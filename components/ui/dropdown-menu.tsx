@@ -63,10 +63,8 @@ const DropdownMenuContent = React.forwardRef<
       className={cn(
         // Clases base
         "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg",
-        // ✅ Animación corregida (aparece con fade + escala desde el centro)
         "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-        // ✅ Transición suave y origen visual centrado
-        "origin-top animate-dropdown-bounce-in",
+        "origin-top",
         className
       )}
       {...props}

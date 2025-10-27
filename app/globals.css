@@ -132,13 +132,6 @@
     transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
   }
 
-  * {
-    transition-property: background-color, border-color, color, fill, stroke,
-      box-shadow, transform;
-    transition-timing-function: ease-in-out;
-    transition-duration: 0.3s;
-  }
-
   /* Custom scrollbar styling for better UX */
   ::-webkit-scrollbar {
     width: 10px;
