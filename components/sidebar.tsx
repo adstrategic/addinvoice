@@ -19,6 +19,7 @@ import {
   LogOut,
   File,
   SendHorizontal,
+  FileCheck,
 } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { useAuth } from "@/components/auth-provider"
@@ -26,6 +27,7 @@ import { useAuth } from "@/components/auth-provider"
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Invoices", href: "/invoices", icon: FileText },
+  { name: "Quotes", href: "/quotes", icon: FileCheck },
   { name: "Drafts", href: "/drafts", icon: File },
   { name: "Emitted Invoices", href: "/emitted-invoices", icon: SendHorizontal },
   { name: "Clients", href: "/clients", icon: Users },
