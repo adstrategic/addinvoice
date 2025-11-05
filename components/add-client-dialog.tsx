@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,52 +10,92 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { CheckCircle2, Building2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { CheckCircle2, Building2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface AddClientDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onClientAdded?: () => void;
 }
 
-export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
-  const [adding, setAdding] = useState(false)
-  const [added, setAdded] = useState(false)
-  const { toast } = useToast()
+export function AddClientDialog({
+  open,
+  onOpenChange,
+  onClientAdded,
+}: AddClientDialogProps) {
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+  const { toast } = useToast();
 
   const handleAddClient = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setAdding(true)
+    e.preventDefault();
+    setAdding(true);
 
-    const formData = new FormData(e.currentTarget)
+    const formData = new FormData(e.currentTarget);
     const clientData = {
-      name: formData.get("name"),
-      email: formData.get("email"),
-      phone: formData.get("phone"),
-      address: formData.get("address"),
-    }
+      id: Date.now().toString(),
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      phone: (formData.get("phone") as string) || "",
+      address: (formData.get("address") as string) || "",
+      status: "active",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    // Save to localStorage
+    const existingClients = JSON.parse(localStorage.getItem("clients") || "[]");
 
-    setAdding(false)
-    setAdded(true)
+    // Check if client already exists (case-insensitive)
+    const existingIndex = existingClients.findIndex(
+      (c: any) => c.name.toLowerCase() === clientData.name.toLowerCase()
+    );
 
-    // Show success state for 2 seconds
-    setTimeout(() => {
-      setAdded(false)
-      onOpenChange(false)
+    if (existingIndex >= 0) {
+      // Update existing client
+      existingClients[existingIndex] = {
+        ...existingClients[existingIndex],
+        ...clientData,
+        id: existingClients[existingIndex].id,
+        createdAt: existingClients[existingIndex].createdAt,
+        updatedAt: new Date().toISOString(),
+      };
+      toast({
+        title: "Client updated",
+        description: `${clientData.name} has been updated.`,
+      });
+    } else {
+      // Add new client
+      existingClients.push(clientData);
       toast({
         title: "Client added successfully!",
         description: `${clientData.name} has been added to your clients list.`,
-      })
-    }, 2000)
-  }
+      });
+    }
+
+    localStorage.setItem("clients", JSON.stringify(existingClients));
+
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    setAdding(false);
+    setAdded(true);
+
+    // Show success state for 2 seconds
+    setTimeout(() => {
+      setAdded(false);
+      onOpenChange(false);
+      if (onClientAdded) {
+        onClientAdded();
+      }
+    }, 2000);
+  };
 
   if (added) {
     return (
@@ -68,11 +108,13 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
             <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 text-center">
               Client Added Successfully!
             </h3>
-            <p className="text-sm text-muted-foreground text-center">The client has been added to your list</p>
+            <p className="text-sm text-muted-foreground text-center">
+              The client has been added to your list
+            </p>
           </div>
         </DialogContent>
       </Dialog>
-    )
+    );
   }
 
   return (
@@ -83,23 +125,44 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
             <Building2 className="h-5 w-5 text-primary" />
             Add New Client
           </DialogTitle>
-          <DialogDescription className="text-sm">Enter the client details to add them to your system</DialogDescription>
+          <DialogDescription className="text-sm">
+            Enter the client details to add them to your system
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleAddClient} className="space-y-4 mt-4">
           <div>
             <Label htmlFor="name">Client Name *</Label>
-            <Input id="name" name="name" placeholder="Acme Corporation" className="mt-1" required />
+            <Input
+              id="name"
+              name="name"
+              placeholder="Acme Corporation"
+              className="mt-1"
+              required
+            />
           </div>
 
           <div>
             <Label htmlFor="email">Email Address *</Label>
-            <Input id="email" name="email" type="email" placeholder="contact@acme.com" className="mt-1" required />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="contact@acme.com"
+              className="mt-1"
+              required
+            />
           </div>
 
           <div>
             <Label htmlFor="phone">Phone Number</Label>
-            <Input id="phone" name="phone" type="tel" placeholder="+1 (555) 123-4567" className="mt-1" />
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              placeholder="+1 (555) 123-4567"
+              className="mt-1"
+            />
           </div>
 
           <div>
@@ -123,7 +186,11 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={adding} className="gap-2 w-full sm:w-auto">
+            <Button
+              type="submit"
+              disabled={adding}
+              className="gap-2 w-full sm:w-auto"
+            >
               {adding ? (
                 <>Adding...</>
               ) : (
@@ -137,5 +204,5 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -1,49 +1,632 @@
-"use client"
+"use client";
 
-import { AppLayout } from "@/components/app-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, Save, ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import { useState } from "react"
+import type React from "react";
+
+import { AppLayout } from "@/components/app-layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Plus,
+  Trash2,
+  Upload,
+  Save,
+  Send,
+  FileDown,
+  ArrowLeft,
+  CheckCircle2,
+  User,
+} from "lucide-react";
+import Link from "next/link";
+import { useState, useRef, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 type InvoiceItem = {
-  id: string
-  description: string
-  quantity: number
-  unitPrice: number
-  tax: number
-}
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  tax: number;
+};
+
+type Invoice = {
+  id: number | string;
+  invoiceNumber: string;
+  status: string;
+  issueDate: string;
+  dueDate: string;
+  clientName: string;
+  clientContact?: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  clientPhone?: string;
+  companyName: string;
+  companyAddress: string;
+  companyNIT: string;
+  companyEmail: string;
+  companyPhone: string;
+  items: InvoiceItem[];
+  notes: string;
+  terms: string;
+  logo: string | null;
+  subtotal: number;
+  totalTax: number;
+  total: number;
+};
 
 export default function EditInvoicePage() {
-  const [items, setItems] = useState<InvoiceItem[]>([
-    { id: "1", description: "Web Design Services", quantity: 1, unitPrice: 2500, tax: 10 },
-    { id: "2", description: "SEO Optimization", quantity: 1, unitPrice: 1500, tax: 10 },
-    { id: "3", description: "Content Creation", quantity: 3, unitPrice: 500, tax: 10 },
-  ])
+  const params = useParams();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<InvoiceItem[]>([]);
+  const [logo, setLogo] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const invoicePreviewRef = useRef<HTMLDivElement>(null);
+
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [status, setStatus] = useState("draft");
+  const [issueDate, setIssueDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [clientContact, setClientContact] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("");
+  const [companyNIT, setCompanyNIT] = useState("");
+  const [companyEmail, setCompanyEmail] = useState("");
+  const [companyPhone, setCompanyPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [terms, setTerms] = useState("");
+
+  useEffect(() => {
+    const invoiceId = params?.id as string;
+    if (!invoiceId) {
+      toast({
+        title: "Invoice ID missing",
+        description: "No invoice ID provided.",
+        variant: "destructive",
+      });
+      router.push("/invoices");
+      return;
+    }
+
+    // Load invoice from localStorage
+    const emittedInvoices = JSON.parse(
+      localStorage.getItem("emittedInvoices") || "[]"
+    );
+    const draftInvoices = JSON.parse(
+      localStorage.getItem("invoiceDrafts") || "[]"
+    );
+
+    const allInvoices = [...emittedInvoices, ...draftInvoices];
+    const foundInvoice = allInvoices.find(
+      (inv: Invoice) => inv.id.toString() === invoiceId.toString()
+    );
+
+    if (foundInvoice) {
+      // Populate all fields with invoice data
+      setInvoiceNumber(foundInvoice.invoiceNumber || "");
+      setStatus(foundInvoice.status || "draft");
+      setIssueDate(foundInvoice.issueDate || "");
+      setDueDate(foundInvoice.dueDate || "");
+      setClientName(foundInvoice.clientName || "");
+      setClientContact(foundInvoice.clientContact || "");
+      setClientEmail(foundInvoice.clientEmail || "");
+      setClientAddress(foundInvoice.clientAddress || "");
+      setClientPhone(foundInvoice.clientPhone || "");
+      setCompanyName(foundInvoice.companyName || "");
+      setCompanyAddress(foundInvoice.companyAddress || "");
+      setCompanyNIT(foundInvoice.companyNIT || "");
+      setCompanyEmail(foundInvoice.companyEmail || "");
+      setCompanyPhone(foundInvoice.companyPhone || "");
+      setItems(foundInvoice.items || []);
+      setNotes(foundInvoice.notes || "");
+      setTerms(foundInvoice.terms || "");
+      setLogo(foundInvoice.logo || null);
+    } else {
+      toast({
+        title: "Invoice not found",
+        description: "The invoice you're trying to edit doesn't exist.",
+        variant: "destructive",
+      });
+      router.push("/invoices");
+    }
+    setLoading(false);
+  }, [params?.id, router, toast]);
 
   const addItem = () => {
-    setItems([...items, { id: Date.now().toString(), description: "", quantity: 1, unitPrice: 0, tax: 0 }])
-  }
+    setItems([
+      ...items,
+      {
+        id: Date.now().toString(),
+        description: "",
+        quantity: 1,
+        unitPrice: 0,
+        tax: 0,
+      },
+    ]);
+  };
 
   const removeItem = (id: string) => {
     if (items.length > 1) {
-      setItems(items.filter((item) => item.id !== id))
+      setItems(items.filter((item) => item.id !== id));
     }
-  }
+  };
+
+  const updateItem = (
+    index: number,
+    field: keyof InvoiceItem,
+    value: string | number
+  ) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    setItems(newItems);
+  };
 
   const calculateItemTotal = (item: InvoiceItem) => {
-    const subtotal = item.quantity * item.unitPrice
-    const taxAmount = (subtotal * item.tax) / 100
-    return subtotal + taxAmount
-  }
+    const subtotal = item.quantity * item.unitPrice;
+    const taxAmount = (subtotal * item.tax) / 100;
+    return subtotal + taxAmount;
+  };
+
+  const calculateSubtotal = () => {
+    return items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  };
+
+  const calculateTotalTax = () => {
+    return items.reduce((sum, item) => {
+      const subtotal = item.quantity * item.unitPrice;
+      return sum + (subtotal * item.tax) / 100;
+    }, 0);
+  };
 
   const calculateTotal = () => {
-    return items.reduce((sum, item) => sum + calculateItemTotal(item), 0)
+    return items.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+  };
+
+  // Helper function to save/update client in localStorage
+  const saveClientToStorage = (clientData: {
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    contact?: string;
+  }) => {
+    if (!clientData.name.trim()) return;
+
+    const existingClients = JSON.parse(localStorage.getItem("clients") || "[]");
+
+    const existingIndex = existingClients.findIndex(
+      (c: any) => c.name.toLowerCase() === clientData.name.toLowerCase()
+    );
+
+    const clientToSave = {
+      id:
+        existingIndex >= 0
+          ? existingClients[existingIndex].id
+          : Date.now().toString(),
+      name: clientData.name,
+      email: clientData.email || "",
+      phone: clientData.phone || "",
+      address: clientData.address || "",
+      contact: clientData.contact || "",
+      status: "active",
+      createdAt:
+        existingIndex >= 0
+          ? existingClients[existingIndex].createdAt
+          : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      existingClients[existingIndex] = {
+        ...existingClients[existingIndex],
+        ...clientToSave,
+        email: clientData.email || existingClients[existingIndex].email || "",
+        phone: clientData.phone || existingClients[existingIndex].phone || "",
+        address:
+          clientData.address || existingClients[existingIndex].address || "",
+        contact:
+          clientData.contact || existingClients[existingIndex].contact || "",
+        updatedAt: new Date().toISOString(),
+      };
+    } else {
+      existingClients.push(clientToSave);
+    }
+
+    localStorage.setItem("clients", JSON.stringify(existingClients));
+  };
+
+  const handleSaveChanges = () => {
+    const invoiceId = params?.id as string;
+    if (!invoiceId) return;
+
+    // Save client if we have client name
+    if (clientName.trim()) {
+      saveClientToStorage({
+        name: clientName,
+        email: clientEmail,
+        phone: clientPhone,
+        address: clientAddress,
+        contact: clientContact,
+      });
+    }
+
+    const updatedInvoice: Invoice = {
+      id: invoiceId,
+      invoiceNumber,
+      status,
+      issueDate,
+      dueDate,
+      clientName,
+      clientContact: clientContact || undefined,
+      clientEmail: clientEmail || undefined,
+      clientAddress: clientAddress || undefined,
+      clientPhone: clientPhone || undefined,
+      companyName,
+      companyAddress,
+      companyNIT,
+      companyEmail,
+      companyPhone,
+      items,
+      notes,
+      terms,
+      logo,
+      subtotal: calculateSubtotal(),
+      totalTax: calculateTotalTax(),
+      total: calculateTotal(),
+    };
+
+    // Update in the appropriate storage location
+    const emittedInvoices = JSON.parse(
+      localStorage.getItem("emittedInvoices") || "[]"
+    );
+    const draftInvoices = JSON.parse(
+      localStorage.getItem("invoiceDrafts") || "[]"
+    );
+
+    // Check if it's an emitted invoice or draft
+    const emittedIndex = emittedInvoices.findIndex(
+      (inv: Invoice) => inv.id.toString() === invoiceId.toString()
+    );
+
+    if (emittedIndex >= 0) {
+      // Update emitted invoice
+      emittedInvoices[emittedIndex] = updatedInvoice;
+      localStorage.setItem("emittedInvoices", JSON.stringify(emittedInvoices));
+    } else {
+      // Update draft invoice
+      const draftIndex = draftInvoices.findIndex(
+        (inv: Invoice) => inv.id.toString() === invoiceId.toString()
+      );
+      if (draftIndex >= 0) {
+        draftInvoices[draftIndex] = updatedInvoice;
+        localStorage.setItem("invoiceDrafts", JSON.stringify(draftInvoices));
+      }
+    }
+
+    setShowSuccessDialog(true);
+    setTimeout(() => {
+      setShowSuccessDialog(false);
+      router.push(`/invoices/${invoiceId}`);
+    }, 2000);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogo(reader.result as string);
+        toast({
+          title: "Logo uploaded",
+          description: "Your company logo has been updated.",
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast({
+        title: "Print blocked",
+        description: "Please allow popups for this site to print invoices.",
+        variant: "destructive",
+      });
+      setIsExporting(false);
+      return;
+    }
+
+    setIsExporting(true);
+
+    const escapeHtml = (text: string) => {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    };
+
+    const formatCurrency = (amount: number) => {
+      return `$${amount.toFixed(2)}`;
+    };
+
+    const logoHtml = logo
+      ? `<img src="${logo}" alt="Company Logo" style="height: 180px; max-width: 300px; object-fit: contain;" />`
+      : "";
+
+    const companyInfoHtml = `
+      <div style="text-align: right; margin-left: 20px; font-size: 12px;">
+        <h1 style="margin: 0; font-size: 22px; color: #000; font-weight: bold;">
+          ${escapeHtml(companyName || "Company Name")}
+        </h1>
+        ${
+          companyAddress
+            ? `<div class="info-line">${escapeHtml(companyAddress)}</div>`
+            : ""
+        }
+        ${
+          companyEmail && companyPhone
+            ? `<div class="info-line">${escapeHtml(
+                companyEmail
+              )} | Phone ${escapeHtml(companyPhone)}</div>`
+            : companyEmail
+            ? `<div class="info-line">${escapeHtml(companyEmail)}</div>`
+            : companyPhone
+            ? `<div class="info-line">Phone ${escapeHtml(companyPhone)}</div>`
+            : ""
+        }
+        ${
+          companyNIT
+            ? `<div class="info-line">NIT: ${escapeHtml(companyNIT)}</div>`
+            : ""
+        }
+      </div>
+    `;
+
+    const itemsRowsHtml = items
+      .map(
+        (item, index) => `
+      <tr>
+        <td style="text-align: center;">${index + 1}</td>
+        <td>${escapeHtml(item.description || "")}</td>
+        <td style="text-align: center;">${item.quantity}</td>
+        <td style="text-align: right;">${formatCurrency(item.unitPrice)}</td>
+        <td style="text-align: right;">${formatCurrency(
+          item.unitPrice * item.quantity
+        )}</td>
+      </tr>
+    `
+      )
+      .join("");
+
+    const subtotal = calculateSubtotal();
+    const totalTax = calculateTotalTax();
+    const total = calculateTotal();
+
+    const invoiceHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Invoice ${escapeHtml(invoiceNumber)}</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      padding: 0;
+      font-size: 12px;
+      color: #000;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+    .info-line {
+      margin: 2px 0;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid black;
+      margin: 20px 0;
+    }
+    .invoice-details {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 12px;
+    }
+    table, th, td {
+      border: 1px solid black;
+    }
+    th, td {
+      padding: 6px;
+      text-align: left;
+    }
+    th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+    }
+    .totals {
+      text-align: right;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    .totals p {
+      margin: 5px 0;
+    }
+    .remarks {
+      margin-top: 30px;
+      font-size: 10px;
+      text-align: justify;
+      border-top: 1px solid black;
+      padding-top: 10px;
+    }
+    .watermark {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      z-index: -1;
+      pointer-events: none;
+      opacity: 0.1;
+      font-size: 120px;
+      color: #cccccc;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    @media print {
+      body {
+        margin: 0;
+      }
+      .no-print {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="watermark">${escapeHtml(companyName || "INVOICE")}</div>
+
+  <div class="header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; z-index: 1;">
+    ${logoHtml}
+    ${companyInfoHtml}
+  </div>
+
+  <hr />
+
+  <div class="invoice-details">
+    <div>
+      <div class="section-title">BILLED TO:</div>
+      <div><strong>NAME:</strong> ${escapeHtml(clientName || "")}</div>
+      ${
+        clientAddress
+          ? `<div><strong>ADDRESS:</strong> ${escapeHtml(clientAddress)}</div>`
+          : ""
+      }
+      ${
+        clientPhone
+          ? `<div><strong>PHONE:</strong> ${escapeHtml(clientPhone)}</div>`
+          : ""
+      }
+      ${
+        clientEmail
+          ? `<div><strong>EMAIL:</strong> ${escapeHtml(clientEmail)}</div>`
+          : ""
+      }
+      ${
+        clientContact
+          ? `<div><strong>CONTACT:</strong> ${escapeHtml(clientContact)}</div>`
+          : ""
+      }
+    </div>
+    <div style="text-align: right;">
+      <div><strong>INVOICE No:</strong> ${escapeHtml(invoiceNumber)}</div>
+      <div><strong>INVOICE date:</strong> ${escapeHtml(issueDate)}</div>
+      <div><strong>INVOICE due date:</strong> ${escapeHtml(dueDate)}</div>
+      ${
+        notes ? `<div><strong>MESSAGE:</strong> ${escapeHtml(notes)}</div>` : ""
+      }
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ITEM</th>
+        <th>DESCRIPTION</th>
+        <th>QTY</th>
+        <th>PRICE PER UNIT</th>
+        <th>AMOUNT</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemsRowsHtml}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <p><strong>Sub total:</strong> ${formatCurrency(subtotal)}</p>
+    <p><strong>Tax:</strong> ${formatCurrency(totalTax)}</p>
+    <p><strong>Invoice total:</strong> ${formatCurrency(total)}</p>
+  </div>
+
+  ${
+    notes || terms
+      ? `
+  <div class="remarks">
+    ${notes ? `<p><strong>REMARKS:</strong> ${escapeHtml(notes)}</p>` : ""}
+    ${terms ? `<p>${escapeHtml(terms)}</p>` : ""}
+  </div>
+  `
+      : ""
+  }
+</body>
+</html>
+    `;
+
+    printWindow.document.write(invoiceHTML);
+    printWindow.document.close();
+
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+        setIsExporting(false);
+      }, 250);
+    };
+  };
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto px-6 py-8 max-w-7xl">
+          <div className="flex items-center justify-center h-64">
+            <p className="text-muted-foreground">Loading invoice...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
   }
 
   return (
@@ -52,21 +635,36 @@ export default function EditInvoicePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Link href="/invoices/INV-001">
+            <Link href={`/invoices/${params?.id}`}>
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Edit Invoice</h1>
-              <p className="text-muted-foreground mt-1">Update invoice details</p>
+              <h1 className="text-3xl font-bold text-foreground">
+                Edit Invoice
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Update invoice details
+              </p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="bg-transparent">
-              Cancel
+            <Link href={`/invoices/${params?.id}`}>
+              <Button variant="outline" className="bg-transparent">
+                Cancel
+              </Button>
+            </Link>
+            <Button
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              variant="outline"
+              className="gap-2 bg-transparent"
+            >
+              <FileDown className="h-4 w-4" />
+              {isExporting ? "Exporting..." : "Export PDF"}
             </Button>
-            <Button className="gap-2">
+            <Button onClick={handleSaveChanges} className="gap-2">
               <Save className="h-4 w-4" />
               Save Changes
             </Button>
@@ -77,38 +675,90 @@ export default function EditInvoicePage() {
           {/* Company Information Sidebar */}
           <Card className="bg-card border-border lg:col-span-1">
             <CardHeader>
-              <CardTitle className="text-lg font-bold text-foreground">Company Information</CardTitle>
+              <CardTitle className="text-lg font-bold text-foreground">
+                Company Information
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <div>
-                <Label>Company Name</Label>
-                <Input placeholder="ADSTRATEGIC" className="mt-1" defaultValue="ADSTRATEGIC" />
-              </div>
-              <div>
-                <Label>Address</Label>
-                <Textarea
-                  placeholder="123 Business St, City, Country"
-                  className="mt-1"
-                  rows={2}
-                  defaultValue="123 Business St, City, Country"
+                <Label>Company Logo</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
                 />
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="mt-2 flex items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg hover:border-primary/50 transition-colors cursor-pointer overflow-hidden"
+                >
+                  {logo ? (
+                    <img
+                      src={logo || "/placeholder.svg"}
+                      alt="Company Logo"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        Click to upload logo
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <Label>NIT / Tax ID</Label>
-                <Input placeholder="123456789-0" className="mt-1" defaultValue="123456789-0" />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  placeholder="contact@adstrategic.com"
-                  className="mt-1"
-                  defaultValue="contact@adstrategic.com"
-                />
-              </div>
-              <div>
-                <Label>Phone</Label>
-                <Input type="tel" placeholder="+1 (555) 123-4567" className="mt-1" defaultValue="+1 (555) 123-4567" />
+
+              <div className="space-y-3 pt-4 border-t border-border">
+                <div>
+                  <Label>Company Name</Label>
+                  <Input
+                    placeholder="ADSTRATEGIC"
+                    className="mt-1"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Address</Label>
+                  <Textarea
+                    placeholder="123 Business St, City, Country"
+                    className="mt-1"
+                    rows={2}
+                    value={companyAddress}
+                    onChange={(e) => setCompanyAddress(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>NIT / Tax ID</Label>
+                  <Input
+                    placeholder="123456789-0"
+                    className="mt-1"
+                    value={companyNIT}
+                    onChange={(e) => setCompanyNIT(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    placeholder="contact@adstrategic.com"
+                    className="mt-1"
+                    value={companyEmail}
+                    onChange={(e) => setCompanyEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Phone</Label>
+                  <Input
+                    type="tel"
+                    placeholder="+1 (555) 123-4567"
+                    className="mt-1"
+                    value={companyPhone}
+                    onChange={(e) => setCompanyPhone(e.target.value)}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -118,17 +768,24 @@ export default function EditInvoicePage() {
             {/* Invoice Header */}
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-lg font-bold text-foreground">Invoice Details</CardTitle>
+                <CardTitle className="text-lg font-bold text-foreground">
+                  Invoice Details
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <Label>Invoice Number</Label>
-                    <Input placeholder="INV-001" className="mt-1" defaultValue="INV-001" />
+                    <Input
+                      placeholder="INV-001"
+                      className="mt-1"
+                      value={invoiceNumber}
+                      onChange={(e) => setInvoiceNumber(e.target.value)}
+                    />
                   </div>
                   <div>
                     <Label>Status</Label>
-                    <Select defaultValue="pending">
+                    <Select value={status} onValueChange={setStatus}>
                       <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
@@ -145,17 +802,87 @@ export default function EditInvoicePage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <Label>Issue Date</Label>
-                    <Input type="date" className="mt-1" defaultValue="2025-01-15" />
+                    <Input
+                      type="date"
+                      className="mt-1"
+                      value={issueDate}
+                      onChange={(e) => setIssueDate(e.target.value)}
+                    />
                   </div>
                   <div>
                     <Label>Due Date</Label>
-                    <Input type="date" className="mt-1" defaultValue="2025-02-15" />
+                    <Input
+                      type="date"
+                      className="mt-1"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Client Details */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Client Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label>Client Name *</Label>
+                    <Input
+                      placeholder="Enter client name"
+                      className="mt-1"
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Contact Name</Label>
+                    <Input
+                      placeholder="Enter contact name"
+                      className="mt-1"
+                      value={clientContact}
+                      onChange={(e) => setClientContact(e.target.value)}
+                    />
                   </div>
                 </div>
 
                 <div>
-                  <Label>Client Name</Label>
-                  <Input placeholder="Enter client name" className="mt-1" defaultValue="Acme Corp" />
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    placeholder="client@example.com"
+                    className="mt-1"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label>Address</Label>
+                  <Textarea
+                    placeholder="Enter client address"
+                    className="mt-1"
+                    rows={2}
+                    value={clientAddress}
+                    onChange={(e) => setClientAddress(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label>Phone Number</Label>
+                  <Input
+                    type="tel"
+                    placeholder="+1 (555) 123-4567"
+                    className="mt-1"
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -164,8 +891,15 @@ export default function EditInvoicePage() {
             <Card className="bg-card border-border">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-bold text-foreground">Items / Services</CardTitle>
-                  <Button onClick={addItem} size="sm" variant="outline" className="gap-2 bg-transparent">
+                  <CardTitle className="text-lg font-bold text-foreground">
+                    Items / Services
+                  </CardTitle>
+                  <Button
+                    onClick={addItem}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2 bg-transparent"
+                  >
                     <Plus className="h-4 w-4" />
                     Add Item
                   </Button>
@@ -173,7 +907,10 @@ export default function EditInvoicePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {items.map((item, index) => (
-                  <div key={item.id} className="p-4 rounded-lg bg-secondary/50 border border-border space-y-3">
+                  <div
+                    key={item.id}
+                    className="p-4 rounded-lg bg-secondary/50 border border-border space-y-3"
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 space-y-3">
                         <div>
@@ -182,11 +919,9 @@ export default function EditInvoicePage() {
                             placeholder="Product or service description"
                             className="mt-1"
                             value={item.description}
-                            onChange={(e) => {
-                              const newItems = [...items]
-                              newItems[index].description = e.target.value
-                              setItems(newItems)
-                            }}
+                            onChange={(e) =>
+                              updateItem(index, "description", e.target.value)
+                            }
                           />
                         </div>
                         <div className="grid gap-3 md:grid-cols-4">
@@ -197,11 +932,13 @@ export default function EditInvoicePage() {
                               min="1"
                               className="mt-1"
                               value={item.quantity}
-                              onChange={(e) => {
-                                const newItems = [...items]
-                                newItems[index].quantity = Number(e.target.value)
-                                setItems(newItems)
-                              }}
+                              onChange={(e) =>
+                                updateItem(
+                                  index,
+                                  "quantity",
+                                  Number(e.target.value)
+                                )
+                              }
                             />
                           </div>
                           <div>
@@ -212,11 +949,13 @@ export default function EditInvoicePage() {
                               step="0.01"
                               className="mt-1"
                               value={item.unitPrice}
-                              onChange={(e) => {
-                                const newItems = [...items]
-                                newItems[index].unitPrice = Number(e.target.value)
-                                setItems(newItems)
-                              }}
+                              onChange={(e) =>
+                                updateItem(
+                                  index,
+                                  "unitPrice",
+                                  Number(e.target.value)
+                                )
+                              }
                             />
                           </div>
                           <div>
@@ -228,11 +967,9 @@ export default function EditInvoicePage() {
                               step="0.1"
                               className="mt-1"
                               value={item.tax}
-                              onChange={(e) => {
-                                const newItems = [...items]
-                                newItems[index].tax = Number(e.target.value)
-                                setItems(newItems)
-                              }}
+                              onChange={(e) =>
+                                updateItem(index, "tax", Number(e.target.value))
+                              }
                             />
                           </div>
                           <div>
@@ -258,10 +995,24 @@ export default function EditInvoicePage() {
                 ))}
 
                 {/* Totals */}
-                <div className="pt-4 border-t border-border">
-                  <div className="flex justify-between text-lg">
+                <div className="pt-4 border-t border-border space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal:</span>
+                    <span className="font-semibold text-foreground">
+                      ${calculateSubtotal().toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total Tax:</span>
+                    <span className="font-semibold text-foreground">
+                      ${calculateTotalTax().toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-lg pt-2 border-t border-border">
                     <span className="font-bold text-foreground">Total:</span>
-                    <span className="font-bold text-primary">${calculateTotal().toFixed(2)}</span>
+                    <span className="font-bold text-primary">
+                      ${calculateTotal().toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -270,7 +1021,9 @@ export default function EditInvoicePage() {
             {/* Additional Information */}
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-lg font-bold text-foreground">Additional Information</CardTitle>
+                <CardTitle className="text-lg font-bold text-foreground">
+                  Additional Information
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -279,7 +1032,8 @@ export default function EditInvoicePage() {
                     placeholder="Add any additional notes or comments..."
                     className="mt-1"
                     rows={3}
-                    defaultValue="Thank you for your business!"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
                   />
                 </div>
                 <div>
@@ -288,7 +1042,8 @@ export default function EditInvoicePage() {
                     placeholder="Payment terms, late fees, etc..."
                     className="mt-1"
                     rows={3}
-                    defaultValue="Payment is due within 30 days. Late payments may incur additional fees."
+                    value={terms}
+                    onChange={(e) => setTerms(e.target.value)}
                   />
                 </div>
               </CardContent>
@@ -296,6 +1051,23 @@ export default function EditInvoicePage() {
           </div>
         </div>
       </div>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <div className="rounded-full bg-green-100 p-3 animate-in zoom-in duration-300">
+              <CheckCircle2 className="h-12 w-12 text-green-600" />
+            </div>
+            <DialogTitle className="text-2xl font-bold text-center">
+              Invoice Updated Successfully!
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Your invoice changes have been saved. Redirecting...
+            </DialogDescription>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
-  )
+  );
 }
