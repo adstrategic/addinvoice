@@ -17,6 +17,7 @@ import {
   Edit,
   Send,
   Trash2,
+  Mic,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -312,17 +313,28 @@ export default function InvoicesPage() {
               Manage and track all your invoices
             </p>
           </div>
-          <Link href="/invoices/new">
-            <Button
-              size="lg"
-              className="gap-2 w-full sm:w-auto hover:shadow-lg hover:shadow-primary/20 transition-all duration-300"
-            >
-              <Plus className="h-5 w-5" />
-              Create Invoice
-            </Button>
-          </Link>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Link href="/invoices/voice" className="flex-1 sm:flex-none">
+              <Button
+                size="lg"
+                variant="outline"
+                className="gap-2 w-full hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 bg-transparent"
+              >
+                <Mic className="h-5 w-5" />
+                Create by Voice
+              </Button>
+            </Link>
+            <Link href="/invoices/new" className="flex-1 sm:flex-none">
+              <Button
+                size="lg"
+                className="gap-2 w-full hover:shadow-lg hover:shadow-primary/20 transition-all duration-300"
+              >
+                <Plus className="h-5 w-5" />
+                Create Invoice
+              </Button>
+            </Link>
+          </div>
         </motion.div>
-
         <motion.div
           className="grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-4 mb-6 sm:mb-8"
           variants={containerVariants}
