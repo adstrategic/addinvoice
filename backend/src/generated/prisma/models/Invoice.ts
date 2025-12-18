@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model Invoice
@@ -369,7 +369,7 @@ export type InvoiceGroupByOutputType = {
   id: number
   workspaceId: number
   clientId: number
-  businessId: number | null
+  businessId: number
   sequence: number
   invoiceNumber: string
   status: $Enums.InvoiceStatus
@@ -425,7 +425,7 @@ export type InvoiceWhereInput = {
   id?: Prisma.IntFilter<"Invoice"> | number
   workspaceId?: Prisma.IntFilter<"Invoice"> | number
   clientId?: Prisma.IntFilter<"Invoice"> | number
-  businessId?: Prisma.IntNullableFilter<"Invoice"> | number | null
+  businessId?: Prisma.IntFilter<"Invoice"> | number
   sequence?: Prisma.IntFilter<"Invoice"> | number
   invoiceNumber?: Prisma.StringFilter<"Invoice"> | string
   status?: Prisma.EnumInvoiceStatusFilter<"Invoice"> | $Enums.InvoiceStatus
@@ -454,7 +454,7 @@ export type InvoiceWhereInput = {
   deletedAt?: Prisma.DateTimeNullableFilter<"Invoice"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   client?: Prisma.XOR<Prisma.ClientScalarRelationFilter, Prisma.ClientWhereInput>
-  business?: Prisma.XOR<Prisma.BusinessNullableScalarRelationFilter, Prisma.BusinessWhereInput> | null
+  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   items?: Prisma.InvoiceItemListRelationFilter
   payments?: Prisma.PaymentListRelationFilter
 }
@@ -463,7 +463,7 @@ export type InvoiceOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   clientId?: Prisma.SortOrder
-  businessId?: Prisma.SortOrderInput | Prisma.SortOrder
+  businessId?: Prisma.SortOrder
   sequence?: Prisma.SortOrder
   invoiceNumber?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -506,7 +506,7 @@ export type InvoiceWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.InvoiceWhereInput | Prisma.InvoiceWhereInput[]
   workspaceId?: Prisma.IntFilter<"Invoice"> | number
   clientId?: Prisma.IntFilter<"Invoice"> | number
-  businessId?: Prisma.IntNullableFilter<"Invoice"> | number | null
+  businessId?: Prisma.IntFilter<"Invoice"> | number
   sequence?: Prisma.IntFilter<"Invoice"> | number
   invoiceNumber?: Prisma.StringFilter<"Invoice"> | string
   status?: Prisma.EnumInvoiceStatusFilter<"Invoice"> | $Enums.InvoiceStatus
@@ -535,7 +535,7 @@ export type InvoiceWhereUniqueInput = Prisma.AtLeast<{
   deletedAt?: Prisma.DateTimeNullableFilter<"Invoice"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   client?: Prisma.XOR<Prisma.ClientScalarRelationFilter, Prisma.ClientWhereInput>
-  business?: Prisma.XOR<Prisma.BusinessNullableScalarRelationFilter, Prisma.BusinessWhereInput> | null
+  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   items?: Prisma.InvoiceItemListRelationFilter
   payments?: Prisma.PaymentListRelationFilter
 }, "id" | "workspaceId_sequence" | "workspaceId_invoiceNumber">
@@ -544,7 +544,7 @@ export type InvoiceOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
   clientId?: Prisma.SortOrder
-  businessId?: Prisma.SortOrderInput | Prisma.SortOrder
+  businessId?: Prisma.SortOrder
   sequence?: Prisma.SortOrder
   invoiceNumber?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -585,7 +585,7 @@ export type InvoiceScalarWhereWithAggregatesInput = {
   id?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
   workspaceId?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
   clientId?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
-  businessId?: Prisma.IntNullableWithAggregatesFilter<"Invoice"> | number | null
+  businessId?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
   sequence?: Prisma.IntWithAggregatesFilter<"Invoice"> | number
   invoiceNumber?: Prisma.StringWithAggregatesFilter<"Invoice"> | string
   status?: Prisma.EnumInvoiceStatusWithAggregatesFilter<"Invoice"> | $Enums.InvoiceStatus
@@ -643,7 +643,7 @@ export type InvoiceCreateInput = {
   deletedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutInvoicesInput
   client: Prisma.ClientCreateNestedOneWithoutInvoicesInput
-  business?: Prisma.BusinessCreateNestedOneWithoutInvoicesInput
+  business: Prisma.BusinessCreateNestedOneWithoutInvoicesInput
   items?: Prisma.InvoiceItemCreateNestedManyWithoutInvoiceInput
   payments?: Prisma.PaymentCreateNestedManyWithoutInvoiceInput
 }
@@ -652,7 +652,7 @@ export type InvoiceUncheckedCreateInput = {
   id?: number
   workspaceId: number
   clientId: number
-  businessId?: number | null
+  businessId: number
   sequence: number
   invoiceNumber: string
   status?: $Enums.InvoiceStatus
@@ -712,7 +712,7 @@ export type InvoiceUpdateInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutInvoicesNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutInvoicesNestedInput
-  business?: Prisma.BusinessUpdateOneWithoutInvoicesNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutInvoicesNestedInput
   items?: Prisma.InvoiceItemUpdateManyWithoutInvoiceNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutInvoiceNestedInput
 }
@@ -721,7 +721,7 @@ export type InvoiceUncheckedUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
   clientId?: Prisma.IntFieldUpdateOperationsInput | number
-  businessId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
@@ -756,7 +756,7 @@ export type InvoiceCreateManyInput = {
   id?: number
   workspaceId: number
   clientId: number
-  businessId?: number | null
+  businessId: number
   sequence: number
   invoiceNumber: string
   status?: $Enums.InvoiceStatus
@@ -818,7 +818,7 @@ export type InvoiceUncheckedUpdateManyInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
   clientId?: Prisma.IntFieldUpdateOperationsInput | number
-  businessId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
@@ -1093,14 +1093,6 @@ export type EnumTaxModeFieldUpdateOperationsInput = {
   set?: $Enums.TaxMode
 }
 
-export type NullableIntFieldUpdateOperationsInput = {
-  set?: number | null
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type InvoiceCreateNestedOneWithoutItemsInput = {
   create?: Prisma.XOR<Prisma.InvoiceCreateWithoutItemsInput, Prisma.InvoiceUncheckedCreateWithoutItemsInput>
   connectOrCreate?: Prisma.InvoiceCreateOrConnectWithoutItemsInput
@@ -1199,7 +1191,7 @@ export type InvoiceCreateWithoutWorkspaceInput = {
   updatedAt?: Date | string
   deletedAt?: Date | string | null
   client: Prisma.ClientCreateNestedOneWithoutInvoicesInput
-  business?: Prisma.BusinessCreateNestedOneWithoutInvoicesInput
+  business: Prisma.BusinessCreateNestedOneWithoutInvoicesInput
   items?: Prisma.InvoiceItemCreateNestedManyWithoutInvoiceInput
   payments?: Prisma.PaymentCreateNestedManyWithoutInvoiceInput
 }
@@ -1207,7 +1199,7 @@ export type InvoiceCreateWithoutWorkspaceInput = {
 export type InvoiceUncheckedCreateWithoutWorkspaceInput = {
   id?: number
   clientId: number
-  businessId?: number | null
+  businessId: number
   sequence: number
   invoiceNumber: string
   status?: $Enums.InvoiceStatus
@@ -1271,7 +1263,7 @@ export type InvoiceScalarWhereInput = {
   id?: Prisma.IntFilter<"Invoice"> | number
   workspaceId?: Prisma.IntFilter<"Invoice"> | number
   clientId?: Prisma.IntFilter<"Invoice"> | number
-  businessId?: Prisma.IntNullableFilter<"Invoice"> | number | null
+  businessId?: Prisma.IntFilter<"Invoice"> | number
   sequence?: Prisma.IntFilter<"Invoice"> | number
   invoiceNumber?: Prisma.StringFilter<"Invoice"> | string
   status?: Prisma.EnumInvoiceStatusFilter<"Invoice"> | $Enums.InvoiceStatus
@@ -1328,7 +1320,7 @@ export type InvoiceCreateWithoutClientInput = {
   updatedAt?: Date | string
   deletedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutInvoicesInput
-  business?: Prisma.BusinessCreateNestedOneWithoutInvoicesInput
+  business: Prisma.BusinessCreateNestedOneWithoutInvoicesInput
   items?: Prisma.InvoiceItemCreateNestedManyWithoutInvoiceInput
   payments?: Prisma.PaymentCreateNestedManyWithoutInvoiceInput
 }
@@ -1336,7 +1328,7 @@ export type InvoiceCreateWithoutClientInput = {
 export type InvoiceUncheckedCreateWithoutClientInput = {
   id?: number
   workspaceId: number
-  businessId?: number | null
+  businessId: number
   sequence: number
   invoiceNumber: string
   status?: $Enums.InvoiceStatus
@@ -1422,7 +1414,7 @@ export type InvoiceCreateWithoutItemsInput = {
   deletedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutInvoicesInput
   client: Prisma.ClientCreateNestedOneWithoutInvoicesInput
-  business?: Prisma.BusinessCreateNestedOneWithoutInvoicesInput
+  business: Prisma.BusinessCreateNestedOneWithoutInvoicesInput
   payments?: Prisma.PaymentCreateNestedManyWithoutInvoiceInput
 }
 
@@ -1430,7 +1422,7 @@ export type InvoiceUncheckedCreateWithoutItemsInput = {
   id?: number
   workspaceId: number
   clientId: number
-  businessId?: number | null
+  businessId: number
   sequence: number
   invoiceNumber: string
   status?: $Enums.InvoiceStatus
@@ -1505,7 +1497,7 @@ export type InvoiceUpdateWithoutItemsInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutInvoicesNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutInvoicesNestedInput
-  business?: Prisma.BusinessUpdateOneWithoutInvoicesNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutInvoicesNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutInvoiceNestedInput
 }
 
@@ -1513,7 +1505,7 @@ export type InvoiceUncheckedUpdateWithoutItemsInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
   clientId?: Prisma.IntFieldUpdateOperationsInput | number
-  businessId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
@@ -1572,7 +1564,7 @@ export type InvoiceCreateWithoutPaymentsInput = {
   deletedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutInvoicesInput
   client: Prisma.ClientCreateNestedOneWithoutInvoicesInput
-  business?: Prisma.BusinessCreateNestedOneWithoutInvoicesInput
+  business: Prisma.BusinessCreateNestedOneWithoutInvoicesInput
   items?: Prisma.InvoiceItemCreateNestedManyWithoutInvoiceInput
 }
 
@@ -1580,7 +1572,7 @@ export type InvoiceUncheckedCreateWithoutPaymentsInput = {
   id?: number
   workspaceId: number
   clientId: number
-  businessId?: number | null
+  businessId: number
   sequence: number
   invoiceNumber: string
   status?: $Enums.InvoiceStatus
@@ -1655,7 +1647,7 @@ export type InvoiceUpdateWithoutPaymentsInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutInvoicesNestedInput
   client?: Prisma.ClientUpdateOneRequiredWithoutInvoicesNestedInput
-  business?: Prisma.BusinessUpdateOneWithoutInvoicesNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutInvoicesNestedInput
   items?: Prisma.InvoiceItemUpdateManyWithoutInvoiceNestedInput
 }
 
@@ -1663,7 +1655,7 @@ export type InvoiceUncheckedUpdateWithoutPaymentsInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
   clientId?: Prisma.IntFieldUpdateOperationsInput | number
-  businessId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
@@ -1789,7 +1781,7 @@ export type InvoiceUpdateManyWithWhereWithoutBusinessInput = {
 export type InvoiceCreateManyWorkspaceInput = {
   id?: number
   clientId: number
-  businessId?: number | null
+  businessId: number
   sequence: number
   invoiceNumber: string
   status?: $Enums.InvoiceStatus
@@ -1846,7 +1838,7 @@ export type InvoiceUpdateWithoutWorkspaceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   client?: Prisma.ClientUpdateOneRequiredWithoutInvoicesNestedInput
-  business?: Prisma.BusinessUpdateOneWithoutInvoicesNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutInvoicesNestedInput
   items?: Prisma.InvoiceItemUpdateManyWithoutInvoiceNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutInvoiceNestedInput
 }
@@ -1854,7 +1846,7 @@ export type InvoiceUpdateWithoutWorkspaceInput = {
 export type InvoiceUncheckedUpdateWithoutWorkspaceInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   clientId?: Prisma.IntFieldUpdateOperationsInput | number
-  businessId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
@@ -1888,7 +1880,7 @@ export type InvoiceUncheckedUpdateWithoutWorkspaceInput = {
 export type InvoiceUncheckedUpdateManyWithoutWorkspaceInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   clientId?: Prisma.IntFieldUpdateOperationsInput | number
-  businessId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
@@ -1920,7 +1912,7 @@ export type InvoiceUncheckedUpdateManyWithoutWorkspaceInput = {
 export type InvoiceCreateManyClientInput = {
   id?: number
   workspaceId: number
-  businessId?: number | null
+  businessId: number
   sequence: number
   invoiceNumber: string
   status?: $Enums.InvoiceStatus
@@ -1977,7 +1969,7 @@ export type InvoiceUpdateWithoutClientInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutInvoicesNestedInput
-  business?: Prisma.BusinessUpdateOneWithoutInvoicesNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutInvoicesNestedInput
   items?: Prisma.InvoiceItemUpdateManyWithoutInvoiceNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutInvoiceNestedInput
 }
@@ -1985,7 +1977,7 @@ export type InvoiceUpdateWithoutClientInput = {
 export type InvoiceUncheckedUpdateWithoutClientInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
-  businessId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
@@ -2019,7 +2011,7 @@ export type InvoiceUncheckedUpdateWithoutClientInput = {
 export type InvoiceUncheckedUpdateManyWithoutClientInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
-  businessId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   invoiceNumber?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
@@ -2252,7 +2244,7 @@ export type InvoiceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   deletedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.Invoice$businessArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   items?: boolean | Prisma.Invoice$itemsArgs<ExtArgs>
   payments?: boolean | Prisma.Invoice$paymentsArgs<ExtArgs>
   _count?: boolean | Prisma.InvoiceCountOutputTypeDefaultArgs<ExtArgs>
@@ -2291,7 +2283,7 @@ export type InvoiceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   deletedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.Invoice$businessArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["invoice"]>
 
 export type InvoiceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -2327,7 +2319,7 @@ export type InvoiceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   deletedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.Invoice$businessArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["invoice"]>
 
 export type InvoiceSelectScalar = {
@@ -2367,7 +2359,7 @@ export type InvoiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
 export type InvoiceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.Invoice$businessArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   items?: boolean | Prisma.Invoice$itemsArgs<ExtArgs>
   payments?: boolean | Prisma.Invoice$paymentsArgs<ExtArgs>
   _count?: boolean | Prisma.InvoiceCountOutputTypeDefaultArgs<ExtArgs>
@@ -2375,12 +2367,12 @@ export type InvoiceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
 export type InvoiceIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.Invoice$businessArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
 }
 export type InvoiceIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   client?: boolean | Prisma.ClientDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.Invoice$businessArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
 }
 
 export type $InvoicePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2388,7 +2380,7 @@ export type $InvoicePayload<ExtArgs extends runtime.Types.Extensions.InternalArg
   objects: {
     workspace: Prisma.$WorkspacePayload<ExtArgs>
     client: Prisma.$ClientPayload<ExtArgs>
-    business: Prisma.$BusinessPayload<ExtArgs> | null
+    business: Prisma.$BusinessPayload<ExtArgs>
     items: Prisma.$InvoiceItemPayload<ExtArgs>[]
     payments: Prisma.$PaymentPayload<ExtArgs>[]
   }
@@ -2396,7 +2388,7 @@ export type $InvoicePayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     id: number
     workspaceId: number
     clientId: number
-    businessId: number | null
+    businessId: number
     sequence: number
     invoiceNumber: string
     status: $Enums.InvoiceStatus
@@ -2819,7 +2811,7 @@ export interface Prisma__InvoiceClient<T, Null = never, ExtArgs extends runtime.
   readonly [Symbol.toStringTag]: "PrismaPromise"
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   client<T extends Prisma.ClientDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClientDefaultArgs<ExtArgs>>): Prisma.Prisma__ClientClient<runtime.Types.Result.GetResult<Prisma.$ClientPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  business<T extends Prisma.Invoice$businessArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Invoice$businessArgs<ExtArgs>>): Prisma.Prisma__BusinessClient<runtime.Types.Result.GetResult<Prisma.$BusinessPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  business<T extends Prisma.BusinessDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BusinessDefaultArgs<ExtArgs>>): Prisma.Prisma__BusinessClient<runtime.Types.Result.GetResult<Prisma.$BusinessPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   items<T extends Prisma.Invoice$itemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Invoice$itemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoiceItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   payments<T extends Prisma.Invoice$paymentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Invoice$paymentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PaymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -3274,25 +3266,6 @@ export type InvoiceDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Limit how many Invoices to delete.
    */
   limit?: number
-}
-
-/**
- * Invoice.business
- */
-export type Invoice$businessArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Business
-   */
-  select?: Prisma.BusinessSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the Business
-   */
-  omit?: Prisma.BusinessOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.BusinessInclude<ExtArgs> | null
-  where?: Prisma.BusinessWhereInput
 }
 
 /**

@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model Business
@@ -494,9 +494,9 @@ export type BusinessOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
-export type BusinessNullableScalarRelationFilter = {
-  is?: Prisma.BusinessWhereInput | null
-  isNot?: Prisma.BusinessWhereInput | null
+export type BusinessScalarRelationFilter = {
+  is?: Prisma.BusinessWhereInput
+  isNot?: Prisma.BusinessWhereInput
 }
 
 export type BusinessWorkspaceIdSequenceCompoundUniqueInput = {
@@ -612,12 +612,10 @@ export type BusinessCreateNestedOneWithoutInvoicesInput = {
   connect?: Prisma.BusinessWhereUniqueInput
 }
 
-export type BusinessUpdateOneWithoutInvoicesNestedInput = {
+export type BusinessUpdateOneRequiredWithoutInvoicesNestedInput = {
   create?: Prisma.XOR<Prisma.BusinessCreateWithoutInvoicesInput, Prisma.BusinessUncheckedCreateWithoutInvoicesInput>
   connectOrCreate?: Prisma.BusinessCreateOrConnectWithoutInvoicesInput
   upsert?: Prisma.BusinessUpsertWithoutInvoicesInput
-  disconnect?: Prisma.BusinessWhereInput | boolean
-  delete?: Prisma.BusinessWhereInput | boolean
   connect?: Prisma.BusinessWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.BusinessUpdateToOneWithWhereWithoutInvoicesInput, Prisma.BusinessUpdateWithoutInvoicesInput>, Prisma.BusinessUncheckedUpdateWithoutInvoicesInput>
 }
