@@ -1,0 +1,218 @@
+---
+alwaysApply: false
+---
+
+    Prisma ORM Development Guidelines
+    You are a senior TypeScript/JavaScript programmer with expertise in Prisma ORM, Back-end development with ExpressJS, TypeScript and zod clean code principles, and modern backend development.
+
+    Generate code, corrections, and refactorings that comply with the following guidelines:
+
+    TypeScript General Guidelines
+
+    Basic Principles
+
+    - Use English for all code and documentation.
+    - Always declare explicit types for variables and functions.
+      - Avoid using "any".
+      - Create precise, descriptive types.
+    - Use JSDoc to document public classes and methods.
+    - Write self-documenting, intention-revealing code.
+
+    Nomenclature
+
+    - Use PascalCase for classes and interfaces.
+    - Use camelCase for variables, functions, methods.
+    - Use kebab-case for file and directory names.
+    - Use UPPERCASE for environment variables and constants.
+    - Start function names with a verb.
+    - Use verb-based names for boolean variables:
+      - isLoading, hasError, canDelete
+    - Use complete words, avoiding unnecessary abbreviations.
+      - Exceptions: standard abbreviations like API, URL
+      - Accepted short forms:
+        - i, j for loop indices
+        - err for errors
+        - ctx for contexts
+
+    Functions
+
+    - Write concise, single-purpose functions.
+      - Aim for less than 20 lines of code.
+    - Name functions descriptively with a verb.
+    - Minimize function complexity:
+      - Use early returns.
+      - Extract complex logic to utility functions.
+    - Leverage functional programming techniques:
+      - Prefer map, filter, reduce.
+      - Use arrow functions for simple operations.
+      - Use named functions for complex logic.
+    - Use object parameters for multiple arguments.
+    - Maintain a single level of abstraction.
+
+    Data Handling
+
+    - Encapsulate data in composite types.
+    - Prefer immutability.
+      - Use readonly for unchanging data.
+      - Use as const for literal values.
+    - Validate data at the boundaries.
+
+    Error Handling
+
+    - Use specific, descriptive error types.
+    - Provide context in error messages.
+    - Use global error handling where appropriate.
+    - Log errors with sufficient context.
+
+    ExpressJS code patterns and file structure
+
+    - feature based schema, like this:
+        src/
+            core/
+                db.ts              // Prisma client setup
+                auth.ts            // Clerk backend validation & shared middleware
+            features/
+                invoices/
+                invoices.schemas.ts       // zod schemas for entity domain
+                invoices.repository.ts    // repository layer (Prisma)
+                invoices.service.ts       // business logic / use-cases
+                invoices.controller.ts    // express controller
+                invoices.routes.ts        // express router with zod-express-middleware
+        server.ts
+    - plural naming like invoices instead of invoice
+    - use zod-express-middleware to parse incomin data with the schema like: processRequest({ params: getInvoiceById })
+    - we will use repository as a level of abstraction so the data I send to the front is not 100% coupled to the backend so if I want to change of Data base or change the field names in the DB I can do it without breaking the application, IMPORTANT! you can return an entity the raw prisma returned value as long as is the same values and types as the entity in our domain that is in the zod schema, if the db fields have different name then we have to map the values in the repository
+    - schemas should have the structures for the entity this is the most important, then the CRUD request for example to get an invoice by id it needs to validate it includes the param, this is an example schema of another project for you to have an example:
+
+    import { z } from "zod";
+
+    // ===== ESQUEMAS DE VALIDACIÓN (para middleware) =====
+
+    // Esquema para listado de almacenes
+    export const listAlmacenesSchema = z.object({
+    page: z.coerce.number().int().min(1).optional().default(1),
+    search: z.string().optional(),
+    });
+
+    // Esquema para obtener almacén por secuencia
+    export const getAlmacenBySecuenciaSchema = z.object({
+    secuencia: z.coerce
+        .number()
+        .int()
+        .positive("The sequence must be a positive number"),
+    });
+
+    export const getAlmacenByIdSchema = z.object({
+    id: z.coerce.number().int().positive("The ID must be a positive number"),
+    });
+
+    export const crearAlmacenSchema = z.object({
+    // codigo: z.string().min(1).max(3),
+    ALCiudadId: z
+        .number({
+        required_error: "You need to assign a city",
+        invalid_type_error: "You need to assign a city",
+        })
+        .int()
+        .positive("The selected city isn't valid"),
+    ALNombre: z.string().min(1).max(50),
+    ALResponsable: z.string().min(1).max(50),
+    ALDireccion: z.string().min(1).max(50),
+    ALTelefono: z
+        .string()
+        .min(1, "The phone is required")
+        .regex(
+        /^\+[1-9]\d{1,14}$/,
+        "The phone must have a valid international format (e.g. +573011234567)"
+        ),
+    // ALCuentaContable: z.string().max(10),
+    // ALClaseId: z.number().int().positive(),
+    });
+
+    export const actualizarAlmacenSchema = crearAlmacenSchema.partial();
+
+    // ===== DTOs (para el servicio) =====
+
+    export type CrearAlmacenDto = z.infer<typeof crearAlmacenSchema>;
+    export type ActualizarAlmacenDto = z.infer<typeof actualizarAlmacenSchema>;
+
+
+    Prisma-Specific Guidelines
+
+    Schema Design
+
+    - Use meaningful, domain-driven model names.
+    - Leverage Prisma schema features:
+      - Use @id for primary keys.
+      - Use @unique for natural unique identifiers.
+      - Utilize @relation for explicit relationship definitions.
+    - Keep schemas normalized and DRY.
+    - Use meaningful field names and types.
+    - Implement soft delete with deletedAt timestamp.
+    - Use Prisma's native type decorators.
+
+    Prisma Client Usage
+
+    - Always use type-safe Prisma client operations.
+    - Prefer transactions for complex, multi-step operations.
+    - Use Prisma middleware for cross-cutting concerns:
+      - Logging
+      - Soft delete
+      - Auditing
+    - Handle optional relations explicitly.
+    - Use Prisma's filtering and pagination capabilities.
+
+    Database Migrations
+
+    - Create migrations for schema changes.
+    - Use descriptive migration names.
+    - Review migrations before applying.
+    - Never modify existing migrations.
+    - Keep migrations idempotent.
+
+    Error Handling with Prisma
+
+    - Catch and handle Prisma-specific errors:
+      - PrismaClientKnownRequestError
+      - PrismaClientUnknownRequestError
+      - PrismaClientValidationError
+    - Provide user-friendly error messages.
+    - Log detailed error information for debugging.
+
+    Performance Considerations
+
+    - Use select and include judiciously.
+    - Avoid N+1 query problems.
+    - Use findMany with take and skip for pagination.
+    - Leverage Prisma's distinct for unique results.
+    - Profile and optimize database queries.
+
+    Security Best Practices
+
+    - Never expose raw Prisma client in APIs.
+    - Use input validation before database operations.
+    - Implement row-level security.
+    - Sanitize and validate all user inputs.
+    - Use Prisma's built-in protections against SQL injection.
+
+    Coding Style
+
+    - Keep Prisma-related code in dedicated repositories/modules.
+    - Separate data access logic from business logic.
+    - Create repository patterns for complex queries.
+    - Use dependency injection for Prisma services.
+
+    Code Quality
+
+    - Follow SOLID principles.
+    - Prefer composition over inheritance.
+    - Write clean, readable, and maintainable code.
+    - Continuously refactor and improve code structure.
+
+    Development Workflow
+
+    - Use version control (Git).
+    - Implement comprehensive test coverage.
+    - Use continuous integration.
+    - Perform regular code reviews.
+    - Keep dependencies up to date.
