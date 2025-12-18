@@ -15,7 +15,7 @@ interface SendInvoiceRequest {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { sequence: string } }
+  { params }: { params: Promise<{ sequence: string }> }
 ) {
   try {
     // 1. Authenticate user
@@ -24,8 +24,9 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Get sequence from params
-    const sequence = parseInt(params.sequence);
+    // 2. Get sequence from params (await params in Next.js 15+)
+    const { sequence: sequenceParam } = await params;
+    const sequence = parseInt(sequenceParam);
     if (isNaN(sequence)) {
       return NextResponse.json(
         { error: "Invalid sequence number" },

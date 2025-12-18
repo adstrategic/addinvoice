@@ -8,7 +8,7 @@ import type { InvoiceResponse } from "@/features/invoices/types/api";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sequence: string } }
+  { params }: { params: Promise<{ sequence: string }> }
 ) {
   try {
     // 1. Authenticate user
@@ -17,8 +17,9 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Get sequence from params
-    const sequence = parseInt(params.sequence);
+    // 2. Get sequence from params (await params in Next.js 15+)
+    const { sequence: sequenceParam } = await params;
+    const sequence = parseInt(sequenceParam);
     if (isNaN(sequence)) {
       return NextResponse.json(
         { error: "Invalid sequence number" },
@@ -72,7 +73,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error generating PDF:", error);
     return NextResponse.json(
       {
         error: "Failed to generate PDF",
