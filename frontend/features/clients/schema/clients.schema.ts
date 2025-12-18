@@ -1,0 +1,58 @@
+import { z } from "zod";
+
+/**
+ * Schema for listing clients
+ */
+export const listClientsSchema = z.object({
+  page: z.coerce.number().int().optional(),
+  limit: z.coerce.number().int().max(30).optional(),
+  search: z.string().optional(),
+});
+
+/**
+ * Client validation schema
+ * Shared between frontend forms and backend API validation
+ * Must match backend clients.schemas.ts createClientSchema
+ */
+export const createClientSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Client name is required")
+    .max(255, "Client name is too long"),
+  email: z.string().trim().email("Invalid email address"),
+  phone: z
+    .string()
+    .trim()
+    .min(1, "The phone is required")
+    .regex(
+      /^\+[1-9]\d{1,14}$/,
+      "The phone must have a valid international format (e.g. +573011234567)"
+    ),
+  address: z
+    .string({ required_error: "Address is required" })
+    .trim()
+    .min(1, "Address cannot be empty")
+    .max(100, "Address cannot exceed 100 characters"),
+  nit: z
+    .string({ required_error: "NIT/Cedula is required" })
+    .trim()
+    .min(1, "NIT/Cedula cannot be empty")
+    .max(15, "NIT/Cedula cannot exceed 15 characters"),
+  businessName: z
+    .string({ required_error: "Business name is required" })
+    .trim()
+    .min(1, "Business name cannot be empty")
+    .max(100, "Business name cannot exceed 100 characters"),
+});
+
+/**
+ * Update client schema (all fields optional)
+ */
+export const updateClientSchema = createClientSchema.partial();
+
+// DTO types
+export type CreateClientDto = z.infer<typeof createClientSchema>;
+export type UpdateClientDto = z.infer<typeof updateClientSchema>;
+
+export type ListClientsParams = z.infer<typeof listClientsSchema>;
