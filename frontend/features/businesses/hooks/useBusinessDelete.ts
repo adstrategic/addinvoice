@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useDeleteBusiness } from "./useBusinesses";
-import { BusinessResponse } from "../types/api";
+import type { BusinessResponse } from "../schema/businesses.schema";
 
 interface UseBusinessDeleteOptions {
   onAfterDelete?: () => void;
@@ -52,12 +52,3 @@ export function useBusinessDelete(options?: UseBusinessDeleteOptions) {
     isDeleting: deleteMutation.isPending,
   };
 }
-
-
-
-
-
-
-
-
-

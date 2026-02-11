@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  clientEntitySchema,
+  createClientSchema,
+} from "../clients/clients.schemas";
+import { businessEntitySchema } from "../businesses/businesses.schemas";
 
 // ===== ENUMS =====
 
@@ -27,6 +32,7 @@ export const listInvoicesSchema = z.object({
   search: z.string().optional(),
   status: InvoiceStatusEnum.optional(),
   clientId: z.coerce.number().int().positive().optional(),
+  businessId: z.coerce.number().int().positive().optional(),
 });
 
 /**
@@ -65,9 +71,7 @@ export const invoiceItemSchema = z.object({
     .max(1000, "Item description is too long"),
   quantity: z.coerce.number().positive("Quantity must be greater than 0"),
   quantityUnit: QuantityUnitEnum.default("UNITS"),
-  unitPrice: z.coerce
-    .number()
-    .nonnegative("Unit price must be greater than or equal to 0"),
+  unitPrice: z.coerce.number().positive("Unit price must be greater than 0"),
   discount: z.coerce
     .number()
     .nonnegative("Discount must be greater than or equal to 0")
@@ -81,6 +85,7 @@ export const invoiceItemSchema = z.object({
     .optional(),
   vatEnabled: z.boolean().default(false).optional(),
   saveToCatalog: z.boolean().default(false).optional(),
+  catalogId: z.coerce.number().int().positive().optional().nullable(), // Optional: link to existing catalog
 });
 
 /**
@@ -98,10 +103,16 @@ const baseInvoiceSchema = z.object({
   dueDate: z.coerce.date({ required_error: "Due date is required" }),
   purchaseOrder: z.string().trim().max(100).nullish(),
   customHeader: z.string().trim().max(1000).nullish(),
-  clientId: z.coerce
-    .number()
-    .int()
-    .positive("Client ID must be a positive number"),
+  // Client selection: either clientId or createClient with clientData
+  clientId: z.coerce.number().int(),
+  // .positive("Client ID must be a positive number")
+  // .optional(),
+  createClient: z.boolean(),
+  clientData: createClientSchema.optional(),
+  // Invoice-specific client contact fields (can differ from client defaults)
+  clientEmail: z.string().trim().email("Invalid email address").optional(),
+  clientPhone: z.string().trim().max(50).nullish(),
+  clientAddress: z.string().trim().max(200).nullish(),
   // General settings
   currency: z.string().trim().min(1).max(10).default("USD"),
   discount: z.coerce
@@ -128,6 +139,45 @@ const baseInvoiceSchema = z.object({
 export const createInvoiceSchema = baseInvoiceSchema
   .refine(
     (data) => {
+      // If createClient is true, clientData must be provided
+      if (data.createClient === true) {
+        return data.clientData != null;
+      }
+      return true;
+    },
+    {
+      message: "Client data is required when createClient is true",
+      path: ["clientData"],
+    },
+  )
+  .refine(
+    (data) => {
+      // If createClient is false or undefined, clientId must be provided
+      if (data.createClient !== true) {
+        return data.clientId != null && data.clientId > 0;
+      }
+      return true;
+    },
+    {
+      message: "Client ID is required when not creating a new client",
+      path: ["clientId"],
+    },
+  )
+  .refine(
+    (data) => {
+      // If not creating a new client, clientEmail is required
+      if (data.createClient !== true) {
+        return data.clientEmail != null && data.clientEmail.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Client email is required when selecting an existing client",
+      path: ["clientEmail"],
+    },
+  )
+  .refine(
+    (data) => {
       // If taxMode is BY_TOTAL, taxName and taxPercentage are required
       if (data.taxMode === "BY_TOTAL") {
         return (
@@ -143,7 +193,7 @@ export const createInvoiceSchema = baseInvoiceSchema
       message:
         "Tax name and tax percentage are required when tax mode is BY_TOTAL",
       path: ["taxName", "taxPercentage"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -156,7 +206,7 @@ export const createInvoiceSchema = baseInvoiceSchema
     {
       message: "Discount must be greater than 0 when discount type is set",
       path: ["discount"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -170,7 +220,7 @@ export const createInvoiceSchema = baseInvoiceSchema
       message:
         "Tax name and tax percentage should not be set when tax mode is not BY_TOTAL",
       path: ["taxMode"],
-    }
+    },
   );
 
 /**
@@ -218,8 +268,23 @@ export const createInvoiceItemSchema = z.object({
     .or(z.string().transform((val) => parseFloat(val))),
   vatEnabled: z.boolean().default(false).optional(),
   saveToCatalog: z.boolean().default(false).optional(),
+  catalogId: z.coerce.number().int().positive().optional().nullable(), // Optional: link to existing catalog
   // Optional taxMode - if provided, will update the invoice's taxMode
   taxMode: TaxModeEnum.optional(),
+  // Optional taxName and taxPercentage - if provided, will update the invoice's tax info
+  taxName: z.string().trim().max(100).nullish(),
+  taxPercentage: z.coerce
+    .number()
+    .min(0, "Tax percentage must be between 0 and 100")
+    .max(100, "Tax percentage must be between 0 and 100")
+    .nullish(),
+});
+
+export const invoiceItemEntitySchema = invoiceItemSchema.extend({
+  id: z.number().int().positive(),
+  invoiceId: z.number().int().positive(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 /**
@@ -242,7 +307,6 @@ export const getInvoiceItemByIdSchema = z.object({
  * Schema for creating a payment
  */
 export const createPaymentSchema = z.object({
-  invoiceId: z.coerce.number().int().positive(),
   amount: z.coerce
     .number()
     .positive("Payment amount must be greater than 0")
@@ -255,32 +319,74 @@ export const createPaymentSchema = z.object({
   transactionId: z
     .string()
     .trim()
-    .min(1, "Transaction ID is required")
-    .max(255, "Transaction ID is too long"),
+    .max(255, "Transaction ID is too long")
+    .nullish(),
   details: z.string().trim().max(1000).nullish(),
   paidAt: z.coerce.date().optional(),
 });
 
 /**
- * Schema for updating a payment
+ * Schema for payment entity
  */
-export const updatePaymentSchema = createPaymentSchema
-  .omit({ invoiceId: true })
-  .partial();
+export const paymentEntitySchema = createPaymentSchema.extend({
+  id: z.number().int().positive(),
+  workspaceId: z.number().int().positive(),
+  invoiceId: z.number().int().positive(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  deletedAt: z.date().nullable(),
+});
 
 /**
- * Schema for getting payment by ID
+ * Schema for updating a payment
  */
-export const getPaymentByIdSchema = z.object({
-  invoiceId: z.coerce.number().int().positive(),
+export const updatePaymentSchema = createPaymentSchema.partial();
+
+/**
+ * Schema for getting payment by ID (invoiceId + paymentId in path)
+ */
+export const getPaymentByIdSchema = getInvoiceByIdSchema.extend({
   paymentId: z.coerce
     .number()
     .int()
     .positive("The payment ID must be a positive number"),
 });
 
+export const invoiceEntitySchema = baseInvoiceSchema
+  .extend({
+    id: z.number().int().positive(),
+    subtotal: z.number(),
+    totalTax: z.number(),
+    total: z.number(),
+    workspaceId: z.number().int().positive(),
+    status: z.enum(["DRAFT", "SENT", "VIEWED", "PAID", "OVERDUE"]),
+    sequence: z.number().int().positive(),
+    paymentLink: z.string().nullable(),
+    paymentProvider: z.string().nullable(),
+    balance: z.number(),
+
+    sentAt: z.date().nullable(),
+    viewedAt: z.date().nullable(),
+    paidAt: z.date().nullable(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+    deletedAt: z.date().nullable(),
+
+    business: businessEntitySchema,
+    client: clientEntitySchema,
+    items: z.array(invoiceItemEntitySchema).optional(),
+    payments: z.array(paymentEntitySchema).optional(),
+  })
+  .omit({
+    createClient: true,
+    clientData: true,
+  });
+
 // ===== DTOs (for the service) =====
 
+export type InvoiceEntity = z.infer<typeof invoiceEntitySchema>;
+export type InvoiceItemEntity = z.infer<typeof invoiceItemEntitySchema>;
+export type PaymentEntity = z.infer<typeof paymentEntitySchema>;
 export type ListInvoicesQuery = z.infer<typeof listInvoicesSchema>;
 export type GetInvoiceBySequenceParams = z.infer<
   typeof getInvoiceBySequenceSchema
@@ -295,69 +401,3 @@ export type GetInvoiceItemByIdParams = z.infer<typeof getInvoiceItemByIdSchema>;
 export type CreatePaymentDto = z.infer<typeof createPaymentSchema>;
 export type UpdatePaymentDto = z.infer<typeof updatePaymentSchema>;
 export type GetPaymentByIdParams = z.infer<typeof getPaymentByIdSchema>;
-
-// ===== ENTITY SCHEMAS (domain models) =====
-
-export type InvoiceEntity = {
-  id: number;
-  sequence: number;
-  workspaceId: number;
-  clientId: number;
-  invoiceNumber: string;
-  status: z.infer<typeof InvoiceStatusEnum>;
-  issueDate: Date;
-  dueDate: Date;
-  purchaseOrder: string | null;
-  customHeader: string | null;
-  currency: string;
-  subtotal: number;
-  totalTax: number;
-  discount: number;
-  discountType: string | null;
-  taxMode: z.infer<typeof TaxModeEnum>;
-  taxName: string | null;
-  taxPercentage: number | null;
-  total: number;
-  notes: string | null;
-  terms: string | null;
-  paymentLink: string | null;
-  paymentProvider: string | null;
-  sentAt: Date | null;
-  viewedAt: Date | null;
-  paidAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-};
-
-export type InvoiceItemEntity = {
-  id: number;
-  invoiceId: number;
-  name: string;
-  description: string;
-  quantity: number;
-  quantityUnit: z.infer<typeof QuantityUnitEnum>;
-  unitPrice: number;
-  discount: number;
-  discountType: z.infer<typeof DiscountTypeEnum>;
-  tax: number;
-  vatEnabled: boolean;
-  total: number;
-  catalogId: number | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type PaymentEntity = {
-  id: number;
-  workspaceId: number;
-  invoiceId: number;
-  amount: number;
-  paymentMethod: string;
-  transactionId: string;
-  details: string | null;
-  paidAt: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-};

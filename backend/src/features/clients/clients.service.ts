@@ -1,4 +1,4 @@
-import { prisma } from "../../core/db";
+import prisma from "../../core/db";
 import type { Prisma } from "../../generated/prisma/client";
 import type {
   ListClientsQuery,
@@ -13,7 +13,7 @@ import { EntityNotFoundError } from "../../errors/EntityErrors";
  */
 export async function listClients(
   workspaceId: number,
-  query: ListClientsQuery
+  query: ListClientsQuery,
 ): Promise<{
   clients: ClientEntity[];
   total: number;
@@ -59,7 +59,7 @@ export async function listClients(
  */
 export async function getClientBySequence(
   workspaceId: number,
-  sequence: number
+  sequence: number,
 ): Promise<ClientEntity> {
   const client = await prisma.client.findUnique({
     where: {
@@ -86,7 +86,7 @@ export async function getClientBySequence(
  */
 export async function createClient(
   workspaceId: number,
-  data: CreateClientDto
+  data: CreateClientDto,
 ): Promise<ClientEntity> {
   return await prisma.$transaction(async (tx) => {
     const sequence = await getNextSequence(tx, workspaceId);
@@ -114,12 +114,12 @@ export async function createClient(
 export async function updateClient(
   workspaceId: number,
   id: number,
-  data: UpdateClientDto
+  data: UpdateClientDto,
 ): Promise<ClientEntity> {
   return await prisma.$transaction(async (tx) => {
     // Verify client exists and belongs to workspace
     const existingClient = await findById(tx, id);
-    if (!existingClient) {
+    if (!existingClient || existingClient.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
         message: "Client not found",
         statusCode: 404,
@@ -140,16 +140,16 @@ export async function updateClient(
 }
 
 /**
- * Delete a client (soft delete)
+ * Delete a client (hard delete)
  */
 export async function deleteClient(
   workspaceId: number,
-  id: number
+  id: number,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
     // Verify client exists and belongs to workspace
     const existingClient = await findById(tx, id);
-    if (!existingClient) {
+    if (!existingClient || existingClient.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
         message: "Client not found",
         statusCode: 404,
@@ -157,13 +157,9 @@ export async function deleteClient(
       });
     }
 
-    await tx.client.update({
+    await tx.client.delete({
       where: {
         id,
-        workspaceId,
-      },
-      data: {
-        deletedAt: new Date(),
       },
     });
   });
@@ -174,7 +170,7 @@ export async function deleteClient(
  */
 export async function findById(
   tx: Prisma.TransactionClient,
-  id: number
+  id: number,
 ): Promise<ClientEntity | null> {
   const client = await tx.client.findUnique({
     where: {
@@ -190,7 +186,7 @@ export async function findById(
  */
 async function getNextSequence(
   tx: Prisma.TransactionClient,
-  workspaceId: number
+  workspaceId: number,
 ): Promise<number> {
   const lastClient = await tx.client.findFirst({
     where: {

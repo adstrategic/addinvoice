@@ -7,13 +7,12 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BasicInfoFields } from "./form-fields/BasicInfoFields";
 import { ContactFields } from "./form-fields/ContactFields";
-import { BusinessTermsFields } from "./form-fields/BusinessTermsFields";
+// import { BusinessTermsFields } from "./form-fields/BusinessTermsFields";
 // import { CiudadSelector } from "@/components/shared/selectors/ciudad-selector";
 // import { VendedorSelector } from "@/components/shared/selectors/vendedor-selector";
 import { FormField } from "@/components/ui/form";
-import type { ClientResponse } from "../types/api";
 import type { UseFormReturn } from "react-hook-form";
-import type { CreateClientDto } from "../schema/clients.schema";
+import type { ClientResponse, CreateClientDto } from "../schema/clients.schema";
 
 interface ClientFormProps {
   form: UseFormReturn<CreateClientDto>;

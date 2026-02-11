@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Edit } from "lucide-react";
-import type { InvoiceItemResponse, DiscountType } from "../../types/api";
+import { Plus, Trash2, Edit, Package } from "lucide-react";
+import type { InvoiceItemResponse } from "../../schemas/invoice.schema";
+import type { DiscountType } from "../../types/api";
 import { ProductFormDialog } from "../../components/ProductFormDialog";
+import { CatalogSelectionModal } from "../../components/CatalogSelectionModal";
 import { useDeleteInvoiceItem } from "../../hooks/useInvoiceItems";
 import { formatCurrency } from "@/lib/utils";
 import type { UseFormReturn } from "react-hook-form";
@@ -13,6 +15,8 @@ import type {
   CreateInvoiceDTO,
   InvoiceItemCreateInput,
 } from "../../schemas/invoice.schema";
+import { useQueryClient } from "@tanstack/react-query";
+import { invoiceKeys } from "../../hooks/useInvoices";
 
 interface InvoiceTotals {
   subtotal: number;
@@ -27,29 +31,37 @@ interface InvoiceTotals {
 interface ProductsSectionProps {
   invoiceId: number | null;
   items: InvoiceItemResponse[];
-  taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
+  taxData: {
+    taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
+    taxName: string | null;
+    taxPercentage: number | null;
+  };
   mode: "create" | "edit";
   form: UseFormReturn<CreateInvoiceDTO>;
   onEnsureInvoiceExists?: (data: InvoiceItemCreateInput) => Promise<number>;
   // Invoice-level totals from DB (when invoice exists)
   invoiceTotals?: InvoiceTotals | null;
+  existingInvoice?: { business: { id: number } } | null; // For getting businessId in edit mode
 }
 
 export function ProductsSection({
   invoiceId,
   items,
-  taxMode,
+  taxData,
   mode,
   form,
   onEnsureInvoiceExists,
   invoiceTotals,
+  existingInvoice,
 }: ProductsSectionProps) {
   const [showProductDialog, setShowProductDialog] = useState(false);
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [editingItem, setEditingItem] = useState<InvoiceItemResponse | null>(
     null
   );
 
   const deleteItem = useDeleteInvoiceItem();
+  const queryClient = useQueryClient();
 
   const handleAddProduct = () => {
     setEditingItem(null);
@@ -57,7 +69,7 @@ export function ProductsSection({
     // If in create mode, validate that client is selected
     if (mode === "create" && !invoiceId) {
       const clientId = form.getValues().clientId;
-      if (!clientId || clientId <= 0) {
+      if (!clientId || clientId === 0) {
         // Set error on form
         form.setError("clientId", {
           type: "manual",
@@ -94,6 +106,43 @@ export function ProductsSection({
     if (confirm("Are you sure you want to delete this product?")) {
       await deleteItem.mutateAsync({ invoiceId, itemId });
     }
+  };
+
+  const handleAddFromCatalog = () => {
+    // Get businessId from existing invoice or form
+    const businessId =
+      existingInvoice?.business?.id || form.getValues("businessId") || null;
+
+    if (!businessId) {
+      // Set error on form
+      form.setError("businessId", {
+        type: "manual",
+        message: "Please select a business first",
+      });
+      // Scroll to business section if it exists
+      const businessField = document.querySelector('[name="businessId"]');
+      if (businessField) {
+        businessField.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
+
+    // Clear any previous errors
+    form.clearErrors("businessId");
+    setShowCatalogModal(true);
+  };
+
+  // Get businessId for catalog modal (from existing invoice or form)
+  const getBusinessId = () => {
+    return (
+      existingInvoice?.business?.id || form.getValues("businessId") || null
+    );
+  };
+
+  const handleCatalogSuccess = () => {
+    // Invalidate invoice queries to refresh the data
+    queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
+    queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
   };
 
   // Calculate items subtotal (before invoice discount and before tax)
@@ -148,7 +197,7 @@ export function ProductsSection({
 
     // Calculate tax
     let totalTax = 0;
-    if (taxMode === "BY_PRODUCT") {
+    if (taxData.taxMode === "BY_PRODUCT") {
       totalTax = items.reduce((sum, item) => {
         let itemSubtotal = item.quantity * item.unitPrice;
         if (item.discountType === "PERCENTAGE") {
@@ -158,7 +207,7 @@ export function ProductsSection({
         }
         return sum + (itemSubtotal * (item.tax || 0)) / 100;
       }, 0);
-    } else if (taxMode === "BY_TOTAL" && formTaxPercentage) {
+    } else if (taxData.taxMode === "BY_TOTAL" && formTaxPercentage) {
       // For BY_TOTAL, tax applies to items with vatEnabled
       totalTax = items.reduce((sum, item) => {
         if (!item.vatEnabled) return sum;
@@ -198,16 +247,28 @@ export function ProductsSection({
             <CardTitle className="text-lg font-bold text-foreground">
               Items / Services
             </CardTitle>
-            <Button
-              type="button"
-              onClick={handleAddProduct}
-              size="sm"
-              variant="outline"
-              className="gap-2 bg-transparent"
-            >
-              <Plus className="h-4 w-4" />
-              Add Product
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                onClick={handleAddFromCatalog}
+                size="sm"
+                variant="outline"
+                className="gap-2 bg-transparent"
+              >
+                <Package className="h-4 w-4" />
+                Add from Catalog
+              </Button>
+              <Button
+                type="button"
+                onClick={handleAddProduct}
+                size="sm"
+                variant="outline"
+                className="gap-2 bg-transparent"
+              >
+                <Plus className="h-4 w-4" />
+                Add Product
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -250,7 +311,7 @@ export function ProductsSection({
                               {formatCurrency(item.unitPrice)}
                             </span>
                           </div>
-                          {taxMode === "BY_PRODUCT" && item.tax && (
+                          {taxData.taxMode === "BY_PRODUCT" && item.tax && (
                             <div>
                               <span className="text-muted-foreground">
                                 Tax:
@@ -310,7 +371,8 @@ export function ProductsSection({
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Items Subtotal:</span>
                   <span className="font-semibold text-foreground">
-                    {formatCurrency(totals.itemsSubtotal)}
+                    {/* {formatCurrency(totals.itemsSubtotal)} */}
+                    {formatCurrency(invoiceTotals?.subtotal || 0)}
                   </span>
                 </div>
 
@@ -336,27 +398,11 @@ export function ProductsSection({
                 )}
 
                 {/* Tax - BY_PRODUCT mode */}
-                {taxMode === "BY_PRODUCT" && totals.totalTax > 0 && (
+                {invoiceTotals && invoiceTotals.totalTax > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Total Tax:</span>
                     <span className="font-semibold text-foreground">
-                      {formatCurrency(totals.totalTax)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Tax - BY_TOTAL mode */}
-                {taxMode === "BY_TOTAL" && totals.totalTax > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {totals.taxName || "Tax"}
-                      {totals.taxPercentage
-                        ? ` (${totals.taxPercentage}%)`
-                        : ""}
-                      :
-                    </span>
-                    <span className="font-semibold text-foreground">
-                      {formatCurrency(totals.totalTax)}
+                      {formatCurrency(invoiceTotals.totalTax)}
                     </span>
                   </div>
                 )}
@@ -379,7 +425,7 @@ export function ProductsSection({
           open={showProductDialog}
           onOpenChange={setShowProductDialog}
           invoiceId={invoiceId}
-          taxMode={taxMode}
+          taxData={taxData}
           item={editingItem}
           mode={mode}
           onEnsureInvoiceExists={onEnsureInvoiceExists}
@@ -387,6 +433,20 @@ export function ProductsSection({
             setShowProductDialog(false);
             setEditingItem(null);
           }}
+        />
+      )}
+
+      {showCatalogModal && (
+        <CatalogSelectionModal
+          open={showCatalogModal}
+          onOpenChange={setShowCatalogModal}
+          businessId={getBusinessId()}
+          invoiceId={invoiceId}
+          existingItems={items}
+          taxData={taxData}
+          mode={mode}
+          onEnsureInvoiceExists={onEnsureInvoiceExists}
+          onSuccess={handleCatalogSuccess}
         />
       )}
     </>

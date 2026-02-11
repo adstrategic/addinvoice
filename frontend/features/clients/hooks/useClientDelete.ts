@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useClientActions } from "./useClientActions";
-import { ClientResponse } from "../types/api";
+import type { ClientResponse } from "../schema/clients.schema";
 
 interface UseClientDeleteOptions {
   onAfterDelete?: () => void;
@@ -13,33 +13,30 @@ export function useClientDelete(options?: UseClientDeleteOptions) {
 
   // Estado para modal de eliminación
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [clienteAEliminar, setClienteAEliminar] = useState<{
+  const [clientToDelete, setClientToDelete] = useState<{
     id: number;
     sequence: number;
-    descripcion: string;
+    description: string;
   } | null>(null);
 
   const openDeleteModal = (client: ClientResponse) => {
-    setClienteAEliminar({
+    setClientToDelete({
       id: client.id,
       sequence: client.sequence,
-      descripcion: client.businessName,
+      description: client.businessName || client.name,
     });
     setIsDeleteModalOpen(true);
   };
 
   const closeDeleteModal = () => {
     setIsDeleteModalOpen(false);
-    setClienteAEliminar(null);
+    setClientToDelete(null);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!clienteAEliminar) return;
+    if (!clientToDelete) return;
     try {
-      await actions.handleDelete(
-        clienteAEliminar.id,
-        clienteAEliminar.sequence
-      );
+      await actions.handleDelete(clientToDelete.id, clientToDelete.sequence);
       closeDeleteModal();
       options?.onAfterDelete?.();
     } catch (error) {
@@ -50,7 +47,7 @@ export function useClientDelete(options?: UseClientDeleteOptions) {
 
   return {
     isDeleteModalOpen,
-    clienteAEliminar,
+    clientToDelete,
     openDeleteModal,
     closeDeleteModal,
     handleDeleteConfirm,

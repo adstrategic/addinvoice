@@ -29,7 +29,6 @@ export async function listBusinesses(
   const result = await businessesService.listBusinesses(workspaceId, query);
 
   res.json({
-    success: true,
     data: result.businesses,
     pagination: {
       total: result.total,
@@ -54,7 +53,6 @@ export async function getBusinessById(
   const business = await businessesService.getBusinessById(workspaceId, id);
 
   res.json({
-    success: true,
     data: business,
   });
 }
@@ -73,7 +71,6 @@ export async function createBusiness(
   const business = await businessesService.createBusiness(workspaceId, body);
 
   res.status(201).json({
-    success: true,
     data: business,
   });
 }
@@ -101,7 +98,6 @@ export async function updateBusiness(
   );
 
   res.json({
-    success: true,
     data: business,
   });
 }
@@ -120,7 +116,6 @@ export async function deleteBusiness(
   await businessesService.deleteBusiness(workspaceId, id);
 
   res.json({
-    success: true,
     message: "Business deleted successfully",
   });
 }
@@ -139,7 +134,6 @@ export async function setDefaultBusiness(
   const business = await businessesService.setDefaultBusiness(workspaceId, id);
 
   res.json({
-    success: true,
     data: business,
   });
 }
@@ -157,7 +151,6 @@ export async function uploadLogo(
 
   if (!file) {
     res.status(400).json({
-      success: false,
       error: "No file provided",
     });
     return;
@@ -167,7 +160,6 @@ export async function uploadLogo(
   const validation = await validateImageFile(file);
   if (!validation.valid) {
     res.status(400).json({
-      success: false,
       error: validation.error,
     });
     return;
@@ -200,7 +192,6 @@ export async function uploadLogo(
   );
 
   res.json({
-    success: true,
     data: updatedBusiness,
   });
 }
@@ -220,7 +211,6 @@ export async function deleteLogo(
 
   if (!business.logo) {
     res.status(404).json({
-      success: false,
       error: "Business has no logo to delete",
     });
     return;
@@ -230,7 +220,6 @@ export async function deleteLogo(
   const publicId = extractPublicIdFromUrl(business.logo);
   if (!publicId) {
     res.status(400).json({
-      success: false,
       error: "Invalid logo URL",
     });
     return;
@@ -247,7 +236,6 @@ export async function deleteLogo(
   );
 
   res.json({
-    success: true,
     data: updatedBusiness,
   });
 }

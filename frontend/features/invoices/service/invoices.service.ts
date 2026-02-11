@@ -1,11 +1,17 @@
 import { apiClient } from "@/lib/api/client";
-import { handleApiError } from "@/lib/errors/handler";
+import { handleApiError, ApiError } from "@/lib/errors/handler";
 import type { ApiSuccessResponse } from "@/lib/api/types";
-import type {
-  InvoiceResponse,
-  InvoiceItemResponse,
-  PaymentResponse,
-} from "../types/api";
+import {
+  invoiceResponseSchema,
+  invoiceResponseListSchema,
+  invoiceItemResponseSchema,
+  paymentResponseSchema,
+  type InvoiceResponse,
+  type InvoiceItemResponse,
+  type PaymentResponse,
+  type InvoiceResponseList,
+} from "../schemas/invoice.schema";
+import { ZodError, z } from "zod";
 
 /**
  * Base URL for invoices API endpoints
@@ -15,13 +21,14 @@ const BASE_URL = "/invoices";
 /**
  * List invoices query parameters
  */
-export interface ListInvoicesParams {
+export type ListInvoicesParams = {
   page?: number;
   limit?: number;
   search?: string;
   status?: string;
   clientId?: number;
-}
+  businessId?: number;
+};
 
 /**
  * Invoices Service
@@ -33,24 +40,23 @@ export interface ListInvoicesParams {
  * List all invoices with pagination and search
  */
 async function listInvoices(
-  params?: ListInvoicesParams
-): Promise<ApiSuccessResponse<InvoiceResponse[]>> {
+  params?: ListInvoicesParams,
+): Promise<InvoiceResponseList> {
   try {
-    const { data } = await apiClient.get<ApiSuccessResponse<InvoiceResponse[]>>(
-      BASE_URL,
-      {
-        params: {
-          page: params?.page ?? 1,
-          limit: params?.limit ?? 10,
-          search: params?.search,
-          status: params?.status,
-          clientId: params?.clientId,
-        },
-      }
-    );
+    const { data } = await apiClient.get<InvoiceResponseList>(BASE_URL, {
+      params: {
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 10,
+        search: params?.search,
+        status: params?.status,
+        clientId: params?.clientId,
+        businessId: params?.businessId,
+      },
+    });
 
-    return data;
+    return invoiceResponseListSchema.parse(data);
   } catch (error) {
+    console.error(error);
     handleApiError(error);
   }
 }
@@ -74,14 +80,16 @@ async function getNextInvoiceNumber(): Promise<string> {
  * Get an invoice by ID
  */
 async function getInvoiceBySequence(
-  sequence: number
+  sequence: number,
 ): Promise<InvoiceResponse> {
   try {
     const { data } = await apiClient.get<ApiSuccessResponse<InvoiceResponse>>(
-      `${BASE_URL}/${sequence}`
+      `${BASE_URL}/${sequence}`,
     );
 
-    return data.data;
+    console.log("data", data.data);
+
+    return invoiceResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -91,15 +99,20 @@ async function getInvoiceBySequence(
  * Create a new invoice
  */
 async function createInvoice(
-  dto: any
+  dto: any,
 ): Promise<InvoiceResponse & { items: InvoiceItemResponse[] }> {
   try {
     const { data } = await apiClient.post<
       ApiSuccessResponse<InvoiceResponse & { items: InvoiceItemResponse[] }>
     >(BASE_URL, dto);
 
-    return data.data;
+    const invoiceSchema = invoiceResponseSchema.extend({
+      items: z.array(invoiceItemResponseSchema),
+    });
+
+    return invoiceSchema.parse(data.data);
   } catch (error) {
+    console.error(error);
     handleApiError(error);
   }
 }
@@ -109,14 +122,17 @@ async function createInvoice(
  */
 async function updateInvoice(
   id: number,
-  dto: any
+  dto: any,
 ): Promise<InvoiceResponse & { items: InvoiceItemResponse[] }> {
   try {
     const { data } = await apiClient.patch<
       ApiSuccessResponse<InvoiceResponse & { items: InvoiceItemResponse[] }>
     >(`${BASE_URL}/${id}`, dto);
 
-    return data.data;
+    const invoiceSchema = invoiceResponseSchema.extend({
+      items: z.array(invoiceItemResponseSchema),
+    });
+    return invoiceSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -134,33 +150,18 @@ async function deleteInvoice(id: number): Promise<void> {
 }
 
 /**
- * Mark an invoice as paid
- */
-async function markInvoiceAsPaid(invoiceId: number): Promise<InvoiceResponse> {
-  try {
-    const { data } = await apiClient.patch<ApiSuccessResponse<InvoiceResponse>>(
-      `${BASE_URL}/${invoiceId}/mark-as-paid`
-    );
-
-    return data.data;
-  } catch (error) {
-    handleApiError(error);
-  }
-}
-
-/**
  * Create an invoice item
  */
 async function createInvoiceItem(
   invoiceId: number,
-  dto: any
+  dto: any,
 ): Promise<InvoiceItemResponse> {
   try {
     const { data } = await apiClient.post<
       ApiSuccessResponse<InvoiceItemResponse>
     >(`${BASE_URL}/${invoiceId}/items`, dto);
 
-    return data.data;
+    return invoiceItemResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -172,14 +173,14 @@ async function createInvoiceItem(
 async function updateInvoiceItem(
   invoiceId: number,
   itemId: number,
-  dto: any
+  dto: any,
 ): Promise<InvoiceItemResponse> {
   try {
     const { data } = await apiClient.patch<
       ApiSuccessResponse<InvoiceItemResponse>
     >(`${BASE_URL}/${invoiceId}/items/${itemId}`, dto);
 
-    return data.data;
+    return invoiceItemResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -190,7 +191,7 @@ async function updateInvoiceItem(
  */
 async function deleteInvoiceItem(
   invoiceId: number,
-  itemId: number
+  itemId: number,
 ): Promise<void> {
   try {
     await apiClient.delete(`${BASE_URL}/${invoiceId}/items/${itemId}`);
@@ -204,15 +205,15 @@ async function deleteInvoiceItem(
  */
 async function createPayment(
   invoiceId: number,
-  dto: any
+  dto: any,
 ): Promise<PaymentResponse> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<PaymentResponse>>(
       `${BASE_URL}/${invoiceId}/payments`,
-      dto
+      dto,
     );
 
-    return data.data;
+    return paymentResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -222,16 +223,17 @@ async function createPayment(
  * Update a payment
  */
 async function updatePayment(
+  invoiceId: number,
   paymentId: number,
-  dto: any
+  dto: any,
 ): Promise<PaymentResponse> {
   try {
     const { data } = await apiClient.patch<ApiSuccessResponse<PaymentResponse>>(
-      `/payments/${paymentId}`,
-      dto
+      `${BASE_URL}/${invoiceId}/payments/${paymentId}`,
+      dto,
     );
 
-    return data.data;
+    return paymentResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -240,9 +242,12 @@ async function updatePayment(
 /**
  * Delete a payment
  */
-async function deletePayment(paymentId: number): Promise<void> {
+async function deletePayment(
+  invoiceId: number,
+  paymentId: number,
+): Promise<void> {
   try {
-    await apiClient.delete(`/payments/${paymentId}`);
+    await apiClient.delete(`${BASE_URL}/${invoiceId}/payments/${paymentId}`);
   } catch (error) {
     handleApiError(error);
   }
@@ -259,7 +264,6 @@ export const invoicesService = {
   create: createInvoice,
   update: updateInvoice,
   delete: deleteInvoice,
-  markAsPaid: markInvoiceAsPaid,
   createItem: createInvoiceItem,
   updateItem: updateInvoiceItem,
   deleteItem: deleteInvoiceItem,

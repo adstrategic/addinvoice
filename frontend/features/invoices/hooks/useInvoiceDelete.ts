@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useDeleteInvoice } from "./useInvoices";
-import { InvoiceResponse } from "../types/api";
+import type { InvoiceResponse } from "../schemas/invoice.schema";
 
 interface UseInvoiceDeleteOptions {
   onAfterDelete?: () => void;

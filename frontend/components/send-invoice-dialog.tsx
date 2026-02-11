@@ -20,8 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 interface SendInvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  invoiceSequence: number;
-  invoiceNumber: string;
+  invoiceSequence?: number;
+  invoiceNumber?: string;
   clientName: string;
   clientEmail?: string;
 }
@@ -40,7 +40,7 @@ export function SendInvoiceDialog({
   const [email, setEmail] = useState(clientEmail || "");
   const [subject, setSubject] = useState(`Invoice ${invoiceNumber}`);
   const [message, setMessage] = useState(
-    `Dear ${clientName},\n\nPlease find attached invoice ${invoiceNumber}. Payment is due within 30 days.\n\nThank you for your business!`
+    `Dear ${clientName},\n\nPlease find attached invoice ${invoiceNumber}. Payment is due within 30 days.\n\nThank you for your business!`,
   );
 
   const handleSendEmail = async () => {

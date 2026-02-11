@@ -1,19 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type CreateClientDto,
   type UpdateClientDto,
   createClientSchema,
+  type ClientResponse,
 } from "../schema/clients.schema";
 import { useClientActions } from "./useClientActions";
 import { useClientBySequence } from "./useClients";
 import { useFormErrorHandler } from "@/hooks/useFormErrorHandler";
 import { useDirtyFields } from "@/hooks/useDirtyValues";
 import { useFormScroll } from "@/hooks/useFormScroll";
-import { transformFromApiFormat } from "../lib/utils";
 
 interface UseClientManagerOptions {
   onAfterSubmit?: () => void;
@@ -48,16 +48,36 @@ export function useClientManager(options?: UseClientManagerOptions) {
     businessName: "",
   };
 
+  // Transform validated ClientResponse to form format
+  // No need to parse again - service already validated the data
+  const getFormValues = (): CreateClientDto | undefined => {
+    if (mode === "edit" && existingClient) {
+      // existingClient is already validated by the service layer
+      return {
+        name: existingClient.name,
+        email: existingClient.email,
+        phone: existingClient.phone || "",
+        address: existingClient.address || "",
+        nit: existingClient.nit || "",
+        businessName: existingClient.businessName || "",
+      };
+    }
+    return undefined;
+  };
+
   const form = useForm<CreateClientDto>({
     resolver: zodResolver(createClientSchema),
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues,
-    values:
-      mode === "edit" && existingClient
-        ? transformFromApiFormat(existingClient)
-        : undefined,
   });
+
+  // Add this useEffect after the form declaration
+  useEffect(() => {
+    if (mode === "edit" && existingClient) {
+      form.reset(getFormValues());
+    }
+  }, [existingClient, mode, form]);
 
   // Hooks de utilidad para el formulario
   const { getDirtyValues } = useDirtyFields(form);
@@ -74,7 +94,7 @@ export function useClientManager(options?: UseClientManagerOptions) {
   const openCreate = () => {
     setMode("create");
     setClientSequence(null);
-    form.reset();
+    form.reset(defaultValues);
     setIsOpen(true);
   };
 
@@ -88,7 +108,6 @@ export function useClientManager(options?: UseClientManagerOptions) {
   const close = () => {
     setIsOpen(false);
     setClientSequence(null);
-    form.reset(); // Limpiar formulario al cerrar
   };
 
   // Envío del formulario

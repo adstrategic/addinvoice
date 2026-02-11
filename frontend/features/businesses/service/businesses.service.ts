@@ -1,12 +1,18 @@
 import { apiClient } from "@/lib/api/client";
-import { handleApiError } from "@/lib/errors/handler";
+import { handleApiError, ApiError } from "@/lib/errors/handler";
 import type { ApiSuccessResponse } from "@/lib/api/types";
 import type {
-  BusinessResponse,
   CreateBusinessDto,
   UpdateBusinessDto,
   ListBusinessesParams,
 } from "../index";
+import {
+  businessResponseSchema,
+  businessResponseListSchema,
+  type BusinessResponse,
+  type BusinessResponseList,
+} from "../schema/businesses.schema";
+import { ZodError } from "zod";
 
 /**
  * Base URL for businesses API endpoints
@@ -24,22 +30,17 @@ const BASE_URL = "/businesses";
  */
 async function listBusinesses(
   params?: ListBusinessesParams
-): Promise<ApiSuccessResponse<BusinessResponse[]>> {
+): Promise<BusinessResponseList> {
   try {
-    const { data } = await apiClient.get<ApiSuccessResponse<BusinessResponse[]>>(
-      BASE_URL,
-      {
-        params: {
-          page: params?.page ?? 1,
-          limit: params?.limit ?? 10,
-          search: params?.search,
-        },
-      }
-    );
+    const { data } = await apiClient.get<BusinessResponseList>(BASE_URL, {
+      params: {
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 10,
+        search: params?.search,
+      },
+    });
 
-    console.log("data", data);
-
-    return data;
+    return businessResponseListSchema.parse(data);
   } catch (error) {
     handleApiError(error);
   }
@@ -54,7 +55,7 @@ async function getBusinessById(id: number): Promise<BusinessResponse> {
       `${BASE_URL}/${id}`
     );
 
-    return data.data;
+    return businessResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -63,14 +64,16 @@ async function getBusinessById(id: number): Promise<BusinessResponse> {
 /**
  * Create a new business
  */
-async function createBusiness(dto: CreateBusinessDto): Promise<BusinessResponse> {
+async function createBusiness(
+  dto: CreateBusinessDto
+): Promise<BusinessResponse> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<BusinessResponse>>(
       BASE_URL,
       dto
     );
 
-    return data.data;
+    return businessResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -84,12 +87,11 @@ async function updateBusiness(
   dto: UpdateBusinessDto
 ): Promise<BusinessResponse> {
   try {
-    const { data } = await apiClient.patch<ApiSuccessResponse<BusinessResponse>>(
-      `${BASE_URL}/${id}`,
-      dto
-    );
+    const { data } = await apiClient.patch<
+      ApiSuccessResponse<BusinessResponse>
+    >(`${BASE_URL}/${id}`, dto);
 
-    return data.data;
+    return businessResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -111,11 +113,11 @@ async function deleteBusiness(id: number): Promise<void> {
  */
 async function setDefaultBusiness(id: number): Promise<BusinessResponse> {
   try {
-    const { data } = await apiClient.patch<ApiSuccessResponse<BusinessResponse>>(
-      `${BASE_URL}/${id}/default`
-    );
+    const { data } = await apiClient.patch<
+      ApiSuccessResponse<BusinessResponse>
+    >(`${BASE_URL}/${id}/default`);
 
-    return data.data;
+    return businessResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -139,7 +141,7 @@ async function uploadLogo(id: number, file: File): Promise<BusinessResponse> {
       }
     );
 
-    return data.data;
+    return businessResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -150,11 +152,11 @@ async function uploadLogo(id: number, file: File): Promise<BusinessResponse> {
  */
 async function deleteLogo(id: number): Promise<BusinessResponse> {
   try {
-    const { data } = await apiClient.delete<ApiSuccessResponse<BusinessResponse>>(
-      `${BASE_URL}/${id}/logo`
-    );
+    const { data } = await apiClient.delete<
+      ApiSuccessResponse<BusinessResponse>
+    >(`${BASE_URL}/${id}/logo`);
 
-    return data.data;
+    return businessResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -174,12 +176,3 @@ export const businessesService = {
   uploadLogo,
   deleteLogo,
 };
-
-
-
-
-
-
-
-
-

@@ -45,22 +45,38 @@ export const createClientSchema = z.object({
     .regex(
       /^\+[1-9]\d{1,14}$/,
       "The phone must have a valid international format (e.g. +573011234567)"
-    ),
+    )
+    .nullish(),
   address: z
     .string({ required_error: "Address is required" })
     .trim()
     .min(1, "Address cannot be empty")
-    .max(100, "Address cannot exceed 100 characters"),
+    .max(100, "Address cannot exceed 100 characters")
+    .nullish(),
   nit: z
     .string({ required_error: "NIT/Cedula is required" })
     .trim()
     .min(1, "NIT/Cedula cannot be empty")
-    .max(15, "NIT/Cedula cannot exceed 15 characters"),
+    .max(15, "NIT/Cedula cannot exceed 15 characters")
+    .nullish(),
   businessName: z
     .string({ required_error: "Business name is required" })
     .trim()
     .min(1, "Business name cannot be empty")
-    .max(100, "Business name cannot exceed 100 characters"),
+    .max(100, "Business name cannot exceed 100 characters")
+    .nullish(),
+});
+
+/**
+ * Schema for client entity
+ */
+export const clientEntitySchema = createClientSchema.extend({
+  id: z.number().int().positive(),
+  sequence: z.number().int().positive(),
+  workspaceId: z.number().int().positive(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  deletedAt: z.date().nullable(),
 });
 
 /**
@@ -70,6 +86,7 @@ export const updateClientSchema = createClientSchema.partial();
 
 // ===== DTOs (for the service) =====
 
+export type ClientEntity = z.infer<typeof clientEntitySchema>;
 export type ListClientsQuery = z.infer<typeof listClientsSchema>;
 export type GetClientBySequenceParams = z.infer<
   typeof getClientBySequenceSchema
@@ -77,14 +94,3 @@ export type GetClientBySequenceParams = z.infer<
 export type GetClientByIdParams = z.infer<typeof getClientByIdSchema>;
 export type CreateClientDto = z.infer<typeof createClientSchema>;
 export type UpdateClientDto = z.infer<typeof updateClientSchema>;
-
-// ===== ENTITY SCHEMA (domain model) =====
-
-export type ClientEntity = z.infer<typeof createClientSchema> & {
-  id: number;
-  sequence: number;
-  workspaceId: number;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-};

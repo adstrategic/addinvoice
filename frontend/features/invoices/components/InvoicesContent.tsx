@@ -8,21 +8,20 @@ import {
   InvoiceActions,
   useInvoices,
   useInvoiceDelete,
-  useMarkInvoiceAsPaid,
 } from "@/features/invoices";
+import { PaymentFormDialog } from "./PaymentFormDialog";
+import { usePaymentDialog } from "../hooks/usePaymentDialog";
 import { TablePagination } from "@/components/TablePagination";
 import { useDebouncedTableParams } from "@/hooks/useDebouncedTableParams";
 import { Card, CardContent } from "@/components/ui/card";
 import LoadingComponent from "@/components/loading-component";
 import { motion } from "framer-motion";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
-import { InvoicePDFPreview } from "./InvoicePDFPreview";
 import { BusinessSelectionDialog } from "@/components/business-selection-dialog";
 import { InvoiceForm } from "../forms/InvoiceForm";
-import type { InvoiceResponse } from "../types/api";
+import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { mapStatusToUI } from "../types/api";
 import { useInvoiceManager } from "../hooks/useInvoiceFormManager";
-import { AppLayout } from "@/components/app-layout";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -38,15 +37,17 @@ export default function InvoicesContent() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<string>("all");
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
-  const [selectedInvoiceForSend, setSelectedInvoiceForSend] =
-    useState<InvoiceResponse | null>(null);
+  const [selectedInvoiceForSend, setSelectedInvoiceForSend] = useState<
+    InvoiceResponse | undefined
+  >(undefined);
+  const paymentDialog = usePaymentDialog();
   const router = useRouter();
   const { toast } = useToast();
   // Fetch invoices with pagination and search
   // Note: Status and tab filtering are done client-side to match original behavior
   const {
     data: invoicesData,
-    isFetching,
+    isLoading,
     error,
   } = useInvoices({
     page: currentPage,
@@ -55,11 +56,6 @@ export default function InvoicesContent() {
 
   const invoiceManager = useInvoiceManager();
   const invoiceDelete = useInvoiceDelete();
-  const markAsPaidMutation = useMarkInvoiceAsPaid();
-
-  const handleMarkAsPaid = async (invoice: InvoiceResponse) => {
-    await markAsPaidMutation.mutateAsync(invoice.id);
-  };
 
   const handleDownloadPDF = async (invoice: InvoiceResponse) => {
     try {
@@ -95,14 +91,37 @@ export default function InvoicesContent() {
     setSendDialogOpen(true);
   };
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <Card className="bg-card border-border">
+          <CardContent className="pt-6">
+            <LoadingComponent variant="dashboard" rows={8} />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error || !invoicesData) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <Card className="bg-card border-border">
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <p className="text-destructive">
+                Error loading invoices. Please try again.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Extract invoices and pagination info
-  const invoices = invoicesData?.data || [];
-  const pagination = invoicesData?.pagination || {
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  };
+  const invoices = invoicesData.data;
+  const pagination = invoicesData.pagination;
 
   // Filter invoices by tab and status (client-side filtering)
   const filteredInvoices = invoices.filter((invoice) => {
@@ -139,51 +158,22 @@ export default function InvoicesContent() {
     return matchesSearch && matchesStatus && matchesTab;
   });
 
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <Card className="bg-card border-border">
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <p className="text-destructive">
-                Error loading invoices. Please try again.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (isFetching) {
-    return (
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <Card className="bg-card border-border">
-          <CardContent className="pt-6">
-            <LoadingComponent variant="dashboard" rows={8} />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   // If business is selected, show invoice form instead of list
   if (invoiceManager.isFormOpen && invoiceManager.selectedBusiness) {
     return (
-      <>
-        <InvoiceForm
-          selectedBusiness={invoiceManager.selectedBusiness}
-          form={invoiceManager.form}
-          mode={invoiceManager.mode}
-          isLoading={invoiceManager.isMutating}
-          isLoadingInvoice={invoiceManager.isLoadingInvoice}
-          invoiceError={invoiceManager.invoiceError}
-          onSubmit={invoiceManager.onSubmit}
-          onCancel={invoiceManager.close}
-          existingInvoice={invoiceManager.invoice}
-          ensureInvoiceExists={invoiceManager.ensureInvoiceExists}
-        />
-      </>
+      <InvoiceForm
+        selectedBusiness={invoiceManager.selectedBusiness}
+        form={invoiceManager.form}
+        mode={invoiceManager.mode}
+        isLoading={invoiceManager.isMutating}
+        isLoadingInvoice={invoiceManager.isLoadingInvoice}
+        isLoadingNumber={invoiceManager.isLoadingNextNumber}
+        invoiceError={invoiceManager.invoiceError}
+        onSubmit={invoiceManager.onSubmit}
+        onCancel={invoiceManager.close}
+        existingInvoice={invoiceManager.invoice}
+        ensureInvoiceExists={invoiceManager.ensureInvoiceExists}
+      />
     );
   }
 
@@ -210,47 +200,39 @@ export default function InvoicesContent() {
           />
         </motion.div>
 
-        {!invoices ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No invoices found</p>
-          </div>
-        ) : (
-          <>
-            <InvoiceStats invoices={invoices} />
+        <InvoiceStats invoices={invoices} />
 
-            <InvoiceFilters
-              searchTerm={searchTerm}
-              onSearchChange={setSearch}
-              statusFilter={statusFilter}
-              onStatusChange={setStatusFilter}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
+        <InvoiceFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearch}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+
+        {/* Invoices List */}
+        <InvoiceList
+          invoices={filteredInvoices}
+          activeTab={activeTab}
+          onEdit={(sequence) => router.push(`/invoices/${sequence}/edit`)}
+          onView={(sequence) => router.push(`/invoices/${sequence}`)}
+          onDownload={handleDownloadPDF}
+          onSend={handleSendInvoice}
+          onAddPayment={paymentDialog.openPaymentDialog}
+          onDelete={invoiceDelete.openDeleteModal}
+        >
+          {pagination && (
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={pagination.totalPages}
+              totalItems={pagination.total}
+              onPageChange={setPage}
+              emptyMessage="No invoices found"
+              itemLabel="invoices"
             />
-
-            {/* Invoices List */}
-            <InvoiceList
-              invoices={filteredInvoices}
-              activeTab={activeTab}
-              onEdit={(sequence) => router.push(`/invoices/${sequence}/edit`)}
-              onView={(sequence) => router.push(`/invoices/${sequence}`)}
-              onDownload={handleDownloadPDF}
-              onSend={handleSendInvoice}
-              onMarkAsPaid={handleMarkAsPaid}
-              onDelete={invoiceDelete.openDeleteModal}
-            >
-              {pagination && (
-                <TablePagination
-                  currentPage={currentPage}
-                  totalPages={pagination.totalPages}
-                  totalItems={pagination.total}
-                  onPageChange={setPage}
-                  emptyMessage="No invoices found"
-                  itemLabel="invoices"
-                />
-              )}
-            </InvoiceList>
-          </>
-        )}
+          )}
+        </InvoiceList>
       </div>
 
       {/* Delete Confirmation Modal - Separate logic */}
@@ -263,30 +245,30 @@ export default function InvoicesContent() {
         isDeleting={invoiceDelete.isDeleting}
       />
 
-      {/* Hidden PDF previews for PDF generation */}
-      {invoices.map((invoice) => (
-        <InvoicePDFPreview key={invoice.id} invoice={invoice} />
-      ))}
-
-      {selectedInvoiceForSend && (
-        <SendInvoiceDialog
-          open={sendDialogOpen}
-          onOpenChange={(open) => {
-            setSendDialogOpen(open);
-            if (!open) {
-              setSelectedInvoiceForSend(null);
-            }
-          }}
-          invoiceSequence={selectedInvoiceForSend.sequence}
-          invoiceNumber={selectedInvoiceForSend.invoiceNumber}
-          clientName={
-            selectedInvoiceForSend.client?.name ||
-            selectedInvoiceForSend.client?.businessName ||
-            "Client"
+      <SendInvoiceDialog
+        open={sendDialogOpen}
+        onOpenChange={(open) => {
+          setSendDialogOpen(open);
+          if (!open) {
+            setSelectedInvoiceForSend(undefined);
           }
-          clientEmail={selectedInvoiceForSend.client?.email}
-        />
-      )}
+        }}
+        invoiceSequence={selectedInvoiceForSend?.sequence}
+        invoiceNumber={selectedInvoiceForSend?.invoiceNumber}
+        clientName={
+          selectedInvoiceForSend?.client?.name ||
+          selectedInvoiceForSend?.client?.businessName ||
+          "Client"
+        }
+        clientEmail={selectedInvoiceForSend?.client?.email}
+      />
+
+      <PaymentFormDialog
+        open={paymentDialog.isPaymentDialogOpen}
+        onOpenChange={paymentDialog.setIsPaymentDialogOpen}
+        invoiceId={paymentDialog.selectedInvoiceForPayment?.id}
+        invoiceSequence={paymentDialog.selectedInvoiceForPayment?.sequence}
+      />
 
       <BusinessSelectionDialog
         open={invoiceManager.showBusinessDialog}

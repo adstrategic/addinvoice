@@ -59,7 +59,7 @@ export function ClientCard({
               variant="default"
               className="bg-primary/20 text-primary hover:bg-primary/30"
             >
-              {/* {client.status} */}
+              {client.businessName}
             </Badge>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
@@ -89,7 +89,11 @@ export function ClientCard({
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 hover:bg-primary/10 hover:text-primary transition-colors duration-300"
+            >
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>

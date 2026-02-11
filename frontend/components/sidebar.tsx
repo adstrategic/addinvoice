@@ -24,11 +24,13 @@ import {
   Sparkles,
   Receipt,
   Package,
+  Mic,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Voice Assistant", href: "/voice", icon: Mic },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Quotes", href: "/quotes", icon: FileCheck },
   { name: "Payments", href: "/payments", icon: CreditCard },

@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { z } from "zod";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -57,3 +58,10 @@ export const getPageNumbers = (totalPages: number, currentPage: number) => {
 
   return pages;
 };
+
+// Generic helper for nullable optional fields that converts empty strings to null
+export const nullableOptional = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (val) => (val === "" || val === undefined ? null : val),
+    schema.nullable(),
+  );

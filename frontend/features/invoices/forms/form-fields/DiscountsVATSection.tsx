@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import type { UseFormReturn } from "react-hook-form";
 import type { CreateInvoiceDTO } from "../../schemas/invoice.schema";
+import { NumericFormat } from "react-number-format";
 
 interface DiscountsVATSectionProps {
   form: UseFormReturn<CreateInvoiceDTO>;
@@ -154,8 +155,8 @@ export function DiscountsVATSection({ form }: DiscountsVATSectionProps) {
                   {taxMode === "BY_PRODUCT"
                     ? "Fill the tax data on each item above"
                     : taxMode === "BY_TOTAL"
-                    ? "Fill the tax data for the invoice below"
-                    : "No tax data needed"}
+                      ? "Fill the tax data for the invoice below"
+                      : "No tax data needed"}
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -188,21 +189,17 @@ export function DiscountsVATSection({ form }: DiscountsVATSectionProps) {
                   <FormItem>
                     <FormLabel>Tax Percentage (%)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        placeholder="15"
-                        {...field}
-                        value={field.value || ""}
-                        onChange={(e) =>
-                          field.onChange(
-                            e.target.value
-                              ? parseFloat(e.target.value)
-                              : undefined
-                          )
-                        }
+                      <NumericFormat
+                        id="taxPercentage"
+                        value={field.value}
+                        onValueChange={(values) => {
+                          field.onChange(values.floatValue);
+                        }}
+                        placeholder="0,00"
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        decimalScale={2}
+                        customInput={Input}
                       />
                     </FormControl>
                     <FormMessage />

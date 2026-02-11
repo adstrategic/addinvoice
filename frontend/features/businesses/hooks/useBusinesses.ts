@@ -4,15 +4,15 @@ import {
   type CreateBusinessDto,
   type UpdateBusinessDto,
   businessesService,
-  BusinessResponse,
+  type BusinessResponse,
+  type BusinessResponseList,
 } from "@/features/businesses";
-import { ApiSuccessResponse } from "@/lib/api/types";
 
 type ListBusinessesParams = {
   page?: number;
   search?: string;
   enabled?: boolean;
-  initialData?: ApiSuccessResponse<BusinessResponse[]>;
+  initialData?: BusinessResponseList;
 };
 
 /**

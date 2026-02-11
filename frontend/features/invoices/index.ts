@@ -6,16 +6,18 @@
  *   import { useInvoices, InvoiceStats, type InvoiceResponse } from '@/features/invoices'
  */
 
-// Types
+// Types - Response types from schema, enums and utilities from types/api
 export type {
   InvoiceResponse,
   InvoiceItemResponse,
   PaymentResponse,
+  InvoiceResponseList,
+} from "./schemas/invoice.schema";
+export type {
   InvoiceStatus,
   TaxMode,
   QuantityUnit,
   DiscountType,
-  InvoiceClientInfo,
 } from "./types/api";
 export { mapStatusToUI, mapUIToStatus } from "./types/api";
 
@@ -30,7 +32,6 @@ export {
   useCreateInvoice,
   useUpdateInvoice,
   useDeleteInvoice,
-  useMarkInvoiceAsPaid,
   invoiceKeys,
 } from "./hooks/useInvoices";
 

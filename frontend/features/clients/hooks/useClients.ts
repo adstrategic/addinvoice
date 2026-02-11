@@ -4,15 +4,14 @@ import {
   type CreateClientDto,
   type UpdateClientDto,
   clientsService,
-  ClientResponse,
 } from "@/features/clients";
-import { ApiSuccessResponse } from "@/lib/api/types";
+import { ClientResponseList } from "../schema/clients.schema";
 
 type ListClientsParams = {
   page?: number;
   search?: string;
   enabled?: boolean;
-  initialData?: ApiSuccessResponse<ClientResponse[]>; // Opcional: datos iniciales para React Query
+  initialData?: ClientResponseList; // Opcional: datos iniciales para React Query
 };
 
 /**

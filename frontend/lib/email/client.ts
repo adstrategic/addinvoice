@@ -19,7 +19,7 @@ export async function sendInvoiceEmail({
   message,
   pdfBuffer,
   invoiceNumber,
-  fromEmail = "no-reply@news.addinvoicesia.com", // Default Resend email, should be replaced with verified domain
+  fromEmail = "no-reply@news.addinvoicesai.com", // Default Resend email, should be replaced with verified domain
 }: SendInvoiceEmailParams) {
   if (!resend) {
     throw new Error(

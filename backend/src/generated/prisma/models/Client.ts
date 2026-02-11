@@ -234,10 +234,10 @@ export type ClientGroupByOutputType = {
   workspaceId: number
   name: string
   email: string
-  phone: string
-  address: string
-  nit: string
-  businessName: string
+  phone: string | null
+  address: string | null
+  nit: string | null
+  businessName: string | null
   sequence: number
   createdAt: Date
   updatedAt: Date
@@ -272,10 +272,10 @@ export type ClientWhereInput = {
   workspaceId?: Prisma.IntFilter<"Client"> | number
   name?: Prisma.StringFilter<"Client"> | string
   email?: Prisma.StringFilter<"Client"> | string
-  phone?: Prisma.StringFilter<"Client"> | string
-  address?: Prisma.StringFilter<"Client"> | string
-  nit?: Prisma.StringFilter<"Client"> | string
-  businessName?: Prisma.StringFilter<"Client"> | string
+  phone?: Prisma.StringNullableFilter<"Client"> | string | null
+  address?: Prisma.StringNullableFilter<"Client"> | string | null
+  nit?: Prisma.StringNullableFilter<"Client"> | string | null
+  businessName?: Prisma.StringNullableFilter<"Client"> | string | null
   sequence?: Prisma.IntFilter<"Client"> | number
   createdAt?: Prisma.DateTimeFilter<"Client"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Client"> | Date | string
@@ -290,10 +290,10 @@ export type ClientOrderByWithRelationInput = {
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   email?: Prisma.SortOrder
-  phone?: Prisma.SortOrder
-  address?: Prisma.SortOrder
-  nit?: Prisma.SortOrder
-  businessName?: Prisma.SortOrder
+  phone?: Prisma.SortOrderInput | Prisma.SortOrder
+  address?: Prisma.SortOrderInput | Prisma.SortOrder
+  nit?: Prisma.SortOrderInput | Prisma.SortOrder
+  businessName?: Prisma.SortOrderInput | Prisma.SortOrder
   sequence?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -312,10 +312,10 @@ export type ClientWhereUniqueInput = Prisma.AtLeast<{
   workspaceId?: Prisma.IntFilter<"Client"> | number
   name?: Prisma.StringFilter<"Client"> | string
   email?: Prisma.StringFilter<"Client"> | string
-  phone?: Prisma.StringFilter<"Client"> | string
-  address?: Prisma.StringFilter<"Client"> | string
-  nit?: Prisma.StringFilter<"Client"> | string
-  businessName?: Prisma.StringFilter<"Client"> | string
+  phone?: Prisma.StringNullableFilter<"Client"> | string | null
+  address?: Prisma.StringNullableFilter<"Client"> | string | null
+  nit?: Prisma.StringNullableFilter<"Client"> | string | null
+  businessName?: Prisma.StringNullableFilter<"Client"> | string | null
   sequence?: Prisma.IntFilter<"Client"> | number
   createdAt?: Prisma.DateTimeFilter<"Client"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Client"> | Date | string
@@ -330,10 +330,10 @@ export type ClientOrderByWithAggregationInput = {
   workspaceId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   email?: Prisma.SortOrder
-  phone?: Prisma.SortOrder
-  address?: Prisma.SortOrder
-  nit?: Prisma.SortOrder
-  businessName?: Prisma.SortOrder
+  phone?: Prisma.SortOrderInput | Prisma.SortOrder
+  address?: Prisma.SortOrderInput | Prisma.SortOrder
+  nit?: Prisma.SortOrderInput | Prisma.SortOrder
+  businessName?: Prisma.SortOrderInput | Prisma.SortOrder
   sequence?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -353,10 +353,10 @@ export type ClientScalarWhereWithAggregatesInput = {
   workspaceId?: Prisma.IntWithAggregatesFilter<"Client"> | number
   name?: Prisma.StringWithAggregatesFilter<"Client"> | string
   email?: Prisma.StringWithAggregatesFilter<"Client"> | string
-  phone?: Prisma.StringWithAggregatesFilter<"Client"> | string
-  address?: Prisma.StringWithAggregatesFilter<"Client"> | string
-  nit?: Prisma.StringWithAggregatesFilter<"Client"> | string
-  businessName?: Prisma.StringWithAggregatesFilter<"Client"> | string
+  phone?: Prisma.StringNullableWithAggregatesFilter<"Client"> | string | null
+  address?: Prisma.StringNullableWithAggregatesFilter<"Client"> | string | null
+  nit?: Prisma.StringNullableWithAggregatesFilter<"Client"> | string | null
+  businessName?: Prisma.StringNullableWithAggregatesFilter<"Client"> | string | null
   sequence?: Prisma.IntWithAggregatesFilter<"Client"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Client"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Client"> | Date | string
@@ -366,10 +366,10 @@ export type ClientScalarWhereWithAggregatesInput = {
 export type ClientCreateInput = {
   name: string
   email: string
-  phone: string
-  address: string
-  nit: string
-  businessName: string
+  phone?: string | null
+  address?: string | null
+  nit?: string | null
+  businessName?: string | null
   sequence: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -384,10 +384,10 @@ export type ClientUncheckedCreateInput = {
   workspaceId: number
   name: string
   email: string
-  phone: string
-  address: string
-  nit: string
-  businessName: string
+  phone?: string | null
+  address?: string | null
+  nit?: string | null
+  businessName?: string | null
   sequence: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -399,10 +399,10 @@ export type ClientUncheckedCreateInput = {
 export type ClientUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  nit?: Prisma.StringFieldUpdateOperationsInput | string
-  businessName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -417,10 +417,10 @@ export type ClientUncheckedUpdateInput = {
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  nit?: Prisma.StringFieldUpdateOperationsInput | string
-  businessName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -434,10 +434,10 @@ export type ClientCreateManyInput = {
   workspaceId: number
   name: string
   email: string
-  phone: string
-  address: string
-  nit: string
-  businessName: string
+  phone?: string | null
+  address?: string | null
+  nit?: string | null
+  businessName?: string | null
   sequence: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -447,10 +447,10 @@ export type ClientCreateManyInput = {
 export type ClientUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  nit?: Prisma.StringFieldUpdateOperationsInput | string
-  businessName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -462,10 +462,10 @@ export type ClientUncheckedUpdateManyInput = {
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  nit?: Prisma.StringFieldUpdateOperationsInput | string
-  businessName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -622,10 +622,10 @@ export type ClientUpdateOneRequiredWithoutEstimatesNestedInput = {
 export type ClientCreateWithoutWorkspaceInput = {
   name: string
   email: string
-  phone: string
-  address: string
-  nit: string
-  businessName: string
+  phone?: string | null
+  address?: string | null
+  nit?: string | null
+  businessName?: string | null
   sequence: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -638,10 +638,10 @@ export type ClientUncheckedCreateWithoutWorkspaceInput = {
   id?: number
   name: string
   email: string
-  phone: string
-  address: string
-  nit: string
-  businessName: string
+  phone?: string | null
+  address?: string | null
+  nit?: string | null
+  businessName?: string | null
   sequence: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -684,10 +684,10 @@ export type ClientScalarWhereInput = {
   workspaceId?: Prisma.IntFilter<"Client"> | number
   name?: Prisma.StringFilter<"Client"> | string
   email?: Prisma.StringFilter<"Client"> | string
-  phone?: Prisma.StringFilter<"Client"> | string
-  address?: Prisma.StringFilter<"Client"> | string
-  nit?: Prisma.StringFilter<"Client"> | string
-  businessName?: Prisma.StringFilter<"Client"> | string
+  phone?: Prisma.StringNullableFilter<"Client"> | string | null
+  address?: Prisma.StringNullableFilter<"Client"> | string | null
+  nit?: Prisma.StringNullableFilter<"Client"> | string | null
+  businessName?: Prisma.StringNullableFilter<"Client"> | string | null
   sequence?: Prisma.IntFilter<"Client"> | number
   createdAt?: Prisma.DateTimeFilter<"Client"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Client"> | Date | string
@@ -697,10 +697,10 @@ export type ClientScalarWhereInput = {
 export type ClientCreateWithoutInvoicesInput = {
   name: string
   email: string
-  phone: string
-  address: string
-  nit: string
-  businessName: string
+  phone?: string | null
+  address?: string | null
+  nit?: string | null
+  businessName?: string | null
   sequence: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -714,10 +714,10 @@ export type ClientUncheckedCreateWithoutInvoicesInput = {
   workspaceId: number
   name: string
   email: string
-  phone: string
-  address: string
-  nit: string
-  businessName: string
+  phone?: string | null
+  address?: string | null
+  nit?: string | null
+  businessName?: string | null
   sequence: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -744,10 +744,10 @@ export type ClientUpdateToOneWithWhereWithoutInvoicesInput = {
 export type ClientUpdateWithoutInvoicesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  nit?: Prisma.StringFieldUpdateOperationsInput | string
-  businessName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -761,10 +761,10 @@ export type ClientUncheckedUpdateWithoutInvoicesInput = {
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  nit?: Prisma.StringFieldUpdateOperationsInput | string
-  businessName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -775,10 +775,10 @@ export type ClientUncheckedUpdateWithoutInvoicesInput = {
 export type ClientCreateWithoutEstimatesInput = {
   name: string
   email: string
-  phone: string
-  address: string
-  nit: string
-  businessName: string
+  phone?: string | null
+  address?: string | null
+  nit?: string | null
+  businessName?: string | null
   sequence: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -792,10 +792,10 @@ export type ClientUncheckedCreateWithoutEstimatesInput = {
   workspaceId: number
   name: string
   email: string
-  phone: string
-  address: string
-  nit: string
-  businessName: string
+  phone?: string | null
+  address?: string | null
+  nit?: string | null
+  businessName?: string | null
   sequence: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -822,10 +822,10 @@ export type ClientUpdateToOneWithWhereWithoutEstimatesInput = {
 export type ClientUpdateWithoutEstimatesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  nit?: Prisma.StringFieldUpdateOperationsInput | string
-  businessName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -839,10 +839,10 @@ export type ClientUncheckedUpdateWithoutEstimatesInput = {
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  nit?: Prisma.StringFieldUpdateOperationsInput | string
-  businessName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -854,10 +854,10 @@ export type ClientCreateManyWorkspaceInput = {
   id?: number
   name: string
   email: string
-  phone: string
-  address: string
-  nit: string
-  businessName: string
+  phone?: string | null
+  address?: string | null
+  nit?: string | null
+  businessName?: string | null
   sequence: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -867,10 +867,10 @@ export type ClientCreateManyWorkspaceInput = {
 export type ClientUpdateWithoutWorkspaceInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  nit?: Prisma.StringFieldUpdateOperationsInput | string
-  businessName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -883,10 +883,10 @@ export type ClientUncheckedUpdateWithoutWorkspaceInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  nit?: Prisma.StringFieldUpdateOperationsInput | string
-  businessName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -899,10 +899,10 @@ export type ClientUncheckedUpdateManyWithoutWorkspaceInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  phone?: Prisma.StringFieldUpdateOperationsInput | string
-  address?: Prisma.StringFieldUpdateOperationsInput | string
-  nit?: Prisma.StringFieldUpdateOperationsInput | string
-  businessName?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sequence?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1041,10 +1041,10 @@ export type $ClientPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     workspaceId: number
     name: string
     email: string
-    phone: string
-    address: string
-    nit: string
-    businessName: string
+    phone: string | null
+    address: string | null
+    nit: string | null
+    businessName: string | null
     sequence: number
     createdAt: Date
     updatedAt: Date

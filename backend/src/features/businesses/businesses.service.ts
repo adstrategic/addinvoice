@@ -1,4 +1,4 @@
-import { prisma } from "../../core/db";
+import prisma from "../../core/db";
 import type { Prisma } from "../../generated/prisma/client";
 import type {
   ListBusinessesQuery,
@@ -13,7 +13,7 @@ import { EntityNotFoundError } from "../../errors/EntityErrors";
  */
 export async function listBusinesses(
   workspaceId: number,
-  query: ListBusinessesQuery
+  query: ListBusinessesQuery,
 ): Promise<{
   businesses: BusinessEntity[];
   total: number;
@@ -59,7 +59,7 @@ export async function listBusinesses(
  */
 export async function getBusinessById(
   workspaceId: number,
-  id: number
+  id: number,
 ): Promise<BusinessEntity> {
   const business = await prisma.business.findFirst({
     where: {
@@ -85,7 +85,7 @@ export async function getBusinessById(
  */
 export async function createBusiness(
   workspaceId: number,
-  data: CreateBusinessDto
+  data: CreateBusinessDto,
 ): Promise<BusinessEntity> {
   return await prisma.$transaction(async (tx) => {
     const sequence = await getNextSequence(tx, workspaceId);
@@ -114,7 +114,7 @@ export async function createBusiness(
 export async function updateBusiness(
   workspaceId: number,
   id: number,
-  data: UpdateBusinessDto
+  data: UpdateBusinessDto,
 ): Promise<BusinessEntity> {
   return await prisma.$transaction(async (tx) => {
     // Verify business exists and belongs to workspace
@@ -144,7 +144,7 @@ export async function updateBusiness(
  */
 export async function deleteBusiness(
   workspaceId: number,
-  id: number
+  id: number,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
     // Verify business exists and belongs to workspace
@@ -170,7 +170,7 @@ export async function deleteBusiness(
  */
 export async function setDefaultBusiness(
   workspaceId: number,
-  id: number
+  id: number,
 ): Promise<BusinessEntity> {
   return await prisma.$transaction(async (tx) => {
     // Verify business exists and belongs to workspace
@@ -215,7 +215,7 @@ export async function setDefaultBusiness(
  */
 export async function findById(
   tx: Prisma.TransactionClient,
-  id: number
+  id: number,
 ): Promise<BusinessEntity | null> {
   const business = await tx.business.findUnique({
     where: {
@@ -231,7 +231,7 @@ export async function findById(
  */
 async function getNextSequence(
   tx: Prisma.TransactionClient,
-  workspaceId: number
+  workspaceId: number,
 ): Promise<number> {
   const lastBusiness = await tx.business.findFirst({
     where: {

@@ -233,7 +233,7 @@ export type PaymentGroupByOutputType = {
   invoiceId: number
   amount: runtime.Decimal
   paymentMethod: string
-  transactionId: string
+  transactionId: string | null
   details: string | null
   paidAt: Date
   createdAt: Date
@@ -270,7 +270,7 @@ export type PaymentWhereInput = {
   invoiceId?: Prisma.IntFilter<"Payment"> | number
   amount?: Prisma.DecimalFilter<"Payment"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFilter<"Payment"> | string
-  transactionId?: Prisma.StringFilter<"Payment"> | string
+  transactionId?: Prisma.StringNullableFilter<"Payment"> | string | null
   details?: Prisma.StringNullableFilter<"Payment"> | string | null
   paidAt?: Prisma.DateTimeFilter<"Payment"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Payment"> | Date | string
@@ -286,7 +286,7 @@ export type PaymentOrderByWithRelationInput = {
   invoiceId?: Prisma.SortOrder
   amount?: Prisma.SortOrder
   paymentMethod?: Prisma.SortOrder
-  transactionId?: Prisma.SortOrder
+  transactionId?: Prisma.SortOrderInput | Prisma.SortOrder
   details?: Prisma.SortOrderInput | Prisma.SortOrder
   paidAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -321,7 +321,7 @@ export type PaymentOrderByWithAggregationInput = {
   invoiceId?: Prisma.SortOrder
   amount?: Prisma.SortOrder
   paymentMethod?: Prisma.SortOrder
-  transactionId?: Prisma.SortOrder
+  transactionId?: Prisma.SortOrderInput | Prisma.SortOrder
   details?: Prisma.SortOrderInput | Prisma.SortOrder
   paidAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -343,7 +343,7 @@ export type PaymentScalarWhereWithAggregatesInput = {
   invoiceId?: Prisma.IntWithAggregatesFilter<"Payment"> | number
   amount?: Prisma.DecimalWithAggregatesFilter<"Payment"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringWithAggregatesFilter<"Payment"> | string
-  transactionId?: Prisma.StringWithAggregatesFilter<"Payment"> | string
+  transactionId?: Prisma.StringNullableWithAggregatesFilter<"Payment"> | string | null
   details?: Prisma.StringNullableWithAggregatesFilter<"Payment"> | string | null
   paidAt?: Prisma.DateTimeWithAggregatesFilter<"Payment"> | Date | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Payment"> | Date | string
@@ -354,7 +354,7 @@ export type PaymentScalarWhereWithAggregatesInput = {
 export type PaymentCreateInput = {
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod: string
-  transactionId: string
+  transactionId?: string | null
   details?: string | null
   paidAt?: Date | string
   createdAt?: Date | string
@@ -370,7 +370,7 @@ export type PaymentUncheckedCreateInput = {
   invoiceId: number
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod: string
-  transactionId: string
+  transactionId?: string | null
   details?: string | null
   paidAt?: Date | string
   createdAt?: Date | string
@@ -381,7 +381,7 @@ export type PaymentUncheckedCreateInput = {
 export type PaymentUpdateInput = {
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFieldUpdateOperationsInput | string
-  transactionId?: Prisma.StringFieldUpdateOperationsInput | string
+  transactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   details?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -397,7 +397,7 @@ export type PaymentUncheckedUpdateInput = {
   invoiceId?: Prisma.IntFieldUpdateOperationsInput | number
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFieldUpdateOperationsInput | string
-  transactionId?: Prisma.StringFieldUpdateOperationsInput | string
+  transactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   details?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -411,7 +411,7 @@ export type PaymentCreateManyInput = {
   invoiceId: number
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod: string
-  transactionId: string
+  transactionId?: string | null
   details?: string | null
   paidAt?: Date | string
   createdAt?: Date | string
@@ -422,7 +422,7 @@ export type PaymentCreateManyInput = {
 export type PaymentUpdateManyMutationInput = {
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFieldUpdateOperationsInput | string
-  transactionId?: Prisma.StringFieldUpdateOperationsInput | string
+  transactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   details?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -436,7 +436,7 @@ export type PaymentUncheckedUpdateManyInput = {
   invoiceId?: Prisma.IntFieldUpdateOperationsInput | number
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFieldUpdateOperationsInput | string
-  transactionId?: Prisma.StringFieldUpdateOperationsInput | string
+  transactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   details?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -597,7 +597,7 @@ export type PaymentUncheckedUpdateManyWithoutInvoiceNestedInput = {
 export type PaymentCreateWithoutWorkspaceInput = {
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod: string
-  transactionId: string
+  transactionId?: string | null
   details?: string | null
   paidAt?: Date | string
   createdAt?: Date | string
@@ -611,7 +611,7 @@ export type PaymentUncheckedCreateWithoutWorkspaceInput = {
   invoiceId: number
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod: string
-  transactionId: string
+  transactionId?: string | null
   details?: string | null
   paidAt?: Date | string
   createdAt?: Date | string
@@ -654,7 +654,7 @@ export type PaymentScalarWhereInput = {
   invoiceId?: Prisma.IntFilter<"Payment"> | number
   amount?: Prisma.DecimalFilter<"Payment"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFilter<"Payment"> | string
-  transactionId?: Prisma.StringFilter<"Payment"> | string
+  transactionId?: Prisma.StringNullableFilter<"Payment"> | string | null
   details?: Prisma.StringNullableFilter<"Payment"> | string | null
   paidAt?: Prisma.DateTimeFilter<"Payment"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Payment"> | Date | string
@@ -665,7 +665,7 @@ export type PaymentScalarWhereInput = {
 export type PaymentCreateWithoutInvoiceInput = {
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod: string
-  transactionId: string
+  transactionId?: string | null
   details?: string | null
   paidAt?: Date | string
   createdAt?: Date | string
@@ -679,7 +679,7 @@ export type PaymentUncheckedCreateWithoutInvoiceInput = {
   workspaceId: number
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod: string
-  transactionId: string
+  transactionId?: string | null
   details?: string | null
   paidAt?: Date | string
   createdAt?: Date | string
@@ -718,7 +718,7 @@ export type PaymentCreateManyWorkspaceInput = {
   invoiceId: number
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod: string
-  transactionId: string
+  transactionId?: string | null
   details?: string | null
   paidAt?: Date | string
   createdAt?: Date | string
@@ -729,7 +729,7 @@ export type PaymentCreateManyWorkspaceInput = {
 export type PaymentUpdateWithoutWorkspaceInput = {
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFieldUpdateOperationsInput | string
-  transactionId?: Prisma.StringFieldUpdateOperationsInput | string
+  transactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   details?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -743,7 +743,7 @@ export type PaymentUncheckedUpdateWithoutWorkspaceInput = {
   invoiceId?: Prisma.IntFieldUpdateOperationsInput | number
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFieldUpdateOperationsInput | string
-  transactionId?: Prisma.StringFieldUpdateOperationsInput | string
+  transactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   details?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -756,7 +756,7 @@ export type PaymentUncheckedUpdateManyWithoutWorkspaceInput = {
   invoiceId?: Prisma.IntFieldUpdateOperationsInput | number
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFieldUpdateOperationsInput | string
-  transactionId?: Prisma.StringFieldUpdateOperationsInput | string
+  transactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   details?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -769,7 +769,7 @@ export type PaymentCreateManyInvoiceInput = {
   workspaceId: number
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod: string
-  transactionId: string
+  transactionId?: string | null
   details?: string | null
   paidAt?: Date | string
   createdAt?: Date | string
@@ -780,7 +780,7 @@ export type PaymentCreateManyInvoiceInput = {
 export type PaymentUpdateWithoutInvoiceInput = {
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFieldUpdateOperationsInput | string
-  transactionId?: Prisma.StringFieldUpdateOperationsInput | string
+  transactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   details?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -794,7 +794,7 @@ export type PaymentUncheckedUpdateWithoutInvoiceInput = {
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFieldUpdateOperationsInput | string
-  transactionId?: Prisma.StringFieldUpdateOperationsInput | string
+  transactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   details?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -807,7 +807,7 @@ export type PaymentUncheckedUpdateManyWithoutInvoiceInput = {
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   paymentMethod?: Prisma.StringFieldUpdateOperationsInput | string
-  transactionId?: Prisma.StringFieldUpdateOperationsInput | string
+  transactionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   details?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paidAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -905,7 +905,7 @@ export type $PaymentPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     invoiceId: number
     amount: runtime.Decimal
     paymentMethod: string
-    transactionId: string
+    transactionId: string | null
     details: string | null
     paidAt: Date
     createdAt: Date

@@ -1,12 +1,17 @@
 import { apiClient } from "@/lib/api/client";
-import { handleApiError } from "@/lib/errors/handler";
+import { handleApiError, ApiError } from "@/lib/errors/handler";
 import type { ApiSuccessResponse } from "@/lib/api/types";
 import type {
-  ClientResponse,
   CreateClientDto,
   UpdateClientDto,
   ListClientsParams,
 } from "../index";
+import {
+  clientResponseSchema,
+  clientResponseListSchema,
+  type ClientResponse,
+  ClientResponseList,
+} from "../schema/clients.schema";
 
 /**
  * Base URL for clients API endpoints
@@ -24,20 +29,21 @@ const BASE_URL = "/clients";
  */
 async function listClients(
   params?: ListClientsParams
-): Promise<ApiSuccessResponse<ClientResponse[]>> {
+): Promise<ClientResponseList> {
   try {
-    const { data } = await apiClient.get<ApiSuccessResponse<ClientResponse[]>>(
-      BASE_URL,
-      {
-        params: {
-          page: params?.page ?? 1,
-          limit: params?.limit ?? 10,
-          search: params?.search,
-        },
-      }
-    );
+    const { data } = await apiClient.get<ClientResponseList>(BASE_URL, {
+      params: {
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 10,
+        search: params?.search,
+      },
+    });
 
-    return data;
+    const validatedData = clientResponseListSchema.parse(data);
+    return {
+      data: validatedData.data,
+      pagination: validatedData.pagination,
+    };
   } catch (error) {
     handleApiError(error);
   }
@@ -52,7 +58,8 @@ async function getClientBySequence(sequence: number): Promise<ClientResponse> {
       `${BASE_URL}/${sequence}`
     );
 
-    return data.data;
+    // Validate response data with Zod
+    return clientResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -68,7 +75,8 @@ async function createClient(dto: CreateClientDto): Promise<ClientResponse> {
       dto
     );
 
-    return data.data;
+    // Validate response data with Zod
+    return clientResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }
@@ -87,7 +95,8 @@ async function updateClient(
       dto
     );
 
-    return data.data;
+    // Validate response data with Zod
+    return clientResponseSchema.parse(data.data);
   } catch (error) {
     handleApiError(error);
   }

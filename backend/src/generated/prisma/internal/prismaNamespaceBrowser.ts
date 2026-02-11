@@ -96,7 +96,13 @@ export const WorkspaceScalarFieldEnum = {
   invoiceColor: 'invoiceColor',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  deletedAt: 'deletedAt'
+  deletedAt: 'deletedAt',
+  stripeCustomerId: 'stripeCustomerId',
+  stripeSubscriptionId: 'stripeSubscriptionId',
+  subscriptionPlan: 'subscriptionPlan',
+  subscriptionStatus: 'subscriptionStatus',
+  subscriptionEndsAt: 'subscriptionEndsAt',
+  lastStripeSync: 'lastStripeSync'
 } as const
 
 export type WorkspaceScalarFieldEnum = (typeof WorkspaceScalarFieldEnum)[keyof typeof WorkspaceScalarFieldEnum]
@@ -123,6 +129,7 @@ export type ClientScalarFieldEnum = (typeof ClientScalarFieldEnum)[keyof typeof 
 export const CatalogScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
+  businessId: 'businessId',
   name: 'name',
   description: 'description',
   price: 'price',
@@ -141,6 +148,9 @@ export const InvoiceScalarFieldEnum = {
   workspaceId: 'workspaceId',
   clientId: 'clientId',
   businessId: 'businessId',
+  clientEmail: 'clientEmail',
+  clientPhone: 'clientPhone',
+  clientAddress: 'clientAddress',
   sequence: 'sequence',
   invoiceNumber: 'invoiceNumber',
   status: 'status',
@@ -157,6 +167,7 @@ export const InvoiceScalarFieldEnum = {
   taxName: 'taxName',
   taxPercentage: 'taxPercentage',
   total: 'total',
+  balance: 'balance',
   notes: 'notes',
   terms: 'terms',
   paymentLink: 'paymentLink',

@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { type ListInvoicesParams, invoicesService } from "@/features/invoices";
-import type { InvoiceResponse } from "../types/api";
+import { CreateInvoiceDTO, UpdateInvoiceDTO } from "../schemas/invoice.schema";
+import { clientKeys } from "@/features/clients";
 
 /**
  * Query key factory for invoice queries
@@ -68,9 +69,13 @@ export function useCreateInvoice() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (data: any) => invoicesService.create(data),
-    onSuccess: () => {
+    mutationFn: (data: CreateInvoiceDTO) => invoicesService.create(data),
+    onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+
+      if (variables.createClient) {
+        queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
+      }
       toast({
         title: "Invoice created",
         description: "The invoice has been created successfully.",
@@ -90,13 +95,16 @@ export function useUpdateInvoice() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateInvoiceDTO }) =>
       invoicesService.update(id, data),
-    onSuccess: (_, variables) => {
+    onSuccess: (updatedInvoice, variables) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: invoiceKeys.detail(variables.id),
+        queryKey: invoiceKeys.detail(updatedInvoice.sequence),
       });
+      if (variables.data.createClient) {
+        queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
+      }
       toast({
         title: "Invoice updated",
         description: "The invoice has been updated successfully.",
@@ -137,31 +145,3 @@ export function useDeleteInvoice() {
   });
 }
 
-/**
- * Hook to mark an invoice as paid
- */
-export function useMarkInvoiceAsPaid() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: (invoiceId: number) => invoicesService.markAsPaid(invoiceId),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({
-        queryKey: invoiceKeys.details(),
-      });
-      toast({
-        title: "Invoice marked as paid",
-        description: "The invoice has been marked as paid successfully.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to mark invoice as paid",
-        variant: "destructive",
-      });
-    },
-  });
-}

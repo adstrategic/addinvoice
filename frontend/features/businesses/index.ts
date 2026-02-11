@@ -3,14 +3,17 @@
  * Public exports for businesses feature
  */
 
-// Types
-export type { BusinessResponse } from "./types/api";
-
-// Schemas
-export type {
-  CreateBusinessDto,
-  UpdateBusinessDto,
-  ListBusinessesParams,
+// Schemas and Types
+export {
+  createBusinessSchema,
+  updateBusinessSchema,
+  businessResponseSchema,
+  businessResponseListSchema,
+  type CreateBusinessDto,
+  type UpdateBusinessDto,
+  type BusinessResponse,
+  type BusinessResponseList,
+  type ListBusinessesParams,
 } from "./schema/businesses.schema";
 
 // Service

@@ -4,130 +4,34 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Edit } from "lucide-react";
-import type { PaymentResponse } from "../../types/api";
+import type { PaymentResponse } from "../../schemas/invoice.schema";
 import { useDeletePayment } from "../../hooks/usePayments";
 import { formatCurrency } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  paymentCreateSchema,
-  paymentUpdateSchema,
-  type PaymentCreateInput,
-  type PaymentUpdateInput,
-} from "../../schemas/invoice.schema";
-import { useCreatePayment, useUpdatePayment } from "../../hooks/usePayments";
+import { PaymentFormDialog } from "../../components/PaymentFormDialog";
 
 interface PaymentsSectionProps {
   invoiceId: number;
   payments: PaymentResponse[];
   invoiceTotal: number;
-  onPaymentAdded: () => void;
+  invoiceSequence: number;
 }
 
 export function PaymentsSection({
   invoiceId,
   payments,
   invoiceTotal,
-  onPaymentAdded,
+  invoiceSequence,
 }: PaymentsSectionProps) {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [editingPayment, setEditingPayment] = useState<PaymentResponse | null>(
-    null
-  );
   const deletePayment = useDeletePayment();
-  const createPayment = useCreatePayment();
-  const updatePayment = useUpdatePayment();
-
-  const form = useForm<PaymentCreateInput | PaymentUpdateInput>({
-    resolver: zodResolver(
-      editingPayment ? paymentUpdateSchema : paymentCreateSchema
-    ),
-    defaultValues: editingPayment
-      ? {
-          amount: editingPayment.amount,
-          paymentMethod: editingPayment.paymentMethod,
-          transactionId: editingPayment.transactionId || "",
-          paidAt: editingPayment.paidAt.split("T")[0],
-          details: editingPayment.details || "",
-        }
-      : {
-          amount: 0,
-          paymentMethod: "",
-          transactionId: "",
-          paidAt: new Date().toISOString().split("T")[0],
-          details: "",
-        },
-  });
 
   const handleAddPayment = () => {
-    setEditingPayment(null);
-    form.reset({
-      amount: 0,
-      paymentMethod: "",
-      transactionId: "",
-      paidAt: new Date().toISOString().split("T")[0],
-      details: "",
-    });
-    setShowPaymentDialog(true);
-  };
-
-  const handleEditPayment = (payment: PaymentResponse) => {
-    setEditingPayment(payment);
-    form.reset({
-      amount: payment.amount,
-      paymentMethod: payment.paymentMethod,
-      transactionId: payment.transactionId || "",
-      paidAt: payment.paidAt.split("T")[0],
-      details: payment.details || "",
-    });
     setShowPaymentDialog(true);
   };
 
   const handleDeletePayment = async (paymentId: number) => {
     if (confirm("Are you sure you want to delete this payment?")) {
-      await deletePayment.mutateAsync(paymentId);
-      onPaymentAdded();
-    }
-  };
-
-  const onSubmit = async (data: PaymentCreateInput | PaymentUpdateInput) => {
-    try {
-      if (editingPayment) {
-        await updatePayment.mutateAsync({
-          paymentId: editingPayment.id,
-          data: data as PaymentUpdateInput,
-        });
-      } else {
-        await createPayment.mutateAsync({
-          invoiceId,
-          data: data as PaymentCreateInput,
-        });
-      }
-      setShowPaymentDialog(false);
-      setEditingPayment(null);
-      form.reset();
-      onPaymentAdded();
-    } catch (error) {
-      // Error handling is done in the hooks
-      console.error("Payment save error:", error);
+      await deletePayment.mutateAsync({ invoiceId, paymentId });
     }
   };
 
@@ -203,14 +107,14 @@ export function PaymentsSection({
                         )}
                       </div>
                       <div className="flex gap-2">
-                        <Button
+                        {/* <Button
                           onClick={() => handleEditPayment(payment)}
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
                         >
                           <Edit className="h-4 w-4" />
-                        </Button>
+                        </Button> */}
                         <Button
                           onClick={() => handleDeletePayment(payment.id)}
                           variant="ghost"
@@ -255,113 +159,12 @@ export function PaymentsSection({
         </CardContent>
       </Card>
 
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingPayment ? "Edit Payment" : "Add Payment"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingPayment
-                ? "Update the payment information below."
-                : "Enter the payment details below."}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="amount">Amount *</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  {...form.register("amount", { valueAsNumber: true })}
-                />
-                {form.formState.errors.amount && (
-                  <p className="text-sm text-destructive mt-1">
-                    {form.formState.errors.amount.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="paidAt">Payment Date *</Label>
-                <Input id="paidAt" type="date" {...form.register("paidAt")} />
-                {form.formState.errors.paidAt && (
-                  <p className="text-sm text-destructive mt-1">
-                    {form.formState.errors.paidAt.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="paymentMethod">Payment Method *</Label>
-              <Select
-                value={form.watch("paymentMethod")}
-                onValueChange={(value) => form.setValue("paymentMethod", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="Credit Card">Credit Card</SelectItem>
-                  <SelectItem value="Debit Card">Debit Card</SelectItem>
-                  <SelectItem value="Check">Check</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-              {form.formState.errors.paymentMethod && (
-                <p className="text-sm text-destructive mt-1">
-                  {form.formState.errors.paymentMethod.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="transactionId">Transaction ID (Optional)</Label>
-              <Input
-                id="transactionId"
-                {...form.register("transactionId")}
-                placeholder="e.g., TXN-12345"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="details">Details (Optional)</Label>
-              <Textarea
-                id="details"
-                rows={3}
-                {...form.register("details")}
-                placeholder="Additional payment details..."
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setShowPaymentDialog(false);
-                  setEditingPayment(null);
-                  form.reset();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting
-                  ? "Saving..."
-                  : editingPayment
-                  ? "Update Payment"
-                  : "Add Payment"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <PaymentFormDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        invoiceId={invoiceId}
+        invoiceSequence={invoiceSequence}
+      />
     </>
   );
 }

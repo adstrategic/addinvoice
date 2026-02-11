@@ -53,23 +53,14 @@ const createApiClient = (): AxiosInstance => {
   // Response interceptor for error handling
   client.interceptors.response.use(
     (response) => {
-      // Validate response structure
-      if (response.data && typeof response.data === "object") {
-        // If response has success field, validate it
-        if ("success" in response.data) {
-          if (!response.data.success) {
-            // This shouldn't happen, but handle it gracefully
-            return Promise.reject(response);
-          }
-        }
-      }
+      // Axios automatically handles non-2xx status codes as errors
+      // No need to validate success property anymore
       return response;
     },
     (error: AxiosError) => {
       // Type the error response for better type safety
       const errorData = error.response?.data as
         | {
-            success: boolean;
             error: string;
             message: string;
             redirectTo?: string;

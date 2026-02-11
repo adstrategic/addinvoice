@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, DollarSign, Calendar } from "lucide-react";
 import { motion, Variants } from "framer-motion";
-import type { InvoiceResponse } from "../types/api";
+import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { mapStatusToUI } from "../types/api";
 
 interface InvoiceStatsProps {

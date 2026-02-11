@@ -23,7 +23,6 @@ export async function listClients(
   const result = await clientsService.listClients(workspaceId, query);
 
   res.json({
-    success: true,
     data: result.clients,
     pagination: {
       total: result.total,
@@ -51,7 +50,6 @@ export async function getClientBySequence(
   );
 
   res.json({
-    success: true,
     data: client,
   });
 }
@@ -70,7 +68,6 @@ export async function createClient(
   const client = await clientsService.createClient(workspaceId, body);
 
   res.status(201).json({
-    success: true,
     data: client,
   });
 }
@@ -90,7 +87,6 @@ export async function updateClient(
   const client = await clientsService.updateClient(workspaceId, id, body);
 
   res.json({
-    success: true,
     data: client,
   });
 }
@@ -108,8 +104,5 @@ export async function deleteClient(
 
   await clientsService.deleteClient(workspaceId, id);
 
-  res.json({
-    success: true,
-    message: "Client deleted successfully",
-  });
+  res.status(204).send();
 }

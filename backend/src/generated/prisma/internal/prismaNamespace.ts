@@ -1135,7 +1135,13 @@ export const WorkspaceScalarFieldEnum = {
   invoiceColor: 'invoiceColor',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  deletedAt: 'deletedAt'
+  deletedAt: 'deletedAt',
+  stripeCustomerId: 'stripeCustomerId',
+  stripeSubscriptionId: 'stripeSubscriptionId',
+  subscriptionPlan: 'subscriptionPlan',
+  subscriptionStatus: 'subscriptionStatus',
+  subscriptionEndsAt: 'subscriptionEndsAt',
+  lastStripeSync: 'lastStripeSync'
 } as const
 
 export type WorkspaceScalarFieldEnum = (typeof WorkspaceScalarFieldEnum)[keyof typeof WorkspaceScalarFieldEnum]
@@ -1162,6 +1168,7 @@ export type ClientScalarFieldEnum = (typeof ClientScalarFieldEnum)[keyof typeof 
 export const CatalogScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
+  businessId: 'businessId',
   name: 'name',
   description: 'description',
   price: 'price',
@@ -1180,6 +1187,9 @@ export const InvoiceScalarFieldEnum = {
   workspaceId: 'workspaceId',
   clientId: 'clientId',
   businessId: 'businessId',
+  clientEmail: 'clientEmail',
+  clientPhone: 'clientPhone',
+  clientAddress: 'clientAddress',
   sequence: 'sequence',
   invoiceNumber: 'invoiceNumber',
   status: 'status',
@@ -1196,6 +1206,7 @@ export const InvoiceScalarFieldEnum = {
   taxName: 'taxName',
   taxPercentage: 'taxPercentage',
   total: 'total',
+  balance: 'balance',
   notes: 'notes',
   terms: 'terms',
   paymentLink: 'paymentLink',
@@ -1392,6 +1403,34 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'DateTime[]'
  */
 export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
+ * Reference to a field of type 'SubscriptionPlan'
+ */
+export type EnumSubscriptionPlanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionPlan'>
+    
+
+
+/**
+ * Reference to a field of type 'SubscriptionPlan[]'
+ */
+export type ListEnumSubscriptionPlanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionPlan[]'>
+    
+
+
+/**
+ * Reference to a field of type 'SubscriptionStatus'
+ */
+export type EnumSubscriptionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'SubscriptionStatus[]'
+ */
+export type ListEnumSubscriptionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionStatus[]'>
     
 
 

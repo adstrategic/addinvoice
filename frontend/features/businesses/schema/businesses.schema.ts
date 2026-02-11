@@ -1,46 +1,78 @@
-/**
- * Business Schema Types
- * Type definitions for business forms and validation
- */
+import { paginationMetaSchema } from "@/lib/api/types";
+import { z } from "zod";
 
 /**
- * Create business DTO
+ * Schema for listing businesses
  */
-export interface CreateBusinessDto {
-  name: string;
-  nit: string;
-  address: string;
-  email: string;
-  phone: string;
-  logo?: string | null;
-}
+export const listBusinessesSchema = z.object({
+  page: z.coerce.number().int().optional(),
+  limit: z.coerce.number().int().max(30).optional(),
+  search: z.string().optional(),
+});
 
 /**
- * Update business DTO
+ * Business validation schema
+ * Shared between frontend forms and backend API validation
+ * Must match backend businesses.schemas.ts createBusinessSchema
  */
-export interface UpdateBusinessDto {
-  name?: string;
-  nit?: string;
-  address?: string;
-  email?: string;
-  phone?: string;
-  logo?: string | null;
-}
+export const createBusinessSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Business name is required")
+    .max(255, "Business name is too long"),
+  nit: z
+    .string({ required_error: "NIT/Tax ID is required" })
+    .trim()
+    .min(1, "NIT/Tax ID cannot be empty")
+    .max(50, "NIT/Tax ID cannot exceed 50 characters"),
+  address: z
+    .string({ required_error: "Address is required" })
+    .trim()
+    .min(1, "Address cannot be empty")
+    .max(500, "Address cannot exceed 500 characters"),
+  email: z.string().trim().email("Invalid email address"),
+  phone: z
+    .string()
+    .trim()
+    .min(1, "Phone is required")
+    .regex(
+      /^\+[1-9]\d{1,14}$/,
+      "Phone must have a valid international format (e.g. +573011234567)"
+    ),
+  logo: z.string().url("Invalid logo URL").optional().nullable(),
+});
 
 /**
- * List businesses params
+ * Update business schema (all fields optional)
  */
-export interface ListBusinessesParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-}
+export const updateBusinessSchema = createBusinessSchema.partial();
 
+/**
+ * Business response schema from API
+ * Matches backend BusinessEntity structure
+ */
+export const businessResponseSchema = createBusinessSchema.extend({
+  id: z.number().int().positive(),
+  workspaceId: z.number().int().positive(),
+  isDefault: z.boolean(),
+  sequence: z.number().int().positive(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  deletedAt: z.string().datetime().nullable(),
+});
 
+/**
+ * Business list response schema with pagination
+ */
+export const businessResponseListSchema = z.object({
+  data: z.array(businessResponseSchema),
+  pagination: paginationMetaSchema,
+});
 
-
-
-
-
-
-
+// DTO types
+export type CreateBusinessDto = z.infer<typeof createBusinessSchema>;
+export type UpdateBusinessDto = z.infer<typeof updateBusinessSchema>;
+export type BusinessResponse = z.infer<typeof businessResponseSchema>;
+export type BusinessResponseList = z.infer<typeof businessResponseListSchema>;
+export type ListBusinessesParams = z.infer<typeof listBusinessesSchema>;

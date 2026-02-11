@@ -17,10 +17,10 @@ import {
   Send,
   Trash2,
   FileText,
-  CheckCircle,
+  Plus,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import type { InvoiceResponse } from "../types/api";
+import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { mapStatusToUI } from "../types/api";
 
 // Status config (used for badge classes/labels)
@@ -50,7 +50,7 @@ interface InvoiceCardProps {
   onEdit: (sequence: number) => void;
   onDownload: (invoice: InvoiceResponse) => void;
   onSend: (invoice: InvoiceResponse) => void;
-  onMarkAsPaid: (invoice: InvoiceResponse) => void;
+  onAddPayment: (invoice: InvoiceResponse) => void;
   onDelete: (invoice: InvoiceResponse) => void;
 }
 
@@ -64,7 +64,7 @@ export function InvoiceCard({
   onEdit,
   onDownload,
   onSend,
-  onMarkAsPaid,
+  onAddPayment,
   onDelete,
 }: InvoiceCardProps) {
   const clientName =
@@ -116,7 +116,7 @@ export function InvoiceCard({
             <Button
               variant="ghost"
               size="icon"
-              className="flex-shrink-0 hover:bg-primary/10 hover:text-primary transition-colors duration-300"
+              className="shrink-0 hover:bg-primary/10 hover:text-primary transition-colors duration-300"
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
@@ -141,9 +141,9 @@ export function InvoiceCard({
               Send
             </DropdownMenuItem>
             {uiStatus !== "paid" && (
-              <DropdownMenuItem onClick={() => onMarkAsPaid(invoice)}>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Mark as Paid
+              <DropdownMenuItem onClick={() => onAddPayment(invoice)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Payment
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />

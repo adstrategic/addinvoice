@@ -21,7 +21,6 @@ import {
 import { useFormErrorHandler } from "@/hooks/useFormErrorHandler";
 import { useDirtyFields } from "@/hooks/useDirtyValues";
 import { useFormScroll } from "@/hooks/useFormScroll";
-import { transformFromApiFormat } from "../lib/utils";
 import { BusinessResponse, useBusinesses } from "@/features/businesses";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateInvoiceItem } from "./useInvoiceItems";
@@ -38,10 +37,10 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
   // === ESTADO UI ===
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [mode, setMode] = useState<"create" | "edit">(
-    options?.mode || "create"
+    options?.mode || "create",
   );
   const [invoiceSequence, setInvoiceSequence] = useState<number | null>(
-    options?.sequence || null
+    options?.sequence || null,
   );
 
   // === BUSINESS SELECTION ===
@@ -81,14 +80,14 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
 
   // === CONFIGURACIÓN DEL FORMULARIO ===
   const defaultValues: DefaultValues<CreateInvoiceDTO> = {
-    invoiceNumber: "",
     issueDate: new Date(),
     dueDate: new Date(),
-    businessId: existingInvoice?.businessId || 0,
-    discount: 0,
+    taxPercentage: null,
+    taxName: null,
     discountType: "NONE",
     taxMode: "NONE",
     currency: "USD",
+    createClient: false,
   };
 
   const form = useForm<CreateInvoiceDTO>({
@@ -96,11 +95,17 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues,
-    values:
-      mode === "edit" && existingInvoice
-        ? transformFromApiFormat(existingInvoice)
-        : undefined,
   });
+
+  // Add this useEffect after the form declaration
+  useEffect(() => {
+    if (mode === "edit" && existingInvoice) {
+      form.reset({
+        ...existingInvoice,
+        createClient: false,
+      });
+    }
+  }, [existingInvoice, mode, form]);
 
   // Pre-populate invoice number when next number is available and form is in create mode
   useEffect(() => {
@@ -142,7 +147,7 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
   const openCreate = useCallback(() => {
     setMode("create");
     setInvoiceSequence(null);
-    form.reset();
+    form.reset(defaultValues);
     setIsFormOpen(true);
   }, [form, selectedBusiness]);
 
@@ -152,7 +157,7 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       setShowBusinessDialog(false);
       openCreate();
     },
-    [openCreate]
+    [openCreate],
   );
 
   const handleCreateInvoice = () => {
@@ -176,7 +181,6 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     setIsFormOpen(false);
     setInvoiceSequence(null);
     setSelectedBusiness(null);
-    form.reset(); // Limpiar formulario al cerrar
   };
 
   // Envío del formulario
@@ -193,12 +197,11 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
         return existingInvoice.id;
       }
 
-      // Get current form values
-      const formValues = form.getValues();
-
-      // Validate that client is selected
-      if (!formValues.clientId || formValues.clientId <= 0) {
-        throw new Error("Client is required before adding products");
+      // Trigger form validation - this marks invalid fields with errors in the UI
+      const isValid = await form.trigger();
+      if (!isValid) {
+        // Throw specific error that ProductFormDialog can catch to close modal
+        throw new Error("VALIDATION_FAILED");
       }
 
       // Validate that business is selected
@@ -206,11 +209,26 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
         throw new Error("Business is required before creating invoice");
       }
 
+      // Get validated form values
+      const formValues = form.getValues();
+      const isCreatingNewClient = formValues.createClient === true;
+
+      // Validate client selection based on mode
+      if (isCreatingNewClient) {
+        if (!formValues.clientData) {
+          throw new Error("Client data is required when creating a new client");
+        }
+      } else {
+        if (!formValues.clientId || formValues.clientId <= 0) {
+          throw new Error("Client is required before adding products");
+        }
+      }
+
+      // Build invoice data with conditional client fields
       const invoiceData: CreateInvoiceDTO = {
         invoiceNumber: formValues.invoiceNumber || "",
         issueDate: formValues.issueDate,
         dueDate: formValues.dueDate,
-        clientId: formValues.clientId,
         businessId: selectedBusiness.id,
         currency: formValues.currency || "USD",
         discount: formValues.discount ?? 0,
@@ -223,6 +241,27 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
         customHeader: formValues.customHeader,
         notes: formValues.notes,
         terms: formValues.terms,
+        // Conditionally include client fields based on create new client mode
+        ...(isCreatingNewClient
+          ? {
+              createClient: true,
+              clientId: formValues.clientId,
+              clientData: {
+                name: formValues.clientData!.name,
+                email: formValues.clientData!.email,
+                phone: formValues.clientData!.phone ?? null,
+                address: formValues.clientData!.address ?? null,
+                nit: formValues.clientData!.nit ?? null,
+                businessName: formValues.clientData!.businessName ?? null,
+              },
+            }
+          : {
+              createClient: false,
+              clientId: formValues.clientId,
+              clientEmail: formValues.clientEmail || "",
+              clientPhone: formValues.clientPhone || null,
+              clientAddress: formValues.clientAddress || null,
+            }),
       };
 
       // Create invoice
@@ -235,7 +274,6 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       });
 
       router.push(`/invoices/${sequence}/edit`);
-
       return result.id;
     },
     [
@@ -245,7 +283,8 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       queryClient,
       router,
       selectedBusiness,
-    ]
+      createItem,
+    ],
   );
 
   // Onsubmit
@@ -259,6 +298,30 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
 
         const apiData = processFormData(data);
 
+        // Check if we need to create a new client (from form data)
+        const isCreatingNewClient = data.createClient === true;
+
+        if (isCreatingNewClient && mode === "create") {
+          // Get client form data from form values
+          const clientData = data.clientData;
+          if (!clientData) {
+            throw new Error(
+              "Client data is required when creating a new client",
+            );
+          }
+
+          // Set createClient flag and include clientData
+          apiData.createClient = true;
+          apiData.clientData = {
+            name: clientData.name,
+            email: clientData.email,
+            phone: clientData.phone ?? null,
+            address: clientData.address ?? null,
+            nit: clientData.nit ?? null,
+            businessName: clientData.businessName ?? null,
+          };
+        }
+
         // Always include businessId for create, include it in update if it changed
         if (mode === "create") {
           (apiData as CreateInvoiceDTO).businessId = selectedBusiness.id;
@@ -269,12 +332,12 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
 
           await actions.handleUpdate(
             existingInvoice.id,
-            apiData as UpdateInvoiceDTO
+            apiData as UpdateInvoiceDTO,
           );
         } else {
           // Create mode: create invoice and navigate to edit page
           const result = await actions.handleCreate(
-            apiData as CreateInvoiceDTO
+            apiData as CreateInvoiceDTO,
           );
 
           const sequence = result.sequence;
@@ -289,12 +352,11 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       }
     },
     (errors) => {
-      console.log("errors", errors);
       const firstErrorField = Object.keys(errors)[0];
       if (firstErrorField) {
         scrollToField(firstErrorField);
       }
-    }
+    },
   );
 
   return {
@@ -309,9 +371,11 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     invoice: existingInvoice,
     isLoadingInvoice,
     invoiceError,
+    isLoadingNextNumber,
 
     // Formulario
     form,
+    isDirty: form.formState.isDirty,
     onSubmit,
     isMutating:
       actions.isMutating ||

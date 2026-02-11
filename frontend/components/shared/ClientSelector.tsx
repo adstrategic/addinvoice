@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -22,17 +22,24 @@ import { cn } from "@/lib/utils";
 import { useClientSelector } from "./hooks/useClientSelector";
 import type { ClientResponse } from "@/features/clients";
 
+// Special value to represent "Create New Client" mode
+export const CREATE_NEW_CLIENT_VALUE = -1;
+
 interface ClientSelectorProps {
   field: {
     value: number;
     onChange: (value: number) => void;
   };
   initialClient: ClientResponse | null;
+  mode: "create" | "edit";
+  onSelect?: (client: ClientResponse) => void;
 }
 
 export const ClientSelector = ({
   field,
   initialClient,
+  mode,
+  onSelect,
 }: ClientSelectorProps) => {
   const {
     clientQuery,
@@ -45,12 +52,22 @@ export const ClientSelector = ({
     handleClientSearch,
     handleClientSelect,
     toggleClientPopover,
-  } = useClientSelector(initialClient);
+    handleCreateNewClient,
+  } = useClientSelector(initialClient, mode);
+
+  const isCreateNewMode = field.value === CREATE_NEW_CLIENT_VALUE;
 
   // Función para manejar la selección
   const handleSelect = (client: ClientResponse) => {
     field.onChange(client.id);
     handleClientSelect(client);
+    onSelect?.(client);
+  };
+
+  // Función para manejar "Create New Client"
+  const handleCreateNew = () => {
+    field.onChange(CREATE_NEW_CLIENT_VALUE);
+    handleCreateNewClient();
   };
 
   return (
@@ -65,11 +82,15 @@ export const ClientSelector = ({
               aria-expanded={openClients}
               className={cn(
                 "w-full justify-between text-left font-normal",
-                !selectedClient && "text-muted-foreground"
+                !selectedClient && !isCreateNewMode && "text-muted-foreground"
               )}
               type="button"
             >
-              {selectedClient ? selectedClient.name : "Select customer..."}
+              {isCreateNewMode
+                ? "➕ Create New Client"
+                : selectedClient
+                ? selectedClient.name
+                : "Select customer..."}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </FormControl>
@@ -94,6 +115,21 @@ export const ClientSelector = ({
               </CommandEmpty>
             )}
             <CommandGroup className="max-h-64 overflow-auto">
+              {/* Create New Client option - always first */}
+              <CommandItem
+                value="create-new-client"
+                onSelect={handleCreateNew}
+                className="font-medium"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                <span>Create New Client</span>
+                <Check
+                  className={cn(
+                    "ml-auto h-4 w-4",
+                    isCreateNewMode ? "opacity-100" : "opacity-0"
+                  )}
+                />
+              </CommandItem>
               {!hasUserInteracted && (
                 <CommandItem disabled>
                   Type to search for a customer...

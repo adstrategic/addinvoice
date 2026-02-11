@@ -1,16 +1,18 @@
-import { prisma } from "../../core/db";
+import prisma from "../../core/db";
 import type { Prisma } from "../../generated/prisma/client";
 import type {
   ListInvoicesQuery,
   CreateInvoiceDto,
   UpdateInvoiceDto,
   InvoiceEntity,
-  InvoiceItemEntity,
-  PaymentEntity,
+  // InvoiceItemEntity,
+  // PaymentEntity,
   CreateInvoiceItemDto,
   UpdateInvoiceItemDto,
   CreatePaymentDto,
   UpdatePaymentDto,
+  InvoiceItemEntity,
+  PaymentEntity,
 } from "./invoices.schemas";
 import {
   EntityNotFoundError,
@@ -32,7 +34,7 @@ function calculateItemTotal(
     vatEnabled: boolean;
   },
   invoiceTaxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE",
-  invoiceTaxPercentage: number | null
+  invoiceTaxPercentage: number | null,
 ): number {
   // 1. Base amount: quantity × unitPrice
   const baseAmount = item.quantity * item.unitPrice;
@@ -80,7 +82,7 @@ function calculateInvoiceTotals(
     discountType: "PERCENTAGE" | "FIXED" | "NONE";
     tax: number;
     vatEnabled: boolean;
-  }>
+  }>,
 ): {
   subtotal: number;
   totalTax: number;
@@ -157,7 +159,7 @@ function extractNumberFromInvoiceNumber(invoiceNumber: string): number | null {
  */
 async function getNextInvoiceNumber(
   tx: Prisma.TransactionClient,
-  workspaceId: number
+  workspaceId: number,
 ): Promise<string> {
   return await getNextInvoiceNumberInternal(tx, workspaceId);
 }
@@ -167,7 +169,7 @@ async function getNextInvoiceNumber(
  * This version can be used without a transaction
  */
 export async function getNextInvoiceNumberForWorkspace(
-  workspaceId: number
+  workspaceId: number,
 ): Promise<string> {
   return await getNextInvoiceNumberInternal(prisma, workspaceId);
 }
@@ -178,7 +180,7 @@ export async function getNextInvoiceNumberForWorkspace(
  */
 async function getNextInvoiceNumberInternal(
   client: Prisma.TransactionClient | typeof prisma,
-  workspaceId: number
+  workspaceId: number,
 ): Promise<string> {
   // Get workspace to get invoice prefix
   const workspace = await client.workspace.findUnique({
@@ -213,7 +215,7 @@ async function getNextInvoiceNumberInternal(
 
     // Extract number from last invoice number
     const extractedNumber = extractNumberFromInvoiceNumber(
-      lastInvoiceWithPrefix.invoiceNumber
+      lastInvoiceWithPrefix.invoiceNumber,
     );
 
     if (extractedNumber !== null && !isNaN(extractedNumber)) {
@@ -246,7 +248,7 @@ async function getNextInvoiceNumberInternal(
 
     // Try to extract and increment the number from the last invoice
     const extractedNumber = extractNumberFromInvoiceNumber(
-      lastInvoice.invoiceNumber
+      lastInvoice.invoiceNumber,
     );
 
     if (extractedNumber !== null && !isNaN(extractedNumber)) {
@@ -269,17 +271,19 @@ async function getNextInvoiceNumberInternal(
 async function handleCatalogIntegration(
   tx: Prisma.TransactionClient,
   workspaceId: number,
+  businessId: number,
   itemData: {
     name: string;
     description: string;
     price: number;
     quantityUnit: "DAYS" | "HOURS" | "UNITS";
-  }
+  },
 ): Promise<number | null> {
-  // Check if catalog item with same name exists
+  // Check if catalog item with same name exists for this business
   const existingCatalog = await tx.catalog.findFirst({
     where: {
       workspaceId,
+      businessId,
       name: itemData.name,
       deletedAt: null,
     },
@@ -294,10 +298,11 @@ async function handleCatalogIntegration(
   }
 
   // Create new catalog entry
-  // First, get next sequence
+  // First, get next sequence for this business
   const lastCatalog = await tx.catalog.findFirst({
     where: {
       workspaceId,
+      businessId,
       deletedAt: null,
     },
     orderBy: {
@@ -313,6 +318,7 @@ async function handleCatalogIntegration(
   const newCatalog = await tx.catalog.create({
     data: {
       workspaceId,
+      businessId,
       name: itemData.name,
       description: itemData.description,
       price: itemData.price,
@@ -331,14 +337,14 @@ async function handleCatalogIntegration(
  */
 export async function listInvoices(
   workspaceId: number,
-  query: ListInvoicesQuery
+  query: ListInvoicesQuery,
 ): Promise<{
   invoices: InvoiceEntity[];
   total: number;
   page: number;
   limit: number;
 }> {
-  const { page, limit, search, status, clientId } = query;
+  const { page, limit, search, status, clientId, businessId } = query;
   const skip = (page - 1) * limit;
 
   const where: Prisma.InvoiceWhereInput = {
@@ -353,6 +359,7 @@ export async function listInvoices(
     }),
     ...(status && { status }),
     ...(clientId && { clientId }),
+    ...(businessId && { businessId }),
   };
 
   const [invoices, total] = await Promise.all([
@@ -377,6 +384,7 @@ export async function listInvoices(
       discount: Number(inv.discount),
       taxPercentage: inv.taxPercentage ? Number(inv.taxPercentage) : null,
       total: Number(inv.total),
+      balance: Number(inv.balance),
     })),
     total,
     page,
@@ -389,10 +397,8 @@ export async function listInvoices(
  */
 export async function getInvoiceBySequence(
   workspaceId: number,
-  sequence: number
-): Promise<
-  InvoiceEntity & { items: InvoiceItemEntity[]; payments: PaymentEntity[] }
-> {
+  sequence: number,
+): Promise<InvoiceEntity> {
   const invoice = await prisma.invoice.findUnique({
     where: {
       workspaceId_sequence: {
@@ -432,6 +438,7 @@ export async function getInvoiceBySequence(
     discount: Number(invoice.discount),
     taxPercentage: invoice.taxPercentage ? Number(invoice.taxPercentage) : null,
     total: Number(invoice.total),
+    balance: Number(invoice.balance),
     items: invoice.items.map((item) => ({
       ...item,
       quantity: Number(item.quantity),
@@ -444,9 +451,6 @@ export async function getInvoiceBySequence(
       ...payment,
       amount: Number(payment.amount),
     })),
-  } as InvoiceEntity & {
-    items: InvoiceItemEntity[];
-    payments: PaymentEntity[];
   };
 }
 
@@ -455,8 +459,8 @@ export async function getInvoiceBySequence(
  */
 export async function createInvoice(
   workspaceId: number,
-  data: CreateInvoiceDto
-): Promise<InvoiceEntity & { items: InvoiceItemEntity[] }> {
+  data: CreateInvoiceDto,
+): Promise<InvoiceEntity> {
   return await prisma.$transaction(async (tx) => {
     // Check if workspace has at least one business
     const businessCount = await tx.business.count({
@@ -520,13 +524,45 @@ export async function createInvoice(
           data.items.map(async (item) => {
             // Handle catalog integration if needed
             let catalogId: number | null = null;
-            if (item.saveToCatalog) {
-              catalogId = await handleCatalogIntegration(tx, workspaceId, {
-                name: item.name,
-                description: item.description,
-                price: item.unitPrice,
-                quantityUnit: item.quantityUnit,
+
+            // If catalogId is provided directly, use it (when adding from existing catalog)
+            if (item.catalogId) {
+              // Verify catalog exists and belongs to the business
+              const catalog = await tx.catalog.findUnique({
+                where: { id: item.catalogId },
               });
+
+              if (!catalog || catalog.deletedAt !== null) {
+                throw new EntityNotFoundError({
+                  message: "Catalog item not found",
+                  statusCode: 404,
+                  code: "ERR_NF",
+                });
+              }
+
+              if (catalog.businessId !== data.businessId) {
+                throw new EntityValidationError({
+                  message:
+                    "Catalog item does not belong to the selected business",
+                  statusCode: 400,
+                  code: "ERR_VALID",
+                });
+              }
+
+              catalogId = item.catalogId;
+            } else if (item.saveToCatalog) {
+              // Create new catalog entry or link to existing one by name
+              catalogId = await handleCatalogIntegration(
+                tx,
+                workspaceId,
+                data.businessId,
+                {
+                  name: item.name,
+                  description: item.description,
+                  price: item.unitPrice,
+                  quantityUnit: item.quantityUnit,
+                },
+              );
             }
 
             // Determine item tax value based on taxMode
@@ -551,7 +587,7 @@ export async function createInvoice(
                 vatEnabled: itemVatEnabled,
               },
               data.taxMode,
-              data.taxPercentage || null
+              data.taxPercentage || null,
             );
 
             return {
@@ -567,7 +603,7 @@ export async function createInvoice(
               total: itemTotal,
               catalogId,
             };
-          })
+          }),
         )
       : [];
 
@@ -579,7 +615,7 @@ export async function createInvoice(
         taxMode: data.taxMode,
         taxPercentage: data.taxPercentage || null,
       },
-      itemsToCreate
+      itemsToCreate,
     );
 
     // Get next sequence
@@ -594,13 +630,96 @@ export async function createInvoice(
     });
     const sequence = lastInvoice ? lastInvoice.sequence + 1 : 1;
 
+    // Handle client creation or selection
+    let clientId: number;
+    let client: {
+      id: number;
+      email: string;
+      phone: string | null;
+      address: string | null;
+    };
+
+    if (data.createClient === true && data.clientData) {
+      // Create new client within the transaction
+      // Get next client sequence
+      const lastClient = await tx.client.findFirst({
+        where: {
+          workspaceId,
+          deletedAt: null,
+        },
+        orderBy: {
+          sequence: "desc",
+        },
+        select: {
+          sequence: true,
+        },
+      });
+      const clientSequence = lastClient ? lastClient.sequence + 1 : 1;
+
+      // Create the client
+      const newClient = await tx.client.create({
+        data: {
+          workspaceId,
+          sequence: clientSequence,
+          name: data.clientData.name,
+          email: data.clientData.email,
+          phone: data.clientData.phone,
+          address: data.clientData.address,
+          nit: data.clientData.nit,
+          businessName: data.clientData.businessName,
+        },
+      });
+
+      clientId = newClient.id;
+      client = {
+        id: newClient.id,
+        email: newClient.email,
+        phone: newClient.phone,
+        address: newClient.address,
+      };
+    } else {
+      // Use existing client
+      if (!data.clientId) {
+        throw new EntityValidationError({
+          message: "Client ID is required when not creating a new client",
+          statusCode: 400,
+          code: "ERR_VALID",
+        });
+      }
+
+      const existingClient = await tx.client.findUnique({
+        where: { id: data.clientId },
+      });
+
+      if (!existingClient) {
+        throw new EntityValidationError({
+          message: "Client not found",
+          statusCode: 400,
+          code: "ERR_VALID",
+        });
+      }
+
+      clientId = existingClient.id;
+      client = {
+        id: existingClient.id,
+        email: existingClient.email,
+        phone: existingClient.phone,
+        address: existingClient.address,
+      };
+    }
+
+    // Use provided invoice-specific fields or fallback to client defaults
+    const clientEmail = client.email;
+    const clientPhone = client.phone;
+    const clientAddress = client.address;
+
     // Create invoice
     const invoice = await tx.invoice.create({
       data: {
         workspaceId,
         businessId: data.businessId,
         sequence,
-        clientId: data.clientId,
+        clientId: clientId,
         invoiceNumber,
         status: "DRAFT",
         issueDate: data.issueDate,
@@ -608,6 +727,9 @@ export async function createInvoice(
         purchaseOrder: data.purchaseOrder,
         customHeader: data.customHeader,
         currency: data.currency,
+        clientEmail,
+        clientPhone,
+        clientAddress,
         subtotal: totals.subtotal,
         totalTax: totals.totalTax,
         discount: data.discount,
@@ -624,6 +746,8 @@ export async function createInvoice(
       },
       include: {
         items: true,
+        client: true,
+        business: true,
       },
     });
 
@@ -637,6 +761,7 @@ export async function createInvoice(
         ? Number(invoice.taxPercentage)
         : null,
       total: Number(invoice.total),
+      balance: Number(invoice.balance),
       items: invoice.items.map((item) => ({
         ...item,
         quantity: Number(item.quantity),
@@ -655,13 +780,12 @@ export async function createInvoice(
 export async function updateInvoice(
   workspaceId: number,
   id: number,
-  data: UpdateInvoiceDto
-): Promise<InvoiceEntity & { items: InvoiceItemEntity[] }> {
+  data: UpdateInvoiceDto,
+): Promise<InvoiceEntity> {
   return await prisma.$transaction(async (tx) => {
     // Verify invoice exists and belongs to workspace
     const existingInvoice = await tx.invoice.findUnique({
       where: { id },
-      include: { items: true },
     });
 
     if (
@@ -685,103 +809,199 @@ export async function updateInvoice(
     }
 
     // If items are being updated, recalculate totals
-    const { clientId, items, ...invoiceData } = data;
+    const {
+      clientId,
+      items,
+      clientEmail,
+      clientPhone,
+      clientAddress,
+      createClient,
+      clientData,
+      ...invoiceData
+    } = data;
     let updateData: Prisma.InvoiceUpdateInput = { ...invoiceData };
-    let itemsToUpdate: InvoiceItemEntity[] = existingInvoice.items.map(
-      (item) => ({
-        ...item,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-        discount: Number(item.discount),
-        tax: Number(item.tax),
-        total: Number(item.total),
-      })
-    );
 
-    if (data.items) {
-      // TODO: not delete all to restart
-      // Delete existing items and create new ones
-      await tx.invoiceItem.deleteMany({
+    // Handle client creation or selection
+    let newClientId: number | undefined;
+
+    if (data.createClient === true && data.clientData) {
+      // Create new client within the transaction
+      // Get next client sequence
+      const lastClient = await tx.client.findFirst({
+        where: {
+          workspaceId,
+          deletedAt: null,
+        },
+        orderBy: {
+          sequence: "desc",
+        },
+        select: {
+          sequence: true,
+        },
+      });
+      const clientSequence = lastClient ? lastClient.sequence + 1 : 1;
+
+      // Create the client
+      const newClient = await tx.client.create({
+        data: {
+          workspaceId,
+          sequence: clientSequence,
+          name: data.clientData.name,
+          email: data.clientData.email,
+          phone: data.clientData.phone,
+          address: data.clientData.address,
+          nit: data.clientData.nit,
+          businessName: data.clientData.businessName,
+        },
+      });
+
+      newClientId = newClient.id;
+
+      updateData.clientEmail = newClient.email;
+      updateData.clientPhone = newClient.phone;
+      updateData.clientAddress = newClient.address;
+    }
+
+    // Handle invoice-specific client fields
+    // If clientId is being changed, fetch new client for defaults
+    if (clientId && clientId !== existingInvoice.clientId && !createClient) {
+      const newClient = await tx.client.findUnique({
+        where: { id: clientId },
+      });
+
+      if (!newClient) {
+        throw new EntityValidationError({
+          message: "Client not found",
+          statusCode: 400,
+          code: "ERR_VALID",
+        });
+      }
+
+      // If invoice-specific fields not provided, use new client defaults
+      if (clientEmail !== undefined) {
+        updateData.clientEmail = clientEmail;
+      } else {
+        updateData.clientEmail = newClient.email;
+      }
+
+      if (clientPhone !== undefined) {
+        updateData.clientPhone = clientPhone;
+      } else {
+        updateData.clientPhone = newClient.phone;
+      }
+
+      if (clientAddress !== undefined) {
+        updateData.clientAddress = clientAddress;
+      } else {
+        updateData.clientAddress = newClient.address;
+      }
+    }
+
+    if (!createClient) {
+      // Client not changing, just update the fields if provided
+      if (clientEmail !== undefined) {
+        updateData.clientEmail = clientEmail;
+      }
+      if (clientPhone !== undefined) {
+        updateData.clientPhone = clientPhone;
+      }
+      if (clientAddress !== undefined) {
+        updateData.clientAddress = clientAddress;
+      }
+    }
+
+    // Just update invoice fields, recalculate if tax/discount changed
+    const taxModeChanged =
+      data.taxMode !== undefined && data.taxMode !== existingInvoice.taxMode;
+    const discountChanged =
+      data.discount !== undefined || data.discountType !== undefined;
+    const taxPercentageChanged = data.taxPercentage !== undefined;
+
+    // If taxMode changed to NONE, clear tax data on all items
+    if (taxModeChanged && data.taxMode === "NONE") {
+      await tx.invoiceItem.updateMany({
+        where: { invoiceId: id },
+        data: { tax: 0, vatEnabled: false },
+      });
+
+      const invoiceItems = await tx.invoiceItem.findMany({
         where: { invoiceId: id },
       });
 
-      // Create new items
-      const newItems = await Promise.all(
-        data.items.map(async (item) => {
-          let catalogId: number | null = null;
-          if (item.saveToCatalog) {
-            catalogId = await handleCatalogIntegration(tx, workspaceId, {
-              name: item.name,
-              description: item.description,
-              price: item.unitPrice,
-              quantityUnit: item.quantityUnit,
-            });
-          }
-
-          // Determine effective taxMode and taxPercentage
-          const effectiveTaxMode = data.taxMode || existingInvoice.taxMode;
-          const effectiveTaxPercentage =
-            data.taxPercentage !== undefined
-              ? data.taxPercentage
-              : existingInvoice.taxPercentage
-              ? Number(existingInvoice.taxPercentage)
-              : null;
-
-          // Determine item tax value based on taxMode
-          let itemTax = 0;
-          const itemVatEnabled = item.vatEnabled || false;
-          if (effectiveTaxMode === "BY_PRODUCT") {
-            itemTax = item.tax || 0;
-          } else if (effectiveTaxMode === "BY_TOTAL") {
-            // For BY_TOTAL mode, set tax to invoice taxPercentage for display if vatEnabled
-            itemTax =
-              itemVatEnabled && effectiveTaxPercentage
-                ? effectiveTaxPercentage
-                : 0;
-          }
-
-          const itemTotal = calculateItemTotal(
-            {
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              discount: item.discount,
-              discountType: item.discountType,
-              tax: itemTax,
-              vatEnabled: itemVatEnabled,
-            },
-            effectiveTaxMode,
-            effectiveTaxPercentage
-          );
-
-          return await tx.invoiceItem.create({
-            data: {
-              invoiceId: id,
-              name: item.name,
-              description: item.description,
-              quantity: item.quantity,
-              quantityUnit: item.quantityUnit,
-              unitPrice: item.unitPrice,
-              discount: item.discount,
-              discountType: item.discountType,
-              tax: itemTax,
-              vatEnabled: itemVatEnabled,
-              total: itemTotal,
-              catalogId,
-            },
-          });
-        })
-      );
-
-      itemsToUpdate = newItems.map((item) => ({
-        ...item,
+      const itemsToUpdate = invoiceItems.map((item) => ({
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
         discount: Number(item.discount),
+        discountType: item.discountType,
         tax: Number(item.tax),
-        total: Number(item.total),
+        vatEnabled: item.vatEnabled,
       }));
 
-      // Recalculate totals
+      // Recalculate totals with cleared tax data
+      const totalsAfterClear = calculateInvoiceTotals(
+        {
+          discount:
+            data.discount !== undefined
+              ? data.discount
+              : Number(existingInvoice.discount),
+          discountType:
+            data.discountType !== undefined
+              ? data.discountType
+              : existingInvoice.discountType,
+          taxMode: "NONE",
+          taxPercentage: null,
+        },
+        itemsToUpdate,
+      );
+      updateData.subtotal = totalsAfterClear.subtotal;
+      updateData.totalTax = totalsAfterClear.totalTax;
+      updateData.total = totalsAfterClear.total;
+    }
+
+    // If taxMode changed to something other than BY_TOTAL, clear taxName and taxPercentage
+    if (taxModeChanged && data.taxMode !== "BY_TOTAL") {
+      updateData.taxName = null;
+      updateData.taxPercentage = null;
+    }
+
+    // If taxMode changed to BY_TOTAL or taxPercentage changed in BY_TOTAL mode, update all items with vatEnabled
+    const effectiveTaxMode = data.taxMode || existingInvoice.taxMode;
+    const effectiveTaxPercentage =
+      data.taxPercentage !== undefined
+        ? data.taxPercentage
+        : existingInvoice.taxPercentage
+          ? Number(existingInvoice.taxPercentage)
+          : null;
+    if (
+      effectiveTaxMode === "BY_TOTAL" &&
+      effectiveTaxPercentage !== null &&
+      (taxModeChanged || taxPercentageChanged)
+    ) {
+      await tx.invoiceItem.updateMany({
+        where: {
+          invoiceId: id,
+        },
+        data: {
+          tax: effectiveTaxPercentage,
+          vatEnabled: effectiveTaxPercentage !== 0,
+        },
+      });
+    }
+
+    if (taxModeChanged || discountChanged || taxPercentageChanged) {
+      const invoiceItems = await tx.invoiceItem.findMany({
+        where: { invoiceId: id },
+      });
+
+      const itemsToUpdate = invoiceItems.map((item) => ({
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        discount: Number(item.discount),
+        discountType: item.discountType,
+        tax: Number(item.tax),
+        vatEnabled: item.vatEnabled,
+      }));
+
       const totals = calculateInvoiceTotals(
         {
           discount:
@@ -797,178 +1017,15 @@ export async function updateInvoice(
             data.taxPercentage !== undefined
               ? data.taxPercentage
               : existingInvoice.taxPercentage
-              ? Number(existingInvoice.taxPercentage)
-              : null,
+                ? Number(existingInvoice.taxPercentage)
+                : null,
         },
-        itemsToUpdate
+        itemsToUpdate,
       );
 
       updateData.subtotal = totals.subtotal;
       updateData.totalTax = totals.totalTax;
       updateData.total = totals.total;
-
-      // If taxMode changed to NONE, clear tax data on all items
-      const taxModeChanged =
-        data.taxMode !== undefined && data.taxMode !== existingInvoice.taxMode;
-      const taxPercentageChanged = data.taxPercentage !== undefined;
-      if (taxModeChanged && data.taxMode === "NONE") {
-        await tx.invoiceItem.updateMany({
-          where: { invoiceId: id },
-          data: { tax: 0, vatEnabled: false },
-        });
-        // Update itemsToUpdate array to reflect cleared tax data
-        itemsToUpdate = itemsToUpdate.map((item) => ({
-          ...item,
-          tax: 0,
-          vatEnabled: false,
-        }));
-        // Recalculate totals with cleared tax data
-        const totalsAfterClear = calculateInvoiceTotals(
-          {
-            discount:
-              data.discount !== undefined
-                ? data.discount
-                : Number(existingInvoice.discount),
-            discountType:
-              data.discountType !== undefined
-                ? data.discountType
-                : existingInvoice.discountType,
-            taxMode: "NONE",
-            taxPercentage: null,
-          },
-          itemsToUpdate
-        );
-        updateData.subtotal = totalsAfterClear.subtotal;
-        updateData.totalTax = totalsAfterClear.totalTax;
-        updateData.total = totalsAfterClear.total;
-      }
-
-      // If taxMode changed to something other than BY_TOTAL, clear taxName and taxPercentage
-      if (taxModeChanged && data.taxMode !== "BY_TOTAL") {
-        updateData.taxName = null;
-        updateData.taxPercentage = null;
-      }
-
-      // If taxMode is BY_TOTAL and taxPercentage changed, update all items with vatEnabled
-      const effectiveTaxMode = data.taxMode || existingInvoice.taxMode;
-      const effectiveTaxPercentage =
-        data.taxPercentage !== undefined
-          ? data.taxPercentage
-          : existingInvoice.taxPercentage
-          ? Number(existingInvoice.taxPercentage)
-          : null;
-      if (
-        effectiveTaxMode === "BY_TOTAL" &&
-        taxPercentageChanged &&
-        effectiveTaxPercentage !== null
-      ) {
-        await tx.invoiceItem.updateMany({
-          where: {
-            invoiceId: id,
-            vatEnabled: true,
-          },
-          data: {
-            tax: effectiveTaxPercentage,
-          },
-        });
-      }
-    } else {
-      // Just update invoice fields, recalculate if tax/discount changed
-      const taxModeChanged =
-        data.taxMode !== undefined && data.taxMode !== existingInvoice.taxMode;
-      const discountChanged =
-        data.discount !== undefined || data.discountType !== undefined;
-      const taxPercentageChanged = data.taxPercentage !== undefined;
-
-      if (taxModeChanged || discountChanged || taxPercentageChanged) {
-        const totals = calculateInvoiceTotals(
-          {
-            discount:
-              data.discount !== undefined
-                ? data.discount
-                : Number(existingInvoice.discount),
-            discountType:
-              data.discountType !== undefined
-                ? data.discountType
-                : existingInvoice.discountType,
-            taxMode: data.taxMode || existingInvoice.taxMode,
-            taxPercentage:
-              data.taxPercentage !== undefined
-                ? data.taxPercentage
-                : existingInvoice.taxPercentage
-                ? Number(existingInvoice.taxPercentage)
-                : null,
-          },
-          itemsToUpdate
-        );
-
-        updateData.subtotal = totals.subtotal;
-        updateData.totalTax = totals.totalTax;
-        updateData.total = totals.total;
-      }
-
-      // If taxMode changed to NONE, clear tax data on all items
-      if (taxModeChanged && data.taxMode === "NONE") {
-        await tx.invoiceItem.updateMany({
-          where: { invoiceId: id },
-          data: { tax: 0, vatEnabled: false },
-        });
-        // Re-fetch items after clearing tax data for accurate totals
-        itemsToUpdate = itemsToUpdate.map((item) => ({
-          ...item,
-          tax: 0,
-          vatEnabled: false,
-        }));
-        // Recalculate totals with cleared tax data
-        const totalsAfterClear = calculateInvoiceTotals(
-          {
-            discount:
-              data.discount !== undefined
-                ? data.discount
-                : Number(existingInvoice.discount),
-            discountType:
-              data.discountType !== undefined
-                ? data.discountType
-                : existingInvoice.discountType,
-            taxMode: "NONE",
-            taxPercentage: null,
-          },
-          itemsToUpdate
-        );
-        updateData.subtotal = totalsAfterClear.subtotal;
-        updateData.totalTax = totalsAfterClear.totalTax;
-        updateData.total = totalsAfterClear.total;
-      }
-
-      // If taxMode changed to something other than BY_TOTAL, clear taxName and taxPercentage
-      if (taxModeChanged && data.taxMode !== "BY_TOTAL") {
-        updateData.taxName = null;
-        updateData.taxPercentage = null;
-      }
-
-      // If taxMode changed to BY_TOTAL or taxPercentage changed in BY_TOTAL mode, update all items with vatEnabled
-      const effectiveTaxMode = data.taxMode || existingInvoice.taxMode;
-      const effectiveTaxPercentage =
-        data.taxPercentage !== undefined
-          ? data.taxPercentage
-          : existingInvoice.taxPercentage
-          ? Number(existingInvoice.taxPercentage)
-          : null;
-      if (
-        effectiveTaxMode === "BY_TOTAL" &&
-        effectiveTaxPercentage !== null &&
-        (taxModeChanged || taxPercentageChanged)
-      ) {
-        await tx.invoiceItem.updateMany({
-          where: {
-            invoiceId: id,
-            vatEnabled: true,
-          },
-          data: {
-            tax: effectiveTaxPercentage,
-          },
-        });
-      }
     }
 
     const updatedInvoice = await tx.invoice.update({
@@ -976,10 +1033,15 @@ export async function updateInvoice(
       data: {
         ...updateData,
         client: {
-          connect: clientId ? { id: clientId } : undefined,
+          connect:
+            createClient && newClientId !== undefined
+              ? { id: newClientId }
+              : clientId
+                ? { id: clientId }
+                : undefined,
         },
       },
-      include: { items: true },
+      include: { items: true, client: true, business: true },
     });
 
     return {
@@ -991,6 +1053,7 @@ export async function updateInvoice(
         ? Number(updatedInvoice.taxPercentage)
         : null,
       total: Number(updatedInvoice.total),
+      balance: Number(updatedInvoice.balance),
       items: updatedInvoice.items.map((item) => ({
         ...item,
         quantity: Number(item.quantity),
@@ -998,8 +1061,8 @@ export async function updateInvoice(
         discount: Number(item.discount),
         tax: Number(item.tax),
         total: Number(item.total),
-      })) as InvoiceItemEntity[],
-    } as InvoiceEntity & { items: InvoiceItemEntity[] };
+      })),
+    };
   });
 }
 
@@ -1008,7 +1071,7 @@ export async function updateInvoice(
  */
 export async function deleteInvoice(
   workspaceId: number,
-  id: number
+  id: number,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const existingInvoice = await tx.invoice.findUnique({
@@ -1056,7 +1119,7 @@ export async function deleteInvoice(
  */
 export async function markInvoiceAsSent(
   workspaceId: number,
-  invoiceId: number
+  invoiceId: number,
 ): Promise<InvoiceEntity> {
   const invoice = await prisma.invoice.findUnique({
     where: {
@@ -1078,71 +1141,8 @@ export async function markInvoiceAsSent(
 
   // Only update if not already sent (idempotent)
   if (invoice.status === "SENT" && invoice.sentAt) {
-    return {
-      ...invoice,
-      subtotal: Number(invoice.subtotal),
-      totalTax: Number(invoice.totalTax),
-      discount: Number(invoice.discount),
-      taxPercentage: invoice.taxPercentage
-        ? Number(invoice.taxPercentage)
-        : null,
-      total: Number(invoice.total),
-    };
-  }
-
-  const updatedInvoice = await prisma.invoice.update({
-    where: {
-      id: invoiceId,
-    },
-    data: {
-      status: "SENT",
-      sentAt: new Date(),
-    },
-  });
-
-  return {
-    ...updatedInvoice,
-    subtotal: Number(updatedInvoice.subtotal),
-    totalTax: Number(updatedInvoice.totalTax),
-    discount: Number(updatedInvoice.discount),
-    taxPercentage: updatedInvoice.taxPercentage
-      ? Number(updatedInvoice.taxPercentage)
-      : null,
-    total: Number(updatedInvoice.total),
-  };
-}
-
-/**
- * Mark an invoice as paid
- * Updates status to PAID and sets paidAt timestamp
- * Only allows marking as paid if status is SENT, VIEWED, or PENDING (not DRAFT)
- */
-export async function markInvoiceAsPaid(
-  workspaceId: number,
-  invoiceId: number
-): Promise<InvoiceEntity> {
-  const invoice = await prisma.invoice.findUnique({
-    where: {
-      id: invoiceId,
-    },
-  });
-
-  if (
-    !invoice ||
-    invoice.deletedAt !== null ||
-    invoice.workspaceId !== workspaceId
-  ) {
-    throw new EntityNotFoundError({
-      message: "Invoice not found",
-      statusCode: 404,
-      code: "ERR_NF",
-    });
-  }
-
-  // Only update if not already paid (idempotent)
-  if (invoice.status === "PAID" && invoice.paidAt) {
     throw new EntityValidationError({
-      message: "Invoice already paid",
+      message: "Invoice already sent",
       statusCode: 400,
       code: "ERR_VALID",
     });
@@ -1153,8 +1153,13 @@ export async function markInvoiceAsPaid(
       id: invoiceId,
     },
     data: {
-      status: "PAID",
-      paidAt: new Date(),
+      status: "SENT",
+      sentAt: new Date(),
+    },
+
+    include: {
+      business: true,
+      client: true,
     },
   });
 
@@ -1167,6 +1172,7 @@ export async function markInvoiceAsPaid(
       ? Number(updatedInvoice.taxPercentage)
       : null,
     total: Number(updatedInvoice.total),
+    balance: Number(updatedInvoice.balance),
   };
 }
 
@@ -1178,7 +1184,7 @@ export async function markInvoiceAsPaid(
 export async function addInvoiceItem(
   workspaceId: number,
   invoiceId: number,
-  data: Omit<CreateInvoiceItemDto, "invoiceId">
+  data: Omit<CreateInvoiceItemDto, "invoiceId">,
 ): Promise<InvoiceItemEntity> {
   return await prisma.$transaction(async (tx) => {
     // Verify invoice exists and belongs to workspace
@@ -1208,23 +1214,79 @@ export async function addInvoiceItem(
 
     // Handle catalog integration if needed
     let catalogId: number | null = null;
-    if (data.saveToCatalog) {
-      catalogId = await handleCatalogIntegration(tx, workspaceId, {
-        name: data.name,
-        description: data.description,
-        price: data.unitPrice,
-        quantityUnit: data.quantityUnit,
+
+    // If catalogId is provided directly, use it (when adding from existing catalog)
+    if (data.catalogId) {
+      // Verify catalog exists and belongs to the invoice's business
+      const catalog = await tx.catalog.findUnique({
+        where: { id: data.catalogId },
       });
+
+      if (!catalog || catalog.deletedAt !== null) {
+        throw new EntityNotFoundError({
+          message: "Catalog item not found",
+          statusCode: 404,
+          code: "ERR_NF",
+        });
+      }
+
+      if (catalog.businessId !== invoice.businessId) {
+        throw new EntityValidationError({
+          message: "Catalog item does not belong to the invoice's business",
+          statusCode: 400,
+          code: "ERR_VALID",
+        });
+      }
+
+      catalogId = data.catalogId;
+    } else if (data.saveToCatalog) {
+      // Create new catalog entry or link to existing one by name
+      catalogId = await handleCatalogIntegration(
+        tx,
+        workspaceId,
+        invoice.businessId,
+        {
+          name: data.name,
+          description: data.description,
+          price: data.unitPrice,
+          quantityUnit: data.quantityUnit,
+        },
+      );
     }
 
     // Determine effective taxMode - use passed taxMode or fallback to invoice's
     const effectiveTaxMode = data.taxMode || invoice.taxMode;
 
+    // Prepare invoice update data for tax-related fields
+    const invoiceUpdateData: {
+      taxMode?: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
+      taxName?: string | null;
+      taxPercentage?: number | null;
+    } = {};
+
     // If taxMode was passed and differs from invoice, update the invoice
     if (data.taxMode && data.taxMode !== invoice.taxMode) {
+      invoiceUpdateData.taxMode = data.taxMode;
+    }
+
+    // If taxMode is BY_TOTAL and taxName/taxPercentage are provided, update them
+    if (
+      effectiveTaxMode === "BY_TOTAL" &&
+      (data.taxName !== undefined || data.taxPercentage !== undefined)
+    ) {
+      if (data.taxName !== undefined) {
+        invoiceUpdateData.taxName = data.taxName;
+      }
+      if (data.taxPercentage !== undefined) {
+        invoiceUpdateData.taxPercentage = data.taxPercentage;
+      }
+    }
+
+    // Update invoice if there are tax-related changes
+    if (Object.keys(invoiceUpdateData).length > 0) {
       await tx.invoice.update({
         where: { id: invoiceId },
-        data: { taxMode: data.taxMode },
+        data: invoiceUpdateData,
       });
     }
 
@@ -1259,7 +1321,7 @@ export async function addInvoiceItem(
         vatEnabled: itemVatEnabled,
       },
       effectiveTaxMode,
-      invoice.taxPercentage ? Number(invoice.taxPercentage) : null
+      invoice.taxPercentage ? Number(invoice.taxPercentage) : null,
     );
 
     // Create item
@@ -1285,14 +1347,20 @@ export async function addInvoiceItem(
       where: { invoiceId },
     });
 
+    // Use updated taxPercentage if provided, otherwise use invoice's current value
+    const effectiveTaxPercentage =
+      data.taxPercentage !== undefined
+        ? data.taxPercentage
+        : invoice.taxPercentage
+          ? Number(invoice.taxPercentage)
+          : null;
+
     const totals = calculateInvoiceTotals(
       {
         discount: Number(invoice.discount),
         discountType: invoice.discountType,
         taxMode: effectiveTaxMode,
-        taxPercentage: invoice.taxPercentage
-          ? Number(invoice.taxPercentage)
-          : null,
+        taxPercentage: effectiveTaxPercentage,
       },
       allItems.map((i) => ({
         quantity: Number(i.quantity),
@@ -1301,17 +1369,40 @@ export async function addInvoiceItem(
         discountType: i.discountType,
         tax: Number(i.tax),
         vatEnabled: i.vatEnabled,
-      }))
+      })),
     );
+
+    // Prepare final invoice update data
+    const finalInvoiceUpdateData: {
+      taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
+      subtotal: number;
+      totalTax: number;
+      total: number;
+      taxName?: string | null;
+      taxPercentage?: number | null;
+    } = {
+      taxMode: effectiveTaxMode, // Ensure taxMode is updated along with totals
+      subtotal: totals.subtotal,
+      totalTax: totals.totalTax,
+      total: totals.total,
+    };
+
+    // Include taxName and taxPercentage if they were provided and taxMode is BY_TOTAL
+    if (
+      effectiveTaxMode === "BY_TOTAL" &&
+      (data.taxName !== undefined || data.taxPercentage !== undefined)
+    ) {
+      if (data.taxName !== undefined) {
+        finalInvoiceUpdateData.taxName = data.taxName;
+      }
+      if (data.taxPercentage !== undefined) {
+        finalInvoiceUpdateData.taxPercentage = data.taxPercentage;
+      }
+    }
 
     await tx.invoice.update({
       where: { id: invoiceId },
-      data: {
-        taxMode: effectiveTaxMode, // Ensure taxMode is updated along with totals
-        subtotal: totals.subtotal,
-        totalTax: totals.totalTax,
-        total: totals.total,
-      },
+      data: finalInvoiceUpdateData,
     });
 
     return {
@@ -1321,7 +1412,7 @@ export async function addInvoiceItem(
       discount: Number(item.discount),
       tax: Number(item.tax),
       total: Number(item.total),
-    } as InvoiceItemEntity;
+    };
   });
 }
 
@@ -1332,7 +1423,7 @@ export async function updateInvoiceItem(
   workspaceId: number,
   invoiceId: number,
   itemId: number,
-  data: UpdateInvoiceItemDto
+  data: UpdateInvoiceItemDto,
 ): Promise<InvoiceItemEntity> {
   return await prisma.$transaction(async (tx) => {
     // Verify invoice exists and belongs to workspace
@@ -1375,24 +1466,100 @@ export async function updateInvoiceItem(
 
     // Handle catalog integration if needed
     let itemCatalogId = existingItem.catalogId;
-    if (data.saveToCatalog && !itemCatalogId) {
-      itemCatalogId = await handleCatalogIntegration(tx, workspaceId, {
-        name: data.name || existingItem.name,
-        description: data.description || existingItem.description,
-        price:
-          data.unitPrice !== undefined
-            ? data.unitPrice
-            : Number(existingItem.unitPrice),
-        quantityUnit: data.quantityUnit || existingItem.quantityUnit,
-      });
+
+    // If catalogId is provided directly, use it (when updating from existing catalog)
+    if (data.catalogId !== undefined) {
+      if (data.catalogId === null) {
+        // Explicitly remove catalog link
+        itemCatalogId = null;
+      } else {
+        // Verify catalog exists and belongs to the invoice's business
+        const catalog = await tx.catalog.findUnique({
+          where: { id: data.catalogId },
+        });
+
+        if (!catalog || catalog.deletedAt !== null) {
+          throw new EntityNotFoundError({
+            message: "Catalog item not found",
+            statusCode: 404,
+            code: "ERR_NF",
+          });
+        }
+
+        if (catalog.businessId !== invoice.businessId) {
+          throw new EntityValidationError({
+            message: "Catalog item does not belong to the invoice's business",
+            statusCode: 400,
+            code: "ERR_VALID",
+          });
+        }
+
+        itemCatalogId = data.catalogId;
+      }
+    } else if (data.saveToCatalog && !itemCatalogId) {
+      // Create new catalog entry or link to existing one by name
+      itemCatalogId = await handleCatalogIntegration(
+        tx,
+        workspaceId,
+        invoice.businessId,
+        {
+          name: data.name || existingItem.name,
+          description: data.description || existingItem.description,
+          price:
+            data.unitPrice !== undefined
+              ? data.unitPrice
+              : Number(existingItem.unitPrice),
+          quantityUnit: data.quantityUnit || existingItem.quantityUnit,
+        },
+      );
     }
 
-    // Prepare update data - exclude saveToCatalog and taxMode as they're not item database fields
-    const { saveToCatalog, taxMode: passedTaxMode, ...itemData } = data;
+    // Prepare update data - exclude saveToCatalog, taxMode, taxName, taxPercentage, and catalogId as they're not item database fields
+    const {
+      saveToCatalog,
+      taxMode: passedTaxMode,
+      taxName: passedTaxName,
+      taxPercentage: passedTaxPercentage,
+      catalogId: _catalogId, // Exclude catalogId from itemData, we handle it separately
+      ...itemData
+    } = data;
     const updateData: Prisma.InvoiceItemUpdateInput = {};
 
     // Determine effective taxMode - use passed taxMode or fallback to invoice's
     const effectiveTaxMode = passedTaxMode || invoice.taxMode;
+
+    // Prepare invoice update data for tax-related fields
+    const invoiceUpdateData: {
+      taxMode?: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
+      taxName?: string | null;
+      taxPercentage?: number | null;
+    } = {};
+
+    // If taxMode was passed and differs from invoice, update the invoice
+    if (passedTaxMode && passedTaxMode !== invoice.taxMode) {
+      invoiceUpdateData.taxMode = passedTaxMode;
+    }
+
+    // If taxMode is BY_TOTAL and taxName/taxPercentage are provided, update them
+    if (
+      effectiveTaxMode === "BY_TOTAL" &&
+      (passedTaxName !== undefined || passedTaxPercentage !== undefined)
+    ) {
+      if (passedTaxName !== undefined) {
+        invoiceUpdateData.taxName = passedTaxName;
+      }
+      if (passedTaxPercentage !== undefined) {
+        invoiceUpdateData.taxPercentage = passedTaxPercentage;
+      }
+    }
+
+    // Update invoice if there are tax-related changes (before calculating totals)
+    if (Object.keys(invoiceUpdateData).length > 0) {
+      await tx.invoice.update({
+        where: { id: invoiceId },
+        data: invoiceUpdateData,
+      });
+    }
 
     // Only include fields that are provided in the update
     if (itemData.name !== undefined) updateData.name = itemData.name;
@@ -1432,10 +1599,10 @@ export async function updateInvoiceItem(
     if (itemCatalogId !== null) {
       updateData.catalog = { connect: { id: itemCatalogId } };
     } else if (
-      data.saveToCatalog === false &&
+      (data.catalogId === null || data.saveToCatalog === false) &&
       existingItem.catalogId !== null
     ) {
-      // If explicitly set to false and item has a catalog, disconnect it
+      // If explicitly set to null/false and item has a catalog, disconnect it
       updateData.catalog = { disconnect: true };
     }
 
@@ -1482,10 +1649,18 @@ export async function updateInvoiceItem(
       vatEnabled: finalVatEnabled,
     };
 
+    // Use updated taxPercentage if provided, otherwise use invoice's current value
+    const effectiveTaxPercentage =
+      passedTaxPercentage !== undefined
+        ? passedTaxPercentage
+        : invoice.taxPercentage
+          ? Number(invoice.taxPercentage)
+          : null;
+
     const itemTotal = calculateItemTotal(
       finalItem,
       effectiveTaxMode,
-      invoice.taxPercentage ? Number(invoice.taxPercentage) : null
+      effectiveTaxPercentage,
     );
 
     updateData.total = itemTotal;
@@ -1506,9 +1681,7 @@ export async function updateInvoiceItem(
         discount: Number(invoice.discount),
         discountType: invoice.discountType,
         taxMode: effectiveTaxMode,
-        taxPercentage: invoice.taxPercentage
-          ? Number(invoice.taxPercentage)
-          : null,
+        taxPercentage: effectiveTaxPercentage,
       },
       allItems.map((i) => ({
         quantity: Number(i.quantity),
@@ -1517,17 +1690,40 @@ export async function updateInvoiceItem(
         discountType: i.discountType,
         tax: Number(i.tax),
         vatEnabled: i.vatEnabled,
-      }))
+      })),
     );
+
+    // Prepare final invoice update data
+    const finalInvoiceUpdateData: {
+      taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
+      subtotal: number;
+      totalTax: number;
+      total: number;
+      taxName?: string | null;
+      taxPercentage?: number | null;
+    } = {
+      taxMode: effectiveTaxMode, // Update invoice taxMode if it changed
+      subtotal: totals.subtotal,
+      totalTax: totals.totalTax,
+      total: totals.total,
+    };
+
+    // Include taxName and taxPercentage if they were provided and taxMode is BY_TOTAL
+    if (
+      effectiveTaxMode === "BY_TOTAL" &&
+      (passedTaxName !== undefined || passedTaxPercentage !== undefined)
+    ) {
+      if (passedTaxName !== undefined) {
+        finalInvoiceUpdateData.taxName = passedTaxName;
+      }
+      if (passedTaxPercentage !== undefined) {
+        finalInvoiceUpdateData.taxPercentage = passedTaxPercentage;
+      }
+    }
 
     await tx.invoice.update({
       where: { id: invoiceId },
-      data: {
-        taxMode: effectiveTaxMode, // Update invoice taxMode if it changed
-        subtotal: totals.subtotal,
-        totalTax: totals.totalTax,
-        total: totals.total,
-      },
+      data: finalInvoiceUpdateData,
     });
 
     return {
@@ -1547,7 +1743,7 @@ export async function updateInvoiceItem(
 export async function deleteInvoiceItem(
   workspaceId: number,
   invoiceId: number,
-  itemId: number
+  itemId: number,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
     // Verify invoice exists and belongs to workspace
@@ -1614,7 +1810,7 @@ export async function deleteInvoiceItem(
         discountType: i.discountType,
         tax: Number(i.tax),
         vatEnabled: i.vatEnabled,
-      }))
+      })),
     );
 
     await tx.invoice.update({
@@ -1631,12 +1827,91 @@ export async function deleteInvoiceItem(
 // ===== PAYMENT OPERATIONS =====
 
 /**
+ * Helper function to update invoice balance and status based on payments
+ * This function calculates the total of all non-deleted payments and updates
+ * the invoice balance and status accordingly.
+ */
+async function updateInvoiceBalanceAndStatus(
+  tx: Prisma.TransactionClient,
+  invoiceId: number,
+  invoiceTotal: number,
+): Promise<void> {
+  // Get all non-deleted payments for this invoice
+  const payments = await tx.payment.findMany({
+    where: {
+      invoiceId,
+      deletedAt: null,
+    },
+    select: {
+      amount: true,
+    },
+  });
+
+  // Calculate total payments
+  const totalPayments = payments.reduce(
+    (sum, payment) => sum + Number(payment.amount),
+    0,
+  );
+
+  // Calculate balance
+  const balance = invoiceTotal - totalPayments;
+
+  // Get current invoice to check status
+  const invoice = await tx.invoice.findUnique({
+    where: { id: invoiceId },
+    select: {
+      status: true,
+      viewedAt: true,
+      paidAt: true,
+    },
+  });
+
+  if (!invoice) {
+    return; // Should not happen, but guard against it
+  }
+
+  // Prepare update data
+  const updateData: Prisma.InvoiceUpdateInput = {
+    balance,
+  };
+
+  // Update status based on balance
+  if (balance <= 0) {
+    // Invoice is fully paid
+    updateData.status = "PAID";
+    if (!invoice.paidAt) {
+      updateData.paidAt = new Date();
+    }
+  } else {
+    // Invoice has remaining balance
+    if (invoice.status === "PAID") {
+      // Revert from PAID status
+      // Prefer VIEWED if viewedAt exists, otherwise SENT
+      if (invoice.viewedAt) {
+        updateData.status = "VIEWED";
+      } else {
+        updateData.status = "SENT";
+      }
+      // Clear paidAt since it's no longer fully paid
+      updateData.paidAt = null;
+    }
+    // If status is not PAID, leave it as is (could be DRAFT, SENT, VIEWED, OVERDUE)
+  }
+
+  // Update invoice
+  await tx.invoice.update({
+    where: { id: invoiceId },
+    data: updateData,
+  });
+}
+
+/**
  * Add a payment to an invoice
  */
 export async function addPayment(
   workspaceId: number,
   invoiceId: number,
-  data: Omit<CreatePaymentDto, "invoiceId">
+  data: CreatePaymentDto,
 ): Promise<PaymentEntity> {
   return await prisma.$transaction(async (tx) => {
     // Verify invoice exists and belongs to workspace
@@ -1656,17 +1931,20 @@ export async function addPayment(
       });
     }
 
-    // Check if transactionId already exists
-    const existingPayment = await tx.payment.findUnique({
-      where: { transactionId: data.transactionId },
-    });
-
-    if (existingPayment) {
-      throw new EntityValidationError({
-        message: "Transaction ID already exists",
-        statusCode: 400,
-        code: "ERR_VALID",
+    // Check if transactionId already exists only when provided
+    const transactionId = data.transactionId ?? null;
+    if (transactionId) {
+      const existingPayment = await tx.payment.findUnique({
+        where: { transactionId },
       });
+
+      if (existingPayment) {
+        throw new EntityValidationError({
+          message: "Transaction ID already exists",
+          statusCode: 400,
+          code: "ERR_VALID",
+        });
+      }
     }
 
     // Create payment
@@ -1676,11 +1954,14 @@ export async function addPayment(
         invoiceId,
         amount: data.amount,
         paymentMethod: data.paymentMethod,
-        transactionId: data.transactionId,
+        transactionId,
         details: data.details,
         paidAt: data.paidAt || new Date(),
       },
     });
+
+    // Update invoice balance and status
+    await updateInvoiceBalanceAndStatus(tx, invoiceId, Number(invoice.total));
 
     return {
       ...payment,
@@ -1696,7 +1977,7 @@ export async function updatePayment(
   workspaceId: number,
   invoiceId: number,
   paymentId: number,
-  data: UpdatePaymentDto
+  data: UpdatePaymentDto,
 ): Promise<PaymentEntity> {
   return await prisma.$transaction(async (tx) => {
     // Verify invoice exists and belongs to workspace
@@ -1766,6 +2047,9 @@ export async function updatePayment(
       data: updateData,
     });
 
+    // Update invoice balance and status
+    await updateInvoiceBalanceAndStatus(tx, invoiceId, Number(invoice.total));
+
     return {
       ...payment,
       amount: Number(payment.amount),
@@ -1779,7 +2063,7 @@ export async function updatePayment(
 export async function deletePayment(
   workspaceId: number,
   invoiceId: number,
-  paymentId: number
+  paymentId: number,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
     // Verify invoice exists and belongs to workspace
@@ -1822,5 +2106,8 @@ export async function deletePayment(
         deletedAt: new Date(),
       },
     });
+
+    // Update invoice balance and status
+    await updateInvoiceBalanceAndStatus(tx, invoiceId, Number(invoice.total));
   });
 }

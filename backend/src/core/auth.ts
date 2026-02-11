@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
-import { prisma } from "./db";
+import prisma from "./db";
 
 // Extender Request para incluir usuario
 declare global {
@@ -20,7 +20,7 @@ declare global {
 export async function verifyWorkspaceAccess(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> {
   try {
     // Get auth from Clerk (requires clerkMiddleware to be applied first)

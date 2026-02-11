@@ -1,0 +1,135 @@
+---
+description: TDD workflow for new features, refactors, and bugfixes — when to write unit, integration, and E2E tests
+alwaysApply: false
+---
+
+# TDD Workflow Rule
+
+When creating a **new feature**, **refactoring**, or **fixing a bug**, follow this workflow. No production code without a failing test first.
+
+## When This Rule Applies
+
+- **New feature** (backend or frontend)
+- **Refactor** (behavior must be preserved; tests define behavior)
+- **Bug fix** (reproduce with a failing test, then fix)
+
+**Do not skip** for "quick changes" or "simple code." If in doubt, apply the workflow.
+
+---
+
+## Test Levels: When to Use Which
+
+Choose the **smallest level** that meaningfully specifies the behavior. Add more levels only when the workflow below requires it.
+
+| Level | What it tests | Use when | Typical location |
+|-------|----------------|----------|-------------------|
+| **Unit** | One function/module in isolation. Fast, no DB, no HTTP. | Pure logic, validation, calculations, formatters, small services. | `*.test.ts` / `*.spec.ts` next to code or in `__tests__` |
+| **Integration** | Several units together (e.g. API route + service + DB, or hook + API client). | Contract between layers; "this endpoint returns X when Y"; "this hook exposes Z when API returns W". | `*.test.ts` in route/handler or feature test folder |
+| **E2E** | Full app in a browser (Playwright). Real UI and navigation. | Critical user paths only: e.g. "user can create an invoice", "user can send an invoice". | Playwright tests; see `testing.mdc` for E2E style |
+
+**Decision flow:**
+
+1. Does the behavior affect a **critical user path** (e.g. create invoice, send invoice, sign up)?  
+   → Add or extend an **E2E test** first, then implement.
+2. Does the behavior cross **multiple layers** (API + service + DB, or UI + API)?  
+   → Add an **integration test** first, then implement.
+3. Otherwise (single function, validation, calculation, formatter):  
+   → Add a **unit test** first, then implement.
+
+You can combine: e.g. one E2E for the happy path, then unit/integration tests for edge cases and business rules.
+
+---
+
+## The Workflow (Every Feature / Refactor / Bugfix)
+
+Follow these steps in order. Do not write production code before the failing test.
+
+### Step 1: Choose the test level
+
+- **Critical user path** → E2E (Playwright).
+- **API or multi-layer behavior** → Integration.
+- **Single function / pure logic** → Unit.
+
+### Step 2: RED — Write one failing test
+
+- Write **one** test that describes the desired behavior.
+- Test name: clear, behavior-focused (e.g. `rejects empty email`, `returns 404 when invoice does not exist`).
+- Test **one** behavior per test; if the name has "and", split into two tests.
+- Prefer **real code**; use mocks only when necessary (e.g. DB, external API).
+
+### Step 3: Verify RED — Run the test and confirm it fails
+
+- Run the test (e.g. `npm test path/to/test.file.ts` or project equivalent).
+- **Required:** The test must **fail** (not pass, not error).
+- **Required:** The failure reason must be "feature not implemented" or "bug not fixed" (not a typo or wrong assertion).
+- If the test **passes**: you are testing existing behavior; change or add a test so it fails for the right reason.
+- If the test **errors**: fix the test/setup until it **fails** with the expected assertion/behavior.
+
+Do not proceed to implementation until RED is verified.
+
+### Step 4: GREEN — Write minimal code to pass
+
+- Write the **smallest** amount of production code that makes the test pass.
+- Do not add extra features, options, or refactors beyond what the test requires.
+- Do not write code for behaviors not yet specified by a test.
+
+### Step 5: Verify GREEN — Run all relevant tests
+
+- Run the new test: it must **pass**.
+- Run the full test suite (or at least the affected area): **all** must still pass.
+- Fix any failing tests before continuing (fix code, not the test, unless the test was wrong).
+
+### Step 6: REFACTOR — Clean up without changing behavior
+
+- Only after all tests are green: remove duplication, improve names, extract helpers.
+- Do **not** add new behavior during refactor.
+- After refactor, run tests again; they must stay green.
+
+### Step 7: Repeat for the next behavior
+
+- For the same feature: add the **next** failing test (RED → verify RED → GREEN → verify GREEN → REFACTOR).
+- Stop when the feature is complete and all tests pass.
+
+---
+
+## Bug Fix Workflow
+
+1. **Reproduce:** Write a failing test that demonstrates the bug (RED).
+2. **Verify RED:** Run it; confirm it fails for the right reason (e.g. "rejects empty email" fails because empty is currently accepted).
+3. **Fix:** Write minimal code to make the test pass (GREEN).
+4. **Verify GREEN:** Test passes; rest of suite still passes.
+5. **Refactor** if needed; keep tests green.
+
+Never fix a bug without a test that would have caught it.
+
+---
+
+## Refactor Workflow
+
+1. **Ensure** existing tests cover the behavior you are refactoring. If not, add failing tests first (RED → GREEN) for that behavior.
+2. **Refactor** the implementation; do not change behavior.
+3. **Run** all tests; they must stay green. If any fail, fix the refactor (or add a missing test and fix).
+
+Refactoring without tests is unsafe. Add tests first if the area is untested.
+
+---
+
+## References for Agents
+
+- **Red-Green-Refactor and TDD discipline:** Use the test-driven-development skill when implementing. No production code before a failing test; verify RED then GREEN every time.
+- **E2E (Playwright):** When writing E2E tests, follow `.cursor/rules/testing.mdc` (locators, fixtures, assertions, critical paths).
+- **Backend style:** Follow `.cursor/rules/backend.mdc` for backend code and structure.
+- **Frontend style:** Follow `.cursor/rules/frontend.mdc` for frontend code and structure.
+
+---
+
+## Checklist Before Marking Work Complete
+
+- [ ] Every new or changed behavior has a test.
+- [ ] Each of those tests was written **first** and was seen to **fail** (RED) before implementation.
+- [ ] Each test failed for the **expected** reason (missing behavior or bug), not a typo.
+- [ ] Implementation is **minimal** to pass the tests (GREEN).
+- [ ] All tests pass; no new errors or warnings.
+- [ ] Mocks are used only when necessary; tests prefer real code where possible.
+
+If any item is unchecked, the workflow was not followed; correct it before considering the work done.

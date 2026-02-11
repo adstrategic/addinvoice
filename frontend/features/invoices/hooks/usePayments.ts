@@ -18,14 +18,18 @@ export function useCreatePayment() {
   return useMutation({
     mutationFn: ({
       invoiceId,
+      invoiceSequence,
       data,
     }: {
       invoiceId: number;
+      invoiceSequence: number;
       data: PaymentCreateInput;
     }) => invoicesService.createPayment(invoiceId, data),
-    onSuccess: () => {
+    onSuccess: (_, { invoiceSequence }) => {
       // Invalidate all invoice details since we key by sequence, not id
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.detail(invoiceSequence),
+      });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast({
         title: "Payment added",
@@ -46,13 +50,16 @@ export function useUpdatePayment() {
 
   return useMutation({
     mutationFn: ({
+      invoiceId,
       paymentId,
       data,
     }: {
+      invoiceId: number;
       paymentId: number;
       data: PaymentUpdateInput;
-    }) => invoicesService.updatePayment(paymentId, data),
+    }) => invoicesService.updatePayment(invoiceId, paymentId, data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast({
         title: "Payment updated",
@@ -71,8 +78,15 @@ export function useDeletePayment() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (paymentId: number) => invoicesService.deletePayment(paymentId),
+    mutationFn: ({
+      invoiceId,
+      paymentId,
+    }: {
+      invoiceId: number;
+      paymentId: number;
+    }) => invoicesService.deletePayment(invoiceId, paymentId),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast({
         title: "Payment deleted",

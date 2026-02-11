@@ -1,75 +1,66 @@
-import React from "react";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { renderToBuffer } from "@react-pdf/renderer";
-import { InvoicePDFTemplate } from "@/components/invoices/InvoicePDFTemplate";
-import { createServerApiClient } from "@/lib/api/server-client";
-import type { InvoiceResponse } from "@/features/invoices/types/api";
 
+/**
+ * Proxies PDF request to the backend. Authenticates with Clerk, then
+ * forwards GET to backend GET /api/v1/invoices/:sequence/pdf and streams
+ * the PDF response to the client.
+ */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ sequence: string }> }
+  { params }: { params: Promise<{ sequence: string }> },
 ) {
   try {
-    // 1. Authenticate user
-    const { userId } = await auth();
+    const { userId, getToken } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Get sequence from params (await params in Next.js 15+)
     const { sequence: sequenceParam } = await params;
     const sequence = parseInt(sequenceParam);
     if (isNaN(sequence)) {
       return NextResponse.json(
         { error: "Invalid sequence number" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // 3. Create server-side API client
-    const apiClient = await createServerApiClient();
+    const token = await getToken();
+    const baseURL = process.env.NEXT_PUBLIC_API_URL;
+    const url = `${baseURL}/api/v1/invoices/${sequence}/pdf`;
 
-    // 4. Fetch invoice data from backend
-    const response = await apiClient.get<{
-      success: boolean;
-      data: InvoiceResponse;
-    }>(`/invoices/${sequence}`);
-
-    if (!response.data.success || !response.data.data) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
-    }
-
-    const invoice = response.data.data;
-
-    // 5. Validate invoice has required data
-    if (!invoice.client) {
-      return NextResponse.json(
-        { error: "Invoice client data missing" },
-        { status: 400 }
-      );
-    }
-
-    // 6. Get company data (generic for now)
-    const companyData = invoice.business;
-
-    // 7. Render PDF
-    const pdfBuffer = await renderToBuffer(
-      <InvoicePDFTemplate
-        invoice={invoice}
-        client={invoice.client}
-        company={companyData}
-      />
-    );
-
-    // 8. Convert Buffer to Uint8Array for NextResponse
-    const pdfArray = new Uint8Array(pdfBuffer);
-
-    // 9. Return PDF
-    return new NextResponse(pdfArray, {
+    const backendResponse = await fetch(url, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`,
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!backendResponse.ok) {
+      const text = await backendResponse.text();
+      let body: unknown = { error: "Failed to generate PDF" };
+      try {
+        body = JSON.parse(text);
+      } catch {
+        if (text) body = { error: text };
+      }
+      return NextResponse.json(body, {
+        status: backendResponse.status,
+      });
+    }
+
+    const pdfBuffer = await backendResponse.arrayBuffer();
+    const contentType =
+      backendResponse.headers.get("Content-Type") || "application/pdf";
+    const contentDisposition =
+      backendResponse.headers.get("Content-Disposition") ||
+      `attachment; filename="invoice-${sequence}.pdf"`;
+
+    return new NextResponse(pdfBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": contentType,
+        "Content-Disposition": contentDisposition,
       },
     });
   } catch (error) {
@@ -78,7 +69,7 @@ export async function GET(
         error: "Failed to generate PDF",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

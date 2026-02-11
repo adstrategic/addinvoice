@@ -29,6 +29,7 @@ export type AggregateCatalog = {
 export type CatalogAvgAggregateOutputType = {
   id: number | null
   workspaceId: number | null
+  businessId: number | null
   price: runtime.Decimal | null
   sequence: number | null
 }
@@ -36,6 +37,7 @@ export type CatalogAvgAggregateOutputType = {
 export type CatalogSumAggregateOutputType = {
   id: number | null
   workspaceId: number | null
+  businessId: number | null
   price: runtime.Decimal | null
   sequence: number | null
 }
@@ -43,6 +45,7 @@ export type CatalogSumAggregateOutputType = {
 export type CatalogMinAggregateOutputType = {
   id: number | null
   workspaceId: number | null
+  businessId: number | null
   name: string | null
   description: string | null
   price: runtime.Decimal | null
@@ -56,6 +59,7 @@ export type CatalogMinAggregateOutputType = {
 export type CatalogMaxAggregateOutputType = {
   id: number | null
   workspaceId: number | null
+  businessId: number | null
   name: string | null
   description: string | null
   price: runtime.Decimal | null
@@ -69,6 +73,7 @@ export type CatalogMaxAggregateOutputType = {
 export type CatalogCountAggregateOutputType = {
   id: number
   workspaceId: number
+  businessId: number
   name: number
   description: number
   price: number
@@ -84,6 +89,7 @@ export type CatalogCountAggregateOutputType = {
 export type CatalogAvgAggregateInputType = {
   id?: true
   workspaceId?: true
+  businessId?: true
   price?: true
   sequence?: true
 }
@@ -91,6 +97,7 @@ export type CatalogAvgAggregateInputType = {
 export type CatalogSumAggregateInputType = {
   id?: true
   workspaceId?: true
+  businessId?: true
   price?: true
   sequence?: true
 }
@@ -98,6 +105,7 @@ export type CatalogSumAggregateInputType = {
 export type CatalogMinAggregateInputType = {
   id?: true
   workspaceId?: true
+  businessId?: true
   name?: true
   description?: true
   price?: true
@@ -111,6 +119,7 @@ export type CatalogMinAggregateInputType = {
 export type CatalogMaxAggregateInputType = {
   id?: true
   workspaceId?: true
+  businessId?: true
   name?: true
   description?: true
   price?: true
@@ -124,6 +133,7 @@ export type CatalogMaxAggregateInputType = {
 export type CatalogCountAggregateInputType = {
   id?: true
   workspaceId?: true
+  businessId?: true
   name?: true
   description?: true
   price?: true
@@ -224,6 +234,7 @@ export type CatalogGroupByArgs<ExtArgs extends runtime.Types.Extensions.Internal
 export type CatalogGroupByOutputType = {
   id: number
   workspaceId: number
+  businessId: number
   name: string
   description: string
   price: runtime.Decimal
@@ -260,6 +271,7 @@ export type CatalogWhereInput = {
   NOT?: Prisma.CatalogWhereInput | Prisma.CatalogWhereInput[]
   id?: Prisma.IntFilter<"Catalog"> | number
   workspaceId?: Prisma.IntFilter<"Catalog"> | number
+  businessId?: Prisma.IntFilter<"Catalog"> | number
   name?: Prisma.StringFilter<"Catalog"> | string
   description?: Prisma.StringFilter<"Catalog"> | string
   price?: Prisma.DecimalFilter<"Catalog"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -269,12 +281,14 @@ export type CatalogWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"Catalog"> | Date | string
   deletedAt?: Prisma.DateTimeNullableFilter<"Catalog"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
+  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   invoiceItems?: Prisma.InvoiceItemListRelationFilter
 }
 
 export type CatalogOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
+  businessId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   price?: Prisma.SortOrder
@@ -284,6 +298,7 @@ export type CatalogOrderByWithRelationInput = {
   updatedAt?: Prisma.SortOrder
   deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
+  business?: Prisma.BusinessOrderByWithRelationInput
   invoiceItems?: Prisma.InvoiceItemOrderByRelationAggregateInput
 }
 
@@ -294,6 +309,7 @@ export type CatalogWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.CatalogWhereInput[]
   NOT?: Prisma.CatalogWhereInput | Prisma.CatalogWhereInput[]
   workspaceId?: Prisma.IntFilter<"Catalog"> | number
+  businessId?: Prisma.IntFilter<"Catalog"> | number
   name?: Prisma.StringFilter<"Catalog"> | string
   description?: Prisma.StringFilter<"Catalog"> | string
   price?: Prisma.DecimalFilter<"Catalog"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -303,12 +319,14 @@ export type CatalogWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"Catalog"> | Date | string
   deletedAt?: Prisma.DateTimeNullableFilter<"Catalog"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
+  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   invoiceItems?: Prisma.InvoiceItemListRelationFilter
 }, "id" | "workspaceId_sequence">
 
 export type CatalogOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
+  businessId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   price?: Prisma.SortOrder
@@ -330,6 +348,7 @@ export type CatalogScalarWhereWithAggregatesInput = {
   NOT?: Prisma.CatalogScalarWhereWithAggregatesInput | Prisma.CatalogScalarWhereWithAggregatesInput[]
   id?: Prisma.IntWithAggregatesFilter<"Catalog"> | number
   workspaceId?: Prisma.IntWithAggregatesFilter<"Catalog"> | number
+  businessId?: Prisma.IntWithAggregatesFilter<"Catalog"> | number
   name?: Prisma.StringWithAggregatesFilter<"Catalog"> | string
   description?: Prisma.StringWithAggregatesFilter<"Catalog"> | string
   price?: Prisma.DecimalWithAggregatesFilter<"Catalog"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -350,12 +369,14 @@ export type CatalogCreateInput = {
   updatedAt?: Date | string
   deletedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutCatalogsInput
+  business: Prisma.BusinessCreateNestedOneWithoutCatalogInput
   invoiceItems?: Prisma.InvoiceItemCreateNestedManyWithoutCatalogInput
 }
 
 export type CatalogUncheckedCreateInput = {
   id?: number
   workspaceId: number
+  businessId: number
   name: string
   description: string
   price: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -377,12 +398,14 @@ export type CatalogUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutCatalogsNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutCatalogNestedInput
   invoiceItems?: Prisma.InvoiceItemUpdateManyWithoutCatalogNestedInput
 }
 
 export type CatalogUncheckedUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -397,6 +420,7 @@ export type CatalogUncheckedUpdateInput = {
 export type CatalogCreateManyInput = {
   id?: number
   workspaceId: number
+  businessId: number
   name: string
   description: string
   price: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -421,6 +445,7 @@ export type CatalogUpdateManyMutationInput = {
 export type CatalogUncheckedUpdateManyInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -449,6 +474,7 @@ export type CatalogWorkspaceIdSequenceCompoundUniqueInput = {
 export type CatalogCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
+  businessId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   price?: Prisma.SortOrder
@@ -462,6 +488,7 @@ export type CatalogCountOrderByAggregateInput = {
 export type CatalogAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
+  businessId?: Prisma.SortOrder
   price?: Prisma.SortOrder
   sequence?: Prisma.SortOrder
 }
@@ -469,6 +496,7 @@ export type CatalogAvgOrderByAggregateInput = {
 export type CatalogMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
+  businessId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   price?: Prisma.SortOrder
@@ -482,6 +510,7 @@ export type CatalogMaxOrderByAggregateInput = {
 export type CatalogMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
+  businessId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   price?: Prisma.SortOrder
@@ -495,6 +524,7 @@ export type CatalogMinOrderByAggregateInput = {
 export type CatalogSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   workspaceId?: Prisma.SortOrder
+  businessId?: Prisma.SortOrder
   price?: Prisma.SortOrder
   sequence?: Prisma.SortOrder
 }
@@ -574,6 +604,48 @@ export type CatalogUpdateOneWithoutInvoiceItemsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.CatalogUpdateToOneWithWhereWithoutInvoiceItemsInput, Prisma.CatalogUpdateWithoutInvoiceItemsInput>, Prisma.CatalogUncheckedUpdateWithoutInvoiceItemsInput>
 }
 
+export type CatalogCreateNestedManyWithoutBusinessInput = {
+  create?: Prisma.XOR<Prisma.CatalogCreateWithoutBusinessInput, Prisma.CatalogUncheckedCreateWithoutBusinessInput> | Prisma.CatalogCreateWithoutBusinessInput[] | Prisma.CatalogUncheckedCreateWithoutBusinessInput[]
+  connectOrCreate?: Prisma.CatalogCreateOrConnectWithoutBusinessInput | Prisma.CatalogCreateOrConnectWithoutBusinessInput[]
+  createMany?: Prisma.CatalogCreateManyBusinessInputEnvelope
+  connect?: Prisma.CatalogWhereUniqueInput | Prisma.CatalogWhereUniqueInput[]
+}
+
+export type CatalogUncheckedCreateNestedManyWithoutBusinessInput = {
+  create?: Prisma.XOR<Prisma.CatalogCreateWithoutBusinessInput, Prisma.CatalogUncheckedCreateWithoutBusinessInput> | Prisma.CatalogCreateWithoutBusinessInput[] | Prisma.CatalogUncheckedCreateWithoutBusinessInput[]
+  connectOrCreate?: Prisma.CatalogCreateOrConnectWithoutBusinessInput | Prisma.CatalogCreateOrConnectWithoutBusinessInput[]
+  createMany?: Prisma.CatalogCreateManyBusinessInputEnvelope
+  connect?: Prisma.CatalogWhereUniqueInput | Prisma.CatalogWhereUniqueInput[]
+}
+
+export type CatalogUpdateManyWithoutBusinessNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogCreateWithoutBusinessInput, Prisma.CatalogUncheckedCreateWithoutBusinessInput> | Prisma.CatalogCreateWithoutBusinessInput[] | Prisma.CatalogUncheckedCreateWithoutBusinessInput[]
+  connectOrCreate?: Prisma.CatalogCreateOrConnectWithoutBusinessInput | Prisma.CatalogCreateOrConnectWithoutBusinessInput[]
+  upsert?: Prisma.CatalogUpsertWithWhereUniqueWithoutBusinessInput | Prisma.CatalogUpsertWithWhereUniqueWithoutBusinessInput[]
+  createMany?: Prisma.CatalogCreateManyBusinessInputEnvelope
+  set?: Prisma.CatalogWhereUniqueInput | Prisma.CatalogWhereUniqueInput[]
+  disconnect?: Prisma.CatalogWhereUniqueInput | Prisma.CatalogWhereUniqueInput[]
+  delete?: Prisma.CatalogWhereUniqueInput | Prisma.CatalogWhereUniqueInput[]
+  connect?: Prisma.CatalogWhereUniqueInput | Prisma.CatalogWhereUniqueInput[]
+  update?: Prisma.CatalogUpdateWithWhereUniqueWithoutBusinessInput | Prisma.CatalogUpdateWithWhereUniqueWithoutBusinessInput[]
+  updateMany?: Prisma.CatalogUpdateManyWithWhereWithoutBusinessInput | Prisma.CatalogUpdateManyWithWhereWithoutBusinessInput[]
+  deleteMany?: Prisma.CatalogScalarWhereInput | Prisma.CatalogScalarWhereInput[]
+}
+
+export type CatalogUncheckedUpdateManyWithoutBusinessNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogCreateWithoutBusinessInput, Prisma.CatalogUncheckedCreateWithoutBusinessInput> | Prisma.CatalogCreateWithoutBusinessInput[] | Prisma.CatalogUncheckedCreateWithoutBusinessInput[]
+  connectOrCreate?: Prisma.CatalogCreateOrConnectWithoutBusinessInput | Prisma.CatalogCreateOrConnectWithoutBusinessInput[]
+  upsert?: Prisma.CatalogUpsertWithWhereUniqueWithoutBusinessInput | Prisma.CatalogUpsertWithWhereUniqueWithoutBusinessInput[]
+  createMany?: Prisma.CatalogCreateManyBusinessInputEnvelope
+  set?: Prisma.CatalogWhereUniqueInput | Prisma.CatalogWhereUniqueInput[]
+  disconnect?: Prisma.CatalogWhereUniqueInput | Prisma.CatalogWhereUniqueInput[]
+  delete?: Prisma.CatalogWhereUniqueInput | Prisma.CatalogWhereUniqueInput[]
+  connect?: Prisma.CatalogWhereUniqueInput | Prisma.CatalogWhereUniqueInput[]
+  update?: Prisma.CatalogUpdateWithWhereUniqueWithoutBusinessInput | Prisma.CatalogUpdateWithWhereUniqueWithoutBusinessInput[]
+  updateMany?: Prisma.CatalogUpdateManyWithWhereWithoutBusinessInput | Prisma.CatalogUpdateManyWithWhereWithoutBusinessInput[]
+  deleteMany?: Prisma.CatalogScalarWhereInput | Prisma.CatalogScalarWhereInput[]
+}
+
 export type CatalogCreateWithoutWorkspaceInput = {
   name: string
   description: string
@@ -583,11 +655,13 @@ export type CatalogCreateWithoutWorkspaceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
+  business: Prisma.BusinessCreateNestedOneWithoutCatalogInput
   invoiceItems?: Prisma.InvoiceItemCreateNestedManyWithoutCatalogInput
 }
 
 export type CatalogUncheckedCreateWithoutWorkspaceInput = {
   id?: number
+  businessId: number
   name: string
   description: string
   price: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -631,6 +705,7 @@ export type CatalogScalarWhereInput = {
   NOT?: Prisma.CatalogScalarWhereInput | Prisma.CatalogScalarWhereInput[]
   id?: Prisma.IntFilter<"Catalog"> | number
   workspaceId?: Prisma.IntFilter<"Catalog"> | number
+  businessId?: Prisma.IntFilter<"Catalog"> | number
   name?: Prisma.StringFilter<"Catalog"> | string
   description?: Prisma.StringFilter<"Catalog"> | string
   price?: Prisma.DecimalFilter<"Catalog"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -651,11 +726,13 @@ export type CatalogCreateWithoutInvoiceItemsInput = {
   updatedAt?: Date | string
   deletedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutCatalogsInput
+  business: Prisma.BusinessCreateNestedOneWithoutCatalogInput
 }
 
 export type CatalogUncheckedCreateWithoutInvoiceItemsInput = {
   id?: number
   workspaceId: number
+  businessId: number
   name: string
   description: string
   price: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -692,11 +769,13 @@ export type CatalogUpdateWithoutInvoiceItemsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutCatalogsNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutCatalogNestedInput
 }
 
 export type CatalogUncheckedUpdateWithoutInvoiceItemsInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -707,8 +786,62 @@ export type CatalogUncheckedUpdateWithoutInvoiceItemsInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
+export type CatalogCreateWithoutBusinessInput = {
+  name: string
+  description: string
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  quantityUnit?: $Enums.QuantityUnit
+  sequence: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutCatalogsInput
+  invoiceItems?: Prisma.InvoiceItemCreateNestedManyWithoutCatalogInput
+}
+
+export type CatalogUncheckedCreateWithoutBusinessInput = {
+  id?: number
+  workspaceId: number
+  name: string
+  description: string
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  quantityUnit?: $Enums.QuantityUnit
+  sequence: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  invoiceItems?: Prisma.InvoiceItemUncheckedCreateNestedManyWithoutCatalogInput
+}
+
+export type CatalogCreateOrConnectWithoutBusinessInput = {
+  where: Prisma.CatalogWhereUniqueInput
+  create: Prisma.XOR<Prisma.CatalogCreateWithoutBusinessInput, Prisma.CatalogUncheckedCreateWithoutBusinessInput>
+}
+
+export type CatalogCreateManyBusinessInputEnvelope = {
+  data: Prisma.CatalogCreateManyBusinessInput | Prisma.CatalogCreateManyBusinessInput[]
+  skipDuplicates?: boolean
+}
+
+export type CatalogUpsertWithWhereUniqueWithoutBusinessInput = {
+  where: Prisma.CatalogWhereUniqueInput
+  update: Prisma.XOR<Prisma.CatalogUpdateWithoutBusinessInput, Prisma.CatalogUncheckedUpdateWithoutBusinessInput>
+  create: Prisma.XOR<Prisma.CatalogCreateWithoutBusinessInput, Prisma.CatalogUncheckedCreateWithoutBusinessInput>
+}
+
+export type CatalogUpdateWithWhereUniqueWithoutBusinessInput = {
+  where: Prisma.CatalogWhereUniqueInput
+  data: Prisma.XOR<Prisma.CatalogUpdateWithoutBusinessInput, Prisma.CatalogUncheckedUpdateWithoutBusinessInput>
+}
+
+export type CatalogUpdateManyWithWhereWithoutBusinessInput = {
+  where: Prisma.CatalogScalarWhereInput
+  data: Prisma.XOR<Prisma.CatalogUpdateManyMutationInput, Prisma.CatalogUncheckedUpdateManyWithoutBusinessInput>
+}
+
 export type CatalogCreateManyWorkspaceInput = {
   id?: number
+  businessId: number
   name: string
   description: string
   price: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -728,11 +861,13 @@ export type CatalogUpdateWithoutWorkspaceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  business?: Prisma.BusinessUpdateOneRequiredWithoutCatalogNestedInput
   invoiceItems?: Prisma.InvoiceItemUpdateManyWithoutCatalogNestedInput
 }
 
 export type CatalogUncheckedUpdateWithoutWorkspaceInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -746,6 +881,60 @@ export type CatalogUncheckedUpdateWithoutWorkspaceInput = {
 
 export type CatalogUncheckedUpdateManyWithoutWorkspaceInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
+  businessId?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  quantityUnit?: Prisma.EnumQuantityUnitFieldUpdateOperationsInput | $Enums.QuantityUnit
+  sequence?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type CatalogCreateManyBusinessInput = {
+  id?: number
+  workspaceId: number
+  name: string
+  description: string
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  quantityUnit?: $Enums.QuantityUnit
+  sequence: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+}
+
+export type CatalogUpdateWithoutBusinessInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  quantityUnit?: Prisma.EnumQuantityUnitFieldUpdateOperationsInput | $Enums.QuantityUnit
+  sequence?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutCatalogsNestedInput
+  invoiceItems?: Prisma.InvoiceItemUpdateManyWithoutCatalogNestedInput
+}
+
+export type CatalogUncheckedUpdateWithoutBusinessInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  quantityUnit?: Prisma.EnumQuantityUnitFieldUpdateOperationsInput | $Enums.QuantityUnit
+  sequence?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoiceItems?: Prisma.InvoiceItemUncheckedUpdateManyWithoutCatalogNestedInput
+}
+
+export type CatalogUncheckedUpdateManyWithoutBusinessInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -790,6 +979,7 @@ export type CatalogCountOutputTypeCountInvoiceItemsArgs<ExtArgs extends runtime.
 export type CatalogSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   workspaceId?: boolean
+  businessId?: boolean
   name?: boolean
   description?: boolean
   price?: boolean
@@ -799,6 +989,7 @@ export type CatalogSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   updatedAt?: boolean
   deletedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   invoiceItems?: boolean | Prisma.Catalog$invoiceItemsArgs<ExtArgs>
   _count?: boolean | Prisma.CatalogCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["catalog"]>
@@ -806,6 +997,7 @@ export type CatalogSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
 export type CatalogSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   workspaceId?: boolean
+  businessId?: boolean
   name?: boolean
   description?: boolean
   price?: boolean
@@ -815,11 +1007,13 @@ export type CatalogSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   updatedAt?: boolean
   deletedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["catalog"]>
 
 export type CatalogSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   workspaceId?: boolean
+  businessId?: boolean
   name?: boolean
   description?: boolean
   price?: boolean
@@ -829,11 +1023,13 @@ export type CatalogSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   updatedAt?: boolean
   deletedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["catalog"]>
 
 export type CatalogSelectScalar = {
   id?: boolean
   workspaceId?: boolean
+  businessId?: boolean
   name?: boolean
   description?: boolean
   price?: boolean
@@ -844,28 +1040,33 @@ export type CatalogSelectScalar = {
   deletedAt?: boolean
 }
 
-export type CatalogOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "workspaceId" | "name" | "description" | "price" | "quantityUnit" | "sequence" | "createdAt" | "updatedAt" | "deletedAt", ExtArgs["result"]["catalog"]>
+export type CatalogOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "workspaceId" | "businessId" | "name" | "description" | "price" | "quantityUnit" | "sequence" | "createdAt" | "updatedAt" | "deletedAt", ExtArgs["result"]["catalog"]>
 export type CatalogInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   invoiceItems?: boolean | Prisma.Catalog$invoiceItemsArgs<ExtArgs>
   _count?: boolean | Prisma.CatalogCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type CatalogIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
 }
 export type CatalogIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
 }
 
 export type $CatalogPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Catalog"
   objects: {
     workspace: Prisma.$WorkspacePayload<ExtArgs>
+    business: Prisma.$BusinessPayload<ExtArgs>
     invoiceItems: Prisma.$InvoiceItemPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
     workspaceId: number
+    businessId: number
     name: string
     description: string
     price: runtime.Decimal
@@ -1269,6 +1470,7 @@ readonly fields: CatalogFieldRefs;
 export interface Prisma__CatalogClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  business<T extends Prisma.BusinessDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BusinessDefaultArgs<ExtArgs>>): Prisma.Prisma__BusinessClient<runtime.Types.Result.GetResult<Prisma.$BusinessPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   invoiceItems<T extends Prisma.Catalog$invoiceItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Catalog$invoiceItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoiceItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1301,6 +1503,7 @@ export interface Prisma__CatalogClient<T, Null = never, ExtArgs extends runtime.
 export interface CatalogFieldRefs {
   readonly id: Prisma.FieldRef<"Catalog", 'Int'>
   readonly workspaceId: Prisma.FieldRef<"Catalog", 'Int'>
+  readonly businessId: Prisma.FieldRef<"Catalog", 'Int'>
   readonly name: Prisma.FieldRef<"Catalog", 'String'>
   readonly description: Prisma.FieldRef<"Catalog", 'String'>
   readonly price: Prisma.FieldRef<"Catalog", 'Decimal'>

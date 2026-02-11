@@ -7,6 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { TemplateSelectionDialog } from "@/components/template-selection-dialog";
+import { catalogService } from "@/features/catalog";
+import type { CreateCatalogDto } from "@/features/catalog";
 
 // Speech Recognition types
 interface SpeechRecognition extends EventTarget {
@@ -79,7 +81,8 @@ interface CatalogItemData {
   name: string;
   price: number;
   description: string;
-  companyId?: number;
+  quantityUnit: "DAYS" | "HOURS" | "UNITS";
+  businessId: number;
 }
 
 export default function CatalogByVoicePage() {
@@ -96,6 +99,8 @@ export default function CatalogByVoicePage() {
     name: "",
     price: 0,
     description: "",
+    quantityUnit: "UNITS",
+    businessId: 0,
   });
   const [conversationStep, setConversationStep] = useState(0);
   const [conversationHistory, setConversationHistory] = useState<
@@ -196,7 +201,7 @@ export default function CatalogByVoicePage() {
     if (template) {
       setSelectedTemplate(template);
       setShowTemplateDialog(false);
-      setItemData((prev) => ({ ...prev, companyId: template.id }));
+      setItemData((prev) => ({ ...prev, businessId: template.id }));
       initializeConversation(template.name);
     } else {
       toast({
@@ -313,7 +318,7 @@ export default function CatalogByVoicePage() {
         await speakText(aiResponse);
         
         // Save and redirect
-        saveItem({ ...itemData, description });
+        await saveItem({ ...itemData, description });
         setTimeout(() => {
             router.push("/catalog");
         }, 3000);
@@ -321,18 +326,29 @@ export default function CatalogByVoicePage() {
     }
   };
 
-  const saveItem = (data: CatalogItemData) => {
-    const newItem = {
-      id: Date.now().toString(),
-      ...data,
-      createdAt: new Date().toISOString(),
-    };
-    const existing = JSON.parse(localStorage.getItem("catalogItems") || "[]");
-    localStorage.setItem("catalogItems", JSON.stringify([newItem, ...existing]));
-    toast({
-      title: "Item Added",
-      description: `${data.name} has been successfully added to the catalog.`,
-    });
+  const saveItem = async (data: CatalogItemData) => {
+    try {
+      const catalogDto: CreateCatalogDto = {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        quantityUnit: data.quantityUnit,
+        businessId: data.businessId,
+      };
+      
+      await catalogService.create(catalogDto);
+      
+      toast({
+        title: "Item Added",
+        description: `${data.name} has been successfully added to the catalog.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add catalog item",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

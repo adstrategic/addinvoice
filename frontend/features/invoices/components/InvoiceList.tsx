@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { InvoiceCard } from "./InvoiceCard";
-import type { InvoiceResponse } from "../types/api";
+import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { mapStatusToUI } from "../types/api";
 
 interface InvoiceListProps {
@@ -14,7 +14,7 @@ interface InvoiceListProps {
   onEdit: (sequence: number) => void;
   onDownload: (invoice: InvoiceResponse) => void;
   onSend: (invoice: InvoiceResponse) => void;
-  onMarkAsPaid: (invoice: InvoiceResponse) => void;
+  onAddPayment: (invoice: InvoiceResponse) => void;
   onDelete: (invoice: InvoiceResponse) => void;
   children?: React.ReactNode;
 }
@@ -30,7 +30,7 @@ export function InvoiceList({
   onEdit,
   onDownload,
   onSend,
-  onMarkAsPaid,
+  onAddPayment,
   onDelete,
   children,
 }: InvoiceListProps) {
@@ -68,9 +68,7 @@ export function InvoiceList({
           {invoices.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                No invoices found matching your filters
-              </p>
+              <p className="text-muted-foreground">No invoices found</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -83,7 +81,7 @@ export function InvoiceList({
                   onEdit={onEdit}
                   onDownload={onDownload}
                   onSend={onSend}
-                  onMarkAsPaid={onMarkAsPaid}
+                  onAddPayment={onAddPayment}
                   onDelete={onDelete}
                 />
               ))}

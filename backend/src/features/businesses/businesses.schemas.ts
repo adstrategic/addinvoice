@@ -61,37 +61,25 @@ export const setDefaultBusinessSchema = z.object({
   id: z.coerce.number().int().positive("The ID must be a positive number"),
 });
 
+/**
+ * Business entity schema from API
+ * Matches backend BusinessEntity structure
+ */
+export const businessEntitySchema = createBusinessSchema.extend({
+  id: z.number().int().positive(),
+  workspaceId: z.number().int().positive(),
+  isDefault: z.boolean(),
+  sequence: z.number().int().positive(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  deletedAt: z.date().nullable(),
+});
+
 // ===== DTOs (for the service) =====
 
+export type BusinessEntity = z.infer<typeof businessEntitySchema>;
 export type ListBusinessesQuery = z.infer<typeof listBusinessesSchema>;
 export type GetBusinessByIdParams = z.infer<typeof getBusinessByIdSchema>;
 export type CreateBusinessDto = z.infer<typeof createBusinessSchema>;
 export type UpdateBusinessDto = z.infer<typeof updateBusinessSchema>;
 export type SetDefaultBusinessParams = z.infer<typeof setDefaultBusinessSchema>;
-
-// ===== ENTITY SCHEMA (domain model) =====
-
-export type BusinessEntity = {
-  id: number;
-  workspaceId: number;
-  name: string;
-  nit: string;
-  address: string;
-  email: string;
-  phone: string;
-  logo: string | null;
-  isDefault: boolean;
-  sequence: number;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-};
-
-
-
-
-
-
-
-
-

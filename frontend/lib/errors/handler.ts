@@ -3,6 +3,7 @@ import type {
   ApiErrorResponse,
   ValidationErrorResponse,
 } from "@/lib/api/types";
+import { ZodError } from "zod";
 
 /**
  * Custom API Error class
@@ -29,6 +30,15 @@ export class ApiError extends Error {
  * Handles all error scenarios: network, validation, HTTP errors
  */
 export function handleApiError(error: unknown): never {
+  // If error is already an ApiError, re-throw it
+  if (error instanceof ZodError) {
+    throw new ApiError(
+      500,
+      "ResponseValidationError",
+      "Received invalid data from server",
+      error.issues
+    );
+  }
   // Network error or request timeout
   if (error instanceof AxiosError && !error.response) {
     throw new ApiError(
@@ -48,8 +58,6 @@ export function handleApiError(error: unknown): never {
       status === 400 &&
       data &&
       typeof data === "object" &&
-      "success" in data &&
-      !data.success &&
       ("details" in data ||
         data.error === "Validation error" ||
         data.error === "ZodError")
@@ -63,12 +71,12 @@ export function handleApiError(error: unknown): never {
       );
     }
 
-    // Handle other API errors
+    // Handle other API errors (check for error property instead of success)
     if (
       data &&
       typeof data === "object" &&
-      "success" in data &&
-      !data.success
+      "error" in data &&
+      "message" in data
     ) {
       const errorData = data as ApiErrorResponse;
       throw new ApiError(

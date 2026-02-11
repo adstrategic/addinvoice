@@ -290,6 +290,7 @@ export type BusinessWhereInput = {
   deletedAt?: Prisma.DateTimeNullableFilter<"Business"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   invoices?: Prisma.InvoiceListRelationFilter
+  catalog?: Prisma.CatalogListRelationFilter
 }
 
 export type BusinessOrderByWithRelationInput = {
@@ -308,6 +309,7 @@ export type BusinessOrderByWithRelationInput = {
   deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   workspace?: Prisma.WorkspaceOrderByWithRelationInput
   invoices?: Prisma.InvoiceOrderByRelationAggregateInput
+  catalog?: Prisma.CatalogOrderByRelationAggregateInput
 }
 
 export type BusinessWhereUniqueInput = Prisma.AtLeast<{
@@ -330,6 +332,7 @@ export type BusinessWhereUniqueInput = Prisma.AtLeast<{
   deletedAt?: Prisma.DateTimeNullableFilter<"Business"> | Date | string | null
   workspace?: Prisma.XOR<Prisma.WorkspaceScalarRelationFilter, Prisma.WorkspaceWhereInput>
   invoices?: Prisma.InvoiceListRelationFilter
+  catalog?: Prisma.CatalogListRelationFilter
 }, "id" | "workspaceId_sequence">
 
 export type BusinessOrderByWithAggregationInput = {
@@ -386,6 +389,7 @@ export type BusinessCreateInput = {
   deletedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutBusinessesInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutBusinessInput
+  catalog?: Prisma.CatalogCreateNestedManyWithoutBusinessInput
 }
 
 export type BusinessUncheckedCreateInput = {
@@ -403,6 +407,7 @@ export type BusinessUncheckedCreateInput = {
   updatedAt?: Date | string
   deletedAt?: Date | string | null
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  catalog?: Prisma.CatalogUncheckedCreateNestedManyWithoutBusinessInput
 }
 
 export type BusinessUpdateInput = {
@@ -419,6 +424,7 @@ export type BusinessUpdateInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutBusinessesNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutBusinessNestedInput
+  catalog?: Prisma.CatalogUpdateManyWithoutBusinessNestedInput
 }
 
 export type BusinessUncheckedUpdateInput = {
@@ -436,6 +442,7 @@ export type BusinessUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  catalog?: Prisma.CatalogUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
 export type BusinessCreateManyInput = {
@@ -606,6 +613,20 @@ export type BusinessUncheckedUpdateManyWithoutWorkspaceNestedInput = {
   deleteMany?: Prisma.BusinessScalarWhereInput | Prisma.BusinessScalarWhereInput[]
 }
 
+export type BusinessCreateNestedOneWithoutCatalogInput = {
+  create?: Prisma.XOR<Prisma.BusinessCreateWithoutCatalogInput, Prisma.BusinessUncheckedCreateWithoutCatalogInput>
+  connectOrCreate?: Prisma.BusinessCreateOrConnectWithoutCatalogInput
+  connect?: Prisma.BusinessWhereUniqueInput
+}
+
+export type BusinessUpdateOneRequiredWithoutCatalogNestedInput = {
+  create?: Prisma.XOR<Prisma.BusinessCreateWithoutCatalogInput, Prisma.BusinessUncheckedCreateWithoutCatalogInput>
+  connectOrCreate?: Prisma.BusinessCreateOrConnectWithoutCatalogInput
+  upsert?: Prisma.BusinessUpsertWithoutCatalogInput
+  connect?: Prisma.BusinessWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.BusinessUpdateToOneWithWhereWithoutCatalogInput, Prisma.BusinessUpdateWithoutCatalogInput>, Prisma.BusinessUncheckedUpdateWithoutCatalogInput>
+}
+
 export type BusinessCreateNestedOneWithoutInvoicesInput = {
   create?: Prisma.XOR<Prisma.BusinessCreateWithoutInvoicesInput, Prisma.BusinessUncheckedCreateWithoutInvoicesInput>
   connectOrCreate?: Prisma.BusinessCreateOrConnectWithoutInvoicesInput
@@ -633,6 +654,7 @@ export type BusinessCreateWithoutWorkspaceInput = {
   updatedAt?: Date | string
   deletedAt?: Date | string | null
   invoices?: Prisma.InvoiceCreateNestedManyWithoutBusinessInput
+  catalog?: Prisma.CatalogCreateNestedManyWithoutBusinessInput
 }
 
 export type BusinessUncheckedCreateWithoutWorkspaceInput = {
@@ -649,6 +671,7 @@ export type BusinessUncheckedCreateWithoutWorkspaceInput = {
   updatedAt?: Date | string
   deletedAt?: Date | string | null
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutBusinessInput
+  catalog?: Prisma.CatalogUncheckedCreateNestedManyWithoutBusinessInput
 }
 
 export type BusinessCreateOrConnectWithoutWorkspaceInput = {
@@ -696,6 +719,88 @@ export type BusinessScalarWhereInput = {
   deletedAt?: Prisma.DateTimeNullableFilter<"Business"> | Date | string | null
 }
 
+export type BusinessCreateWithoutCatalogInput = {
+  name: string
+  nit: string
+  address: string
+  email: string
+  phone: string
+  logo?: string | null
+  isDefault?: boolean
+  sequence: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  workspace: Prisma.WorkspaceCreateNestedOneWithoutBusinessesInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutBusinessInput
+}
+
+export type BusinessUncheckedCreateWithoutCatalogInput = {
+  id?: number
+  workspaceId: number
+  name: string
+  nit: string
+  address: string
+  email: string
+  phone: string
+  logo?: string | null
+  isDefault?: boolean
+  sequence: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutBusinessInput
+}
+
+export type BusinessCreateOrConnectWithoutCatalogInput = {
+  where: Prisma.BusinessWhereUniqueInput
+  create: Prisma.XOR<Prisma.BusinessCreateWithoutCatalogInput, Prisma.BusinessUncheckedCreateWithoutCatalogInput>
+}
+
+export type BusinessUpsertWithoutCatalogInput = {
+  update: Prisma.XOR<Prisma.BusinessUpdateWithoutCatalogInput, Prisma.BusinessUncheckedUpdateWithoutCatalogInput>
+  create: Prisma.XOR<Prisma.BusinessCreateWithoutCatalogInput, Prisma.BusinessUncheckedCreateWithoutCatalogInput>
+  where?: Prisma.BusinessWhereInput
+}
+
+export type BusinessUpdateToOneWithWhereWithoutCatalogInput = {
+  where?: Prisma.BusinessWhereInput
+  data: Prisma.XOR<Prisma.BusinessUpdateWithoutCatalogInput, Prisma.BusinessUncheckedUpdateWithoutCatalogInput>
+}
+
+export type BusinessUpdateWithoutCatalogInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  nit?: Prisma.StringFieldUpdateOperationsInput | string
+  address?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sequence?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutBusinessesNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutBusinessNestedInput
+}
+
+export type BusinessUncheckedUpdateWithoutCatalogInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  workspaceId?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  nit?: Prisma.StringFieldUpdateOperationsInput | string
+  address?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  logo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sequence?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+}
+
 export type BusinessCreateWithoutInvoicesInput = {
   name: string
   nit: string
@@ -709,6 +814,7 @@ export type BusinessCreateWithoutInvoicesInput = {
   updatedAt?: Date | string
   deletedAt?: Date | string | null
   workspace: Prisma.WorkspaceCreateNestedOneWithoutBusinessesInput
+  catalog?: Prisma.CatalogCreateNestedManyWithoutBusinessInput
 }
 
 export type BusinessUncheckedCreateWithoutInvoicesInput = {
@@ -725,6 +831,7 @@ export type BusinessUncheckedCreateWithoutInvoicesInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   deletedAt?: Date | string | null
+  catalog?: Prisma.CatalogUncheckedCreateNestedManyWithoutBusinessInput
 }
 
 export type BusinessCreateOrConnectWithoutInvoicesInput = {
@@ -756,6 +863,7 @@ export type BusinessUpdateWithoutInvoicesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   workspace?: Prisma.WorkspaceUpdateOneRequiredWithoutBusinessesNestedInput
+  catalog?: Prisma.CatalogUpdateManyWithoutBusinessNestedInput
 }
 
 export type BusinessUncheckedUpdateWithoutInvoicesInput = {
@@ -772,6 +880,7 @@ export type BusinessUncheckedUpdateWithoutInvoicesInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  catalog?: Prisma.CatalogUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
 export type BusinessCreateManyWorkspaceInput = {
@@ -802,6 +911,7 @@ export type BusinessUpdateWithoutWorkspaceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   invoices?: Prisma.InvoiceUpdateManyWithoutBusinessNestedInput
+  catalog?: Prisma.CatalogUpdateManyWithoutBusinessNestedInput
 }
 
 export type BusinessUncheckedUpdateWithoutWorkspaceInput = {
@@ -818,6 +928,7 @@ export type BusinessUncheckedUpdateWithoutWorkspaceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutBusinessNestedInput
+  catalog?: Prisma.CatalogUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
 export type BusinessUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -842,10 +953,12 @@ export type BusinessUncheckedUpdateManyWithoutWorkspaceInput = {
 
 export type BusinessCountOutputType = {
   invoices: number
+  catalog: number
 }
 
 export type BusinessCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   invoices?: boolean | BusinessCountOutputTypeCountInvoicesArgs
+  catalog?: boolean | BusinessCountOutputTypeCountCatalogArgs
 }
 
 /**
@@ -865,6 +978,13 @@ export type BusinessCountOutputTypeCountInvoicesArgs<ExtArgs extends runtime.Typ
   where?: Prisma.InvoiceWhereInput
 }
 
+/**
+ * BusinessCountOutputType without action
+ */
+export type BusinessCountOutputTypeCountCatalogArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CatalogWhereInput
+}
+
 
 export type BusinessSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -882,6 +1002,7 @@ export type BusinessSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   deletedAt?: boolean
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   invoices?: boolean | Prisma.Business$invoicesArgs<ExtArgs>
+  catalog?: boolean | Prisma.Business$catalogArgs<ExtArgs>
   _count?: boolean | Prisma.BusinessCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["business"]>
 
@@ -939,6 +1060,7 @@ export type BusinessOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs =
 export type BusinessInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   workspace?: boolean | Prisma.WorkspaceDefaultArgs<ExtArgs>
   invoices?: boolean | Prisma.Business$invoicesArgs<ExtArgs>
+  catalog?: boolean | Prisma.Business$catalogArgs<ExtArgs>
   _count?: boolean | Prisma.BusinessCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type BusinessIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -953,6 +1075,7 @@ export type $BusinessPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
   objects: {
     workspace: Prisma.$WorkspacePayload<ExtArgs>
     invoices: Prisma.$InvoicePayload<ExtArgs>[]
+    catalog: Prisma.$CatalogPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -1364,6 +1487,7 @@ export interface Prisma__BusinessClient<T, Null = never, ExtArgs extends runtime
   readonly [Symbol.toStringTag]: "PrismaPromise"
   workspace<T extends Prisma.WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceDefaultArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   invoices<T extends Prisma.Business$invoicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$invoicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  catalog<T extends Prisma.Business$catalogArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$catalogArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1823,6 +1947,30 @@ export type Business$invoicesArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.InvoiceScalarFieldEnum | Prisma.InvoiceScalarFieldEnum[]
+}
+
+/**
+ * Business.catalog
+ */
+export type Business$catalogArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Catalog
+   */
+  select?: Prisma.CatalogSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Catalog
+   */
+  omit?: Prisma.CatalogOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CatalogInclude<ExtArgs> | null
+  where?: Prisma.CatalogWhereInput
+  orderBy?: Prisma.CatalogOrderByWithRelationInput | Prisma.CatalogOrderByWithRelationInput[]
+  cursor?: Prisma.CatalogWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CatalogScalarFieldEnum | Prisma.CatalogScalarFieldEnum[]
 }
 
 /**

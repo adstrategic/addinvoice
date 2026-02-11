@@ -1,11 +1,7 @@
-import React from "react";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { renderToBuffer } from "@react-pdf/renderer";
-import { InvoicePDFTemplate } from "@/components/invoices/InvoicePDFTemplate";
 import { createServerApiClient } from "@/lib/api/server-client";
 import { sendInvoiceEmail } from "@/lib/email/client";
-import type { InvoiceResponse } from "@/features/invoices";
 
 interface SendInvoiceRequest {
   email: string;
@@ -18,13 +14,11 @@ export async function POST(
   { params }: { params: Promise<{ sequence: string }> }
 ) {
   try {
-    // 1. Authenticate user
-    const { userId } = await auth();
+    const { userId, getToken } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Get sequence from params (await params in Next.js 15+)
     const { sequence: sequenceParam } = await params;
     const sequence = parseInt(sequenceParam);
     if (isNaN(sequence)) {
@@ -34,7 +28,6 @@ export async function POST(
       );
     }
 
-    // 3. Parse request body
     const body: SendInvoiceRequest = await request.json();
     const { email, subject, message } = body;
 
@@ -45,22 +38,14 @@ export async function POST(
       );
     }
 
-    // 4. Create server-side API client
     const apiClient = await createServerApiClient();
-
-    // 5. Fetch invoice data from backend
-    const response = await apiClient.get<{
-      success: boolean;
-      data: InvoiceResponse;
-    }>(`/invoices/${sequence}`);
-
-    if (!response.data.success || !response.data.data) {
+    const invoiceRes = await apiClient.get<{ data: { id: number; invoiceNumber: string; client: unknown } }>(
+      `/invoices/${sequence}`
+    );
+    const invoice = invoiceRes.data?.data;
+    if (!invoice) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
-
-    const invoice: InvoiceResponse = response.data.data;
-
-    // 6. Validate invoice has required data
     if (!invoice.client) {
       return NextResponse.json(
         { error: "Invoice client data missing" },
@@ -68,40 +53,44 @@ export async function POST(
       );
     }
 
-    // 7. Get company data (generic for now)
-    const companyData = invoice.business;
+    const token = await getToken();
+    const baseURL =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+    const pdfResponse = await fetch(`${baseURL}/api/v1/invoices/${sequence}/pdf`, {
+      method: "GET",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
 
-    // 8. Generate PDF
-    const pdfBuffer = await renderToBuffer(
-      <InvoicePDFTemplate
-        invoice={invoice}
-        client={invoice.client}
-        company={companyData}
-      />
-    );
+    if (!pdfResponse.ok) {
+      const errText = await pdfResponse.text();
+      let errBody: unknown = { error: "Failed to generate PDF" };
+      try {
+        errBody = JSON.parse(errText);
+      } catch {
+        if (errText) errBody = { error: errText };
+      }
+      return NextResponse.json(errBody, { status: pdfResponse.status });
+    }
 
-    // 9. Send email with PDF attachment via Resend
+    const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer());
+
     await sendInvoiceEmail({
       to: email,
-      subject: subject,
-      message: message,
-      pdfBuffer: Buffer.from(pdfBuffer),
+      subject,
+      message,
+      pdfBuffer,
       invoiceNumber: invoice.invoiceNumber,
     });
 
-    // 10. Update invoice status to SENT in the database
     try {
       await apiClient.patch(`/invoices/${invoice.id}/send`);
     } catch (error) {
-      // Log but don't fail if status update fails
-      // Email was sent successfully, so we still return success
-      // User can manually mark as sent if needed
       console.warn("Failed to update invoice status:", error);
     }
 
-    // 11. Return success
     return NextResponse.json({
-      success: true,
       message: "Invoice sent successfully",
     });
   } catch (error) {

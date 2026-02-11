@@ -40,14 +40,18 @@ import {
   useCreateInvoiceItem,
   useUpdateInvoiceItem,
 } from "../hooks/useInvoiceItems";
-import type { InvoiceItemResponse } from "../types/api";
-import type { TaxMode } from "../types/api";
+import type { InvoiceItemResponse } from "../schemas/invoice.schema";
+import { NumericFormat } from "react-number-format";
 
 interface ProductFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   invoiceId: number | null;
-  taxMode: TaxMode;
+  taxData: {
+    taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
+    taxName: string | null;
+    taxPercentage: number | null;
+  };
   item?: InvoiceItemResponse | null;
   mode?: "create" | "edit";
   onEnsureInvoiceExists?: (data: InvoiceItemCreateInput) => Promise<number>;
@@ -58,7 +62,7 @@ export function ProductFormDialog({
   open,
   onOpenChange,
   invoiceId,
-  taxMode,
+  taxData,
   item,
   mode = "edit",
   onEnsureInvoiceExists,
@@ -102,8 +106,8 @@ export function ProductFormDialog({
   const onSubmit = async (data: InvoiceItemCreateInput) => {
     let currentInvoiceId = invoiceId;
 
-    // Include taxMode in the data to sync with backend
-    const dataWithTaxMode = { ...data, taxMode };
+    // Include taxMode, taxName, and taxPercentage in the data to sync with backend
+    const dataWithTaxMode = { ...data, ...taxData };
 
     // If no invoice exists and we're in create mode, create invoice first
     if (!currentInvoiceId && mode === "create" && onEnsureInvoiceExists) {
@@ -114,6 +118,14 @@ export function ProductFormDialog({
         return;
       } catch (error) {
         setIsCreatingInvoice(false);
+
+        // If validation failed, close the modal so user can see invoice form errors
+        if (error instanceof Error && error.message === "VALIDATION_FAILED") {
+          onOpenChange(false);
+          return;
+        }
+
+        // For other errors, re-throw
         throw error;
       }
     }
@@ -127,13 +139,13 @@ export function ProductFormDialog({
       await updateItem.mutateAsync({
         invoiceId: currentInvoiceId,
         itemId: item.id,
-        data: dataWithTaxMode as InvoiceItemUpdateInput,
+        data: dataWithTaxMode,
       });
       onSuccess(currentInvoiceId);
     } else {
       await createItem.mutateAsync({
         invoiceId: currentInvoiceId,
-        data: dataWithTaxMode as InvoiceItemCreateInput,
+        data: dataWithTaxMode,
       });
       // Pass the invoiceId back in case it was just created
       onSuccess(currentInvoiceId);
@@ -201,15 +213,16 @@ export function ProductFormDialog({
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="quantity">Quantity *</FieldLabel>
-                    <Input
-                      {...field}
-                      id="quantity"
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      aria-invalid={fieldState.invalid}
-                      onChange={field.onChange}
-                      value={field.value ?? ""}
+                    <NumericFormat
+                      value={field.value}
+                      onValueChange={(values) => {
+                        field.onChange(values.floatValue);
+                      }}
+                      placeholder="0,00"
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      decimalScale={2}
+                      customInput={Input}
                     />
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
@@ -253,7 +266,7 @@ export function ProductFormDialog({
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="unitPrice">Unit Price *</FieldLabel>
-                  <Input
+                  {/* <Input
                     {...field}
                     id="unitPrice"
                     type="number"
@@ -263,6 +276,20 @@ export function ProductFormDialog({
                     placeholder="0.00"
                     onChange={field.onChange}
                     value={field.value ?? ""}
+                  /> */}
+                  <NumericFormat
+                    id="unitPrice"
+                    aria-invalid={fieldState.invalid}
+                    value={field.value}
+                    onValueChange={(values) => {
+                      field.onChange(values.floatValue);
+                    }}
+                    placeholder="0,00"
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    decimalScale={2}
+                    prefix="$"
+                    customInput={Input}
                   />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
@@ -317,20 +344,23 @@ export function ProductFormDialog({
                             : "(Amount)"}{" "}
                           *
                         </FieldLabel>
-                        <Input
-                          {...field}
+                        <NumericFormat
                           id="discount"
-                          type="number"
-                          min="0"
-                          step="0.01"
                           aria-invalid={fieldState.invalid}
+                          value={field.value}
+                          onValueChange={(values) => {
+                            field.onChange(values.floatValue);
+                          }}
                           placeholder={
                             form.watch("discountType") === "PERCENTAGE"
                               ? "10"
                               : "50.00"
                           }
-                          onChange={field.onChange}
-                          value={field.value ?? ""}
+                          thousandSeparator="."
+                          decimalSeparator=","
+                          decimalScale={2}
+                          prefix="$"
+                          customInput={Input}
                         />
                         {fieldState.invalid && (
                           <FieldError errors={[fieldState.error]} />
@@ -342,24 +372,25 @@ export function ProductFormDialog({
             </div>
 
             {/* Tax field - conditional based on taxMode */}
-            {taxMode === "BY_PRODUCT" && (
+            {taxData.taxMode === "BY_PRODUCT" && (
               <Controller
                 name="tax"
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="tax">Tax Percentage (%)</FieldLabel>
-                    <Input
-                      {...field}
+                    <NumericFormat
                       id="tax"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
                       aria-invalid={fieldState.invalid}
-                      placeholder="0"
-                      onChange={field.onChange}
-                      value={field.value ?? ""}
+                      value={field.value}
+                      onValueChange={(values) => {
+                        field.onChange(values.floatValue);
+                      }}
+                      placeholder="0,00"
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      decimalScale={2}
+                      customInput={Input}
                     />
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
@@ -369,7 +400,7 @@ export function ProductFormDialog({
               />
             )}
 
-            {taxMode === "BY_TOTAL" && (
+            {taxData.taxMode === "BY_TOTAL" && (
               <Controller
                 name="vatEnabled"
                 control={form.control}

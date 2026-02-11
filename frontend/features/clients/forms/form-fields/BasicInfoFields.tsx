@@ -29,15 +29,15 @@ export function BasicInfoFields({
         <FormField
           control={control}
           name="nit"
-          disabled={mode === "edit"}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>NIT/ID *</FormLabel>
+              <FormLabel>NIT/ID</FormLabel>
               <FormControl>
                 <Input
+                  {...field}
                   placeholder="Enter NIT or ID number..."
                   disabled={isLoading}
-                  {...field}
+                  value={field.value ?? ""}
                 />
               </FormControl>
               <FormMessage />
@@ -51,12 +51,13 @@ export function BasicInfoFields({
           name="businessName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Business Name *</FormLabel>
+              <FormLabel>Business Name</FormLabel>
               <FormControl>
                 <Input
+                  {...field}
                   placeholder="Enter business name..."
                   disabled={isLoading}
-                  {...field}
+                  value={field.value ?? ""}
                 />
               </FormControl>
               <FormMessage />
@@ -70,7 +71,9 @@ export function BasicInfoFields({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Client Name *</FormLabel>
+              <FormLabel>
+                Client Name <span className="text-red-500">*</span>
+              </FormLabel>
               <FormControl>
                 <Input
                   placeholder="Enter client name..."
@@ -89,12 +92,13 @@ export function BasicInfoFields({
           name="address"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Address *</FormLabel>
+              <FormLabel>Address</FormLabel>
               <FormControl>
                 <Input
+                  {...field}
                   placeholder="Enter address..."
                   disabled={isLoading}
-                  {...field}
+                  value={field.value ?? ""}
                 />
               </FormControl>
               <FormMessage />

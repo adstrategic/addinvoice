@@ -25,13 +25,35 @@ export function ContactFields({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Correo 1 */}
+        <FormField
+          control={control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Primary Email <span className="text-red-500">*</span>
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="email"
+                  placeholder="Enter primary email..."
+                  disabled={isLoading}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         {/* Teléfono 1 */}
         <FormField
           control={control}
           name="phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Primary Phone *</FormLabel>
+              <FormLabel>Primary Phone </FormLabel>
               <FormControl>
                 <PhoneInputField
                   value={field.value || ""}
@@ -66,26 +88,6 @@ export function ContactFields({
             </FormItem>
           )}
         /> */}
-
-        {/* Correo 1 */}
-        <FormField
-          control={control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Primary Email *</FormLabel>
-              <FormControl>
-                <Input
-                  type="email"
-                  placeholder="Enter primary email..."
-                  disabled={isLoading}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         {/* Correo 2 */}
         {/* <FormField

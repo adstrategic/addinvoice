@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { prisma } from "./db";
+import prisma from "./db";
 
 /**
  * Middleware to check if workspace has at least one business
@@ -14,14 +14,13 @@ import { prisma } from "./db";
 export async function requireBusiness(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> {
   try {
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {
       res.status(401).json({
-        success: false,
         error: "UNAUTHORIZED",
         message: "Workspace not found",
       });
@@ -41,7 +40,6 @@ export async function requireBusiness(
     if (businessCount === 0) {
       // Return special error that frontend interceptor will catch
       res.status(403).json({
-        success: false,
         error: "BUSINESS_REQUIRED",
         message: "You need to create a business before accessing this feature",
         redirectTo: "/setup", // Tell frontend where to redirect
@@ -53,7 +51,6 @@ export async function requireBusiness(
     next();
   } catch (error) {
     res.status(500).json({
-      success: false,
       error: "INTERNAL_ERROR",
       message: "Internal server error",
     });

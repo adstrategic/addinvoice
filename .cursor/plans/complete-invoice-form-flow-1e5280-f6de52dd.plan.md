@@ -1,4 +1,25 @@
-<!-- f6de52dd-be58-4e61-a3f4-6f9ab1be7bef 53e2d11d-aacc-428b-946b-b8dd0cb2e6d4 -->
+---
+name: Complete Invoice Form Flow Integration
+overview: ""
+todos:
+  - id: c5e3e231-aa2d-40b7-a4de-b6de2e04c9ff
+    content: Modify useInvoiceFormManager.ts to switch to edit mode after create, set invoiceSequence, and keep form open
+    status: pending
+  - id: 35b9dc08-560d-43ff-9b2e-b8909419b0ef
+    content: Remove duplicate logic from InvoiceForm.tsx and integrate with useInvoiceFormManager state
+    status: pending
+  - id: 1a31a483-145b-42d3-8011-ce7a0e4f614b
+    content: Pass existingInvoice from invoiceManager to InvoiceForm component
+    status: pending
+  - id: a49dee40-4644-4756-a8eb-c26a491e0669
+    content: Ensure product addition properly refreshes invoice data via query invalidation
+    status: pending
+  - id: d843a2ef-a3bc-4392-b57a-40d4c90323cd
+    content: Confirm invoice schema excludes products from create/update operations
+    status: pending
+isProject: false
+---
+
 # Complete Invoice Form Flow Integration
 
 ## Overview
@@ -113,11 +134,3 @@ Complete the invoice form flow where:
 - [ ] Form stays open after create (to allow adding products)
 - [ ] Form closes after update in edit mode (returns to invoice list)
 - [ ] Invoice data refreshes correctly after product addition
-
-### To-dos
-
-- [ ] Modify useInvoiceFormManager.ts to switch to edit mode after create, set invoiceSequence, and keep form open
-- [ ] Remove duplicate logic from InvoiceForm.tsx and integrate with useInvoiceFormManager state
-- [ ] Pass existingInvoice from invoiceManager to InvoiceForm component
-- [ ] Ensure product addition properly refreshes invoice data via query invalidation
-- [ ] Confirm invoice schema excludes products from create/update operations

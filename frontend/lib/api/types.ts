@@ -3,20 +3,19 @@
  * Shared types for all API responses across the application
  */
 
+import z from "zod";
+
 /**
  * Success response wrapper from API
  */
 export interface ApiSuccessResponse<T> {
-  success: true;
   data: T;
-  pagination?: PaginationMeta;
 }
 
 /**
  * Error response from API
  */
 export interface ApiErrorResponse {
-  success: false;
   error: string;
   message: string;
 }
@@ -33,24 +32,17 @@ export interface ValidationErrorResponse extends ApiErrorResponse {
   }>;
 }
 
+export const paginationMetaSchema = z.object({
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  totalPages: z.number(),
+});
+
 /**
  * Pagination metadata
  */
-export interface PaginationMeta {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
-/**
- * Type guard to check if response is a success response
- */
-export function isApiSuccessResponse<T>(
-  response: ApiSuccessResponse<T> | ApiErrorResponse
-): response is ApiSuccessResponse<T> {
-  return response.success === true;
-}
+export type PaginationMeta = z.infer<typeof paginationMetaSchema>;
 
 /**
  * Type guard to check if error is a validation error

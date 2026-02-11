@@ -20,16 +20,30 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
-import { enUS, es } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 
 interface HeaderSectionProps {
   form: UseFormReturn<CreateInvoiceDTO>;
+  isLoadingNumber: boolean;
 }
 
-export function HeaderSection({ form }: HeaderSectionProps) {
+export function HeaderSection({ form, isLoadingNumber }: HeaderSectionProps) {
+  const issueDate = form.watch("issueDate");
+  const dueDate = form.watch("dueDate");
+
+  const isIssueDateDisabled = (date: Date) => {
+    if (!dueDate) return false;
+    return startOfDay(date) > startOfDay(dueDate);
+  };
+
+  const isDueDateDisabled = (date: Date) => {
+    if (!issueDate) return false;
+    return startOfDay(date) < startOfDay(issueDate);
+  };
+
   return (
     <Card className="bg-card border-border">
       <CardHeader>
@@ -46,7 +60,11 @@ export function HeaderSection({ form }: HeaderSectionProps) {
               <FormItem>
                 <FormLabel>Invoice Number</FormLabel>
                 <FormControl>
-                  <Input placeholder="INV-001" {...field} />
+                  <Input
+                    placeholder="INV-001"
+                    disabled={isLoadingNumber}
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -68,7 +86,7 @@ export function HeaderSection({ form }: HeaderSectionProps) {
                         variant="outline"
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                         type="button"
                       >
@@ -86,6 +104,7 @@ export function HeaderSection({ form }: HeaderSectionProps) {
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
+                      disabled={isIssueDateDisabled}
                       initialFocus
                     />
                   </PopoverContent>
@@ -107,7 +126,7 @@ export function HeaderSection({ form }: HeaderSectionProps) {
                         variant="outline"
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                         type="button"
                       >
@@ -125,7 +144,7 @@ export function HeaderSection({ form }: HeaderSectionProps) {
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
-                      initialFocus
+                      disabled={isDueDateDisabled}
                     />
                   </PopoverContent>
                 </Popover>

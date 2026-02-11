@@ -43,7 +43,21 @@ model Workspace {
     catalogs   Catalog[]
     businesses Business[]
 
+    // Subscription fields (cached from Stripe - Stripe is source of truth)
+    stripeCustomerId     String?             @unique
+    stripeSubscriptionId String?             @unique
+    subscriptionPlan     SubscriptionPlan?
+    subscriptionStatus   SubscriptionStatus?
+    subscriptionEndsAt   DateTime? // For quick expiry checks
+    lastStripeSync       DateTime? // Track when we last verified with Stripe
+    // TODO: AI CREDITS - Add fields for AI credit tracking
+    // aiCreditBalance      Decimal?           @default(0)
+    // aiCreditResetDate    DateTime?
+
     @@index([clerkId])
+    @@index([stripeCustomerId])
+    @@index([stripeSubscriptionId])
+    @@index([subscriptionStatus])
     @@map("workspaces")
 }
 
@@ -52,10 +66,10 @@ model Client {
     workspaceId  Int
     name         String
     email        String
-    phone        String
-    address      String
-    nit          String
-    businessName String
+    phone        String?
+    address      String?
+    nit          String?
+    businessName String?
     sequence     Int
     createdAt    DateTime  @default(now())
     updatedAt    DateTime  @updatedAt
@@ -71,18 +85,21 @@ model Client {
 }
 
 model Catalog {
-    id           Int          @id @default(autoincrement())
-    workspaceId  Int
+    id          Int @id @default(autoincrement())
+    workspaceId Int
+    businessId  Int
+
     name         String
     description  String
     price        Decimal
-    quantityUnit QuantityUnit @default(DAYS) // Default quantity unit for items created from catalog
+    quantityUnit QuantityUnit @default(UNITS) // Default quantity unit for items created from catalog
     sequence     Int
     createdAt    DateTime     @default(now())
     updatedAt    DateTime     @updatedAt
     deletedAt    DateTime?
 
     workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    business     Business      @relation(fields: [businessId], references: [id], onDelete: Restrict)
     invoiceItems InvoiceItem[]
 
     @@unique([workspaceId, sequence])
@@ -117,10 +134,16 @@ enum DiscountType {
 }
 
 model Invoice {
-    id              Int           @id @default(autoincrement())
-    workspaceId     Int
-    clientId        Int
-    businessId      Int // Optional: link invoice to specific business
+    id          Int @id @default(autoincrement())
+    workspaceId Int
+    clientId    Int
+    businessId  Int // Optional: link invoice to specific business
+
+    // Client Information
+    clientEmail   String
+    clientPhone   String?
+    clientAddress String?
+
     sequence        Int
     invoiceNumber   String
     status          InvoiceStatus @default(DRAFT)
@@ -137,6 +160,7 @@ model Invoice {
     taxName         String? // Tax name when taxMode is "BY_TOTAL"
     taxPercentage   Decimal? // Tax percentage when taxMode is "BY_TOTAL"
     total           Decimal       @default(0)
+    balance         Decimal       @default(0)
     notes           String?
     terms           String?
     paymentLink     String?
@@ -194,7 +218,7 @@ model Payment {
     invoiceId     Int
     amount        Decimal
     paymentMethod String // e.g., "cash", "bank_transfer", "check", "stripe", "paypal", etc.
-    transactionId String    @unique // Required unique transaction ID
+    transactionId String?   @unique // Required unique transaction ID
     details       String? // Optional payment notes/details
     paidAt        DateTime  @default(now())
     createdAt     DateTime  @default(now())
@@ -286,9 +310,26 @@ model Business {
 
     workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     invoices  Invoice[]
+    catalog   Catalog[]
 
     @@unique([workspaceId, sequence])
     @@index([workspaceId])
     @@index([isDefault])
     @@map("businesses")
+}
+
+enum SubscriptionPlan {
+    CORE
+    AI_PRO
+    LIFETIME
+}
+
+enum SubscriptionStatus {
+    ACTIVE
+    CANCELED
+    PAST_DUE
+    UNPAID
+    INCOMPLETE
+    INCOMPLETE_EXPIRED
+    TRIALING
 }

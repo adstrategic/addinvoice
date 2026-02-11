@@ -1,6 +1,6 @@
 "use client";
 
-import type { InvoiceResponse } from "../types/api";
+import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { calculateItemTotal } from "../lib/utils";
 
 interface InvoicePDFPreviewProps {
@@ -148,4 +148,3 @@ export function InvoicePDFPreview({ invoice }: InvoicePDFPreviewProps) {
     </div>
   );
 }
-

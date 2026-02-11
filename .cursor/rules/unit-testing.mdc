@@ -1,0 +1,67 @@
+---
+description: Pattern and conventions for backend unit tests (Vitest, service layer, Prisma mock)
+alwaysApply: false
+---
+
+# Backend unit testing pattern
+
+Use this pattern when writing or reviewing unit tests for feature services (e.g. `clients.service`, `invoices.service`). Tests live next to the service in `__tests__/*.unit.test.ts`.
+
+## 1. Imports and test framework
+
+- Use **Vitest**: `describe`, `it`, `expect`, `vi`, `beforeEach` from `"vitest"`.
+- Import the **functions under test** directly from the service file (e.g. `listClients`, `createClient`, `updateClient`, `deleteClient` from `"../clients.service"`).
+- Import **domain errors** used by the service for assertions (e.g. `EntityNotFoundError` from `"../../../errors/EntityErrors"`).
+- Import **prismaMock** as the **default export** from the shared db mock: `import prismaMock from "../../../core/__mocks__/db";`
+
+## 2. Mocking the database
+
+- Mock the **same module path the service uses**: `vi.mock("../../../core/db");` (from tests under `src/features/<feature>/__tests__/`). Vitest resolves this to the mock at `src/core/__mocks__/db.ts`, which exports the deep Prisma mock as default.
+- The shared mock uses **vitest-mock-extended** (`mockDeep<PrismaClient>()`) and runs `mockReset(prismaMock)` in its own `beforeEach`. In the test file, add **`beforeEach(() => { vi.restoreAllMocks(); });`** inside the outer describe so mocks are restored between tests.
+
+## 3. Test data
+
+- Define a **default entity object** at the top of the file (e.g. `defaultClient`) with all required fields and types (id, workspaceId, sequence, dates, etc.) so tests can spread and override: `{ ...defaultClient, name: "Updated" }`.
+- Use **realistic values** (e.g. valid emails, numbers) and `new Date()` for dates; use `null` for optional fields when testing “missing” behavior.
+
+## 4. Structure: one describe per service, nested describes per function
+
+- Wrap all tests in **one outer `describe("<feature>.service", () => { ... })`** (e.g. `describe("clients.service", () => { ... })`).
+- At the top of that block, add **`beforeEach(() => { vi.restoreAllMocks(); });`**.
+- Inside it, one **nested `describe("<functionName>", () => { ... })`** per exported function (e.g. `describe("listClients", () => { ... })`).
+- Inside each function describe, one **`it("...", async () => { ... })`** per behavior: happy path, error cases, and edge cases (e.g. “returns clients when found”, “throws EntityNotFoundError when client does not exist”, “throws when client belongs to another workspace”).
+
+## 5. Arrange–Act–Assert
+
+- **Arrange**: Set up `prismaMock.<model>.<method>.mockResolvedValue(...)` (or `mockImplementationOnce` for transactions) so the next call returns the value the service will use.
+- **Act**: Call the service function with the same arguments the production code would use (workspaceId, ids, payloads).
+- **Assert**: Use `expect(result).toEqual(...)` or `expect(...).rejects.toThrow(EntityNotFoundError)` and, for errors, `toMatchObject({ statusCode: 404, message: "..." })` when you care about the shape of the error.
+
+## 6. Transactions
+
+- When the service uses `prisma.$transaction(callback)`, run the callback with the same mock so nested calls (findUnique, update, etc.) use `prismaMock`:
+  - **Single test**: `prismaMock.$transaction.mockImplementationOnce((callback) => callback(prismaMock));`
+  - **Multiple tests in the same describe** (e.g. several error cases): `prismaMock.$transaction.mockImplementation((callback) => callback(prismaMock));`
+- Set up all nested mocks (e.g. `findUnique`, `update`) before calling the service so the transaction callback sees them.
+
+## 7. Call assertions
+
+- Assert **that the service called Prisma as expected** when the call shape matters (e.g. correct `where`, `data`, or that delete was not called when validation fails):
+  - `expect(prismaMock.client.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: ... }));`
+  - `expect(prismaMock.client.delete).toHaveBeenCalledWith({ where: { id: 1 } });`
+  - `expect(prismaMock.client.delete).not.toHaveBeenCalled();`
+
+## 8. Naming and scope
+
+- Test names should describe **observable behavior**, not implementation: “returns client when found and not deleted”, “throws EntityNotFoundError when client does not exist”, “builds where with OR for search when search is provided”.
+- Keep tests **isolated**: each test sets only the mocks it needs; `beforeEach(() => vi.restoreAllMocks())` in the test file (and the mock’s own `mockReset` in `__mocks__/db.ts`) keep state clean between tests.
+
+## Summary checklist
+
+- [ ] Vitest + import service functions + domain errors + default import `prismaMock` from `core/__mocks__/db`
+- [ ] `vi.mock("../../../core/db");` (same path the service imports)
+- [ ] One outer `describe("<feature>.service")` with `beforeEach(() => vi.restoreAllMocks());`; nested `describe` per function; one `it` per behavior
+- [ ] Default entity object at top; spread in tests
+- [ ] Arrange (mock return values / transaction impl) → Act (call service) → Assert (return value and/or Prisma call)
+- [ ] For `$transaction`: `mockImplementationOnce` (single test) or `mockImplementation` (multiple tests in same describe); set nested mocks before calling service
+- [ ] Assert return values and, when relevant, Prisma call arguments (e.g. `toHaveBeenCalledWith`) or “not called”

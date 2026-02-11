@@ -30,7 +30,6 @@ export function errorHandler(
   // Handle our custom AppError instances (includes all feature-specific errors)
   if (err instanceof CustomError) {
     res.status(err.statusCode).json({
-      success: false,
       error: err.name,
       message: err.message,
     });
@@ -42,7 +41,6 @@ export function errorHandler(
     // Handle unique constraint violations
     if (err.code === "P2002") {
       res.status(409).json({
-        success: false,
         error: "Conflict",
         message: "A record with this value already exists",
       });
@@ -52,7 +50,6 @@ export function errorHandler(
     // Handle record not found
     if (err.code === "P2025") {
       res.status(404).json({
-        success: false,
         error: "Not Found",
         message: "The requested resource was not found",
       });
@@ -61,7 +58,6 @@ export function errorHandler(
 
     // Generic Prisma error
     res.status(400).json({
-      success: false,
       error: "Database error",
       message: "An error occurred while processing your request",
     });
@@ -71,7 +67,7 @@ export function errorHandler(
   // Handle Zod validation errors
   // if (err.name === "ZodError") {
   //   res.status(400).json({
-  //     success: false,
+  // success: false,
   //     error: "Validation error",
   //     message: err.message,
   //     // In development, include validation details
@@ -84,7 +80,6 @@ export function errorHandler(
 
   // Default error - don't leak error details in production
   res.status(500).json({
-    success: false,
     error: "Internal server error",
     message:
       process.env.NODE_ENV === "development"

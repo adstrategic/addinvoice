@@ -1,10 +1,8 @@
 /**
- * API Response Types for Invoices
- * Types matching the backend API responses
+ * Invoice Enums and Utility Functions
+ * Enums and utility functions for invoice feature
+ * Response types are now defined in schemas/invoice.schema.ts
  */
-
-import { BusinessResponse } from "@/features/businesses";
-import { ClientResponse } from "@/features/clients";
 
 /**
  * Invoice status enum matching backend
@@ -25,101 +23,6 @@ export type QuantityUnit = "DAYS" | "HOURS" | "UNITS";
  * Discount type enum matching backend
  */
 export type DiscountType = "PERCENTAGE" | "FIXED" | "NONE";
-
-/**
- * Invoice item response from API
- * Matches InvoiceItemEntity from backend
- */
-export interface InvoiceItemResponse {
-  id: number;
-  invoiceId: number;
-  name: string;
-  description: string;
-  quantity: number;
-  quantityUnit: QuantityUnit;
-  unitPrice: number;
-  discount: number;
-  discountType: DiscountType;
-  tax: number;
-  vatEnabled: boolean;
-  total: number;
-  catalogId: number | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * Payment response from API
- * Matches PaymentEntity from backend
- */
-export interface PaymentResponse {
-  id: number;
-  workspaceId: number;
-  invoiceId: number;
-  amount: number;
-  paymentMethod: string;
-  transactionId: string;
-  details: string | null;
-  paidAt: string;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-}
-
-/**
- * Client info in invoice response
- */
-export interface InvoiceClientInfo {
-  id: number;
-  name: string;
-  businessName: string;
-  email: string;
-  phone: string;
-  address: string;
-  nit: string;
-}
-
-/**
- * Invoice response from API
- * Matches InvoiceEntity from backend
- */
-export interface InvoiceResponse {
-  id: number;
-  workspaceId: number;
-  clientId: number;
-  businessId: number;
-  sequence: number;
-  invoiceNumber: string;
-  status: InvoiceStatus;
-  issueDate: string;
-  dueDate: string;
-  purchaseOrder: string | null;
-  customHeader: string | null;
-  currency: string;
-  subtotal: number;
-  totalTax: number;
-  discount: number;
-  discountType: string | null;
-  taxMode: TaxMode;
-  taxName: string | null;
-  taxPercentage: number | null;
-  total: number;
-  notes: string | null;
-  terms: string | null;
-  paymentLink: string | null;
-  paymentProvider: string | null;
-  sentAt: string | null;
-  viewedAt: string | null;
-  paidAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-  // Relations
-  business: BusinessResponse;
-  client: ClientResponse;
-  items?: InvoiceItemResponse[];
-  payments?: PaymentResponse[];
-}
 
 /**
  * Map backend status to UI status string

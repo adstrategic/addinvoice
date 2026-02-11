@@ -6,15 +6,15 @@
  *   import { useClients, ClientForm, type Client } from '@/features/clients'
  */
 
-// Types
-export type { ClientResponse } from "./types/api";
-
-// Schemas
+// Schemas and Types
 export {
   createClientSchema,
   updateClientSchema,
+  clientResponseSchema,
+  clientResponseListSchema,
   type CreateClientDto,
   type UpdateClientDto,
+  type ClientResponse,
   type ListClientsParams,
 } from "./schema/clients.schema";
 
