@@ -1,28 +1,18 @@
 "use client";
 
 import { AppLayout } from "@/components/app-layout";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  ArrowLeft,
-  Download,
-  Send,
-  Edit,
-  Trash2,
-  Printer,
-  CheckCircle,
-} from "lucide-react";
+import { ArrowLeft, Download, Send, Edit, Trash2, Plus } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { useToast } from "@/hooks/use-toast";
-import {
-  useInvoiceBySequence,
-  useMarkInvoiceAsPaid,
-} from "@/features/invoices/hooks/useInvoices";
+import { downloadInvoicePdf } from "@/features/invoices/lib/utils";
+import { useInvoiceBySequence } from "@/features/invoices/hooks/useInvoices";
+import { PaymentFormDialog } from "@/features/invoices/components/PaymentFormDialog";
+import { PaymentsSection } from "@/features/invoices/forms/form-fields/PaymentsSection";
 import { useInvoiceDelete } from "@/features/invoices/hooks/useInvoiceDelete";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { mapStatusToUI } from "@/features/invoices/types/api";
@@ -31,10 +21,6 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import type {
-  InvoiceResponse,
-  InvoiceItemResponse,
-} from "@/features/invoices/types/api";
 
 const statusConfig = {
   paid: { label: "Paid", className: "bg-primary/20 text-primary" },
@@ -48,13 +34,13 @@ export default function InvoiceDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const invoiceDelete = useInvoiceDelete({
     onAfterDelete: () => {
       router.push("/invoices");
     },
   });
-  const markAsPaidMutation = useMarkInvoiceAsPaid();
 
   const sequence = params?.sequence
     ? parseInt(params.sequence as string)
@@ -68,55 +54,32 @@ export default function InvoiceDetailPage() {
 
   if (isLoading) {
     return (
-      <AppLayout>
-        <div className="container mx-auto px-6 py-8 max-w-5xl">
-          <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">Loading invoice...</p>
-          </div>
+      <div className="container mx-auto px-6 py-8 max-w-5xl">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading invoice...</p>
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
   if (error || !invoice) {
     return (
-      <AppLayout>
-        <div className="container mx-auto px-6 py-8 max-w-5xl">
-          <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">Invoice not found</p>
-          </div>
+      <div className="container mx-auto px-6 py-8 max-w-5xl">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Invoice not found</p>
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
-  const companyData = invoice.business!;
   const client = invoice.client;
-  const items = invoice.items || [];
   const uiStatus = mapStatusToUI(invoice.status);
 
   const handleDownloadPDF = async () => {
     if (!sequence) return;
-
     setDownloading(true);
     try {
-      const response = await fetch(`/api/invoices/${sequence}/pdf`);
-      if (!response.ok) {
-        throw new Error("Failed to generate PDF");
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `invoice-${invoice.invoiceNumber}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast({
-        title: "PDF downloaded",
-        description: "The invoice PDF has been downloaded successfully.",
-      });
+      await downloadInvoicePdf(sequence, invoice.invoiceNumber, toast);
     } catch (error) {
       toast({
         title: "Error",
@@ -129,17 +92,8 @@ export default function InvoiceDetailPage() {
     }
   };
 
-  const handleMarkAsPaid = async () => {
-    if (!invoice) return;
-    try {
-      await markAsPaidMutation.mutateAsync(invoice.id);
-    } catch (error) {
-      // Error is already handled by the hook's onError
-    }
-  };
-
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto px-6 py-8 max-w-5xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -221,21 +175,20 @@ export default function InvoiceDetailPage() {
                 <p>Delete invoice</p>
               </TooltipContent>
             </Tooltip>
-            {uiStatus !== "paid" && (
+            {invoice.status !== "DRAFT" && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
-                    size="icon"
-                    className="bg-transparent"
-                    onClick={handleMarkAsPaid}
-                    disabled={markAsPaidMutation.isPending}
+                    className="gap-2 bg-transparent"
+                    onClick={() => setShowPaymentDialog(true)}
                   >
-                    <CheckCircle className="h-4 w-4" />
+                    <Plus className="h-4 w-4" />
+                    Add Payment
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Mark as paid</p>
+                  <p>Add payment</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -257,208 +210,25 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Invoice Preview */}
-        <Card className="bg-card border-border">
-          <CardHeader className="border-b border-border">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                {companyData.logo && (
-                  <img
-                    src={companyData.logo}
-                    alt="Company Logo"
-                    className="h-16 w-16 object-contain"
-                  />
-                )}
-                <div>
-                  <h2 className="text-2xl font-bold text-foreground">
-                    {companyData.name}
-                  </h2>
-                  {companyData.address && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {companyData.address}
-                    </p>
-                  )}
-                  {companyData.nit && (
-                    <p className="text-sm text-muted-foreground">
-                      NIT: {companyData.nit}
-                    </p>
-                  )}
-                  {companyData.email && (
-                    <p className="text-sm text-muted-foreground">
-                      {companyData.email}
-                    </p>
-                  )}
-                  {companyData.phone && (
-                    <p className="text-sm text-muted-foreground">
-                      {companyData.phone}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="text-right">
-                <h3 className="text-3xl font-bold text-primary">INVOICE</h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  <span className="font-semibold">Invoice #:</span>{" "}
-                  {invoice.invoiceNumber}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-semibold">Issue Date:</span>{" "}
-                  {new Date(invoice.issueDate).toLocaleDateString()}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-semibold">Due Date:</span>{" "}
-                  {new Date(invoice.dueDate).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          </CardHeader>
 
-          <CardContent className="pt-6 space-y-6">
-            {/* Bill To */}
-            {client && (
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-2">
-                  BILL TO:
-                </h4>
-                <p className="font-semibold text-foreground">{client.name}</p>
-                {client.businessName && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {client.businessName}
-                  </p>
-                )}
-                {client.address && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {client.address}
-                  </p>
-                )}
-                {client.phone && (
-                  <p className="text-sm text-muted-foreground">
-                    {client.phone}
-                  </p>
-                )}
-                {client.email && (
-                  <p className="text-sm text-muted-foreground">
-                    {client.email}
-                  </p>
-                )}
-                {client.nit && (
-                  <p className="text-sm text-muted-foreground">
-                    NIT: {client.nit}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Items Table */}
-            <div className="border border-border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-secondary/50">
-                  <tr>
-                    <th className="text-left p-3 text-sm font-semibold text-foreground">
-                      Description
-                    </th>
-                    <th className="text-right p-3 text-sm font-semibold text-foreground">
-                      Qty
-                    </th>
-                    <th className="text-right p-3 text-sm font-semibold text-foreground">
-                      Unit Price
-                    </th>
-                    <th className="text-right p-3 text-sm font-semibold text-foreground">
-                      Tax
-                    </th>
-                    <th className="text-right p-3 text-sm font-semibold text-foreground">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item) => (
-                    <tr key={item.id} className="border-t border-border">
-                      <td className="p-3 text-sm text-foreground">
-                        <div>
-                          <div className="font-medium">{item.name}</div>
-                          {item.description && (
-                            <div className="text-muted-foreground text-xs mt-1">
-                              {item.description}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3 text-sm text-right text-foreground">
-                        {item.quantity} {item.quantityUnit}
-                      </td>
-                      <td className="p-3 text-sm text-right text-foreground">
-                        {invoice.currency} {item.unitPrice.toFixed(2)}
-                      </td>
-                      <td className="p-3 text-sm text-right text-foreground">
-                        {item.tax}%
-                      </td>
-                      <td className="p-3 text-sm text-right font-semibold text-foreground">
-                        {invoice.currency} ${item.total.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Totals */}
-            <div className="flex justify-end">
-              <div className="w-64 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal:</span>
-                  <span className="font-semibold text-foreground">
-                    {invoice.currency} {invoice.subtotal.toFixed(2)}
-                  </span>
-                </div>
-                {invoice.discount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Discount:</span>
-                    <span className="font-semibold text-foreground">
-                      - {invoice.currency}{" "}
-                      {invoice.discountType === "PERCENTAGE"
-                        ? ((invoice.discount * invoice.subtotal) / 100).toFixed(
-                            2
-                          )
-                        : invoice.discount.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax:</span>
-                  <span className="font-semibold text-foreground">
-                    {invoice.currency} {invoice.totalTax.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-lg pt-2 border-t border-border">
-                  <span className="font-bold text-foreground">Total:</span>
-                  <span className="font-bold text-primary">
-                    {invoice.currency} {invoice.total.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Notes and Terms */}
-            {invoice.notes && (
-              <div className="pt-4 border-t border-border">
-                <h4 className="text-sm font-semibold text-foreground mb-2">
-                  Notes:
-                </h4>
-                <p className="text-sm text-muted-foreground">{invoice.notes}</p>
-              </div>
-            )}
-
-            {invoice.terms && (
-              <div className="pt-4 border-t border-border">
-                <h4 className="text-sm font-semibold text-foreground mb-2">
-                  Terms & Conditions:
-                </h4>
-                <p className="text-sm text-muted-foreground">{invoice.terms}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {invoice.status !== "DRAFT" && (
+          <div className="mt-6">
+            <PaymentsSection
+              invoiceId={invoice.id}
+              payments={invoice.payments ?? []}
+              invoiceTotal={Number(invoice.total)}
+              invoiceSequence={invoice.sequence}
+            />
+          </div>
+        )}
       </div>
+
+      <PaymentFormDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        invoiceId={invoice.id}
+        invoiceSequence={invoice.sequence}
+      />
 
       <SendInvoiceDialog
         open={sendDialogOpen}
@@ -477,6 +247,6 @@ export default function InvoiceDetailPage() {
         entityName={invoiceDelete.invoiceToDelete?.invoiceNumber || ""}
         isDeleting={invoiceDelete.isDeleting}
       />
-    </AppLayout>
+    </>
   );
 }

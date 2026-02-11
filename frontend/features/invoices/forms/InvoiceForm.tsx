@@ -1,15 +1,18 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, Upload, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, FileText, Download, Send } from "lucide-react";
 import { BusinessResponse } from "@/features/businesses";
+import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { downloadInvoicePdf } from "../lib/utils";
 import {
   CreateInvoiceDTO,
   InvoiceItemCreateInput,
 } from "../schemas/invoice.schema";
-import { invoiceKeys } from "../hooks/useInvoices";
 import { HeaderSection } from "./form-fields/HeaderSection";
 import { ClientSection } from "./form-fields/ClientSection";
 import { DiscountsVATSection } from "./form-fields/DiscountsVATSection";
@@ -17,13 +20,14 @@ import { NotesSection } from "./form-fields/NotesSection";
 import { TermsSection } from "./form-fields/TermsSection";
 import { ProductsSection } from "./form-fields/ProductsSection";
 import { PaymentsSection } from "./form-fields/PaymentsSection";
-import type { InvoiceResponse } from "../types/api";
+import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { Form } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import LoadingComponent from "@/components/loading-component";
 
 interface InvoiceFormProps {
   selectedBusiness: BusinessResponse;
@@ -32,6 +36,7 @@ interface InvoiceFormProps {
   form: UseFormReturn<CreateInvoiceDTO>;
   mode: "create" | "edit";
   isLoading: boolean;
+  isLoadingNumber: boolean;
   isLoadingInvoice: boolean;
   invoiceError: Error | null;
   existingInvoice?: InvoiceResponse | null;
@@ -46,128 +51,30 @@ export function InvoiceForm({
   mode,
   existingInvoice,
   ensureInvoiceExists,
+  isLoadingNumber,
   isLoadingInvoice,
   invoiceError,
   isLoading,
 }: InvoiceFormProps) {
-  const queryClient = useQueryClient();
+  const router = useRouter();
+  const { toast } = useToast();
+  const isDirty = form.formState.isDirty;
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  const handlePaymentAdded = async () => {
-    // Refetch invoice data to get updated payments
-    if (existingInvoice?.id) {
-      await queryClient.invalidateQueries({
-        queryKey: invoiceKeys.detail(existingInvoice.id),
-      });
-      // The useInvoiceBySequence hook in the manager will automatically refetch
-    }
+  const taxData = {
+    taxMode: form.watch("taxMode") || "NONE",
+    taxName: form.watch("taxName") || null,
+    taxPercentage: form.watch("taxPercentage") || null,
   };
 
   // Show loading state in edit mode while invoice is loading
   if (mode === "edit" && isLoadingInvoice) {
-    return (
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={onCancel}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                Edit Invoice
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Loading invoice data...
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Company Information Sidebar Skeleton */}
-          <Card className="bg-card border-border lg:col-span-1">
-            <CardHeader>
-              <Skeleton className="h-6 w-48" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Skeleton className="h-4 w-24 mb-2" />
-                <Skeleton className="h-32 w-full" />
-              </div>
-              <div className="space-y-3 pt-4 border-t border-border">
-                <div>
-                  <Skeleton className="h-4 w-28 mb-2" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-                <div>
-                  <Skeleton className="h-4 w-20 mb-2" />
-                  <Skeleton className="h-20 w-full" />
-                </div>
-                <div>
-                  <Skeleton className="h-4 w-24 mb-2" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-                <div>
-                  <Skeleton className="h-4 w-16 mb-2" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-                <div>
-                  <Skeleton className="h-4 w-20 mb-2" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Form Skeleton */}
-          <div className="space-y-6 lg:col-span-2">
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <Skeleton className="h-6 w-32" />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Skeleton className="h-4 w-24 mb-2" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                  <div>
-                    <Skeleton className="h-4 w-24 mb-2" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                </div>
-                <div>
-                  <Skeleton className="h-4 w-20 mb-2" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <Skeleton className="h-6 w-32" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-10 w-full" />
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <Skeleton className="h-6 w-40" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-32 w-full" />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingComponent variant="form" rows={8} />;
   }
 
   // Show error state if invoice failed to load
-  if (mode === "edit" && invoiceError) {
+  if (mode === "edit" && invoiceError && !existingInvoice) {
     return (
       <div className="container mx-auto px-6 py-8 max-w-7xl">
         <div className="flex items-center justify-between mb-8">
@@ -188,7 +95,7 @@ export function InvoiceForm({
         <Card className="bg-destructive/10 border-destructive">
           <CardContent className="pt-6">
             <p className="text-destructive">
-              {invoiceError.message ||
+              {invoiceError?.message ||
                 "Failed to load invoice. Please try again."}
             </p>
             <Button onClick={onCancel} variant="outline" className="mt-4">
@@ -220,24 +127,103 @@ export function InvoiceForm({
           </div>
         </div>
         <div className="flex gap-2">
-          <Button
-            type="button"
-            onClick={onSubmit}
-            disabled={form.formState.isSubmitting || isLoading}
-            className="gap-2"
-          >
-            {isLoading || form.formState.isSubmitting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {mode === "create" ? "Creating Invoice..." : "Saving..."}
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                {mode === "create" ? "Save Invoice" : "Update Invoice"}
-              </>
-            )}
-          </Button>
+          {mode === "edit" && existingInvoice ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.push(`/invoices/${existingInvoice.sequence}`)}
+                className="gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Preview
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  setIsExporting(true);
+                  try {
+                    await downloadInvoicePdf(
+                      existingInvoice.sequence,
+                      existingInvoice.invoiceNumber,
+                      toast,
+                    );
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description:
+                        error instanceof Error
+                          ? error.message
+                          : "Failed to download PDF",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsExporting(false);
+                  }
+                }}
+                disabled={isExporting}
+                className="gap-2"
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Exporting…
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Export PDF
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                onClick={onSubmit}
+                disabled={form.formState.isSubmitting || isLoading || !isDirty}
+                className="gap-2"
+              >
+                {isLoading || form.formState.isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Save
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setSendDialogOpen(true)}
+                className="gap-2"
+              >
+                <Send className="h-4 w-4" />
+                Send Invoice
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="button"
+              onClick={onSubmit}
+              disabled={form.formState.isSubmitting || isLoading || !isDirty}
+              className="gap-2"
+            >
+              {isLoading || form.formState.isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating Invoice…
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Save Invoice
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -321,50 +307,57 @@ export function InvoiceForm({
           </CardContent>
         </Card>
 
-        <Form {...form}>
-          <div
-            className={`space-y-6 lg:col-span-2 ${
-              isLoading ? "pointer-events-none opacity-60" : ""
-            }`}
-            aria-disabled={isLoading}
-          >
+        <div
+          className={`space-y-6 lg:col-span-2 ${
+            isLoading ? "pointer-events-none opacity-60" : ""
+          }`}
+          aria-disabled={isLoading}
+        >
+          <Form {...form}>
             <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
               {/* Header Section */}
-              <HeaderSection form={form} />
+              <HeaderSection isLoadingNumber={isLoadingNumber} form={form} />
 
               {/* Client Section */}
               <ClientSection
                 form={form}
+                invoice={existingInvoice || null}
                 initialClient={existingInvoice?.client || null}
-              />
-
-              {/* Products Section - Always visible */}
-              <ProductsSection
-                invoiceId={existingInvoice?.id || null}
-                items={existingInvoice?.items || []}
-                taxMode={form.watch("taxMode") || "NONE"}
                 mode={mode}
-                form={form}
-                onEnsureInvoiceExists={ensureInvoiceExists}
-                invoiceTotals={
-                  existingInvoice
-                    ? {
-                        subtotal: existingInvoice.subtotal,
-                        totalTax: existingInvoice.totalTax,
-                        total: existingInvoice.total,
-                        discount: existingInvoice.discount,
-                        discountType:
-                          (existingInvoice.discountType as
-                            | "NONE"
-                            | "PERCENTAGE"
-                            | "FIXED") || "NONE",
-                        taxName: existingInvoice.taxName,
-                        taxPercentage: existingInvoice.taxPercentage,
-                      }
-                    : null
-                }
               />
+            </form>
+          </Form>
 
+          {/* Products Section - Always visible (outside form to avoid nested forms) */}
+          <ProductsSection
+            invoiceId={existingInvoice?.id || null}
+            items={existingInvoice?.items || []}
+            taxData={taxData}
+            mode={mode}
+            form={form}
+            onEnsureInvoiceExists={ensureInvoiceExists}
+            existingInvoice={existingInvoice || null}
+            invoiceTotals={
+              existingInvoice
+                ? {
+                    subtotal: existingInvoice.subtotal,
+                    totalTax: existingInvoice.totalTax,
+                    total: existingInvoice.total,
+                    discount: existingInvoice.discount,
+                    discountType:
+                      (existingInvoice.discountType as
+                        | "NONE"
+                        | "PERCENTAGE"
+                        | "FIXED") || "NONE",
+                    taxName: existingInvoice.taxName,
+                    taxPercentage: existingInvoice.taxPercentage,
+                  }
+                : null
+            }
+          />
+
+          <Form {...form}>
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
               {/* Discounts & VAT Section */}
               <DiscountsVATSection form={form} />
 
@@ -373,20 +366,31 @@ export function InvoiceForm({
 
               {/* Terms Section */}
               <TermsSection form={form} />
-
-              {/* Payments Section - Only visible in edit mode when invoice exists */}
-              {mode === "edit" && existingInvoice && (
-                <PaymentsSection
-                  invoiceId={existingInvoice.id}
-                  payments={existingInvoice.payments || []}
-                  invoiceTotal={existingInvoice.total}
-                  onPaymentAdded={handlePaymentAdded}
-                />
-              )}
             </form>
-          </div>
-        </Form>
+          </Form>
+
+          {/* Payments Section - Only visible in edit mode when invoice exists */}
+          {mode === "edit" && existingInvoice && (
+            <PaymentsSection
+              invoiceId={existingInvoice.id}
+              invoiceSequence={existingInvoice.sequence}
+              payments={existingInvoice.payments || []}
+              invoiceTotal={existingInvoice.total}
+            />
+          )}
+        </div>
       </div>
+
+      {mode === "edit" && existingInvoice && (
+        <SendInvoiceDialog
+          open={sendDialogOpen}
+          onOpenChange={setSendDialogOpen}
+          invoiceSequence={existingInvoice.sequence}
+          invoiceNumber={existingInvoice.invoiceNumber}
+          clientName={existingInvoice.client?.name ?? "Client"}
+          clientEmail={existingInvoice.client?.email}
+        />
+      )}
     </div>
   );
 }
