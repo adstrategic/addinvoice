@@ -24,7 +24,7 @@ import {
 /**
  * Calculate item total with discount and tax
  */
-function calculateItemTotal(
+export function calculateItemTotal(
   item: {
     quantity: number;
     unitPrice: number;
@@ -62,7 +62,7 @@ function calculateItemTotal(
   }
 
   // 4. Final item total
-  return itemTotalAfterDiscount;
+  return itemTotalAfterDiscount + taxAmount;
 }
 
 /**
@@ -377,15 +377,17 @@ export async function listInvoices(
   ]);
 
   return {
-    invoices: invoices.map((inv) => ({
-      ...inv,
-      subtotal: Number(inv.subtotal),
-      totalTax: Number(inv.totalTax),
-      discount: Number(inv.discount),
-      taxPercentage: inv.taxPercentage ? Number(inv.taxPercentage) : null,
-      total: Number(inv.total),
-      balance: Number(inv.balance),
-    })),
+    invoices: invoices.map((inv) => {
+      return {
+        ...inv,
+        subtotal: Number(inv.subtotal),
+        totalTax: Number(inv.totalTax),
+        discount: Number(inv.discount),
+        taxPercentage: inv.taxPercentage ? Number(inv.taxPercentage) : null,
+        total: Number(inv.total),
+        balance: Number(inv.balance),
+      };
+    }),
     total,
     page,
     limit,
@@ -738,6 +740,7 @@ export async function createInvoice(
         taxName: data.taxName || null,
         taxPercentage: data.taxPercentage || null,
         total: totals.total,
+        balance: totals.total,
         notes: data.notes,
         terms: data.terms,
         items: {
@@ -1044,6 +1047,13 @@ export async function updateInvoice(
       include: { items: true, client: true, business: true },
     });
 
+    await updateInvoiceBalanceAndStatus(tx, id, Number(updatedInvoice.total));
+
+    const withBalance = await tx.invoice.findUnique({
+      where: { id, workspaceId },
+      select: { balance: true },
+    });
+
     return {
       ...updatedInvoice,
       subtotal: Number(updatedInvoice.subtotal),
@@ -1053,7 +1063,7 @@ export async function updateInvoice(
         ? Number(updatedInvoice.taxPercentage)
         : null,
       total: Number(updatedInvoice.total),
-      balance: Number(updatedInvoice.balance),
+      balance: Number(withBalance?.balance ?? updatedInvoice.balance),
       items: updatedInvoice.items.map((item) => ({
         ...item,
         quantity: Number(item.quantity),
@@ -1125,6 +1135,7 @@ export async function markInvoiceAsSent(
     where: {
       id: invoiceId,
     },
+    include: { _count: { select: { items: true } } },
   });
 
   if (
@@ -1136,6 +1147,14 @@ export async function markInvoiceAsSent(
       message: "Invoice not found",
       statusCode: 404,
       code: "ERR_NF",
+    });
+  }
+
+  if (invoice._count.items === 0) {
+    throw new EntityValidationError({
+      message: "Cannot send an invoice with no items",
+      statusCode: 400,
+      code: "ERR_VALID",
     });
   }
 
@@ -1404,6 +1423,8 @@ export async function addInvoiceItem(
       where: { id: invoiceId },
       data: finalInvoiceUpdateData,
     });
+
+    await updateInvoiceBalanceAndStatus(tx, invoiceId, totals.total);
 
     return {
       ...item,
@@ -1726,6 +1747,8 @@ export async function updateInvoiceItem(
       data: finalInvoiceUpdateData,
     });
 
+    await updateInvoiceBalanceAndStatus(tx, invoiceId, totals.total);
+
     return {
       ...item,
       quantity: Number(item.quantity),
@@ -1821,6 +1844,8 @@ export async function deleteInvoiceItem(
         total: totals.total,
       },
     });
+
+    await updateInvoiceBalanceAndStatus(tx, invoiceId, totals.total);
   });
 }
 
@@ -1917,6 +1942,7 @@ export async function addPayment(
     // Verify invoice exists and belongs to workspace
     const invoice = await tx.invoice.findUnique({
       where: { id: invoiceId },
+      include: { _count: { select: { items: true } } },
     });
 
     if (
@@ -1928,6 +1954,22 @@ export async function addPayment(
         message: "Invoice not found",
         statusCode: 404,
         code: "ERR_NF",
+      });
+    }
+
+    if (invoice._count.items === 0) {
+      throw new EntityValidationError({
+        message: "Cannot add payment to an invoice with no items",
+        statusCode: 400,
+        code: "ERR_VALID",
+      });
+    }
+
+    if (Number(invoice.balance) <= 0) {
+      throw new EntityValidationError({
+        message: "Cannot add payment: invoice balance is zero or already paid",
+        statusCode: 400,
+        code: "ERR_VALID",
       });
     }
 

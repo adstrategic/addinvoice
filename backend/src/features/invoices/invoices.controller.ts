@@ -16,44 +16,6 @@ import { TypedRequest } from "zod-express-middleware";
 import { listInvoicesSchema } from "./invoices.schemas";
 
 /**
- * Compute item line total (after item discount + tax) for PDF when item.total is missing.
- * Mirrors the service layer logic so the fallback is correct.
- */
-function computeItemTotalForPdf(
-  item: {
-    quantity: number;
-    unitPrice: number;
-    discount: number;
-    discountType: string;
-    tax: number;
-    vatEnabled: boolean;
-  },
-  invoice: {
-    taxMode: string;
-    taxPercentage: number | null;
-  },
-): number {
-  const baseAmount = Number(item.quantity) * Number(item.unitPrice);
-  let afterDiscount = baseAmount;
-  if (item.discountType === "PERCENTAGE") {
-    afterDiscount = baseAmount - (baseAmount * Number(item.discount)) / 100;
-  } else if (item.discountType === "FIXED") {
-    afterDiscount = baseAmount - Number(item.discount);
-  }
-  let taxAmount = 0;
-  if (invoice.taxMode === "BY_PRODUCT") {
-    taxAmount = (afterDiscount * Number(item.tax)) / 100;
-  } else if (
-    invoice.taxMode === "BY_TOTAL" &&
-    item.vatEnabled &&
-    invoice.taxPercentage
-  ) {
-    taxAmount = (afterDiscount * invoice.taxPercentage) / 100;
-  }
-  return afterDiscount + taxAmount;
-}
-
-/**
  * GET /invoices - List all invoices
  * No error handling needed - middleware handles it
  */
@@ -182,21 +144,6 @@ export async function getInvoicePdf(
       logo: invoice.business.logo,
     },
     items: (invoice.items || []).map((item) => {
-      const total: number = computeItemTotalForPdf(
-        {
-          quantity: Number(item.quantity ?? 0),
-          unitPrice: Number(item.unitPrice ?? 0),
-          discount: Number(item.discount ?? 0),
-          discountType:
-            (item as { discountType?: string }).discountType ?? "NONE",
-          tax: Number(item.tax ?? 0),
-          vatEnabled: Boolean((item as { vatEnabled?: boolean }).vatEnabled),
-        },
-        {
-          taxMode: invoice.taxMode,
-          taxPercentage: invoice.taxPercentage ?? null,
-        },
-      );
       return {
         name: item.name,
         description: item.description,
@@ -204,7 +151,7 @@ export async function getInvoicePdf(
         quantityUnit: item.quantityUnit,
         unitPrice: Number(item.unitPrice ?? 0),
         tax: Number(item.tax ?? 0),
-        total,
+        total: Number(item.total ?? 0),
       };
     }),
   };

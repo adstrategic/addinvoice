@@ -285,6 +285,7 @@ export const invoiceItemEntitySchema = invoiceItemSchema.extend({
   invoiceId: z.number().int().positive(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  total: z.number(),
 });
 
 /**
