@@ -10,7 +10,11 @@ export function cn(...inputs: ClassValue[]) {
  * Format a number as currency
  */
 export function formatCurrency(amount: number): string {
-  return `$${amount.toFixed(2)}`;
+  const formatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  });
+  return formatter.format(amount);
 }
 
 // Generate page numbers for pagination

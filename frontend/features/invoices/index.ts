@@ -55,7 +55,6 @@ export { InvoiceFilters } from "./components/InvoiceFilters";
 export { InvoiceList } from "./components/InvoiceList";
 export { InvoiceCard } from "./components/InvoiceCard";
 export { InvoiceActions } from "./components/InvoiceActions";
-export { InvoicePDFPreview } from "./components/InvoicePDFPreview";
 export { InvoiceForm } from "./forms/InvoiceForm";
 export { ProductFormDialog } from "./components/ProductFormDialog";
 

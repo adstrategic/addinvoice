@@ -4,7 +4,6 @@ import type {
   InvoiceResponse,
   InvoiceItemResponse,
 } from "../schemas/invoice.schema";
-import { CreateInvoiceDTO } from "../schemas/invoice.schema";
 
 type ToastFn = (params: {
   title: string;
@@ -53,7 +52,7 @@ export function calculateItemTotal(item: InvoiceItemResponse): number {
  */
 export async function generateInvoicePDF(
   invoice: InvoiceResponse,
-  previewElementId: string
+  previewElementId: string,
 ): Promise<void> {
   const previewElement = document.getElementById(previewElementId);
   if (!previewElement) {

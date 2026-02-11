@@ -213,7 +213,6 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Invoice Preview */}
-
         <Card className="bg-card border-border">
           <CardHeader className="border-b border-border">
             <div className="flex items-start justify-between">
