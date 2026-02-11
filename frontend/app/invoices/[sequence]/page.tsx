@@ -21,6 +21,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 const statusConfig = {
   paid: { label: "Paid", className: "bg-primary/20 text-primary" },
@@ -72,7 +73,9 @@ export default function InvoiceDetailPage() {
     );
   }
 
+  const companyData = invoice.business!;
   const client = invoice.client;
+  const items = invoice.items || [];
   const uiStatus = mapStatusToUI(invoice.status);
 
   const handleDownloadPDF = async () => {
@@ -211,16 +214,218 @@ export default function InvoiceDetailPage() {
 
         {/* Invoice Preview */}
 
-        {invoice.status !== "DRAFT" && (
-          <div className="mt-6">
-            <PaymentsSection
-              invoiceId={invoice.id}
-              payments={invoice.payments ?? []}
-              invoiceTotal={Number(invoice.total)}
-              invoiceSequence={invoice.sequence}
-            />
-          </div>
-        )}
+        <Card className="bg-card border-border">
+          <CardHeader className="border-b border-border">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                {companyData.logo && (
+                  <img
+                    src={companyData.logo}
+                    alt="Company Logo"
+                    className="h-16 w-16 object-contain"
+                  />
+                )}
+              </div>
+              <div className="text-right">
+                <h3 className="text-3xl font-bold text-primary">INVOICE</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  <span className="font-semibold">Invoice #:</span>{" "}
+                  {invoice.invoiceNumber}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-semibold">Issue Date:</span>{" "}
+                  {new Date(invoice.issueDate).toLocaleDateString()}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-semibold">Due Date:</span>{" "}
+                  {new Date(invoice.dueDate).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-6 space-y-6">
+            {/* Bill To */}
+            {client && (
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-2">
+                    BILL TO:
+                  </h4>
+                  <p className="font-semibold text-foreground">{client.name}</p>
+                  {client.businessName && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {client.businessName}
+                    </p>
+                  )}
+                  {client.address && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {client.address}
+                    </p>
+                  )}
+                  {client.phone && (
+                    <p className="text-sm text-muted-foreground">
+                      {client.phone}
+                    </p>
+                  )}
+                  {client.email && (
+                    <p className="text-sm text-muted-foreground">
+                      {client.email}
+                    </p>
+                  )}
+                  {client.nit && (
+                    <p className="text-sm text-muted-foreground">
+                      NIT: {client.nit}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <h2 className="text-2xl font-bold text-foreground">
+                    {companyData.name}
+                  </h2>
+                  {companyData.address && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {companyData.address}
+                    </p>
+                  )}
+                  {companyData.nit && (
+                    <p className="text-sm text-muted-foreground">
+                      NIT: {companyData.nit}
+                    </p>
+                  )}
+                  {companyData.email && (
+                    <p className="text-sm text-muted-foreground">
+                      {companyData.email}
+                    </p>
+                  )}
+                  {companyData.phone && (
+                    <p className="text-sm text-muted-foreground">
+                      {companyData.phone}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Items Table */}
+            <div className="border border-border rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-secondary/50">
+                  <tr>
+                    <th className="text-left p-3 text-sm font-semibold text-foreground">
+                      Description
+                    </th>
+                    <th className="text-right p-3 text-sm font-semibold text-foreground">
+                      Qty
+                    </th>
+                    <th className="text-right p-3 text-sm font-semibold text-foreground">
+                      Unit Price
+                    </th>
+                    <th className="text-right p-3 text-sm font-semibold text-foreground">
+                      Tax
+                    </th>
+                    <th className="text-right p-3 text-sm font-semibold text-foreground">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => (
+                    <tr key={item.id} className="border-t border-border">
+                      <td className="p-3 text-sm text-foreground">
+                        <div>
+                          <div className="font-medium">{item.name}</div>
+                          {item.description && (
+                            <div className="text-muted-foreground text-xs mt-1">
+                              {item.description}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-3 text-sm text-right text-foreground">
+                        {item.quantity} {item.quantityUnit}
+                      </td>
+                      <td className="p-3 text-sm text-right text-foreground">
+                        {invoice.currency} {item.unitPrice.toFixed(2)}
+                      </td>
+                      <td className="p-3 text-sm text-right text-foreground">
+                        {item.tax}%
+                      </td>
+                      <td className="p-3 text-sm text-right font-semibold text-foreground">
+                        {invoice.currency} ${item.total.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals */}
+            <div className="flex justify-end">
+              <div className="w-64 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal:</span>
+                  <span className="font-semibold text-foreground">
+                    {invoice.currency} {invoice.subtotal.toFixed(2)}
+                  </span>
+                </div>
+                {invoice.discount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Discount:</span>
+                    <span className="font-semibold text-foreground">
+                      - {invoice.currency}{" "}
+                      {invoice.discountType === "PERCENTAGE"
+                        ? ((invoice.discount * invoice.subtotal) / 100).toFixed(
+                            2,
+                          )
+                        : invoice.discount.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tax:</span>
+                  <span className="font-semibold text-foreground">
+                    {invoice.currency} {invoice.totalTax.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-lg pt-2 border-t border-border">
+                  <span className="font-bold text-foreground">Total:</span>
+                  <span className="font-bold text-primary">
+                    {invoice.currency} {invoice.total.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes and Terms */}
+            {invoice.notes && (
+              <div className="pt-4 border-t border-border">
+                <h4 className="text-sm font-semibold text-foreground mb-2">
+                  Notes:
+                </h4>
+                <p className="text-sm text-muted-foreground">{invoice.notes}</p>
+              </div>
+            )}
+
+            {invoice.terms && (
+              <div className="pt-4 border-t border-border">
+                <h4 className="text-sm font-semibold text-foreground mb-2">
+                  Terms & Conditions:
+                </h4>
+                <p className="text-sm text-muted-foreground">{invoice.terms}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="mt-6">
+          <PaymentsSection
+            invoiceId={invoice.id}
+            payments={invoice.payments ?? []}
+            invoiceTotal={Number(invoice.total)}
+            invoiceSequence={invoice.sequence}
+          />
+        </div>
       </div>
 
       <PaymentFormDialog
