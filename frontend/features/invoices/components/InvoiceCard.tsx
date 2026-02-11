@@ -22,6 +22,7 @@ import {
 import { motion } from "framer-motion";
 import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { mapStatusToUI } from "../types/api";
+import { cn, formatCurrency } from "@/lib/utils";
 
 // Status config (used for badge classes/labels)
 const statusConfig = {
@@ -69,12 +70,14 @@ export function InvoiceCard({
 }: InvoiceCardProps) {
   const clientName =
     invoice.client?.name || invoice.client?.businessName || "Unknown Client";
-  const amount = invoice.total || 0;
   const uiStatus = mapStatusToUI(invoice.status);
   const statusInfo = statusConfig[uiStatus as keyof typeof statusConfig] || {
     label: uiStatus,
     className: "bg-muted text-muted-foreground",
   };
+  const hasItems = (invoice.items?.length ?? 0) > 0;
+  const hasBalance = (invoice.balance ?? 0) > 0;
+  const canAddPayment = uiStatus !== "paid" && hasItems && hasBalance;
 
   return (
     <motion.div
@@ -87,7 +90,7 @@ export function InvoiceCard({
       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-secondary/50 border border-border hover:border-primary/50 hover:bg-secondary/70 transition-all duration-300 hover:shadow-md cursor-pointer"
     >
       <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-        <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+        <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
           <FileText className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
@@ -105,7 +108,17 @@ export function InvoiceCard({
       <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 pl-[52px] sm:pl-0">
         <div className="text-left sm:text-right">
           <p className="font-semibold text-foreground text-sm sm:text-base">
-            ${amount.toLocaleString()}
+            Total: {formatCurrency(invoice.total)}
+          </p>
+          <p className="text-muted-foreground text-xs sm:text-sm">
+            Balance:{" "}
+            <span
+              className={cn(
+                invoice.balance <= 0 ? "text-green-600" : "text-red-600",
+              )}
+            >
+              {formatCurrency(invoice.balance)}
+            </span>
           </p>
           <p className="text-xs text-muted-foreground">
             Due: {new Date(invoice.dueDate).toLocaleDateString()}
@@ -140,7 +153,7 @@ export function InvoiceCard({
               <Send className="h-4 w-4 mr-2" />
               Send
             </DropdownMenuItem>
-            {uiStatus !== "paid" && (
+            {canAddPayment && (
               <DropdownMenuItem onClick={() => onAddPayment(invoice)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Payment

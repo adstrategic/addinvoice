@@ -4,7 +4,14 @@ import { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, Loader2, FileText, Download, Send } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Loader2,
+  FileText,
+  Download,
+  Send,
+} from "lucide-react";
 import { BusinessResponse } from "@/features/businesses";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -67,6 +74,8 @@ export function InvoiceForm({
     taxName: form.watch("taxName") || null,
     taxPercentage: form.watch("taxPercentage") || null,
   };
+
+  const hasItems = (existingInvoice?.items?.length ?? 0) > 0;
 
   // Show loading state in edit mode while invoice is loading
   if (mode === "edit" && isLoadingInvoice) {
@@ -132,7 +141,9 @@ export function InvoiceForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push(`/invoices/${existingInvoice.sequence}`)}
+                onClick={() =>
+                  router.push(`/invoices/${existingInvoice.sequence}`)
+                }
                 className="gap-2"
               >
                 <FileText className="h-4 w-4" />
@@ -198,7 +209,12 @@ export function InvoiceForm({
               <Button
                 type="button"
                 onClick={() => setSendDialogOpen(true)}
+                disabled={!hasItems}
                 className="gap-2"
+                title={!hasItems ? "Add at least one item to send" : undefined}
+                aria-label={
+                  !hasItems ? "Add at least one item to send" : "Send Invoice"
+                }
               >
                 <Send className="h-4 w-4" />
                 Send Invoice
@@ -369,8 +385,8 @@ export function InvoiceForm({
             </form>
           </Form>
 
-          {/* Payments Section - Only visible in edit mode when invoice exists */}
-          {mode === "edit" && existingInvoice && (
+          {/* Payments Section - Only visible in edit mode when invoice has items */}
+          {mode === "edit" && existingInvoice && hasItems && (
             <PaymentsSection
               invoiceId={existingInvoice.id}
               invoiceSequence={existingInvoice.sequence}

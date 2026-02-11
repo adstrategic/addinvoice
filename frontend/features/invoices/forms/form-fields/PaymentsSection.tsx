@@ -46,15 +46,17 @@ export function PaymentsSection({
             <CardTitle className="text-lg font-bold text-foreground">
               Payments
             </CardTitle>
-            <Button
-              onClick={handleAddPayment}
-              size="sm"
-              variant="outline"
-              className="gap-2 bg-transparent"
-            >
-              <Plus className="h-4 w-4" />
-              Add Payment
-            </Button>
+            {remaining > 0 && (
+              <Button
+                onClick={handleAddPayment}
+                size="sm"
+                variant="outline"
+                className="gap-2 bg-transparent"
+              >
+                <Plus className="h-4 w-4" />
+                Add Payment
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -144,10 +146,10 @@ export function PaymentsSection({
                   </span>
                 </div>
                 <div className="flex justify-between text-lg pt-2 border-t border-border">
-                  <span className="font-bold text-foreground">Remaining:</span>
+                  <span className="font-bold text-foreground">Balance:</span>
                   <span
                     className={`font-bold ${
-                      remaining <= 0 ? "text-green-600" : "text-primary"
+                      remaining <= 0 ? "text-green-600" : "text-red-600"
                     }`}
                   >
                     {formatCurrency(remaining)}
