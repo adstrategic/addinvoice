@@ -1,6 +1,5 @@
 "use client";
 
-import { AppLayout } from "@/components/app-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +78,7 @@ export default function PaymentMethodsPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(
-    null
+    null,
   );
   const [formData, setFormData] = useState({
     type: "credit_card" as PaymentMethod["type"],
@@ -95,9 +94,7 @@ export default function PaymentMethodsPage() {
   }, []);
 
   const loadPaymentMethods = () => {
-    const methods = JSON.parse(
-      localStorage.getItem("paymentMethods") || "[]"
-    );
+    const methods = JSON.parse(localStorage.getItem("paymentMethods") || "[]");
     setPaymentMethods(methods);
   };
 
@@ -218,7 +215,7 @@ export default function PaymentMethodsPage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <motion.div
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8"
@@ -323,7 +320,9 @@ export default function PaymentMethodsPage() {
                       )}
                       {method.expiryMonth && method.expiryYear && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Expires:</span>
+                          <span className="text-muted-foreground">
+                            Expires:
+                          </span>
                           <span className="text-foreground">
                             {method.expiryMonth.toString().padStart(2, "0")}/
                             {method.expiryYear}
@@ -344,9 +343,7 @@ export default function PaymentMethodsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          method.isDefault
-                            ? null
-                            : handleSetDefault(method.id)
+                          method.isDefault ? null : handleSetDefault(method.id)
                         }
                         disabled={method.isDefault}
                         className="flex-1"
@@ -398,7 +395,10 @@ export default function PaymentMethodsPage() {
                 <Select
                   value={formData.type}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, type: value as PaymentMethod["type"] })
+                    setFormData({
+                      ...formData,
+                      type: value as PaymentMethod["type"],
+                    })
                   }
                 >
                   <SelectTrigger id="type">
@@ -484,10 +484,7 @@ export default function PaymentMethodsPage() {
             </div>
 
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-              >
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
               <Button onClick={handleSubmit}>Save</Button>
@@ -495,7 +492,6 @@ export default function PaymentMethodsPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </AppLayout>
+    </>
   );
 }
-
