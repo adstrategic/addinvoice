@@ -44,7 +44,7 @@ export const createClientSchema = z.object({
     .min(1, "The phone is required")
     .regex(
       /^\+[1-9]\d{1,14}$/,
-      "The phone must have a valid international format (e.g. +573011234567)"
+      "The phone must have a valid international format (e.g. +573011234567)",
     )
     .nullish(),
   address: z
@@ -65,6 +65,18 @@ export const createClientSchema = z.object({
     .min(1, "Business name cannot be empty")
     .max(100, "Business name cannot exceed 100 characters")
     .nullish(),
+  // Reminder before due date: every N days (null = disabled)
+  reminderBeforeDueIntervalDays: z
+    .number()
+    .int()
+    .positive("Must be a positive number of days")
+    .nullish(),
+  // Reminder after due date: every N days (null = disabled)
+  reminderAfterDueIntervalDays: z
+    .number()
+    .int()
+    .positive("Must be a positive number of days")
+    .nullish(),
 });
 
 /**
@@ -76,7 +88,6 @@ export const clientEntitySchema = createClientSchema.extend({
   workspaceId: z.number().int().positive(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  deletedAt: z.date().nullable(),
 });
 
 /**

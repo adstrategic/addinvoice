@@ -25,7 +25,6 @@ export async function listClients(
 
   const where: Prisma.ClientWhereInput = {
     workspaceId,
-    deletedAt: null,
     ...(search && {
       OR: [
         { name: { contains: search, mode: "insensitive" } },
@@ -70,7 +69,7 @@ export async function getClientBySequence(
     },
   });
 
-  if (!client || client.deletedAt !== null) {
+  if (!client) {
     throw new EntityNotFoundError({
       message: "Client not found",
       statusCode: 404,
@@ -101,6 +100,8 @@ export async function createClient(
         address: data.address,
         nit: data.nit,
         businessName: data.businessName,
+        reminderBeforeDueIntervalDays: data.reminderBeforeDueIntervalDays,
+        reminderAfterDueIntervalDays: data.reminderAfterDueIntervalDays,
       },
     });
 
@@ -191,7 +192,6 @@ async function getNextSequence(
   const lastClient = await tx.client.findFirst({
     where: {
       workspaceId,
-      deletedAt: null,
     },
     orderBy: {
       sequence: "desc",
