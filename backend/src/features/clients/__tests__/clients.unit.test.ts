@@ -23,7 +23,6 @@ const defaultClient = {
   businessName: null,
   createdAt: new Date(),
   updatedAt: new Date(),
-  deletedAt: null,
 };
 
 describe("clients.service", () => {
@@ -87,7 +86,6 @@ describe("clients.service", () => {
     it("throws EntityNotFoundError when client is deleted", async () => {
       prismaMock.client.findUnique.mockResolvedValue({
         ...defaultClient,
-        deletedAt: new Date(),
       });
 
       await expect(getClientBySequence(1, 1)).rejects.toThrow(

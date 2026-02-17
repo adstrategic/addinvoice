@@ -25,7 +25,7 @@ export async function listBusinesses(
 
   const where: Prisma.BusinessWhereInput = {
     workspaceId,
-    deletedAt: null,
+
     ...(search && {
       OR: [
         { name: { contains: search, mode: "insensitive" } },
@@ -47,7 +47,12 @@ export async function listBusinesses(
   ]);
 
   return {
-    businesses,
+    businesses: businesses.map((business) => ({
+      ...business,
+      defaultTaxPercentage: business.defaultTaxPercentage
+        ? Number(business.defaultTaxPercentage)
+        : null,
+    })),
     total,
     page,
     limit,
@@ -65,7 +70,6 @@ export async function getBusinessById(
     where: {
       id,
       workspaceId,
-      deletedAt: null,
     },
   });
 
@@ -77,7 +81,12 @@ export async function getBusinessById(
     });
   }
 
-  return business;
+  return {
+    ...business,
+    defaultTaxPercentage: business.defaultTaxPercentage
+      ? Number(business.defaultTaxPercentage)
+      : null,
+  };
 }
 
 /**
@@ -101,10 +110,20 @@ export async function createBusiness(
         phone: data.phone,
         logo: data.logo ?? null,
         isDefault: false, // New businesses are not default by default
+        defaultTaxMode: data.defaultTaxMode ?? null,
+        defaultTaxName: data.defaultTaxName ?? null,
+        defaultTaxPercentage: data.defaultTaxPercentage ?? null,
+        defaultNotes: data.defaultNotes ?? null,
+        defaultTerms: data.defaultTerms ?? null,
       },
     });
 
-    return business;
+    return {
+      ...business,
+      defaultTaxPercentage: business.defaultTaxPercentage
+        ? Number(business.defaultTaxPercentage)
+        : null,
+    };
   });
 }
 
@@ -135,7 +154,12 @@ export async function updateBusiness(
       data,
     });
 
-    return business;
+    return {
+      ...business,
+      defaultTaxPercentage: business.defaultTaxPercentage
+        ? Number(business.defaultTaxPercentage)
+        : null,
+    };
   });
 }
 
@@ -188,7 +212,6 @@ export async function setDefaultBusiness(
       where: {
         workspaceId,
         isDefault: true,
-        deletedAt: null,
       },
       data: {
         isDefault: false,
@@ -206,7 +229,12 @@ export async function setDefaultBusiness(
       },
     });
 
-    return business;
+    return {
+      ...business,
+      defaultTaxPercentage: business.defaultTaxPercentage
+        ? Number(business.defaultTaxPercentage)
+        : null,
+    };
   });
 }
 
@@ -223,7 +251,16 @@ export async function findById(
     },
   });
 
-  return business;
+  if (!business) {
+    return null;
+  }
+
+  return {
+    ...business,
+    defaultTaxPercentage: business.defaultTaxPercentage
+      ? Number(business.defaultTaxPercentage)
+      : null,
+  };
 }
 
 /**
@@ -236,7 +273,6 @@ async function getNextSequence(
   const lastBusiness = await tx.business.findFirst({
     where: {
       workspaceId,
-      deletedAt: null,
     },
     orderBy: {
       sequence: "desc",

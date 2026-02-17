@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { invoiceEntitySchema } from "../invoices/invoices.schemas";
+import { invoiceEntityWithRelationsSchema } from "../invoices/invoices.schemas";
 
 /**
  * Schema for dashboard stats query parameters
@@ -28,11 +28,12 @@ export const dashboardStatsResponseSchema = z.object({
   thisMonthInvoices: z.number(),
   totalRevenue: z.number(),
   monthlyRevenue: z.array(monthlyRevenueSchema),
-  recentInvoices: z.array(invoiceEntitySchema),
+  recentInvoices: z.array(invoiceEntityWithRelationsSchema),
 });
 
 // DTO types
 export type DashboardStatsQuery = z.infer<typeof dashboardStatsSchema>;
 export type MonthlyRevenue = z.infer<typeof monthlyRevenueSchema>;
-export type DashboardStatsResponse = z.infer<typeof dashboardStatsResponseSchema>;
-
+export type DashboardStatsResponse = z.infer<
+  typeof dashboardStatsResponseSchema
+>;

@@ -5,7 +5,7 @@ import type {
   DashboardStatsResponse,
   MonthlyRevenue,
 } from "./dashboard.schemas";
-import type { InvoiceEntity } from "../invoices/invoices.schemas";
+import type { InvoiceEntityWithRelations } from "../invoices/invoices.schemas";
 
 /**
  * Get dashboard statistics for a workspace
@@ -19,7 +19,6 @@ export async function getDashboardStats(
   // Base where clause
   const where: Prisma.InvoiceWhereInput = {
     workspaceId,
-    deletedAt: null,
     ...(businessId && { businessId }),
   };
 
@@ -59,13 +58,26 @@ export async function getDashboardStats(
     (inv) => new Date(inv.createdAt) >= startOfMonth,
   ).length;
 
-  // Calculate total revenue (sum of paid invoices)
-  const totalRevenue = invoices
-    .filter((inv) => inv.status === "PAID")
-    .reduce((sum, inv) => sum + Number(inv.total), 0);
+  // Payment filter: non-deleted payments for non-deleted invoices (optional businessId)
+  const paymentWhere: Prisma.PaymentWhereInput = {
+    workspaceId,
+    invoice: {
+      ...(businessId && { businessId }),
+    },
+  };
 
-  // Calculate monthly revenue for the last 12 months
-  const monthlyRevenue = calculateMonthlyRevenue(invoices);
+  // Total revenue = sum of actual payment amounts (handles partial/overpayments)
+  const totalRevenueResult = await prisma.payment.aggregate({
+    where: paymentWhere,
+    _sum: { amount: true },
+  });
+  const totalRevenue = Number(totalRevenueResult._sum.amount ?? 0);
+
+  // Monthly revenue = sum of payment amounts by paidAt month (last 12 months)
+  const monthlyRevenue = await calculateMonthlyRevenueFromPayments(
+    prisma,
+    paymentWhere,
+  );
 
   // Get recent invoices (last 5, ordered by creation date)
   // Fetch items and payments for recent invoices
@@ -81,15 +93,14 @@ export async function getDashboardStats(
         orderBy: { name: "asc" },
       },
       payments: {
-        where: { deletedAt: null },
         orderBy: { paidAt: "desc" },
       },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  const recentInvoicesData: InvoiceEntity[] = recentInvoicesWithDetails.map(
-    (inv) => ({
+  const recentInvoicesData: InvoiceEntityWithRelations[] =
+    recentInvoicesWithDetails.map((inv) => ({
       ...inv,
       subtotal: Number(inv.subtotal),
       totalTax: Number(inv.totalTax),
@@ -109,8 +120,16 @@ export async function getDashboardStats(
         ...payment,
         amount: Number(payment.amount),
       })),
-    }),
-  );
+      client: {
+        ...inv.client,
+      },
+      business: {
+        ...inv.business,
+        defaultTaxPercentage: inv.business.defaultTaxPercentage
+          ? Number(inv.business.defaultTaxPercentage)
+          : null,
+      },
+    }));
 
   return {
     totalInvoices,
@@ -125,28 +144,54 @@ export async function getDashboardStats(
   };
 }
 
-/**
- * Calculate monthly revenue for the last 12 months
- */
-function calculateMonthlyRevenue(invoices: any[]): MonthlyRevenue[] {
-  const now = new Date();
-  const months: MonthlyRevenue[] = [];
-  const monthNames = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
-  // Get last 12 months
+/**
+ * Calculate monthly revenue for the last 12 months from actual payment amounts (paidAt).
+ */
+async function calculateMonthlyRevenueFromPayments(
+  prismaClient: typeof prisma,
+  paymentWhere: Prisma.PaymentWhereInput,
+): Promise<MonthlyRevenue[]> {
+  const now = new Date();
+  const startOfOldestMonth = new Date(
+    now.getFullYear(),
+    now.getMonth() - 11,
+    1,
+  );
+  const endOfCurrentMonth = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999,
+  );
+
+  const payments = await prismaClient.payment.findMany({
+    where: {
+      ...paymentWhere,
+      paidAt: { gte: startOfOldestMonth, lte: endOfCurrentMonth },
+    },
+    select: { amount: true, paidAt: true },
+  });
+
+  // Build 12 months with same labels as before
+  const months: MonthlyRevenue[] = [];
   for (let i = 11; i >= 0; i--) {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -160,20 +205,15 @@ function calculateMonthlyRevenue(invoices: any[]): MonthlyRevenue[] {
       999,
     );
 
-    const monthRevenue = invoices
-      .filter((inv) => {
-        const paidDate = inv.paidAt ? new Date(inv.paidAt) : null;
-        return (
-          inv.status === "PAID" &&
-          paidDate &&
-          paidDate >= monthStart &&
-          paidDate <= monthEnd
-        );
+    const monthRevenue = payments
+      .filter((p) => {
+        const paidDate = new Date(p.paidAt);
+        return paidDate >= monthStart && paidDate <= monthEnd;
       })
-      .reduce((sum, inv) => sum + Number(inv.total), 0);
+      .reduce((sum, p) => sum + Number(p.amount), 0);
 
     months.push({
-      month: monthNames[date.getMonth()],
+      month: MONTH_NAMES[date.getMonth()],
       revenue: monthRevenue,
     });
   }

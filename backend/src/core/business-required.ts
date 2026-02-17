@@ -32,7 +32,6 @@ export async function requireBusiness(
     const businessCount = await prisma.business.count({
       where: {
         workspaceId,
-        deletedAt: null,
       },
       take: 1, // Stop after finding first one (performance optimization)
     });

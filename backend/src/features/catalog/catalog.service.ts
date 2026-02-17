@@ -23,12 +23,13 @@ export async function listCatalogs(
   page: number;
   limit: number;
 }> {
-  const { page, limit, search } = query;
+  const { page, limit, search, businessId, sortBy, sortOrder } = query;
   const skip = (page - 1) * limit;
 
   const where: Prisma.CatalogWhereInput = {
     workspaceId,
-    deletedAt: null,
+
+    ...(businessId && { businessId }),
     ...(search && {
       OR: [
         { name: { contains: search, mode: "insensitive" } },
@@ -37,12 +38,19 @@ export async function listCatalogs(
     }),
   };
 
+  const orderBy = {
+    [sortBy]: sortOrder,
+  } as Prisma.CatalogOrderByWithRelationInput;
+
   const [catalogs, total] = await Promise.all([
     prisma.catalog.findMany({
       where,
+      include: {
+        business: true,
+      },
       skip,
       take: limit,
-      orderBy: { sequence: "asc" },
+      orderBy,
     }),
     prisma.catalog.count({ where }),
   ]);
@@ -51,6 +59,12 @@ export async function listCatalogs(
     catalogs: catalogs.map((catalog) => ({
       ...catalog,
       price: Number(catalog.price),
+      business: {
+        ...catalog.business,
+        defaultTaxPercentage: catalog.business.defaultTaxPercentage
+          ? Number(catalog.business.defaultTaxPercentage)
+          : null,
+      },
     })),
     total,
     page,
@@ -72,9 +86,12 @@ export async function getCatalogBySequence(
         sequence,
       },
     },
+    include: {
+      business: true,
+    },
   });
 
-  if (!catalog || catalog.deletedAt !== null) {
+  if (!catalog) {
     throw new EntityNotFoundError({
       message: "Catalog not found",
       statusCode: 404,
@@ -85,6 +102,12 @@ export async function getCatalogBySequence(
   return {
     ...catalog,
     price: Number(catalog.price),
+    business: {
+      ...catalog.business,
+      defaultTaxPercentage: catalog.business.defaultTaxPercentage
+        ? Number(catalog.business.defaultTaxPercentage)
+        : null,
+    },
   };
 }
 
@@ -108,11 +131,20 @@ export async function createCatalog(
         quantityUnit: data.quantityUnit,
         businessId: data.businessId,
       },
+      include: {
+        business: true,
+      },
     });
 
     return {
       ...catalog,
       price: Number(catalog.price),
+      business: {
+        ...catalog.business,
+        defaultTaxPercentage: catalog.business.defaultTaxPercentage
+          ? Number(catalog.business.defaultTaxPercentage)
+          : null,
+      },
     };
   });
 }
@@ -160,11 +192,20 @@ export async function updateCatalog(
         workspaceId,
       },
       data,
+      include: {
+        business: true,
+      },
     });
 
     return {
       ...catalog,
       price: Number(catalog.price),
+      business: {
+        ...catalog.business,
+        defaultTaxPercentage: catalog.business.defaultTaxPercentage
+          ? Number(catalog.business.defaultTaxPercentage)
+          : null,
+      },
     };
   });
 }
@@ -210,7 +251,6 @@ async function getNextSequence(
   const lastCatalog = await tx.catalog.findFirst({
     where: {
       workspaceId,
-      deletedAt: null,
     },
     orderBy: {
       sequence: "desc",

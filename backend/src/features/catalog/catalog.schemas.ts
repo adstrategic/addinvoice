@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { businessEntitySchema } from "../businesses/businesses.schemas";
 
 // ===== VALIDATION SCHEMAS (for middleware) =====
 
@@ -9,6 +10,9 @@ export const listCatalogsSchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(30).optional().default(10),
   search: z.string().optional(),
+  businessId: z.coerce.number().int().positive().optional(),
+  sortBy: z.enum(["sequence", "name", "price"]).optional().default("sequence"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
 });
 
 /**
@@ -56,7 +60,8 @@ export const catalogEntitySchema = createCatalogSchema.extend({
   workspaceId: z.number().int().positive(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  deletedAt: z.date().nullable(),
+
+  business: businessEntitySchema,
 });
 
 /**
