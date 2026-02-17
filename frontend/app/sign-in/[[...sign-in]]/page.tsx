@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 
 export default function SignInPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0F2027] via-[#203A43] to-[#2C5364] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0F2027] via-[#203A43] to-[#2C5364] sm:p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -17,7 +17,7 @@ export default function SignInPage() {
         <Card className="border-border/50 shadow-2xl bg-card/95 backdrop-blur p-6">
           <div className="flex justify-center mb-6">
             <Image
-              src="/images/adstrategic-banner.png"
+              src="/images/addstrategic-banner.png"
               alt="ADSTRATEGIC"
               width={280}
               height={60}
@@ -47,7 +47,7 @@ export default function SignInPage() {
           />
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
-              AdInvoices — Powered by ADSTRATEGIC
+              ADDINVOICES — Powered by ADDSTRATEGIC
             </p>
           </div>
         </Card>
@@ -55,14 +55,3 @@ export default function SignInPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-

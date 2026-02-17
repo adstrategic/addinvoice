@@ -1,8 +1,5 @@
 "use client";
 
-import type React from "react";
-
-import { AppLayout } from "@/components/app-layout";
 import {
   Card,
   CardContent,
@@ -45,17 +42,9 @@ import {
 } from "lucide-react";
 import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import {
-  useBusinesses,
-  useCreateBusiness,
-  useUpdateBusiness,
-  useDeleteBusiness,
-  useSetDefaultBusiness,
-  useUploadLogo,
-  useDeleteLogo,
-  type CreateBusinessDto,
-  type UpdateBusinessDto,
-} from "@/features/businesses";
+import { useBusinesses, useCreateBusiness } from "@/features/businesses";
+import { CreateCompanyDialog } from "../../../features/businesses/components/CreateCompanyDialog";
+import { CompanyCards } from "../../../features/businesses/components/CompanyCards";
 import { useBusinessDelete } from "@/features/businesses/hooks/useBusinessDelete";
 import { SignOutButton, UserProfile } from "@clerk/nextjs";
 import { Separator } from "@/components/ui/separator";
@@ -82,18 +71,11 @@ type GeneralConfig = {
 export default function ConfigurationPage() {
   const { toast } = useToast();
   const profilePhotoRef = useRef<HTMLInputElement>(null);
-  const companyLogoRefs = useRef<{ [key: number]: HTMLInputElement | null }>(
-    {}
-  );
 
   // Businesses API hooks
   const { data: businessesData, isLoading: isLoadingBusinesses } =
     useBusinesses();
   const createBusinessMutation = useCreateBusiness();
-  const updateBusinessMutation = useUpdateBusiness();
-  const setDefaultBusinessMutation = useSetDefaultBusiness();
-  const uploadLogoMutation = useUploadLogo();
-  const deleteLogoMutation = useDeleteLogo();
   const {
     isDeleteModalOpen,
     businessToDelete,
@@ -104,11 +86,6 @@ export default function ConfigurationPage() {
   } = useBusinessDelete();
 
   const businesses = businessesData?.data || [];
-
-  // Local state for editing businesses
-  const [editingBusinesses, setEditingBusinesses] = useState<{
-    [key: number]: UpdateBusinessDto;
-  }>({});
 
   const [invoiceConfig, setInvoiceConfig] = useState<InvoiceConfig>({
     prefix: "INV-",
@@ -131,105 +108,14 @@ export default function ConfigurationPage() {
 
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [showCreateCompanyDialog, setShowCreateCompanyDialog] = useState(false);
 
-  const handleAddCompany = async () => {
-    try {
-      const newBusiness: CreateBusinessDto = {
-        name: "New Company",
-        nit: "",
-        address: "",
-        email: "",
-        phone: "",
-      };
-      await createBusinessMutation.mutateAsync(newBusiness);
-    } catch (error) {
-      // Error is handled by the mutation hook
-    }
+  const handleAddCompany = () => {
+    setShowCreateCompanyDialog(true);
   };
 
   const handleDeleteCompany = (business: (typeof businesses)[0]) => {
     openDeleteModal(business);
-  };
-
-  const handleCompanyLogoUpload = async (
-    businessId: number,
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image file",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload a file smaller than 5MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await uploadLogoMutation.mutateAsync({ id: businessId, file });
-    } catch (error) {
-      // Error is handled by the mutation hook
-    }
-  };
-
-  const handleUpdateCompany = (
-    id: number,
-    field: keyof UpdateBusinessDto,
-    value: any
-  ) => {
-    setEditingBusinesses((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        [field]: value,
-      },
-    }));
-  };
-
-  const handleSetDefaultCompany = async (id: number) => {
-    try {
-      await setDefaultBusinessMutation.mutateAsync(id);
-    } catch (error) {
-      // Error is handled by the mutation hook
-    }
-  };
-
-  const handleSaveCompany = async (id: number) => {
-    const updates = editingBusinesses[id];
-    if (!updates || Object.keys(updates).length === 0) {
-      toast({
-        title: "No changes",
-        description: "No changes to save",
-      });
-      return;
-    }
-
-    try {
-      await updateBusinessMutation.mutateAsync({ id, data: updates });
-      // Clear editing state for this business
-      setEditingBusinesses((prev) => {
-        const newState = { ...prev };
-        delete newState[id];
-        return newState;
-      });
-      setSuccessMessage("Business settings saved successfully!");
-      setShowSuccessDialog(true);
-    } catch (error) {
-      // Error is handled by the mutation hook
-    }
   };
 
   const handleSaveInvoiceConfig = () => {
@@ -254,11 +140,11 @@ export default function ConfigurationPage() {
 
             localStorage.setItem(
               "invoiceConfig",
-              JSON.stringify(config.invoiceConfig)
+              JSON.stringify(config.invoiceConfig),
             );
             localStorage.setItem(
               "generalConfig",
-              JSON.stringify(config.generalConfig)
+              JSON.stringify(config.generalConfig),
             );
 
             toast({
@@ -302,8 +188,8 @@ export default function ConfigurationPage() {
   };
 
   return (
-    <AppLayout>
-      <div className="container mx-auto px-6 py-8 max-w-6xl">
+    <>
+      <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 max-w-6xl">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Configuration</h1>
@@ -313,23 +199,35 @@ export default function ConfigurationPage() {
         </div>
 
         <Tabs defaultValue="user" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
-            <TabsTrigger value="user" className="gap-2">
+          <TabsList className="gap-4">
+            <TabsTrigger
+              value="user"
+              className="gap-2"
+              data-tour-id="config-profile"
+            >
               <User className="h-4 w-4" />
               User
             </TabsTrigger>
-            <TabsTrigger value="company" className="gap-2">
+            <TabsTrigger
+              value="company"
+              className="gap-2"
+              data-tour-id="config-company"
+            >
               <Building2 className="h-4 w-4" />
               Company
             </TabsTrigger>
-            <TabsTrigger value="invoices" className="gap-2">
+            {/* <TabsTrigger value="invoices" className="gap-2">
               <FileText className="h-4 w-4" />
               Invoices
             </TabsTrigger>
-            <TabsTrigger value="general" className="gap-2">
+            <TabsTrigger
+              value="general"
+              className="gap-2"
+              data-tour-id="config-notifications"
+            >
               <SettingsIcon className="h-4 w-4" />
               General
-            </TabsTrigger>
+            </TabsTrigger> */}
           </TabsList>
 
           {/* User Configuration */}
@@ -337,12 +235,14 @@ export default function ConfigurationPage() {
             <p className="text-sm text-muted-foreground">
               Manage your user settings and preferences
             </p>
-            
+
             {/* Subscription Management */}
-            <SubscriptionManager />
-            
+            <div data-tour-id="config-billing">
+              <SubscriptionManager />
+            </div>
+
             <Separator />
-            
+
             <SignOutButton>
               <Button variant="destructive" className="cursor-pointer">
                 <LogOut className="h-4 w-4" />
@@ -376,230 +276,27 @@ export default function ConfigurationPage() {
               </Button>
             </div>
 
-            {/* Company Cards */}
-            {isLoadingBusinesses ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Loading businesses...
-              </div>
-            ) : businesses.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No businesses yet. Create your first business!
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {businesses.map((company) => {
-                  const editedCompany = {
-                    ...company,
-                    ...editingBusinesses[company.id],
-                  };
-                  return (
-                    <Card key={company.id} className="bg-card border-border">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-lg bg-primary/20 flex items-center justify-center overflow-hidden">
-                              {editedCompany.logo ? (
-                                <img
-                                  src={editedCompany.logo || "/placeholder.svg"}
-                                  alt="Company Logo"
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <Building2 className="h-6 w-6 text-primary" />
-                              )}
-                            </div>
-                            <div>
-                              <CardTitle className="text-base">
-                                {editedCompany.name}
-                              </CardTitle>
-                              {editedCompany.isDefault && (
-                                <p className="text-xs text-primary mt-0.5">
-                                  Default Company
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteCompany(company)}
-                            disabled={isDeleting}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div>
-                            <Label>Company Name</Label>
-                            <Input
-                              placeholder="Company name"
-                              className="mt-1"
-                              value={editedCompany.name || ""}
-                              onChange={(e) =>
-                                handleUpdateCompany(
-                                  company.id,
-                                  "name",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
-                          <div>
-                            <Label>NIT / Tax ID</Label>
-                            <Input
-                              placeholder="123456789-0"
-                              className="mt-1"
-                              value={editedCompany.nit || ""}
-                              onChange={(e) =>
-                                handleUpdateCompany(
-                                  company.id,
-                                  "nit",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label>Address</Label>
-                          <Textarea
-                            placeholder="Company address"
-                            className="mt-1"
-                            rows={2}
-                            value={editedCompany.address || ""}
-                            onChange={(e) =>
-                              handleUpdateCompany(
-                                company.id,
-                                "address",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </div>
-
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div>
-                            <Label>Email</Label>
-                            <Input
-                              type="email"
-                              placeholder="contact@company.com"
-                              className="mt-1"
-                              value={editedCompany.email || ""}
-                              onChange={(e) =>
-                                handleUpdateCompany(
-                                  company.id,
-                                  "email",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
-                          <div>
-                            <Label>Phone</Label>
-                            <Input
-                              type="tel"
-                              placeholder="+1 (555) 123-4567"
-                              className="mt-1"
-                              value={editedCompany.phone || ""}
-                              onChange={(e) =>
-                                handleUpdateCompany(
-                                  company.id,
-                                  "phone",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label>Company Logo</Label>
-                          <input
-                            ref={(el) => {
-                              companyLogoRefs.current[company.id] = el;
-                            }}
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) =>
-                              handleCompanyLogoUpload(company.id, e)
-                            }
-                            className="hidden"
-                          />
-                          <div className="flex gap-2 mt-1">
-                            <Button
-                              variant="outline"
-                              className="flex-1 gap-2 bg-transparent"
-                              onClick={() =>
-                                companyLogoRefs.current[company.id]?.click()
-                              }
-                              disabled={uploadLogoMutation.isPending}
-                            >
-                              <Upload className="h-4 w-4" />
-                              {uploadLogoMutation.isPending
-                                ? "Uploading..."
-                                : "Upload Logo"}
-                            </Button>
-                            {editedCompany.logo && (
-                              <Button
-                                variant="outline"
-                                className="gap-2 bg-transparent"
-                                onClick={async () => {
-                                  try {
-                                    await deleteLogoMutation.mutateAsync(
-                                      company.id
-                                    );
-                                  } catch (error) {
-                                    // Error handled by mutation
-                                  }
-                                }}
-                                disabled={deleteLogoMutation.isPending}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-4 border-t border-border">
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={editedCompany.isDefault}
-                              onCheckedChange={() =>
-                                handleSetDefaultCompany(company.id)
-                              }
-                              disabled={setDefaultBusinessMutation.isPending}
-                            />
-                            <Label className="cursor-pointer">
-                              Set as default company
-                            </Label>
-                          </div>
-                          <Button
-                            variant="outline"
-                            className="gap-2 bg-transparent"
-                            onClick={() => handleSaveCompany(company.id)}
-                            disabled={
-                              updateBusinessMutation.isPending ||
-                              !editingBusinesses[company.id]
-                            }
-                          >
-                            <Save className="h-4 w-4" />
-                            {updateBusinessMutation.isPending
-                              ? "Saving..."
-                              : "Save"}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+            <CompanyCards
+              businesses={businesses}
+              isLoading={isLoadingBusinesses}
+              onDeleteRequested={handleDeleteCompany}
+              onSaveSuccess={() => {
+                setSuccessMessage("Business settings saved successfully!");
+                setShowSuccessDialog(true);
+              }}
+            />
           </TabsContent>
+
+          <CreateCompanyDialog
+            open={showCreateCompanyDialog}
+            onOpenChange={setShowCreateCompanyDialog}
+            onSuccess={() => {
+              toast({
+                title: "Company created",
+                description: "The new company has been added.",
+              });
+            }}
+          />
 
           {/* Invoice Configuration */}
           <TabsContent value="invoices" className="space-y-6">
@@ -908,7 +605,7 @@ export default function ConfigurationPage() {
                       setGeneralConfig({ ...generalConfig, colorPalette: v });
                       localStorage.setItem(
                         "generalConfig",
-                        JSON.stringify({ ...generalConfig, colorPalette: v })
+                        JSON.stringify({ ...generalConfig, colorPalette: v }),
                       );
                       toast({
                         title: "Color palette updated",
@@ -1107,9 +804,6 @@ export default function ConfigurationPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AppLayout>
-    // <AppLayout>
-
-    // </AppLayout>
+    </>
   );
 }

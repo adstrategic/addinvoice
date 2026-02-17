@@ -1,6 +1,5 @@
 "use client";
 
-import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Download, Send, Edit, Trash2, Plus } from "lucide-react";
@@ -22,13 +21,28 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
 
 const statusConfig = {
   paid: { label: "Paid", className: "bg-primary/20 text-primary" },
-  pending: { label: "Pending", className: "bg-chart-4/20 text-chart-4" },
+  overdue: { label: "Overdue", className: "bg-chart-4/20 text-chart-4" },
   issued: { label: "Issued", className: "bg-chart-3/20 text-chart-3" },
   draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
 };
+
+function getItemFixedDiscount(item: {
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  discountType?: string | null;
+}): number {
+  if (!item.discount || item.discountType === "NONE" || !item.discountType)
+    return 0;
+  const base = item.quantity * item.unitPrice;
+  if (item.discountType === "PERCENTAGE") return (base * item.discount) / 100;
+  if (item.discountType === "FIXED") return item.discount;
+  return 0;
+}
 
 export default function InvoiceDetailPage() {
   const params = useParams();
@@ -161,23 +175,25 @@ export default function InvoiceDetailPage() {
                 </TooltipContent>
               </Tooltip>
             )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="text-destructive hover:text-destructive bg-transparent"
-                  onClick={() =>
-                    invoice && invoiceDelete.openDeleteModal(invoice)
-                  }
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete invoice</p>
-              </TooltipContent>
-            </Tooltip>
+            {invoice.status === "DRAFT" && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="text-destructive hover:text-destructive bg-transparent"
+                    onClick={() =>
+                      invoice && invoiceDelete.openDeleteModal(invoice)
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete invoice</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             {invoice.status !== "DRAFT" && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -215,13 +231,13 @@ export default function InvoiceDetailPage() {
         {/* Invoice Preview */}
         <Card className="bg-card border-border">
           <CardHeader className="border-b border-border">
-            <div className="flex items-start justify-between">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 {companyData.logo && (
                   <img
                     src={companyData.logo}
                     alt="Company Logo"
-                    className="h-16 w-16 object-contain"
+                    className="h-48 w-48 object-contain"
                   />
                 )}
               </div>
@@ -257,19 +273,19 @@ export default function InvoiceDetailPage() {
                       {client.businessName}
                     </p>
                   )}
-                  {client.address && (
+                  {invoice.clientAddress && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      {client.address}
+                      {invoice.clientAddress}
                     </p>
                   )}
-                  {client.phone && (
+                  {invoice.clientPhone && (
                     <p className="text-sm text-muted-foreground">
-                      {client.phone}
+                      {invoice.clientPhone}
                     </p>
                   )}
-                  {client.email && (
+                  {invoice.clientEmail && (
                     <p className="text-sm text-muted-foreground">
-                      {client.email}
+                      {invoice.clientEmail}
                     </p>
                   )}
                   {client.nit && (
@@ -324,37 +340,46 @@ export default function InvoiceDetailPage() {
                       Tax
                     </th>
                     <th className="text-right p-3 text-sm font-semibold text-foreground">
-                      Total
+                      Discount
+                    </th>
+                    <th className="text-right p-3 text-sm font-semibold text-foreground">
+                      Amount
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => (
-                    <tr key={item.id} className="border-t border-border">
-                      <td className="p-3 text-sm text-foreground">
-                        <div>
-                          <div className="font-medium">{item.name}</div>
-                          {item.description && (
-                            <div className="text-muted-foreground text-xs mt-1">
-                              {item.description}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3 text-sm text-right text-foreground">
-                        {item.quantity} {item.quantityUnit}
-                      </td>
-                      <td className="p-3 text-sm text-right text-foreground">
-                        {invoice.currency} {item.unitPrice.toFixed(2)}
-                      </td>
-                      <td className="p-3 text-sm text-right text-foreground">
-                        {item.tax}%
-                      </td>
-                      <td className="p-3 text-sm text-right font-semibold text-foreground">
-                        {invoice.currency} ${item.total.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map((item) => {
+                    const itemDiscount = getItemFixedDiscount(item);
+                    return (
+                      <tr key={item.id} className="border-t border-border">
+                        <td className="p-3 text-sm text-foreground">
+                          <div>
+                            <div className="font-medium">{item.name}</div>
+                            {item.description && (
+                              <div className="text-muted-foreground text-xs mt-1">
+                                {item.description}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3 text-sm text-right text-foreground">
+                          {item.quantity} {item.quantityUnit}
+                        </td>
+                        <td className="p-3 text-sm text-right text-foreground">
+                          {invoice.currency} {item.unitPrice.toFixed(2)}
+                        </td>
+                        <td className="p-3 text-sm text-right text-foreground">
+                          {item.tax}%
+                        </td>
+                        <td className="p-3 text-sm text-right text-foreground">
+                          {formatCurrency(itemDiscount)}
+                        </td>
+                        <td className="p-3 text-sm text-right font-semibold text-foreground">
+                          {formatCurrency(item.total)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -365,32 +390,32 @@ export default function InvoiceDetailPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal:</span>
                   <span className="font-semibold text-foreground">
-                    {invoice.currency} {invoice.subtotal.toFixed(2)}
+                    {formatCurrency(invoice.subtotal)}
                   </span>
                 </div>
                 {invoice.discount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Discount:</span>
                     <span className="font-semibold text-foreground">
-                      - {invoice.currency}{" "}
+                      -
                       {invoice.discountType === "PERCENTAGE"
-                        ? ((invoice.discount * invoice.subtotal) / 100).toFixed(
-                            2,
+                        ? formatCurrency(
+                            (invoice.discount * invoice.subtotal) / 100,
                           )
-                        : invoice.discount.toFixed(2)}
+                        : formatCurrency(invoice.discount)}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tax:</span>
                   <span className="font-semibold text-foreground">
-                    {invoice.currency} {invoice.totalTax.toFixed(2)}
+                    {formatCurrency(invoice.totalTax)}
                   </span>
                 </div>
                 <div className="flex justify-between text-lg pt-2 border-t border-border">
                   <span className="font-bold text-foreground">Total:</span>
                   <span className="font-bold text-primary">
-                    {invoice.currency} {invoice.total.toFixed(2)}
+                    {formatCurrency(invoice.total)}
                   </span>
                 </div>
               </div>
@@ -439,8 +464,8 @@ export default function InvoiceDetailPage() {
         onOpenChange={setSendDialogOpen}
         invoiceSequence={sequence!}
         invoiceNumber={invoice.invoiceNumber}
-        clientName={client?.name || "Client"}
-        clientEmail={client?.email}
+        clientName={client.name || "Client"}
+        clientEmail={invoice.clientEmail}
       />
 
       <EntityDeleteModal

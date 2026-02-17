@@ -17,7 +17,7 @@ export default function SignUpPage() {
         <Card className="border-border/50 shadow-2xl bg-card/95 backdrop-blur p-6">
           <div className="flex justify-center mb-6">
             <Image
-              src="/images/adstrategic-banner.png"
+              src="/images/addstrategic-banner.png"
               alt="ADSTRATEGIC"
               width={280}
               height={60}
@@ -55,14 +55,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
