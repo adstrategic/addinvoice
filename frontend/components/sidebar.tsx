@@ -11,20 +11,14 @@ import {
   LayoutDashboard,
   FileText,
   Users,
-  Bell,
   Settings,
   Menu,
-  Moon,
-  Sun,
-  LogOut,
-  File,
-  SendHorizontal,
   FileCheck,
   CreditCard,
-  Sparkles,
   Receipt,
   Package,
   Mic,
+  HelpCircle,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 
@@ -32,15 +26,13 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Voice Assistant", href: "/voice", icon: Mic },
   { name: "Invoices", href: "/invoices", icon: FileText },
-  { name: "Quotes", href: "/quotes", icon: FileCheck },
   { name: "Payments", href: "/payments", icon: CreditCard },
-  { name: "Expenses", href: "/expenses", icon: Receipt },
-  // { name: "Drafts", href: "/drafts", icon: File },
-  // { name: "Emitted Invoices", href: "/emitted-invoices", icon: SendHorizontal },
+  // { name: "Reminders", href: "/reminders", icon: Bell },
   { name: "Clients", href: "/clients", icon: Users },
   { name: "Catalog", href: "/catalog", icon: Package },
-  { name: "Reminders", href: "/reminders", icon: Bell },
-  { name: "Logo AI", href: "/logo-ai", icon: Sparkles },
+  { name: "Quotes", href: "/quotes", icon: FileCheck },
+  { name: "Expenses", href: "/expenses", icon: Receipt },
+  { name: "Ask Me How", href: "/ask-me-how", icon: HelpCircle },
   { name: "Configuration", href: "/configuration", icon: Settings },
 ];
 
@@ -54,14 +46,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Logo Section */}
       <div className="flex h-16 items-center gap-3 border-b border-border px-6">
         <Image
-          src="/images/adstrategic-icon.png"
-          alt="ADSTRATEGIC"
+          src="/images/addinvoices-icon.png"
+          alt="ADDINVOICES"
           width={32}
           height={32}
-          className="h-8 w-8"
+          className="h-16 w-16 -rotate-45"
         />
-        <span className="text-lg font-semibold text-foreground">
-          AddInvoices
+        <span className="text-sm sm:text-lg font-semibold text-foreground">
+          ADDINVOICES
         </span>
       </div>
 
@@ -69,16 +61,21 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex-1 space-y-1 px-3 py-4">
         {navigation.map((item) => {
           const isActive = pathname === item.href;
+          const tourId =
+            item.href === "/"
+              ? "dashboard"
+              : item.href.slice(1).replace(/\//g, "-");
           return (
             <Link
               key={item.name}
               href={item.href}
               onClick={onNavigate}
+              data-tour-id={`sidebar-nav-${tourId}`}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground",
               )}
             >
               <item.icon className="h-5 w-5" />
@@ -125,7 +122,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="text-center">
           <p className="text-xs text-muted-foreground">Powered by</p>
           <Image
-            src="/images/adstrategic-banner.png"
+            src="/images/addstrategic-banner.png"
             alt="ADSTRATEGIC"
             width={120}
             height={24}
@@ -143,21 +140,28 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile Sidebar */}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden fixed top-4 left-4 z-50"
-          >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
-          <SidebarContent onNavigate={() => setOpen(false)} />
-        </SheetContent>
-      </Sheet>
+      <div className="h-16 md:hidden w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 fixed top-0 left-0 z-40 border-b border-border flex items-center px-4">
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              // className="md:hidden fixed top-4 left-4 z-50"
+            >
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0">
+            <SidebarContent onNavigate={() => setOpen(false)} />
+          </SheetContent>
+        </Sheet>
+
+        {/* The sidebar trigger will be positioned here by the Sidebar component */}
+        <span className="ml-2 font-semibold text-lg md:hidden">
+          AddInvoices
+        </span>
+      </div>
 
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">

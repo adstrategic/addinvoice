@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -13,9 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Mail, LinkIcon, CheckCircle2 } from "lucide-react";
+import { Send, Mail, CheckCircle2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { apiClient } from "@/lib/api/client";
+import { invoiceKeys } from "@/features/invoices";
 
 interface SendInvoiceDialogProps {
   open: boolean;
@@ -35,6 +39,8 @@ export function SendInvoiceDialog({
   clientEmail,
 }: SendInvoiceDialogProps) {
   const { toast } = useToast();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [email, setEmail] = useState(clientEmail || "");
@@ -42,6 +48,25 @@ export function SendInvoiceDialog({
   const [message, setMessage] = useState(
     `Dear ${clientName},\n\nPlease find attached invoice ${invoiceNumber}. Payment is due within 30 days.\n\nThank you for your business!`,
   );
+
+  // Sync form state when dialog opens or invoice props change (state is only set on first mount otherwise)
+  useEffect(() => {
+    if (!open) {
+      setEmail("");
+      setSubject("");
+      setMessage("");
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      setEmail(clientEmail || "");
+      setSubject(`Invoice ${invoiceNumber}`);
+      setMessage(
+        `Dear ${clientName},\n\nPlease find attached invoice ${invoiceNumber}. If you have any questions, please contact us.`,
+      );
+    }
+  }, [open]);
 
   const handleSendEmail = async () => {
     if (!email.trim()) {
@@ -55,39 +80,49 @@ export function SendInvoiceDialog({
 
     setSending(true);
     try {
-      const response = await fetch(`/api/invoices/${invoiceSequence}/send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await apiClient.post(
+        `/invoices/${invoiceSequence}/send`,
+        {
           email: email.trim(),
           subject: subject.trim(),
           message: message.trim(),
-        }),
-      });
+        },
+      );
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to send invoice");
-      }
-
+      const isAccepted = response.status === 202;
       setSending(false);
       setSent(true);
+      if (invoiceSequence != null) {
+        queryClient.invalidateQueries({
+          queryKey: invoiceKeys.detail(invoiceSequence),
+        });
+        queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      }
       toast({
-        title: "Invoice sent",
-        description: `Invoice has been sent to ${email}`,
+        title: "Invoice is being sent",
+        description: isAccepted
+          ? "The invoice will be sent shortly."
+          : `Invoice has been sent to ${email}`,
       });
       setTimeout(() => {
         setSent(false);
         onOpenChange(false);
+        if (invoiceSequence != null) {
+          router.push(`/invoices/${invoiceSequence}`);
+        }
       }, 2000);
-    } catch (error) {
+    } catch (error: unknown) {
       setSending(false);
+      const message =
+        error && typeof error === "object" && "response" in error
+          ? (error as { response?: { data?: { message?: string } } }).response
+              ?.data?.message
+          : null;
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to send invoice",
+          message ||
+          (error instanceof Error ? error.message : "Failed to send invoice"),
         variant: "destructive",
       });
     }
@@ -114,7 +149,7 @@ export function SendInvoiceDialog({
               Invoice Sent Successfully!
             </h3>
             <p className="text-sm text-muted-foreground text-center">
-              The invoice has been sent to {clientName}
+              The invoice is being sent to {clientName}. It will arrive shortly.
             </p>
           </div>
         </DialogContent>
