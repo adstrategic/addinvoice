@@ -28,6 +28,15 @@ export interface InvoiceSessionData {
     notes?: string;
   } | null;
   
+  // Last successfully created invoice (for idempotency)
+  lastCreatedInvoice?: {
+    id: number;
+    invoiceNumber: string;
+    total: number;
+    createdAt: number; // timestamp
+    idempotencyKey: string; // hash of invoice content
+  };
+  
   // Reference to job context for RPC
   ctx: JobContext;
 }

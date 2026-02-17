@@ -3,7 +3,7 @@
 
 generator client {
     provider   = "prisma-client"
-    output     = "../src/generated/prisma/client"
+    output     = "../src/generated/prisma"
     engineType = "client"
 }
 
@@ -28,13 +28,12 @@ model Workspace {
     invoiceNumberPrefix String?  @default("INV-") // Prefix for invoice numbers
     defaultCurrency     String?  @default("USD") // Default currency
     defaultPaymentTerms String? // e.g., "Net 30"
-    defaultTaxRate      Decimal? // Default tax percentage
+    defaultTaxRate      Decimal? @db.Decimal(10, 2) // Default tax percentage
     invoiceFooterText   String? // Custom footer text
     invoiceColor        String? // Brand color for invoices
 
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
-    deletedAt DateTime?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     clients    Client[]
     invoices   Invoice[]
@@ -51,7 +50,7 @@ model Workspace {
     subscriptionEndsAt   DateTime? // For quick expiry checks
     lastStripeSync       DateTime? // Track when we last verified with Stripe
     // TODO: AI CREDITS - Add fields for AI credit tracking
-    // aiCreditBalance      Decimal?           @default(0)
+    // aiCreditBalance      Decimal?@db.Decimal(10,2)           @default(0)
     // aiCreditResetDate    DateTime?
 
     @@index([clerkId])
@@ -62,18 +61,20 @@ model Workspace {
 }
 
 model Client {
-    id           Int       @id @default(autoincrement())
-    workspaceId  Int
-    name         String
-    email        String
-    phone        String?
-    address      String?
-    nit          String?
-    businessName String?
-    sequence     Int
-    createdAt    DateTime  @default(now())
-    updatedAt    DateTime  @updatedAt
-    deletedAt    DateTime?
+    id                            Int      @id @default(autoincrement())
+    workspaceId                   Int
+    name                          String
+    email                         String
+    phone                         String?
+    address                       String?
+    nit                           String?
+    businessName                  String?
+    sequence                      Int
+    // Reminder settings (null = disabled)
+    reminderBeforeDueIntervalDays Int? // e.g. 3 = every 3 days while invoice active
+    reminderAfterDueIntervalDays  Int? // e.g. 1 = every 1 day when past due
+    createdAt                     DateTime @default(now())
+    updatedAt                     DateTime @updatedAt
 
     workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     invoices  Invoice[]
@@ -91,12 +92,11 @@ model Catalog {
 
     name         String
     description  String
-    price        Decimal
+    price        Decimal      @db.Decimal(10, 2)
     quantityUnit QuantityUnit @default(UNITS) // Default quantity unit for items created from catalog
     sequence     Int
     createdAt    DateTime     @default(now())
     updatedAt    DateTime     @updatedAt
-    deletedAt    DateTime?
 
     workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     business     Business      @relation(fields: [businessId], references: [id], onDelete: Restrict)
@@ -104,6 +104,7 @@ model Catalog {
 
     @@unique([workspaceId, sequence])
     @@index([workspaceId])
+    @@index([workspaceId, businessId])
     @@map("catalog")
 }
 
@@ -137,40 +138,40 @@ model Invoice {
     id          Int @id @default(autoincrement())
     workspaceId Int
     clientId    Int
-    businessId  Int // Optional: link invoice to specific business
+    businessId  Int
 
     // Client Information
     clientEmail   String
     clientPhone   String?
     clientAddress String?
 
-    sequence        Int
-    invoiceNumber   String
-    status          InvoiceStatus @default(DRAFT)
-    issueDate       DateTime
-    dueDate         DateTime
-    purchaseOrder   String? // Optional purchase order number
-    customHeader    String? // Optional custom header with work details
-    currency        String        @default("USD")
-    subtotal        Decimal       @default(0)
-    totalTax        Decimal       @default(0)
-    discount        Decimal       @default(0)
-    discountType    DiscountType  @default(NONE) // "PERCENTAGE", "FIXED", or "NONE"
-    taxMode         TaxMode       @default(NONE) // "BY_PRODUCT", "BY_TOTAL", or "NONE"
-    taxName         String? // Tax name when taxMode is "BY_TOTAL"
-    taxPercentage   Decimal? // Tax percentage when taxMode is "BY_TOTAL"
-    total           Decimal       @default(0)
-    balance         Decimal       @default(0)
-    notes           String?
-    terms           String?
-    paymentLink     String?
-    paymentProvider String? // "stripe" or "paypal"
-    sentAt          DateTime?
-    viewedAt        DateTime?
-    paidAt          DateTime?
-    createdAt       DateTime      @default(now())
-    updatedAt       DateTime      @updatedAt
-    deletedAt       DateTime?
+    sequence           Int
+    invoiceNumber      String
+    status             InvoiceStatus @default(DRAFT)
+    issueDate          DateTime
+    dueDate            DateTime
+    purchaseOrder      String? // Optional purchase order number
+    customHeader       String? // Optional custom header with work details
+    currency           String        @default("USD")
+    subtotal           Decimal       @default(0) @db.Decimal(10, 2)
+    totalTax           Decimal       @default(0) @db.Decimal(10, 2)
+    discount           Decimal       @default(0) @db.Decimal(10, 2)
+    discountType       DiscountType  @default(NONE) // "PERCENTAGE", "FIXED", or "NONE"
+    taxMode            TaxMode       @default(NONE) // "BY_PRODUCT", "BY_TOTAL", or "NONE"
+    taxName            String? // Tax name when taxMode is "BY_TOTAL"
+    taxPercentage      Decimal?      @db.Decimal(10, 2) // Tax percentage when taxMode is "BY_TOTAL"
+    total              Decimal       @default(0) @db.Decimal(10, 2)
+    balance            Decimal       @default(0) @db.Decimal(10, 2)
+    notes              String?
+    terms              String?
+    paymentLink        String?
+    paymentProvider    String? // "stripe" or "paypal"
+    sentAt             DateTime?
+    viewedAt           DateTime?
+    paidAt             DateTime?
+    lastReminderSentAt DateTime? // When we last sent a reminder (for interval enforcement)
+    createdAt          DateTime      @default(now())
+    updatedAt          DateTime      @updatedAt
 
     workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     client    Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
@@ -178,8 +179,8 @@ model Invoice {
     items     InvoiceItem[]
     payments  Payment[]
 
+    @@unique([workspaceId, businessId, invoiceNumber])
     @@unique([workspaceId, sequence])
-    @@unique([workspaceId, invoiceNumber])
     @@index([workspaceId])
     @@index([clientId])
     @@index([status])
@@ -194,12 +195,12 @@ model InvoiceItem {
     description  String
     quantity     Decimal      @default(1)
     quantityUnit QuantityUnit @default(UNITS) // "DAYS" or "HOURS" for display
-    unitPrice    Decimal
-    discount     Decimal      @default(0) // Item-level discount amount
+    unitPrice    Decimal      @db.Decimal(10, 2)
+    discount     Decimal      @default(0) @db.Decimal(10, 2) // Item-level discount amount
     discountType DiscountType @default(NONE) // "none", "percentage", or "fixed"
-    tax          Decimal      @default(0) // Tax percentage (used when taxMode is "BY_PRODUCT")
+    tax          Decimal      @default(0) @db.Decimal(10, 2) // Tax percentage (used when taxMode is "BY_PRODUCT")
     vatEnabled   Boolean      @default(false) // Checkbox for "BY_TOTAL" tax mode
-    total        Decimal      @default(0)
+    total        Decimal      @default(0) @db.Decimal(10, 2)
     catalogId    Int? // Reference to Catalog if saved from/created in catalog
     createdAt    DateTime     @default(now())
     updatedAt    DateTime     @updatedAt
@@ -213,24 +214,22 @@ model InvoiceItem {
 }
 
 model Payment {
-    id            Int       @id @default(autoincrement())
+    id            Int      @id @default(autoincrement())
     workspaceId   Int
     invoiceId     Int
-    amount        Decimal
+    amount        Decimal  @db.Decimal(10, 2)
     paymentMethod String // e.g., "cash", "bank_transfer", "check", "stripe", "paypal", etc.
-    transactionId String    @unique // Required unique transaction ID
+    transactionId String? // Required unique transaction ID
     details       String? // Optional payment notes/details
-    paidAt        DateTime  @default(now())
-    createdAt     DateTime  @default(now())
-    updatedAt     DateTime  @updatedAt
-    deletedAt     DateTime?
+    paidAt        DateTime @default(now())
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
 
     workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     invoice   Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
 
     @@index([workspaceId])
     @@index([invoiceId])
-    @@index([transactionId])
     @@map("payments")
 }
 
@@ -243,32 +242,33 @@ enum EstimateStatus {
 }
 
 model Estimate {
-    id             Int            @id @default(autoincrement())
-    workspaceId    Int
+    id          Int @id @default(autoincrement())
+    workspaceId Int
+    businessId  Int
+
     clientId       Int
     estimateNumber String
     status         EstimateStatus @default(DRAFT)
     issueDate      DateTime
     expirationDate DateTime?
     currency       String         @default("USD")
-    subtotal       Decimal        @default(0)
-    totalTax       Decimal        @default(0)
-    discount       Decimal        @default(0)
+    subtotal       Decimal        @default(0) @db.Decimal(10, 2)
+    totalTax       Decimal        @default(0) @db.Decimal(10, 2)
+    discount       Decimal        @default(0) @db.Decimal(10, 2)
     discountType   String? // "percentage" or "fixed"
-    total          Decimal        @default(0)
+    total          Decimal        @default(0) @db.Decimal(10, 2)
     notes          String?
     terms          String?
     sentAt         DateTime?
     acceptedAt     DateTime?
     createdAt      DateTime       @default(now())
     updatedAt      DateTime       @updatedAt
-    deletedAt      DateTime?
 
     workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     client    Client         @relation(fields: [clientId], references: [id], onDelete: Restrict)
     items     EstimateItem[]
 
-    @@unique([workspaceId, estimateNumber])
+    @@unique([workspaceId, businessId, estimateNumber])
     @@index([workspaceId])
     @@index([clientId])
     @@index([status])
@@ -281,9 +281,9 @@ model EstimateItem {
     estimateId  Int
     description String
     quantity    Decimal  @default(1)
-    unitPrice   Decimal
-    tax         Decimal  @default(0) // Tax percentage
-    total       Decimal  @default(0)
+    unitPrice   Decimal  @db.Decimal(10, 2)
+    tax         Decimal  @default(0) @db.Decimal(10, 2) // Tax percentage
+    total       Decimal  @default(0) @db.Decimal(10, 2)
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
 
@@ -294,7 +294,7 @@ model EstimateItem {
 }
 
 model Business {
-    id          Int       @id @default(autoincrement())
+    id          Int     @id @default(autoincrement())
     workspaceId Int
     name        String // Company name
     nit         String // Tax ID (NIT/Cedula)
@@ -302,11 +302,18 @@ model Business {
     email       String // Business email
     phone       String // Business phone
     logo        String? // Cloudinary URL
-    isDefault   Boolean   @default(false) // Default business for workspace
+    isDefault   Boolean @default(false) // Default business for workspace
     sequence    Int // For ordering within workspace
-    createdAt   DateTime  @default(now())
-    updatedAt   DateTime  @updatedAt
-    deletedAt   DateTime?
+
+    // Invoice defaults (used to prefill new invoices for this business)
+    defaultTaxMode       TaxMode? // "NONE" | "BY_PRODUCT" | "BY_TOTAL"
+    defaultTaxName       String?
+    defaultTaxPercentage Decimal? @db.Decimal(10, 2)
+    defaultNotes         String?
+    defaultTerms         String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     invoices  Invoice[]
@@ -333,3 +340,45 @@ enum SubscriptionStatus {
     INCOMPLETE_EXPIRED
     TRIALING
 }
+
+// TODO: add outbox model
+// enum OutboxStatus {
+//     PENDING
+//     PROCESSING
+//     COMPLETED
+//     FAILED
+// }
+
+// // Outbox: async send-invoice only. Reminders are executed daily by executeReminders (no outbox rows).
+// enum OutboxType {
+//     REMINDER     // No longer used; reminders run via executeReminders at start of day
+//     RECEIPT      // Unused; receipts sent via queue when user checks box
+//     SEND_INVOICE // Async send invoice (cron processes and marks SENT)
+// }
+
+// model EmailOutbox {
+//     id          String       @id @default(uuid())
+//     workspaceId Int
+//     invoiceId   Int? // Optional for non-invoice emails
+//     type        OutboxType   @default(SEND_INVOICE)
+//     to          String
+//     subject     String
+//     message     String
+//     status      OutboxStatus @default(PENDING)
+//     attempts    Int          @default(0)
+//     maxAttempts Int          @default(3)
+//     lastError   String?
+//     scheduledAt DateTime     @default(now())
+//     processedAt DateTime?
+//     metadata    Json? // Type-specific data if needed later
+//     createdAt   DateTime     @default(now())
+//     updatedAt   DateTime     @updatedAt
+
+//     workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+//     invoice   Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+//     @@index([status, scheduledAt])
+//     @@index([workspaceId])
+//     @@index([invoiceId])
+//     @@map("email_outbox")
+// }

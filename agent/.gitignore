@@ -9,6 +9,8 @@ dist/
 .env.local
 .env
 
+/src/generated/prisma
+
 # Model files (downloaded by download-files script)
 *.onnx
 *.bin

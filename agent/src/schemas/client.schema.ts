@@ -48,4 +48,12 @@ export const createClientSchema = z.object({
   businessName: nullableOptional(
     z.string().trim().max(100, 'Business name cannot exceed 100 characters')
   ),
+  // Reminder before due date: every N days (null = disabled)
+  reminderBeforeDueIntervalDays: nullableOptional(
+    z.number().int().positive('Must be a positive number of days')
+  ),
+  // Reminder after due date: every N days (null = disabled)
+  reminderAfterDueIntervalDays: nullableOptional(
+    z.number().int().positive('Must be a positive number of days')
+  ),
 });

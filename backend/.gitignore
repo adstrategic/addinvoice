@@ -17,6 +17,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+/src/generated/
+
 # env files
 .env*
 

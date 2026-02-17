@@ -1,43 +1,61 @@
-import { voice, llm } from "@livekit/agents";
-import { z } from "zod";
-import { prisma } from "../db/prisma.js";
+import { voice } from "@livekit/agents";
 import type { InvoiceSessionData } from "../types/session-data.js";
-import { createClientSchema } from "../schemas/client.schema.js";
-
-/**
- * Formats an email address for clear TTS pronunciation
- * Example: "user@gmail.com" -> "user at gmail dot com"
- */
-function formatEmailForSpeech(email: string | null | undefined): string {
-  if (!email) return "";
-  const [localPart, domain] = email.split("@");
-  if (!domain) return email; // Fallback if no @ found
-  const normalizedDomain = domain.replace(/\./g, " dot ");
-  return `${localPart} at ${normalizedDomain}`;
-}
+import {
+  createLookupCustomerTool,
+  createSelectCustomerTool,
+} from "../tools/customer.tools.js";
+import {
+  createAddInvoiceItemTool,
+  createCreateInvoiceTool,
+} from "../tools/invoice.tools.js";
+import {
+  createCountClientsTool,
+  createCountInvoicesTool,
+} from "../tools/query.tools.js";
+import {
+  createListBusinessesTool,
+  createSelectBusinessTool,
+} from "../tools/business.tools.js";
 
 export class InvoiceAgent extends voice.Agent {
   constructor() {
     super({
       instructions: `You are a professional invoice creation assistant.
 Your job is to help users create invoices by collecting:
-1. Customer information (name, email, phone)
-2. Invoice line items (description, quantity, unit price)
-3. Payment terms and due date
+1. Business selection (which business to use for the invoice)
+2. Customer selection (from existing customers only)
+3. Invoice line items (description, quantity, unit price)
+4. Payment terms and due date
 
 You can also answer questions about the workspace, such as:
 - How many clients are in the system
 - How many invoices exist
 - Count clients or invoices
 
+CRITICAL - Tool Call Limits:
+- You can only make 3 tool calls per user turn
+
+IMPORTANT - Business Selection Process:
+Before creating an invoice, you MUST select a business:
+1. Use listBusinesses to see all available businesses (ONE tool call)
+2. Present the results to the user and WAIT for their response
+3. If MULTIPLE businesses exist, ask the user which one to use, then WAIT for their answer
+4. If ONLY ONE business exists, tell the user about it and ask for confirmation before selecting
+5. Only after the user confirms, use selectBusiness with the chosen business ID (ONE tool call in a separate turn)
+6. NEVER call createInvoice until a business has been selected (via selectBusiness)
+7. The selected business's default tax settings, notes, and terms will be used for the invoice
+
 IMPORTANT - Customer Selection Process:
 When creating an invoice, you MUST follow this customer selection process:
-1. First use lookupCustomer to search for the customer by name or email
-2. If ONE customer is found, confirm with the user, then use selectCustomer to select them
-3. If MULTIPLE customers are found, list them clearly and ask which one, then use selectCustomer with the chosen customer ID
-4. If NO customers are found, ask if they want to create a new one, then use createCustomer
-5. NEVER call createInvoice until a customer has been selected (via selectCustomer) or created (via createCustomer)
-6. Always confirm the customer selection with the user before proceeding to add invoice items
+1. First use lookupCustomer to search for the customer by name or email (ONE tool call)
+2. Present the results to the user and WAIT for their response
+3. If ONE customer is found, tell the user about the match and ask for confirmation
+4. If MULTIPLE customers are found, list them clearly and ask which one, then WAIT for their answer
+5. Only after the user confirms or chooses, use selectCustomer with the chosen customer ID (ONE tool call in a separate turn)
+6. If NO customers are found, inform the user they need to create the customer first in the main application
+7. NEVER call createInvoice until a customer has been selected (via selectCustomer)
+8. Always wait for user confirmation before proceeding to add invoice items
+9. NOTE: You cannot create new customers - only select from existing ones
 
 IMPORTANT - Phone Number Format:
 When collecting phone numbers for customers or invoices, ALWAYS ask for the country code and format them in international format starting with + followed by country code and number.
@@ -65,400 +83,14 @@ Keep responses concise without formatting symbols or emojis.
 When collecting items, ask for description, quantity, and price.`,
 
       tools: {
-        // TOOL 1: Lookup existing customer
-        lookupCustomer: llm.tool({
-          description:
-            "Search for an existing customer by name or email in the database",
-          parameters: z.object({
-            query: z.string().describe("Customer name or email to search"),
-          }),
-          execute: async ({ query }, { ctx }) => {
-            const sessionData = ctx.session.userData as InvoiceSessionData;
-
-            const customers = await prisma.client.findMany({
-              where: {
-                workspaceId: sessionData.workspaceId,
-                OR: [
-                  { name: { contains: query, mode: "insensitive" } },
-                  { email: { contains: query, mode: "insensitive" } },
-                ],
-                deletedAt: null,
-              },
-              take: 5,
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                phone: true,
-                businessName: true,
-              },
-            });
-
-            if (customers.length === 0) {
-              return {
-                found: false,
-                message:
-                  "No customers found. Would you like to create a new customer?",
-              };
-            }
-
-            // Format customer list with emails for speech
-            const customerList = customers
-              .map(
-                (c) =>
-                  `- ${c.name}${c.email ? ` (${formatEmailForSpeech(c.email)})` : ""}`,
-              )
-              .join("\n");
-
-            return {
-              found: true,
-              customers: customers,
-              message: `Found ${customers.length} customer(s):\n${customerList}\nPlease confirm which one.`,
-            };
-          },
-        }),
-
-        // TOOL 2: Select existing customer
-        selectCustomer: llm.tool({
-          description:
-            "Select an existing customer by ID to associate with the current invoice. Use this after lookupCustomer confirms which customer the user wants. This must be called before adding invoice items or creating the invoice.",
-          parameters: z.object({
-            customerId: z
-              .number()
-              .int()
-              .positive()
-              .describe(
-                "The ID of the customer to select (from lookupCustomer results)",
-              ),
-            customerName: z
-              .string()
-              .describe("The name of the customer (for confirmation message)"),
-          }),
-          execute: async ({ customerId, customerName }, { ctx }) => {
-            const sessionData = ctx.session.userData as InvoiceSessionData;
-
-            // Verify customer exists and belongs to workspace
-            const customer = await prisma.client.findFirst({
-              where: {
-                id: customerId,
-                workspaceId: sessionData.workspaceId,
-                deletedAt: null,
-              },
-              select: { id: true, name: true, email: true },
-            });
-
-            if (!customer) {
-              throw new llm.ToolError(
-                "Customer not found or does not belong to this workspace. Please search again using lookupCustomer.",
-              );
-            }
-
-            // Initialize invoice session if needed
-            if (!sessionData.currentInvoice) {
-              sessionData.currentInvoice = {
-                items: [],
-                subtotal: 0,
-                totalTax: 0,
-                discount: 0,
-                total: 0,
-              };
-            }
-
-            // Set the customer for this invoice
-            sessionData.currentInvoice.customerId = customer.id;
-
-            return {
-              success: true,
-              customerId: customer.id,
-              customerName: customer.name,
-              customerEmail: customer.email,
-              message: `Customer "${customer.name}" selected for this invoice.${customer.email ? ` Email: ${formatEmailForSpeech(customer.email)}` : ""}`,
-            };
-          },
-        }),
-
-        // TOOL 3: Create new customer
-        createCustomer: llm.tool({
-          description:
-            "Create a new customer in the database. Phone numbers must be in international format with + prefix (e.g., +573011234567).",
-          parameters: z.object({
-            name: createClientSchema.shape.name.describe("Customer full name"),
-            email: createClientSchema.shape.email.describe(
-              "Customer email address",
-            ),
-            phone: createClientSchema.shape.phone.describe(
-              "Customer phone number in international format (e.g., +573011234567). Must start with + followed by country code and number.",
-            ),
-            address:
-              createClientSchema.shape.address.describe("Customer address"),
-            nit: createClientSchema.shape.nit.describe("Tax ID or NIT"),
-            businessName: createClientSchema.shape.businessName.describe(
-              "Business name if applicable",
-            ),
-          }),
-          execute: async (
-            { name, email, phone, address, nit, businessName },
-            { ctx },
-          ) => {
-            const sessionData = ctx.session.userData as InvoiceSessionData;
-
-            // Get next sequence number
-            const lastClient = await prisma.client.findFirst({
-              where: { workspaceId: sessionData.workspaceId },
-              orderBy: { sequence: "desc" },
-              select: { sequence: true },
-            });
-
-            const customer = await prisma.client.create({
-              data: {
-                workspaceId: sessionData.workspaceId,
-                name,
-                email,
-                phone: phone || null,
-                address: address || null,
-                nit: nit || null,
-                businessName: businessName || null,
-                sequence: (lastClient?.sequence || 0) + 1,
-              },
-            });
-
-            // Store customer ID in session
-            if (!sessionData.currentInvoice) {
-              sessionData.currentInvoice = {
-                items: [],
-                subtotal: 0,
-                totalTax: 0,
-                discount: 0,
-                total: 0,
-              };
-            }
-            sessionData.currentInvoice.customerId = customer.id;
-
-            return {
-              success: true,
-              customerId: customer.id,
-              message: `Customer "${name}" created successfully!`,
-            };
-          },
-        }),
-
-        // TOOL 4: Add invoice line item
-        addInvoiceItem: llm.tool({
-          description: "Add a line item to the current invoice being created",
-          parameters: z.object({
-            description: z
-              .string()
-              .describe("Description of the product or service"),
-            quantity: z.number().positive().describe("Quantity of items"),
-            unitPrice: z
-              .number()
-              .positive()
-              .describe("Price per unit in dollars"),
-            quantityUnit: z
-              .enum(["DAYS", "HOURS", "UNITS"])
-              .default("UNITS")
-              .describe("Unit of measurement for quantity"),
-          }),
-          execute: async (
-            { description, quantity, unitPrice, quantityUnit },
-            { ctx },
-          ) => {
-            const sessionData = ctx.session.userData as InvoiceSessionData;
-
-            // Initialize invoice if needed
-            if (!sessionData.currentInvoice) {
-              sessionData.currentInvoice = {
-                items: [],
-                subtotal: 0,
-                totalTax: 0,
-                discount: 0,
-                total: 0,
-              };
-            }
-
-            // Create item
-            const itemTotal = quantity * unitPrice;
-            const item = {
-              name: description.split(" ").slice(0, 3).join(" "),
-              description,
-              quantity,
-              quantityUnit,
-              unitPrice,
-              discount: 0,
-              discountType: "NONE" as const,
-              tax: 0,
-              vatEnabled: false,
-              total: itemTotal,
-            };
-
-            // Add to session
-            sessionData.currentInvoice.items.push(item);
-
-            // Recalculate totals
-            sessionData.currentInvoice.subtotal =
-              sessionData.currentInvoice.items.reduce(
-                (sum, i) => sum + i.total,
-                0,
-              );
-            sessionData.currentInvoice.total =
-              sessionData.currentInvoice.subtotal;
-
-            return {
-              success: true,
-              itemNumber: sessionData.currentInvoice.items.length,
-              itemTotal: itemTotal.toFixed(2),
-              runningTotal: sessionData.currentInvoice.total.toFixed(2),
-              message: `Added item ${sessionData.currentInvoice.items.length}. Current total: $${sessionData.currentInvoice.total.toFixed(2)}`,
-            };
-          },
-        }),
-
-        // TOOL 5: Create final invoice
-        createInvoice: llm.tool({
-          description:
-            "Save the complete invoice to the database after all details are confirmed",
-          parameters: z.object({
-            dueDate: z
-              .string()
-              .describe("Invoice due date in YYYY-MM-DD format"),
-            notes: z
-              .string()
-              .optional()
-              .describe("Additional notes for the invoice"),
-          }),
-          execute: async ({ dueDate, notes }, { ctx }) => {
-            const sessionData = ctx.session.userData as InvoiceSessionData;
-
-            if (
-              !sessionData.currentInvoice ||
-              !sessionData.currentInvoice.customerId
-            ) {
-              throw new llm.ToolError(
-                "No customer or invoice data found. Please start over.",
-              );
-            }
-
-            if (sessionData.currentInvoice.items.length === 0) {
-              throw new llm.ToolError(
-                "Cannot create invoice without line items.",
-              );
-            }
-
-            // Get default business for workspace
-            const defaultBusiness = await prisma.business.findFirst({
-              where: {
-                workspaceId: sessionData.workspaceId,
-                isDefault: true,
-              },
-            });
-
-            if (!defaultBusiness) {
-              throw new llm.ToolError(
-                "No default business found. Please set up a business first.",
-              );
-            }
-
-            // Get customer email for invoice
-            const customer = await prisma.client.findUnique({
-              where: { id: sessionData.currentInvoice.customerId },
-            });
-
-            // Get next invoice sequence
-            const lastInvoice = await prisma.invoice.findFirst({
-              where: { workspaceId: sessionData.workspaceId },
-              orderBy: { sequence: "desc" },
-              select: { sequence: true },
-            });
-            const nextSequence = (lastInvoice?.sequence || 0) + 1;
-
-            // Create invoice in database
-            const invoice = await prisma.invoice.create({
-              data: {
-                workspaceId: sessionData.workspaceId,
-                clientId: sessionData.currentInvoice.customerId,
-                businessId: defaultBusiness.id,
-                clientEmail: customer!.email,
-                clientPhone: customer?.phone,
-                clientAddress: customer?.address,
-                sequence: nextSequence,
-                invoiceNumber: `INV-${nextSequence.toString().padStart(5, "0")}`,
-                status: "DRAFT",
-                issueDate: new Date(),
-                dueDate: new Date(dueDate),
-                currency: "USD",
-                subtotal: sessionData.currentInvoice.subtotal,
-                totalTax: 0,
-                discount: 0,
-                total: sessionData.currentInvoice.total,
-                balance: sessionData.currentInvoice.total,
-                notes: notes || null,
-                taxMode: "NONE",
-                discountType: "NONE",
-                items: {
-                  create: sessionData.currentInvoice.items,
-                },
-              },
-              include: {
-                items: true,
-                client: true,
-              },
-            });
-
-            // Clear session data
-            sessionData.currentInvoice = null;
-
-            return {
-              success: true,
-              invoiceId: invoice.id,
-              invoiceNumber: invoice.invoiceNumber,
-              total: invoice.total.toString(),
-              message: `Invoice ${invoice.invoiceNumber} created successfully! Total: $${invoice.total}`,
-            };
-          },
-        }),
-
-        // TOOL 6: Count clients
-        countClients: llm.tool({
-          description:
-            "Count the total number of active clients in the workspace",
-          parameters: z.object({}),
-          execute: async (_, { ctx }) => {
-            const sessionData = ctx.session.userData as InvoiceSessionData;
-
-            const count = await prisma.client.count({
-              where: {
-                workspaceId: sessionData.workspaceId,
-                deletedAt: null,
-              },
-            });
-
-            return {
-              count,
-              message: `You have ${count} active client${count === 1 ? "" : "s"}.`,
-            };
-          },
-        }),
-
-        // TOOL 7: Count invoices
-        countInvoices: llm.tool({
-          description: "Count the total number of invoices in the workspace",
-          parameters: z.object({}),
-          execute: async (_, { ctx }) => {
-            const sessionData = ctx.session.userData as InvoiceSessionData;
-
-            const count = await prisma.invoice.count({
-              where: {
-                workspaceId: sessionData.workspaceId,
-                deletedAt: null,
-              },
-            });
-
-            return {
-              count,
-              message: `You have ${count} invoice${count === 1 ? "" : "s"}.`,
-            };
-          },
-        }),
+        listBusinesses: createListBusinessesTool(),
+        selectBusiness: createSelectBusinessTool(),
+        lookupCustomer: createLookupCustomerTool(),
+        selectCustomer: createSelectCustomerTool(),
+        addInvoiceItem: createAddInvoiceItemTool(),
+        createInvoice: createCreateInvoiceTool(),
+        countClients: createCountClientsTool(),
+        countInvoices: createCountInvoicesTool(),
       },
     });
   }
