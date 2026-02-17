@@ -2,7 +2,6 @@
 
 import type React from "react";
 
-import { AppLayout } from "@/components/app-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,11 +113,13 @@ export default function NewQuotePage() {
 
   const [quoteNumber, setQuoteNumber] = useState("QUO-001");
   const [status, setStatus] = useState("draft");
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
+  const [issueDate, setIssueDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
   const [validUntil, setValidUntil] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() + 30);
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   });
   const [clientName, setClientName] = useState("");
   const [clientContact, setClientContact] = useState("");
@@ -140,18 +141,23 @@ export default function NewQuotePage() {
     // Load clients from existing invoices and quotes
     const loadClients = () => {
       const emittedInvoices = JSON.parse(
-        localStorage.getItem("emittedInvoices") || "[]"
+        localStorage.getItem("emittedInvoices") || "[]",
       );
       const draftInvoices = JSON.parse(
-        localStorage.getItem("invoiceDrafts") || "[]"
+        localStorage.getItem("invoiceDrafts") || "[]",
       );
       const emittedQuotes = JSON.parse(
-        localStorage.getItem("emittedQuotes") || "[]"
+        localStorage.getItem("emittedQuotes") || "[]",
       );
       const draftQuotes = JSON.parse(
-        localStorage.getItem("quoteDrafts") || "[]"
+        localStorage.getItem("quoteDrafts") || "[]",
       );
-      const allDocuments = [...emittedInvoices, ...draftInvoices, ...emittedQuotes, ...draftQuotes];
+      const allDocuments = [
+        ...emittedInvoices,
+        ...draftInvoices,
+        ...emittedQuotes,
+        ...draftQuotes,
+      ];
 
       // Extract unique clients
       const clientMap = new Map<string, Client>();
@@ -229,7 +235,7 @@ export default function NewQuotePage() {
         const config = JSON.parse(savedInvoiceConfig);
         if (config.reminderMessage) {
           setTerms(
-            "This quote is valid for 30 days. Terms and conditions apply."
+            "This quote is valid for 30 days. Terms and conditions apply.",
           );
         }
       }
@@ -269,11 +275,11 @@ export default function NewQuotePage() {
     };
 
     const existingCompanies = JSON.parse(
-      localStorage.getItem("companies") || "[]"
+      localStorage.getItem("companies") || "[]",
     );
     localStorage.setItem(
       "companies",
-      JSON.stringify([...existingCompanies, newTemplate])
+      JSON.stringify([...existingCompanies, newTemplate]),
     );
 
     toast({
@@ -307,7 +313,7 @@ export default function NewQuotePage() {
   const updateItem = (
     index: number,
     field: keyof QuoteItem,
-    value: string | number
+    value: string | number,
   ) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
@@ -365,7 +371,7 @@ export default function NewQuotePage() {
 
     // Check if client already exists (case-insensitive)
     const existingIndex = existingClients.findIndex(
-      (c: any) => c.name.toLowerCase() === clientData.name.toLowerCase()
+      (c: any) => c.name.toLowerCase() === clientData.name.toLowerCase(),
     );
 
     const clientToSave = {
@@ -446,13 +452,13 @@ export default function NewQuotePage() {
     };
 
     const existingDrafts = JSON.parse(
-      localStorage.getItem("quoteDrafts") || "[]"
+      localStorage.getItem("quoteDrafts") || "[]",
     );
 
     let updatedDrafts;
     if (editingDraftId) {
       updatedDrafts = existingDrafts.map((d: QuoteDraft) =>
-        d.id === editingDraftId ? draftData : d
+        d.id === editingDraftId ? draftData : d,
       );
     } else {
       updatedDrafts = [...existingDrafts, draftData];
@@ -524,13 +530,13 @@ export default function NewQuotePage() {
         ${
           companyEmail && companyPhone
             ? `<div class="info-line">${escapeHtml(
-                companyEmail
+                companyEmail,
               )} | Phone ${escapeHtml(companyPhone)}</div>`
             : companyEmail
-            ? `<div class="info-line">${escapeHtml(companyEmail)}</div>`
-            : companyPhone
-            ? `<div class="info-line">Phone ${escapeHtml(companyPhone)}</div>`
-            : ""
+              ? `<div class="info-line">${escapeHtml(companyEmail)}</div>`
+              : companyPhone
+                ? `<div class="info-line">Phone ${escapeHtml(companyPhone)}</div>`
+                : ""
         }
         ${
           companyNIT
@@ -550,10 +556,10 @@ export default function NewQuotePage() {
         <td style="text-align: center;">${item.quantity}</td>
         <td style="text-align: right;">${formatCurrency(item.unitPrice)}</td>
         <td style="text-align: right;">${formatCurrency(
-          item.unitPrice * item.quantity
+          item.unitPrice * item.quantity,
         )}</td>
       </tr>
-    `
+    `,
       )
       .join("");
 
@@ -802,19 +808,19 @@ export default function NewQuotePage() {
     };
 
     const existingEmitted = JSON.parse(
-      localStorage.getItem("emittedQuotes") || "[]"
+      localStorage.getItem("emittedQuotes") || "[]",
     );
     localStorage.setItem(
       "emittedQuotes",
-      JSON.stringify([...existingEmitted, emittedQuoteData])
+      JSON.stringify([...existingEmitted, emittedQuoteData]),
     );
 
     if (editingDraftId) {
       const existingDrafts = JSON.parse(
-        localStorage.getItem("quoteDrafts") || "[]"
+        localStorage.getItem("quoteDrafts") || "[]",
       );
       const updatedDrafts = existingDrafts.filter(
-        (d: QuoteDraft) => d.id !== editingDraftId
+        (d: QuoteDraft) => d.id !== editingDraftId,
       );
       localStorage.setItem("quoteDrafts", JSON.stringify(updatedDrafts));
     }
@@ -842,7 +848,7 @@ export default function NewQuotePage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto px-6 py-8 max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -1194,7 +1200,7 @@ export default function NewQuotePage() {
                                 updateItem(
                                   index,
                                   "quantity",
-                                  Number(e.target.value)
+                                  Number(e.target.value),
                                 )
                               }
                             />
@@ -1211,7 +1217,7 @@ export default function NewQuotePage() {
                                 updateItem(
                                   index,
                                   "unitPrice",
-                                  Number(e.target.value)
+                                  Number(e.target.value),
                                 )
                               }
                             />
@@ -1267,7 +1273,9 @@ export default function NewQuotePage() {
                     </span>
                   </div>
                   <div className="flex justify-between text-lg pt-2 border-t border-border">
-                    <span className="font-bold text-foreground">Estimated Total:</span>
+                    <span className="font-bold text-foreground">
+                      Estimated Total:
+                    </span>
                     <span className="font-bold text-primary">
                       ${calculateTotal().toFixed(2)}
                     </span>
@@ -1407,7 +1415,6 @@ export default function NewQuotePage() {
           </div>
         </DialogContent>
       </Dialog>
-    </AppLayout>
+    </>
   );
 }
-

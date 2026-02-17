@@ -2,7 +2,6 @@
 
 import type React from "react";
 
-import { AppLayout } from "@/components/app-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,10 +30,10 @@ export default function LogoAIPage() {
       setBusinessName(parsed.businessName || "");
       setBusinessDescription(parsed.description || "");
       setLogoStyle(parsed.style || "");
-      
+
       // Clear draft after loading so it doesn't persist forever
       localStorage.removeItem("logoAiDraft");
-      
+
       toast({
         title: "Voice Input Loaded",
         description: "Your voice preferences have been applied.",
@@ -88,7 +87,7 @@ export default function LogoAIPage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto px-6 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
@@ -262,6 +261,6 @@ export default function LogoAIPage() {
           </div>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 }

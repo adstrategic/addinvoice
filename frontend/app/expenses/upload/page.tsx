@@ -1,6 +1,5 @@
 "use client";
 
-import { AppLayout } from "@/components/app-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +33,9 @@ const expenseCategories = [
 ];
 
 // Placeholder OCR function - simulates OCR extraction
-const simulateOCR = async (file: File): Promise<{
+const simulateOCR = async (
+  file: File,
+): Promise<{
   merchant?: string;
   total?: number;
   date?: string;
@@ -46,7 +47,7 @@ const simulateOCR = async (file: File): Promise<{
   // Return mock OCR data
   return {
     merchant: "Sample Merchant",
-    total: 125.50,
+    total: 125.5,
     date: new Date().toISOString().split("T")[0],
     items: ["Item 1", "Item 2"],
   };
@@ -75,7 +76,10 @@ export default function UploadReceiptPage() {
     if (!selectedFile) return;
 
     // Validate file type
-    if (!selectedFile.type.startsWith("image/") && selectedFile.type !== "application/pdf") {
+    if (
+      !selectedFile.type.startsWith("image/") &&
+      selectedFile.type !== "application/pdf"
+    ) {
       toast({
         title: "Invalid file type",
         description: "Please upload an image or PDF file",
@@ -116,7 +120,7 @@ export default function UploadReceiptPage() {
     try {
       const extracted = await simulateOCR(fileToProcess);
       setOcrData(extracted);
-      
+
       // Auto-fill form fields
       if (extracted.merchant) {
         setDescription(extracted.merchant);
@@ -124,7 +128,7 @@ export default function UploadReceiptPage() {
       if (extracted.total) {
         setAmount(extracted.total.toString());
       }
-      
+
       toast({
         title: "Receipt processed",
         description: "Information extracted from receipt",
@@ -132,7 +136,8 @@ export default function UploadReceiptPage() {
     } catch (error) {
       toast({
         title: "OCR processing failed",
-        description: "Could not extract information from receipt. Please enter manually.",
+        description:
+          "Could not extract information from receipt. Please enter manually.",
         variant: "destructive",
       });
     } finally {
@@ -211,7 +216,7 @@ export default function UploadReceiptPage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-4xl">
         <motion.div
           className="flex items-center gap-4 mb-6 sm:mb-8"
@@ -444,7 +449,6 @@ export default function UploadReceiptPage() {
           </motion.div>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 }
-

@@ -51,7 +51,7 @@ export function MassReminderDialog({ open, onOpenChange }: MassReminderDialogPro
     const emitted = localStorage.getItem("emittedInvoices")
     if (emitted) {
       const invoices = JSON.parse(emitted)
-      const pending = invoices.filter((inv: any) => inv.status === "pending" || inv.status === "issued")
+      const pending = invoices.filter((inv: any) => inv.status === "overdue" || inv.status === "issued")
       setPendingInvoices(pending)
     }
   }

@@ -1,15 +1,29 @@
-"use client"
+"use client";
 
-import { AppLayout } from "@/components/app-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Bell, Send, Clock, CheckCircle2, AlertCircle, Search, Calendar, SendHorizontal } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useState } from "react"
-import { SendInvoiceDialog } from "@/components/send-invoice-dialog"
-import { MassReminderDialog } from "@/components/mass-reminder-dialog"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Bell,
+  Send,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Search,
+  Calendar,
+  SendHorizontal,
+} from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
+import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
+import { MassReminderDialog } from "@/components/mass-reminder-dialog";
 
 // Mock reminders data
 const pendingReminders = [
@@ -43,7 +57,7 @@ const pendingReminders = [
     lastReminder: "2025-01-15",
     reminderCount: 2,
   },
-]
+];
 
 const scheduledReminders = [
   {
@@ -64,7 +78,7 @@ const scheduledReminders = [
     scheduledDate: "2025-01-29",
     status: "scheduled",
   },
-]
+];
 
 const reminderHistory = [
   {
@@ -94,30 +108,39 @@ const reminderHistory = [
     status: "delivered",
     result: "No response",
   },
-]
+];
 
 export default function RemindersPage() {
-  const [sendDialogOpen, setSendDialogOpen] = useState(false)
-  const [massReminderDialogOpen, setMassReminderDialogOpen] = useState(false)
-  const [selectedInvoice, setSelectedInvoice] = useState<{ id: string; client: string } | null>(null)
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [massReminderDialogOpen, setMassReminderDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<{
+    id: string;
+    client: string;
+  } | null>(null);
 
   const handleSendReminder = (invoiceId: string, client: string) => {
-    setSelectedInvoice({ id: invoiceId, client })
-    setSendDialogOpen(true)
-  }
+    setSelectedInvoice({ id: invoiceId, client });
+    setSendDialogOpen(true);
+  };
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Reminders</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              Reminders
+            </h1>
             <p className="text-sm sm:text-base text-muted-foreground mt-1">
               Manage payment reminders for overdue invoices
             </p>
           </div>
-          <Button onClick={() => setMassReminderDialogOpen(true)} className="gap-2 w-full sm:w-auto">
+          <Button
+            data-tour-id="reminders-create-btn"
+            onClick={() => setMassReminderDialogOpen(true)}
+            className="gap-2 w-full sm:w-auto"
+          >
             <SendHorizontal className="h-4 w-4" />
             Send Mass Reminders
           </Button>
@@ -127,51 +150,79 @@ export default function RemindersPage() {
         <div className="grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-4 mb-6 sm:mb-8">
           <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Overdue</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                Overdue
+              </CardTitle>
               <AlertCircle className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-foreground">3</div>
-              <p className="text-xs text-muted-foreground mt-1">Invoices need attention</p>
+              <div className="text-xl sm:text-2xl font-bold text-foreground">
+                3
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Invoices need attention
+              </p>
             </CardContent>
           </Card>
 
           <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Scheduled</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                Scheduled
+              </CardTitle>
               <Clock className="h-4 w-4 text-chart-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-foreground">2</div>
-              <p className="text-xs text-muted-foreground mt-1">Reminders queued</p>
+              <div className="text-xl sm:text-2xl font-bold text-foreground">
+                2
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Reminders queued
+              </p>
             </CardContent>
           </Card>
 
           <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Sent Today</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                Sent Today
+              </CardTitle>
               <Send className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-foreground">5</div>
-              <p className="text-xs text-muted-foreground mt-1">Reminders delivered</p>
+              <div className="text-xl sm:text-2xl font-bold text-foreground">
+                5
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Reminders delivered
+              </p>
             </CardContent>
           </Card>
 
           <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Success Rate</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                Success Rate
+              </CardTitle>
               <CheckCircle2 className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-foreground">78%</div>
-              <p className="text-xs text-muted-foreground mt-1">Payment after reminder</p>
+              <div className="text-xl sm:text-2xl font-bold text-foreground">
+                78%
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Payment after reminder
+              </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="pending" className="space-y-6">
+        <Tabs
+          defaultValue="pending"
+          className="space-y-6"
+          data-tour-id="reminders-list"
+        >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="pending" className="gap-2">
               <AlertCircle className="h-4 w-4" />
@@ -217,31 +268,51 @@ export default function RemindersPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <p className="font-semibold text-foreground">{reminder.invoiceId}</p>
-                            <Badge variant="destructive" className="bg-destructive/20 text-destructive text-xs">
+                            <p className="font-semibold text-foreground">
+                              {reminder.invoiceId}
+                            </p>
+                            <Badge
+                              variant="destructive"
+                              className="bg-destructive/20 text-destructive text-xs"
+                            >
                               {reminder.daysOverdue}d overdue
                             </Badge>
                             {reminder.reminderCount > 0 && (
-                              <Badge variant="secondary" className="bg-muted text-muted-foreground text-xs">
+                              <Badge
+                                variant="secondary"
+                                className="bg-muted text-muted-foreground text-xs"
+                              >
                                 {reminder.reminderCount} sent
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground truncate">{reminder.client}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {reminder.client}
+                          </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             Due: {reminder.dueDate}
                             {reminder.lastReminder && (
-                              <span className="hidden sm:inline"> • Last: {reminder.lastReminder}</span>
+                              <span className="hidden sm:inline">
+                                {" "}
+                                • Last: {reminder.lastReminder}
+                              </span>
                             )}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-4">
                         <div className="text-left sm:text-right">
-                          <p className="font-semibold text-foreground">${reminder.amount.toLocaleString()}</p>
+                          <p className="font-semibold text-foreground">
+                            ${reminder.amount.toLocaleString()}
+                          </p>
                         </div>
                         <Button
-                          onClick={() => handleSendReminder(reminder.invoiceId, reminder.client)}
+                          onClick={() =>
+                            handleSendReminder(
+                              reminder.invoiceId,
+                              reminder.client,
+                            )
+                          }
                           size="sm"
                           className="gap-2 shrink-0"
                         >
@@ -278,22 +349,36 @@ export default function RemindersPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-1">
-                            <p className="font-semibold text-foreground">{reminder.invoiceId}</p>
-                            <Badge variant="secondary" className="bg-chart-4/20 text-chart-4">
+                            <p className="font-semibold text-foreground">
+                              {reminder.invoiceId}
+                            </p>
+                            <Badge
+                              variant="secondary"
+                              className="bg-chart-4/20 text-chart-4"
+                            >
                               Scheduled
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground truncate">{reminder.client}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {reminder.client}
+                          </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Due: {reminder.dueDate} • Will send: {reminder.scheduledDate}
+                            Due: {reminder.dueDate} • Will send:{" "}
+                            {reminder.scheduledDate}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-4">
                         <div className="text-left sm:text-right">
-                          <p className="font-semibold text-foreground">${reminder.amount.toLocaleString()}</p>
+                          <p className="font-semibold text-foreground">
+                            ${reminder.amount.toLocaleString()}
+                          </p>
                         </div>
-                        <Button variant="outline" size="sm" className="bg-transparent shrink-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent shrink-0"
+                        >
                           Cancel
                         </Button>
                       </div>
@@ -311,7 +396,9 @@ export default function RemindersPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <CardTitle>Reminder History</CardTitle>
-                    <CardDescription className="hidden sm:block">Past reminders and their outcomes</CardDescription>
+                    <CardDescription className="hidden sm:block">
+                      Past reminders and their outcomes
+                    </CardDescription>
                   </div>
                   <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -332,19 +419,28 @@ export default function RemindersPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-1">
-                            <p className="font-semibold text-foreground">{reminder.invoiceId}</p>
-                            <Badge variant="default" className="bg-primary/20 text-primary hover:bg-primary/30">
+                            <p className="font-semibold text-foreground">
+                              {reminder.invoiceId}
+                            </p>
+                            <Badge
+                              variant="default"
+                              className="bg-primary/20 text-primary hover:bg-primary/30"
+                            >
                               {reminder.status}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground truncate">{reminder.client}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {reminder.client}
+                          </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             Sent: {reminder.sentDate} • {reminder.result}
                           </p>
                         </div>
                       </div>
                       <div className="text-left sm:text-right">
-                        <p className="font-semibold text-foreground">${reminder.amount.toLocaleString()}</p>
+                        <p className="font-semibold text-foreground">
+                          ${reminder.amount.toLocaleString()}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -355,16 +451,19 @@ export default function RemindersPage() {
         </Tabs>
       </div>
 
-      {selectedInvoice && (
+      {/* {selectedInvoice && (
         <SendInvoiceDialog
           open={sendDialogOpen}
           onOpenChange={setSendDialogOpen}
           invoiceId={selectedInvoice.id}
           clientName={selectedInvoice.client}
         />
-      )}
+      )} */}
 
-      <MassReminderDialog open={massReminderDialogOpen} onOpenChange={setMassReminderDialogOpen} />
-    </AppLayout>
-  )
+      <MassReminderDialog
+        open={massReminderDialogOpen}
+        onOpenChange={setMassReminderDialogOpen}
+      />
+    </>
+  );
 }

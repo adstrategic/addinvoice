@@ -1,6 +1,5 @@
 "use client";
 
-import { AppLayout } from "@/components/app-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +103,7 @@ export default function NewExpensePage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-3xl">
         <motion.div
           className="flex items-center gap-4 mb-6 sm:mb-8"
@@ -189,7 +188,7 @@ export default function NewExpensePage() {
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal",
-                          !date && "text-muted-foreground"
+                          !date && "text-muted-foreground",
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -220,11 +219,7 @@ export default function NewExpensePage() {
 
                 <div className="flex gap-4 pt-4">
                   <Link href="/expenses" className="flex-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                    >
+                    <Button type="button" variant="outline" className="w-full">
                       Cancel
                     </Button>
                   </Link>
@@ -238,7 +233,6 @@ export default function NewExpensePage() {
           </Card>
         </motion.div>
       </div>
-    </AppLayout>
+    </>
   );
 }
-
