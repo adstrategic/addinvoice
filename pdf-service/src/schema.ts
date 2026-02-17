@@ -11,6 +11,8 @@ export const invoicePdfPayloadSchema = z.object({
     discount: z.number(),
     totalTax: z.number(),
     total: z.number(),
+    totalPaid: z.number().optional(),
+    balance: z.number().optional(),
     notes: z.string().nullish(),
     terms: z.string().nullish(),
   }),
@@ -38,9 +40,53 @@ export const invoicePdfPayloadSchema = z.object({
       quantityUnit: z.string(),
       unitPrice: z.number(),
       tax: z.number(),
+      discountAmount: z.number().optional(),
       total: z.number(),
-    })
+    }),
   ),
 });
 
 export type InvoicePdfPayload = z.infer<typeof invoicePdfPayloadSchema>;
+
+export const receiptPdfPayloadSchema = z.object({
+  company: z.object({
+    name: z.string(),
+    logo: z.string().nullish(),
+    address: z.string().nullish(),
+  }),
+  client: z.object({
+    name: z.string(),
+    email: z.string().nullish(),
+  }),
+  invoice: z.object({
+    invoiceNumber: z.string(),
+    total: z.number(),
+    currency: z.string(),
+    status: z.string(),
+    totalPaid: z.number(),
+    balance: z.number(),
+  }),
+  payment: z.object({
+    id: z.string(),
+    amount: z.number(),
+    method: z.string(),
+    date: z.string(),
+    notes: z.string().nullish(),
+  }),
+  payments: z.array(
+    z.object({
+      date: z.string(),
+      method: z.string(),
+      amount: z.number(),
+    }),
+  ),
+});
+
+export type ReceiptPdfPayload = z.infer<typeof receiptPdfPayloadSchema>;
+
+/** Body for POST /generate-batch: array of invoice PDF payloads */
+export const invoicePdfBatchSchema = z.object({
+  payloads: z.array(invoicePdfPayloadSchema),
+});
+
+export type InvoicePdfBatchPayload = z.infer<typeof invoicePdfBatchSchema>;

@@ -40,6 +40,7 @@ export interface InvoicePdfItem {
   quantityUnit: string;
   unitPrice: number;
   tax: number;
+  discountAmount?: number;
   total: number;
 }
 
@@ -54,6 +55,8 @@ export interface InvoicePdfPayload {
     discount: number;
     totalTax: number;
     total: number;
+    totalPaid?: number;
+    balance?: number;
     notes?: string | null;
     terms?: string | null;
   };
@@ -82,6 +85,7 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
       <td class="cell-num">${escapeHtml(String(item.quantity))} ${escapeHtml(item.quantityUnit)}</td>
       <td class="cell-num">${usdFormatter.format(item.unitPrice)}</td>
       <td class="cell-num">${escapeHtml(String(item.tax))}%</td>
+      <td class="cell-num">${usdFormatter.format(item.discountAmount ?? 0)}</td>
       <td class="cell-num cell-last">${usdFormatter.format(item.total)}</td>
     </tr>`,
     )
@@ -99,12 +103,13 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
     .watermark-inner { transform: rotate(-45deg); transform-origin: center center; }
     .watermark-text { font-size: 100px; font-weight: bold; color: #000; opacity: 0.05; text-align: center; letter-spacing: 2px; }
     .content { position: relative; z-index: 1; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-    .company-header { display: flex; align-items: center; gap: 25px; flex: 1; }
-    .company-logo { width: 70px; height: 70px; object-fit: contain; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .company-header { display: flex; align-items: center; gap: 25px; flex: 1; min-width: 0; }
+    .company-logo-wrap { height: 120px; max-width: 320px; display: flex; align-items: center; flex-shrink: 0; }
+    .company-logo { max-height: 100%; width: auto; max-width: 100%; object-fit: contain; object-position: left center; display: block; }
     .invoice-info { text-align: right; }
-    .invoice-title { font-size: 28px; font-weight: bold; color: #00aaab; margin-bottom: 8px; }
-    .invoice-details { font-size: 11px; color: #666; margin-top: 2px; }
+    .invoice-title { font-size: 30px; font-weight: bold; color: #00aaab; margin-bottom: 8px; }
+    .invoice-details { font-size: 14px; color: #666; margin-top: 2px; }
     .invoice-details b { font-weight: bold; }
     .divider { border-bottom: 1px solid #000; margin: 20px 0; }
     .bill-to-section { margin-bottom: 20px; }
@@ -147,7 +152,7 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
     <div class="content">
       <div class="header">
         <div class="company-header">
-          ${company.logo ? `<img src="${escapeHtml(company.logo)}" alt="" class="company-logo" />` : ""}
+          ${company.logo ? `<div class="company-logo-wrap"><img src="${escapeHtml(company.logo)}" alt="" class="company-logo" /></div>` : ""}
         </div>
         <div class="invoice-info">
           <div class="invoice-title">INVOICE</div>
@@ -180,11 +185,12 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
         <table>
           <thead>
             <tr>
-              <th class="th-desc" style="width: 40%">DESCRIPTION</th>
-              <th style="width: 15%">QTY</th>
-              <th style="width: 15%">UNIT PRICE</th>
-              <th style="width: 15%">TAX</th>
-              <th class="th-last" style="width: 15%">TOTAL</th>
+              <th class="th-desc" style="width: 35%">DESCRIPTION</th>
+              <th style="width: 12%">QTY</th>
+              <th style="width: 13%">UNIT PRICE</th>
+              <th style="width: 10%">TAX</th>
+              <th style="width: 15%">DISCOUNT</th>
+              <th class="th-last" style="width: 15%">AMOUNT</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}
@@ -213,6 +219,19 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
           <span class="total-label">Invoice total:</span>
           <span class="total-value total-final-value">${usdFormatter.format(invoice.total)}</span>
         </div>
+        ${
+          invoice.totalPaid !== undefined && invoice.totalPaid !== null
+            ? `
+        <div class="total-row">
+          <span class="total-label">Total paid:</span>
+          <span class="total-value">${usdFormatter.format(invoice.totalPaid)}</span>
+        </div>
+        <div class="total-row">
+          <span class="total-label">Balance to pay:</span>
+          <span class="total-value">${usdFormatter.format(invoice.balance!)}</span>
+        </div>`
+            : ""
+        }
       </div>
       ${
         invoice.notes || invoice.terms
