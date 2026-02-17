@@ -1,5 +1,6 @@
 import type React from "react";
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
@@ -8,6 +9,8 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { ClerkTokenProvider } from "@/components/providers/clerk-token-provider";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
+import { TourProvider } from "@/components/tour/TourContext";
+import { TourOverlay } from "@/components/tour/TourOverlay";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -29,7 +32,12 @@ export default function RootLayout({
         <body className={`font-sans antialiased`}>
           <ThemeProvider defaultTheme="light" storageKey="adinvoices-theme">
             <QueryProvider>
-              <ClerkTokenProvider>{children}</ClerkTokenProvider>
+              <ClerkTokenProvider>
+                <TourProvider>
+                  <TourOverlay />
+                  {children}
+                </TourProvider>
+              </ClerkTokenProvider>
             </QueryProvider>
             <Toaster />
           </ThemeProvider>
