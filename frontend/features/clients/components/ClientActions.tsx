@@ -23,13 +23,16 @@ export function ClientActions({ onOpenCreateModal }: ClientActionsProps) {
   return (
     <div className="flex gap-2">
       {/* Primary Action - Create Client */}
-      <Button onClick={onOpenCreateModal} className="gap-2">
-        <Plus className="h-4 w-4" />
-        Add Client
-      </Button>
+      <div data-tour-id="clients-create-btn">
+        <Button onClick={onOpenCreateModal} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add Client
+        </Button>
+      </div>
 
       {/* Secondary Actions */}
-      <DropdownMenu>
+      {/* TODO: Add export and import functionality */}
+      {/* <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon">
             <Download className="h-4 w-4" />
@@ -45,7 +48,7 @@ export function ClientActions({ onOpenCreateModal }: ClientActionsProps) {
             Import Clients
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+      </DropdownMenu> */}
     </div>
   );
 }

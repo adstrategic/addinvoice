@@ -23,9 +23,9 @@ import type { ClientResponse } from "@/features/clients";
 
 interface ClientCardProps {
   client: ClientResponse;
-  onViewDetails: (clientId: number) => void;
+  onViewDetails: (sequence: number) => void;
   onEdit: (sequence: number) => void;
-  onViewInvoices: (client: ClientResponse) => void;
+  // onViewInvoices: (client: ClientResponse) => void;
   onSendEmail: (client: ClientResponse) => void;
   onDelete: (client: ClientResponse) => void;
 }
@@ -38,12 +38,10 @@ export function ClientCard({
   client,
   onViewDetails,
   onEdit,
-  onViewInvoices,
+  // onViewInvoices,
   onSendEmail,
   onDelete,
 }: ClientCardProps) {
-  console.log(client);
-
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-secondary/50 border border-border hover:border-primary/50 transition-colors">
       <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
@@ -55,12 +53,14 @@ export function ClientCard({
             <p className="font-semibold text-foreground text-sm sm:text-base">
               {client.name}
             </p>
-            <Badge
-              variant="default"
-              className="bg-primary/20 text-primary hover:bg-primary/30"
-            >
-              {client.businessName}
-            </Badge>
+            {client.businessName && (
+              <Badge
+                variant="default"
+                className="bg-primary/20 text-primary hover:bg-primary/30"
+              >
+                {client.businessName}
+              </Badge>
+            )}
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
             {client.email && (
@@ -98,7 +98,7 @@ export function ClientCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onViewDetails(client.id)}>
+            <DropdownMenuItem onClick={() => onViewDetails(client.sequence)}>
               <Eye className="h-4 w-4 mr-2" />
               View Details
             </DropdownMenuItem>
@@ -106,10 +106,11 @@ export function ClientCard({
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onViewInvoices(client)}>
+            {/* TODO: Add view invoices functionality */}
+            {/* <DropdownMenuItem onClick={() => onViewInvoices(client)}>
               <FileText className="h-4 w-4 mr-2" />
               View Invoices
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             {client.email && (
               <DropdownMenuItem onClick={() => onSendEmail(client)}>
                 <Mail className="h-4 w-4 mr-2" />

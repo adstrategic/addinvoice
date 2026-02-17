@@ -46,13 +46,15 @@ export function useClients(params?: ListClientsParams) {
 
 /**
  * Hook to fetch a single client by sequence
+ * Uses placeholderData to prevent loading flashes when data exists in cache
  */
 export function useClientBySequence(sequence: number | null, enabled: boolean) {
   return useQuery({
-    queryKey: clientKeys.bySequence(sequence!),
+    queryKey: clientKeys.bySequence(sequence ?? 0),
     queryFn: () => clientsService.getBySequence(sequence!),
-    enabled,
+    enabled: enabled && sequence != null,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    placeholderData: (previousData) => previousData,
   });
 }
 

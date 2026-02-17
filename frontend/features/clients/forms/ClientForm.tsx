@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BasicInfoFields } from "./form-fields/BasicInfoFields";
 import { ContactFields } from "./form-fields/ContactFields";
+import { ReminderFields } from "./form-fields/ReminderFields";
 // import { BusinessTermsFields } from "./form-fields/BusinessTermsFields";
 // import { CiudadSelector } from "@/components/shared/selectors/ciudad-selector";
 // import { VendedorSelector } from "@/components/shared/selectors/vendedor-selector";
@@ -88,6 +89,19 @@ export function ClientForm({
             </p>
           </div>
           <ContactFields control={form.control} isLoading={isLoading} />
+        </div>
+
+        <Separator />
+
+        {/* Reminder settings */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-base font-medium">Invoice reminders</h3>
+            <p className="text-sm text-muted-foreground">
+              Optional: how often to send payment reminders for this client.
+            </p>
+          </div>
+          <ReminderFields control={form.control} isLoading={isLoading} />
         </div>
 
         {/* <Separator />

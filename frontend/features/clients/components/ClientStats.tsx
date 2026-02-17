@@ -25,10 +25,9 @@ export function ClientStats({ clients }: ClientStatsProps) {
       createdDate.getFullYear() === currentYear
     );
   }).length;
-  const totalRevenue = 0;
 
   return (
-    <div className="grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-4">
+    <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 md:grid-cols-3">
       <Card className="bg-card border-border">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
@@ -67,20 +66,6 @@ export function ClientStats({ clients }: ClientStatsProps) {
         <CardContent>
           <div className="text-xl sm:text-2xl font-bold text-foreground">
             {newThisMonth}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
-            Total Revenue
-          </CardTitle>
-          <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-xl sm:text-2xl font-bold text-foreground">
-            ${totalRevenue.toLocaleString()}
           </div>
         </CardContent>
       </Card>

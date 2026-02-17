@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { DefaultValues, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type CreateClientDto,
@@ -17,13 +17,21 @@ import { useFormScroll } from "@/hooks/useFormScroll";
 
 interface UseClientManagerOptions {
   onAfterSubmit?: () => void;
+  mode?: "create" | "edit";
+  sequence?: number;
 }
 
 export function useClientManager(options?: UseClientManagerOptions) {
   // === ESTADO UI ===
   const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState<"create" | "edit">("create");
-  const [clientSequence, setClientSequence] = useState<number | null>(null);
+  const [mode, setMode] = useState<"create" | "edit">(
+    options?.mode ?? "create",
+  );
+  const [clientSequence, setClientSequence] = useState<number | null>(
+    options?.mode === "edit" && options?.sequence != null
+      ? options.sequence
+      : null,
+  );
 
   // === DATA FETCHING ===
   const {
@@ -32,14 +40,14 @@ export function useClientManager(options?: UseClientManagerOptions) {
     error: clientError,
   } = useClientBySequence(
     clientSequence || 0,
-    mode === "edit" && !!clientSequence
+    mode === "edit" && !!clientSequence,
   );
 
   // === ACCIONES ===
   const actions = useClientActions();
 
   // === CONFIGURACIÓN DEL FORMULARIO ===
-  const defaultValues: CreateClientDto = {
+  const defaultValues: DefaultValues<CreateClientDto> = {
     name: "",
     email: "",
     phone: "",
@@ -60,6 +68,10 @@ export function useClientManager(options?: UseClientManagerOptions) {
         address: existingClient.address || "",
         nit: existingClient.nit || "",
         businessName: existingClient.businessName || "",
+        reminderBeforeDueIntervalDays:
+          existingClient.reminderBeforeDueIntervalDays,
+        reminderAfterDueIntervalDays:
+          existingClient.reminderAfterDueIntervalDays,
       };
     }
     return undefined;
@@ -126,7 +138,7 @@ export function useClientManager(options?: UseClientManagerOptions) {
 
           await actions.handleUpdate(
             existingClient.id,
-            apiData as UpdateClientDto
+            apiData as UpdateClientDto,
           );
         } else {
           await actions.handleCreate(apiData as CreateClientDto);
@@ -143,7 +155,7 @@ export function useClientManager(options?: UseClientManagerOptions) {
       if (firstErrorField) {
         scrollToField(firstErrorField);
       }
-    }
+    },
   );
 
   return {

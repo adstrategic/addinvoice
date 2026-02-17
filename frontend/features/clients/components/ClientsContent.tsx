@@ -15,12 +15,14 @@ import { useDebouncedTableParams } from "@/hooks/useDebouncedTableParams";
 import { Card, CardContent } from "@/components/ui/card";
 import LoadingComponent from "@/components/loading-component";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
+import { useRouter } from "next/navigation";
 
 /**
  * Clients page component
  * Displays client list with server-side search, pagination, stats, and management actions
  */
 export default function ClientsPage() {
+  const router = useRouter();
   const { currentPage, setPage, debouncedSearch, searchTerm, setSearch } =
     useDebouncedTableParams();
 
@@ -72,7 +74,7 @@ export default function ClientsPage() {
 
   return (
     <>
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="mt-16 sm:mt-0 container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
@@ -94,10 +96,12 @@ export default function ClientsPage() {
         {/* Clients List */}
         <ClientList
           clients={clients}
-          onViewDetails={() => {}}
+          onViewDetails={(sequence) => router.push(`/clients/${sequence}`)}
           onEdit={clientManager.openEdit}
-          onViewInvoices={() => {}}
-          onSendEmail={() => {}}
+          // onViewInvoices={(client) => router.push("/invoices")}
+          onSendEmail={(client) => {
+            if (client.email) window.location.href = `mailto:${client.email}`;
+          }}
           onDelete={clientDelete.openDeleteModal}
         >
           {pagination && (

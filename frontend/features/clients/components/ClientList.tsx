@@ -7,9 +7,9 @@ import type { ClientResponse } from "@/features/clients";
 
 interface ClientListProps {
   clients: ClientResponse[];
-  onViewDetails: (clientId: number) => void;
+  onViewDetails: (sequence: number) => void;
   onEdit: (sequence: number) => void;
-  onViewInvoices: (client: ClientResponse) => void;
+  // onViewInvoices: (client: ClientResponse) => void;
   onSendEmail: (client: ClientResponse) => void;
   onDelete: (client: ClientResponse) => void;
   children: React.ReactNode;
@@ -24,12 +24,12 @@ export function ClientList({
   clients,
   onViewDetails,
   onEdit,
-  onViewInvoices,
+  // onViewInvoices,
   onSendEmail,
   onDelete,
 }: ClientListProps) {
   return (
-    <Card className="bg-card border-border">
+    <Card data-tour-id="clients-list" className="bg-card border-border">
       <CardHeader>
         <CardTitle className="text-lg sm:text-xl font-bold text-foreground">
           All Clients
@@ -54,7 +54,7 @@ export function ClientList({
                 client={client}
                 onViewDetails={onViewDetails}
                 onEdit={onEdit}
-                onViewInvoices={onViewInvoices}
+                // onViewInvoices={onViewInvoices}
                 onSendEmail={onSendEmail}
                 onDelete={onDelete}
               />

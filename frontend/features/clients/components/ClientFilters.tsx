@@ -13,18 +13,14 @@ export function ClientFilters({
   onSearchChange,
 }: ClientFiltersProps) {
   return (
-    <Card className="mb-4 sm:mb-6 bg-card border-border">
-      <CardContent className="pt-4 sm:pt-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search clients..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
-      </CardContent>
-    </Card>
+    <div className="relative mb-4 sm:mb-6 " data-tour-id="clients-search">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Input
+        placeholder="Search clients..."
+        className="pl-10"
+        value={searchTerm}
+        onChange={(e) => onSearchChange(e.target.value)}
+      />
+    </div>
   );
 }

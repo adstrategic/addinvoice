@@ -29,17 +29,23 @@ export const createClientSchema = z.object({
       .trim()
       .regex(
         /^\+[1-9]\d{1,14}$/,
-        "The phone must have a valid international format (e.g. +573011234567)"
-      )
+        "The phone must have a valid international format (e.g. +573011234567)",
+      ),
   ),
   address: nullableOptional(
-    z.string().trim().max(100, "Address cannot exceed 100 characters")
+    z.string().trim().max(100, "Address cannot exceed 100 characters"),
   ),
   nit: nullableOptional(
-    z.string().trim().max(15, "NIT/Cedula cannot exceed 15 characters")
+    z.string().trim().max(15, "NIT/Cedula cannot exceed 15 characters"),
   ),
   businessName: nullableOptional(
-    z.string().trim().max(100, "Business name cannot exceed 100 characters")
+    z.string().trim().max(100, "Business name cannot exceed 100 characters"),
+  ),
+  reminderBeforeDueIntervalDays: nullableOptional(
+    z.number().int().positive("Must be a positive number of days"),
+  ),
+  reminderAfterDueIntervalDays: nullableOptional(
+    z.number().int().positive("Must be a positive number of days"),
   ),
 });
 
@@ -58,7 +64,6 @@ export const clientResponseSchema = createClientSchema.extend({
   workspaceId: z.number().int().positive(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-  deletedAt: z.string().datetime().nullable(),
 });
 
 /**
