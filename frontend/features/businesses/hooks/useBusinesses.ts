@@ -7,10 +7,9 @@ import {
   type BusinessResponse,
   type BusinessResponseList,
 } from "@/features/businesses";
+import type { ListBusinessesParams as ListBusinessesParamsSchema } from "../schema/businesses.schema";
 
-type ListBusinessesParams = {
-  page?: number;
-  search?: string;
+type ListBusinessesParams = ListBusinessesParamsSchema & {
   enabled?: boolean;
   initialData?: BusinessResponseList;
 };

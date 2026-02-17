@@ -33,3 +33,10 @@ export {
 } from "./hooks/useBusinesses";
 
 export { useBusinessDelete } from "./hooks/useBusinessDelete";
+
+// Components
+export {
+  CreateCompanyForm,
+  type CreateCompanyFormProps,
+  type CreateCompanyFormValues,
+} from "./components/CreateCompanyForm";
