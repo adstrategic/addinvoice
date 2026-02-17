@@ -142,6 +142,12 @@ const baseInvoiceSchema = z.object({
     .nullish(),
   notes: z.string().trim().max(2000).nullish(),
   terms: z.string().trim().max(2000).nullish(),
+  selectedPaymentMethodId: z.coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .optional(),
   // Items
   items: z.array(invoiceItemSchema).optional(),
 });
@@ -339,6 +345,7 @@ export const invoiceEntitySchema = baseInvoiceSchema
     paymentLink: z.string().nullable(),
     paymentProvider: z.string().nullable(),
     balance: z.number(),
+    selectedPaymentMethodId: z.number().int().nullable(),
 
     sentAt: z.date().nullable(),
     viewedAt: z.date().nullable(),
@@ -351,11 +358,24 @@ export const invoiceEntitySchema = baseInvoiceSchema
     clientData: true,
   });
 
+/**
+ * Minimal schema for invoice's selected payment method relation
+ */
+export const invoiceSelectedPaymentMethodSchema = z.object({
+  id: z.number().int().positive(),
+  type: z.enum(["PAYPAL", "VENMO", "ZELLE"]),
+  handle: z.string().nullable(),
+  isEnabled: z.boolean(),
+});
+
 export const invoiceEntityWithRelationsSchema = invoiceEntitySchema.extend({
   business: businessEntitySchema,
   client: clientEntitySchema,
   items: z.array(invoiceItemEntitySchema).optional(),
   payments: z.array(paymentEntitySchema).optional(),
+  selectedPaymentMethod: invoiceSelectedPaymentMethodSchema
+    .nullable()
+    .optional(),
 });
 
 /**

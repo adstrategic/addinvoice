@@ -476,6 +476,7 @@ export async function getInvoiceBySequence(
         orderBy: { paidAt: "desc" },
       },
       client: true,
+      selectedPaymentMethod: true,
     },
   });
 
@@ -519,6 +520,7 @@ export async function getInvoiceBySequence(
         | null
         | undefined,
     },
+    selectedPaymentMethod: invoice.selectedPaymentMethod,
   };
 }
 
@@ -542,6 +544,7 @@ export async function getInvoiceById(
         orderBy: { paidAt: "desc" },
       },
       client: true,
+      selectedPaymentMethod: true,
     },
   });
 
@@ -585,6 +588,7 @@ export async function getInvoiceById(
         | null
         | undefined,
     },
+    selectedPaymentMethod: invoice.selectedPaymentMethod,
   };
 }
 
@@ -601,6 +605,7 @@ export function buildInvoicePdfPayload(invoice: InvoiceEntityWithRelations): {
   client: ClientEntity;
   company: BusinessEntity;
   items: InvoiceItemEntity[];
+  paymentMethod: { type: string; handle: string | null } | null;
 } {
   const invoiceDiscountFixed =
     invoice.discountType === "PERCENTAGE"
@@ -676,6 +681,15 @@ export function buildInvoicePdfPayload(invoice: InvoiceEntityWithRelations): {
         total: Number(item.total ?? 0),
       };
     }),
+    paymentMethod:
+      invoice.selectedPaymentMethod &&
+      invoice.selectedPaymentMethod.isEnabled &&
+      invoice.selectedPaymentMethod.handle?.trim()
+        ? {
+            type: invoice.selectedPaymentMethod.type,
+            handle: invoice.selectedPaymentMethod.handle.trim(),
+          }
+        : null,
   };
 }
 
@@ -1050,6 +1064,7 @@ export async function createInvoice(
         balance: totals.total,
         notes: data.notes,
         terms: data.terms,
+        selectedPaymentMethodId: data.selectedPaymentMethodId ?? null,
         items: {
           create: itemsToCreate,
         },
@@ -1130,6 +1145,7 @@ export async function updateInvoice(
       clientAddress,
       createClient,
       clientData,
+      selectedPaymentMethodId,
       ...invoiceData
     } = data;
     let updateData: Prisma.InvoiceUpdateInput = { ...invoiceData };
@@ -1356,8 +1372,19 @@ export async function updateInvoice(
                 ? { id: clientId }
                 : undefined,
         },
+        ...(selectedPaymentMethodId !== undefined && {
+          selectedPaymentMethod:
+            selectedPaymentMethodId != null
+              ? { connect: { id: selectedPaymentMethodId } }
+              : { disconnect: true },
+        }),
       },
-      include: { items: true, client: true, business: true },
+      include: {
+        items: true,
+        client: true,
+        business: true,
+        selectedPaymentMethod: true,
+      },
     });
 
     await updateInvoiceBalanceAndStatus(tx, id, Number(updatedInvoice.total));
@@ -1392,6 +1419,7 @@ export async function updateInvoice(
         tax: Number(item.tax),
         total: Number(item.total),
       })),
+      selectedPaymentMethod: updatedInvoice.selectedPaymentMethod ?? undefined,
     };
   });
 }

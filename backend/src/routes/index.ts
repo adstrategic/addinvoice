@@ -10,6 +10,7 @@ import { catalogRoutes } from "../features/catalog/catalog.routes";
 import { dashboardRoutes } from "../features/dashboard/dashboard.routes";
 import { paymentsRoutes } from "../features/payments/payments.routes";
 import { subscriptionsRoutes } from "../features/subscriptions/subscriptions.routes";
+import { workspaceRoutes } from "../features/workspace/workspace.routes";
 import { livekitRouter } from "./livekit.routes";
 
 export const apiRouter = Router();
@@ -35,9 +36,10 @@ apiRouter.use((req, res, next) => {
 // Apply business requirement to all routes EXCEPT businesses and subscription routes
 // This allows users to create their first business and access the setup flow
 apiRouter.use((req, res, next) => {
-  // Skip business check for /businesses and /subscription routes
+  // Skip business check for /businesses, /workspace, and /subscription routes
   if (
     req.path.startsWith("/businesses") ||
+    req.path.startsWith("/workspace") ||
     req.path.startsWith("/subscription")
   ) {
     return next();
@@ -54,6 +56,7 @@ apiRouter.use("/businesses", businessesRoutes);
 apiRouter.use("/catalog", catalogRoutes);
 apiRouter.use("/dashboard", dashboardRoutes);
 apiRouter.use("/payments", paymentsRoutes);
+apiRouter.use("/workspace", workspaceRoutes);
 apiRouter.use("/livekit", livekitRouter);
 // TODO: Add other feature routes
 // apiRouter.use("/estimates", estimatesRoutes);

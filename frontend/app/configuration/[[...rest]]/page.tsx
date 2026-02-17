@@ -39,16 +39,23 @@ import {
   SettingsIcon,
   CheckCircle2,
   LogOut,
+  CreditCard,
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useBusinesses, useCreateBusiness } from "@/features/businesses";
+import {
+  useWorkspacePaymentMethods,
+  useUpsertPaymentMethod,
+  type PaymentMethodType,
+} from "@/features/workspace";
 import { CreateCompanyDialog } from "../../../features/businesses/components/CreateCompanyDialog";
 import { CompanyCards } from "../../../features/businesses/components/CompanyCards";
 import { useBusinessDelete } from "@/features/businesses/hooks/useBusinessDelete";
 import { SignOutButton, UserProfile } from "@clerk/nextjs";
 import { Separator } from "@/components/ui/separator";
 import { SubscriptionManager } from "@/components/subscription/subscription-manager";
+import Image from "next/image";
 
 type InvoiceConfig = {
   prefix: string;
@@ -109,6 +116,69 @@ export default function ConfigurationPage() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [showCreateCompanyDialog, setShowCreateCompanyDialog] = useState(false);
+
+  const { data: paymentMethodsList } = useWorkspacePaymentMethods();
+  const upsertPaymentMethod = useUpsertPaymentMethod();
+
+  const PAYMENT_METHOD_TYPES: PaymentMethodType[] = [
+    "PAYPAL",
+    "VENMO",
+    "ZELLE",
+  ];
+  const [localPaymentState, setLocalPaymentState] = useState<
+    Record<PaymentMethodType, { isEnabled: boolean; handle: string | null }>
+  >({
+    PAYPAL: { isEnabled: false, handle: null },
+    VENMO: { isEnabled: false, handle: null },
+    ZELLE: { isEnabled: false, handle: null },
+  });
+
+  useEffect(() => {
+    if (!paymentMethodsList) return;
+    setLocalPaymentState((prev) => {
+      const next = { ...prev };
+      for (const type of PAYMENT_METHOD_TYPES) {
+        const m = paymentMethodsList.find((x) => x.type === type);
+        next[type] = {
+          isEnabled: m?.isEnabled ?? false,
+          handle: m?.handle ?? null,
+        };
+      }
+      return next;
+    });
+  }, [paymentMethodsList]);
+
+  const handlePaymentToggle = (type: PaymentMethodType, isEnabled: boolean) => {
+    const current = localPaymentState[type];
+    setLocalPaymentState((prev) => ({
+      ...prev,
+      [type]: { ...prev[type], isEnabled },
+    }));
+    upsertPaymentMethod.mutate({
+      type,
+      dto: { isEnabled, handle: current.handle },
+    });
+  };
+
+  const handlePaymentHandleChange = (
+    type: PaymentMethodType,
+    handle: string | null,
+  ) => {
+    setLocalPaymentState((prev) => ({
+      ...prev,
+      [type]: { ...prev[type], handle },
+    }));
+  };
+
+  const handleSavePaymentSettings = () => {
+    for (const type of PAYMENT_METHOD_TYPES) {
+      const state = localPaymentState[type];
+      upsertPaymentMethod.mutate({
+        type,
+        dto: { isEnabled: state.isEnabled, handle: state.handle },
+      });
+    }
+  };
 
   const handleAddCompany = () => {
     setShowCreateCompanyDialog(true);
@@ -216,8 +286,12 @@ export default function ConfigurationPage() {
               <Building2 className="h-4 w-4" />
               Company
             </TabsTrigger>
+            <TabsTrigger id="config-billing" value="payments" className="gap-2">
+              <CreditCard className="h-4 w-4" />
+              Payments
+            </TabsTrigger>
             {/* <TabsTrigger value="invoices" className="gap-2">
-              <FileText className="h-4 w-4" />
+              <FileText className="h-4 w-4" />  
               Invoices
             </TabsTrigger>
             <TabsTrigger
@@ -285,6 +359,133 @@ export default function ConfigurationPage() {
                 setShowSuccessDialog(true);
               }}
             />
+          </TabsContent>
+
+          <TabsContent value="payments" className="space-y-6">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle>Payment Methods</CardTitle>
+                <CardDescription>
+                  Configure how you accept payments. When enabled, add the
+                  account or link where you receive payments.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {PAYMENT_METHOD_TYPES.map((type) => {
+                  const state = localPaymentState[type];
+                  const labels: Record<
+                    PaymentMethodType,
+                    { name: string; placeholder: string; label: string }
+                  > = {
+                    PAYPAL: {
+                      name: "PayPal",
+                      placeholder: "e.g., paypal.me/you or email@example.com",
+                      label: "PayPal account (email or PayPal.me link)",
+                    },
+                    VENMO: {
+                      name: "Venmo",
+                      placeholder: "e.g., @username",
+                      label: "Venmo username",
+                    },
+                    ZELLE: {
+                      name: "Zelle",
+                      placeholder: "e.g., email@example.com or phone number",
+                      label: "Zelle (email or phone)",
+                    },
+                  };
+                  const { name, placeholder, label } = labels[type];
+                  return (
+                    <div
+                      key={type}
+                      className="space-y-3 p-4 rounded-lg bg-secondary/50 border border-border"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-4">
+                          {type === "PAYPAL" && (
+                            <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center border border-border overflow-hidden p-2">
+                              <Image
+                                src="/images/PayPal-icon.png"
+                                alt="PayPal"
+                                width={24}
+                                height={24}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                          )}
+                          {type === "VENMO" && (
+                            <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center border border-border overflow-hidden p-2">
+                              <Image
+                                src="/images/venmo-icon.png"
+                                alt="Zelle"
+                                width={24}
+                                height={24}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                          )}
+                          {type === "ZELLE" && (
+                            <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center border border-border overflow-hidden p-2">
+                              <Image
+                                src="/images/zelle-icon.png"
+                                alt="Zelle"
+                                width={24}
+                                height={24}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-semibold text-foreground">
+                              {name}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Accept {name} payments on your invoices
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={state.isEnabled}
+                          onCheckedChange={(v) => handlePaymentToggle(type, v)}
+                        />
+                      </div>
+                      {state.isEnabled && (
+                        <div className="pl-14">
+                          <Label
+                            htmlFor={`${type}-handle`}
+                            className="text-muted-foreground"
+                          >
+                            {label}
+                          </Label>
+                          <Input
+                            id={`${type}-handle`}
+                            value={state.handle ?? ""}
+                            onChange={(e) =>
+                              handlePaymentHandleChange(
+                                type,
+                                e.target.value || null,
+                              )
+                            }
+                            placeholder={placeholder}
+                            className="mt-1"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                <div className="flex justify-end pt-4">
+                  <Button
+                    className="gap-2"
+                    disabled={upsertPaymentMethod.isPending}
+                    onClick={handleSavePaymentSettings}
+                  >
+                    <Save className="h-4 w-4" />
+                    Save Settings
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <CreateCompanyDialog

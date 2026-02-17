@@ -100,6 +100,7 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       clientId: 0,
       businessId: business?.id ?? 0,
       invoiceNumber: "",
+      selectedPaymentMethodId: null,
     };
     if (!business) return base;
     return {
@@ -275,6 +276,7 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
         customHeader: formValues.customHeader,
         notes: formValues.notes,
         terms: formValues.terms,
+        selectedPaymentMethodId: formValues.selectedPaymentMethodId ?? null,
         // Conditionally include client fields based on create new client mode
         ...(isCreatingNewClient
           ? {

@@ -44,6 +44,12 @@ export const invoicePdfPayloadSchema = z.object({
       total: z.number(),
     }),
   ),
+  paymentMethod: z
+    .object({
+      type: z.string(),
+      handle: z.string(),
+    })
+    .nullish(),
 });
 
 export type InvoicePdfPayload = z.infer<typeof invoicePdfPayloadSchema>;

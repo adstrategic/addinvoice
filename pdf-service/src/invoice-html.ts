@@ -15,6 +15,11 @@ function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString();
 }
 
+function capitalize(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
 export interface InvoicePdfClient {
   name: string;
   businessName?: string | null;
@@ -63,6 +68,7 @@ export interface InvoicePdfPayload {
   client: InvoicePdfClient;
   company: InvoicePdfBusiness;
   items: InvoicePdfItem[];
+  paymentMethod?: { type: string; handle: string | null } | null;
 }
 
 export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
@@ -139,6 +145,9 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
     .total-final-value { color: #00aaab; }
     .notes-section { margin-top: 30px; padding-top: 10px; border-top: 1px solid #000; font-size: 11px; }
     .notes-title { font-weight: bold; margin-bottom: 4px; }
+    .payment-method-section { margin-top: 16px; font-size: 11px; border: 1px solid #00aaab; padding: 8px; }
+    .payment-method-label { font-weight: bold; }
+    .payment-method-value { margin-left: 4px; }
     .footer { position: fixed; bottom: 30px; left: 32px; right: 32px; text-align: center; font-size: 9px; color: #999; }
   </style>
 </head>
@@ -233,6 +242,19 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
             : ""
         }
       </div>
+       ${
+         payload.paymentMethod
+           ? `
+      <div class="payment-method-section">
+        <span class="payment-method-label">Payment method:</span>
+        <span class="payment-method-value">
+          ${escapeHtml(capitalize(payload.paymentMethod.type))}
+          ${payload.paymentMethod.handle ? ` (${escapeHtml(payload.paymentMethod.handle)})` : ""}
+        </span>
+      </div>`
+           : ""
+       }
+      
       ${
         invoice.notes || invoice.terms
           ? `
@@ -242,6 +264,7 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
       </div>`
           : ""
       }
+     
       <div class="footer">Page 1 of 1</div>
     </div>
   </div>

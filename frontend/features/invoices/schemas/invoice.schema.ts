@@ -164,6 +164,7 @@ export const baseInvoiceSchema = z.object({
   notes: emptyStringToNull,
   terms: emptyStringToNull,
   currency: z.string().default("USD"),
+  selectedPaymentMethodId: z.coerce.number().int().positive().nullish(),
 });
 
 /**
@@ -316,9 +317,19 @@ export const invoiceItemResponseSchema = z.object({
 });
 
 /**
+ * Selected payment method on invoice (from API)
+ */
+export const invoiceSelectedPaymentMethodSchema = z.object({
+  id: z.number().int().positive(),
+  type: z.enum(["PAYPAL", "VENMO", "ZELLE"]),
+  handle: z.string().nullable(),
+  isEnabled: z.boolean(),
+});
+
+/**
  * Invoice response schema from API
  * Matches InvoiceEntity from backend
- * Includes relations: business, client, items?, payments?
+ * Includes relations: business, client, items?, payments?, selectedPaymentMethod?
  */
 export const invoiceResponseSchema = baseInvoiceSchema
   .extend({
@@ -344,6 +355,9 @@ export const invoiceResponseSchema = baseInvoiceSchema
     client: clientResponseSchema,
     items: z.array(invoiceItemResponseSchema).optional(),
     payments: z.array(paymentResponseSchema).optional(),
+    selectedPaymentMethod: invoiceSelectedPaymentMethodSchema
+      .nullable()
+      .optional(),
   })
   .omit({
     createClient: true,

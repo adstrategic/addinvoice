@@ -41,6 +41,7 @@ model Workspace {
     payments   Payment[]
     catalogs   Catalog[]
     businesses Business[]
+    paymentMethods WorkspacePaymentMethod[]
 
     // Subscription fields (cached from Stripe - Stripe is source of truth)
     stripeCustomerId     String?             @unique
@@ -134,6 +135,29 @@ enum DiscountType {
     NONE
 }
 
+enum PaymentMethodType {
+    PAYPAL
+    VENMO
+    ZELLE
+}
+
+model WorkspacePaymentMethod {
+    id          Int               @id @default(autoincrement())
+    workspaceId Int
+    type        PaymentMethodType
+    handle      String? // e.g. paypal.me/you, @username, +15550000
+    isEnabled   Boolean           @default(true)
+    createdAt   DateTime          @default(now())
+    updatedAt   DateTime          @updatedAt
+
+    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    invoices  Invoice[]
+
+    @@unique([workspaceId, type])
+    @@index([workspaceId])
+    @@map("workspace_payment_methods")
+}
+
 model Invoice {
     id          Int @id @default(autoincrement())
     workspaceId Int
@@ -170,12 +194,14 @@ model Invoice {
     viewedAt           DateTime?
     paidAt             DateTime?
     lastReminderSentAt DateTime? // When we last sent a reminder (for interval enforcement)
+    selectedPaymentMethodId Int?
     createdAt          DateTime      @default(now())
     updatedAt          DateTime      @updatedAt
 
     workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     client    Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
     business  Business      @relation(fields: [businessId], references: [id], onDelete: Restrict)
+    selectedPaymentMethod   WorkspacePaymentMethod? @relation(fields: [selectedPaymentMethodId], references: [id], onDelete: SetNull)
     items     InvoiceItem[]
     payments  Payment[]
 

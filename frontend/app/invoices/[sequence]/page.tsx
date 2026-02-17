@@ -421,6 +421,21 @@ export default function InvoiceDetailPage() {
               </div>
             </div>
 
+            {/* Payment method (same as PDF) */}
+            {invoice.selectedPaymentMethod &&
+              invoice.selectedPaymentMethod.isEnabled &&
+              invoice.selectedPaymentMethod.handle?.trim() && (
+                <div className="pt-4 border border-primary rounded-md p-3">
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    Payment method:{" "}
+                  </span>
+                  <span className="text-sm text-foreground">
+                    {invoice.selectedPaymentMethod.type}{" "}
+                    {invoice.selectedPaymentMethod.handle.trim()}
+                  </span>
+                </div>
+              )}
+
             {/* Notes and Terms */}
             {invoice.notes && (
               <div className="pt-4 border-t border-border">

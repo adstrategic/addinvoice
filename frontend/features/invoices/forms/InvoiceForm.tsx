@@ -11,7 +11,10 @@ import {
   FileText,
   Download,
   Send,
+  CreditCard,
 } from "lucide-react";
+import { useWorkspacePaymentMethods } from "@/features/workspace";
+import Image from "next/image";
 import { BusinessResponse } from "@/features/businesses";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -75,6 +78,9 @@ export function InvoiceForm({
     taxPercentage: form.watch("taxPercentage") || null,
   };
 
+  const { data: paymentMethods } = useWorkspacePaymentMethods();
+  const enabledPaymentMethods =
+    paymentMethods?.filter((m) => m.isEnabled) ?? [];
   const hasItems = (existingInvoice?.items?.length ?? 0) > 0;
 
   // Show loading state in edit mode while invoice is loading
@@ -381,6 +387,98 @@ export function InvoiceForm({
             <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
               {/* Discounts & VAT Section */}
               <DiscountsVATSection form={form} />
+
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Payment Method
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Optional. Choose how the client can pay this invoice.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div
+                      className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${form.watch("selectedPaymentMethodId") == null ? "border-primary bg-secondary/50" : "border-border"}`}
+                      onClick={() =>
+                        form.setValue("selectedPaymentMethodId", null, {
+                          shouldDirty: true,
+                        })
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                          <CreditCard className="h-4 w-4 text-foreground" />
+                        </div>
+                        <span className="font-medium text-foreground">
+                          None
+                        </span>
+                      </div>
+                    </div>
+                    {enabledPaymentMethods.map((method) => {
+                      const labels: Record<
+                        string,
+                        { name: string; icon: "paypal" | "venmo" | "zelle" }
+                      > = {
+                        PAYPAL: { name: "PayPal", icon: "paypal" },
+                        VENMO: { name: "Venmo", icon: "venmo" },
+                        ZELLE: { name: "Zelle", icon: "zelle" },
+                      };
+                      const label = labels[method.type];
+                      const isSelected =
+                        form.watch("selectedPaymentMethodId") === method.id;
+                      return (
+                        <div
+                          key={method.id}
+                          className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${isSelected ? "border-primary bg-secondary/50" : "border-border"}`}
+                          onClick={() =>
+                            form.setValue(
+                              "selectedPaymentMethodId",
+                              method.id,
+                              { shouldDirty: true },
+                            )
+                          }
+                        >
+                          <div className="flex items-center gap-3">
+                            {label?.icon === "paypal" && (
+                              <Image
+                                src="/images/PayPal-icon.png"
+                                alt="PayPal"
+                                width={32}
+                                height={32}
+                                className="h-8 w-8 object-contain"
+                              />
+                            )}
+                            {label?.icon === "venmo" && (
+                              <Image
+                                src="/images/venmo-icon.png"
+                                alt="PayPal"
+                                width={32}
+                                height={32}
+                                className="h-8 w-8 object-contain"
+                              />
+                            )}
+                            {label?.icon === "zelle" && (
+                              <Image
+                                src="/images/zelle-icon.png"
+                                alt="Zelle"
+                                width={32}
+                                height={32}
+                                className="h-8 w-8 object-contain"
+                              />
+                            )}
+                            <span className="font-medium text-foreground">
+                              {label?.name ?? method.type}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Notes Section */}
               <NotesSection form={form} />
