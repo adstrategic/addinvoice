@@ -7,13 +7,20 @@ import type {
   createInvoiceItemSchema,
   updateInvoiceItemSchema,
   getInvoiceItemByIdSchema,
-  createPaymentSchema,
-  updatePaymentSchema,
   getPaymentByIdSchema,
   getInvoiceBySequenceSchema,
+  sendInvoiceBodySchema,
 } from "./invoices.schemas";
+import {
+  createPaymentSchema,
+  updatePaymentSchema,
+} from "../payments/payments.schemas";
+import { sendInvoiceQueue } from "../../queue/queues";
 import { TypedRequest } from "zod-express-middleware";
-import { listInvoicesSchema } from "./invoices.schemas";
+import {
+  listInvoicesSchema,
+  getNextInvoiceNumberQuerySchema,
+} from "./invoices.schemas";
 
 /**
  * GET /invoices - List all invoices
@@ -35,6 +42,7 @@ export async function listInvoices(
       limit: result.limit,
       totalPages: Math.ceil(result.total / result.limit),
     },
+    stats: result.stats,
   });
 }
 
@@ -43,13 +51,16 @@ export async function listInvoices(
  * No error handling needed - middleware handles it
  */
 export async function getNextInvoiceNumber(
-  req: TypedRequest<any, any, any>,
+  req: TypedRequest<any, typeof getNextInvoiceNumberQuerySchema, any>,
   res: Response,
 ): Promise<void> {
   const workspaceId = req.workspaceId!;
+  const { businessId } = req.query;
 
-  const nextNumber =
-    await invoicesService.getNextInvoiceNumberForWorkspace(workspaceId);
+  const nextNumber = await invoicesService.getNextInvoiceNumberForWorkspace(
+    workspaceId,
+    businessId,
+  );
 
   res.json({
     data: { invoiceNumber: nextNumber },
@@ -107,54 +118,7 @@ export async function getInvoicePdf(
     return;
   }
 
-  const payload = {
-    invoice: {
-      invoiceNumber: invoice.invoiceNumber,
-      issueDate:
-        typeof invoice.issueDate === "string"
-          ? invoice.issueDate
-          : invoice.issueDate.toISOString(),
-      dueDate:
-        typeof invoice.dueDate === "string"
-          ? invoice.dueDate
-          : invoice.dueDate.toISOString(),
-      purchaseOrder: invoice.purchaseOrder,
-      currency: invoice.currency,
-      subtotal: invoice.subtotal,
-      discount: invoice.discount,
-      totalTax: invoice.totalTax,
-      total: invoice.total,
-      notes: invoice.notes,
-      terms: invoice.terms,
-    },
-    client: {
-      name: invoice.client.name,
-      businessName: invoice.client.businessName,
-      address: invoice.client.address,
-      phone: invoice.client.phone,
-      email: invoice.client.email,
-      nit: invoice.client.nit,
-    },
-    company: {
-      name: invoice.business.name,
-      address: invoice.business.address,
-      email: invoice.business.email,
-      phone: invoice.business.phone,
-      nit: invoice.business.nit,
-      logo: invoice.business.logo,
-    },
-    items: (invoice.items || []).map((item) => {
-      return {
-        name: item.name,
-        description: item.description,
-        quantity: Number(item.quantity ?? 0),
-        quantityUnit: item.quantityUnit,
-        unitPrice: Number(item.unitPrice ?? 0),
-        tax: Number(item.tax ?? 0),
-        total: Number(item.total ?? 0),
-      };
-    }),
-  };
+  const payload = invoicesService.buildInvoicePdfPayload(invoice);
 
   try {
     const pdfResponse = await fetch(
@@ -259,8 +223,45 @@ export async function deleteInvoice(
 }
 
 /**
- * PATCH /invoices/:sequence/send - Mark invoice as sent
- * Called after email has been successfully sent from frontend
+ * POST /invoices/:sequence/send - Enqueue send invoice email (returns 202)
+ * Marks invoice as sent immediately; worker sends email. On worker failure, invoice is reverted to draft.
+ */
+export async function enqueueSendInvoice(
+  req: TypedRequest<
+    typeof getInvoiceBySequenceSchema,
+    any,
+    typeof sendInvoiceBodySchema
+  >,
+  res: Response,
+): Promise<void> {
+  const workspaceId = req.workspaceId!;
+  const { sequence } = req.params;
+  const { email, subject, message } = req.body;
+
+  const invoice = await invoicesService.getInvoiceBySequence(
+    workspaceId,
+    sequence,
+  );
+
+  await invoicesService.markInvoiceAsSent(workspaceId, invoice.id);
+
+  await sendInvoiceQueue.add("send-invoice", {
+    sequence,
+    invoiceId: invoice.id,
+    workspaceId,
+    email,
+    subject,
+    message,
+  });
+
+  res.status(202).json({
+    message: "Invoice is being sent",
+  });
+}
+
+/**
+ * PATCH /invoices/:invoiceId/send - Mark invoice as sent
+ * Called by the queue worker after email has been sent (or from frontend if sync flow).
  * No error handling needed - middleware handles it
  */
 export async function sendInvoice(

@@ -8,6 +8,7 @@ import {
   createInvoice,
   updateInvoice,
   deleteInvoice,
+  enqueueSendInvoice,
   sendInvoice,
   addInvoiceItem,
   updateInvoiceItem,
@@ -18,18 +19,22 @@ import {
 } from "./invoices.controller";
 import {
   listInvoicesSchema,
+  getNextInvoiceNumberQuerySchema,
   getInvoiceBySequenceSchema,
   getInvoiceByIdSchema,
+  sendInvoiceBodySchema,
   createInvoiceSchema,
   updateInvoiceSchema,
   createInvoiceItemSchema,
   updateInvoiceItemSchema,
   getInvoiceItemByIdSchema,
-  createPaymentSchema,
-  updatePaymentSchema,
   getPaymentByIdSchema,
 } from "./invoices.schemas";
 import asyncHandler from "../../core/async-handler";
+import {
+  createPaymentSchema,
+  updatePaymentSchema,
+} from "../payments/payments.schemas";
 
 /**
  * Invoices routes
@@ -39,7 +44,11 @@ import asyncHandler from "../../core/async-handler";
 export const invoicesRoutes = Router();
 
 // GET /api/v1/invoices/next-number - Get next suggested invoice number
-invoicesRoutes.get("/next-number", asyncHandler(getNextInvoiceNumber));
+invoicesRoutes.get(
+  "/next-number",
+  processRequest({ query: getNextInvoiceNumberQuerySchema }),
+  asyncHandler(getNextInvoiceNumber),
+);
 
 // GET /api/v1/invoices - List all invoices
 invoicesRoutes.get(
@@ -53,6 +62,16 @@ invoicesRoutes.get(
   "/:sequence/pdf",
   processRequest({ params: getInvoiceBySequenceSchema }),
   asyncHandler(getInvoicePdf),
+);
+
+// POST /api/v1/invoices/:sequence/send - Enqueue send invoice email (202)
+invoicesRoutes.post(
+  "/:sequence/send",
+  processRequest({
+    params: getInvoiceBySequenceSchema,
+    body: sendInvoiceBodySchema,
+  }),
+  asyncHandler(enqueueSendInvoice),
 );
 
 // GET /api/v1/invoices/:id - Get invoice by ID

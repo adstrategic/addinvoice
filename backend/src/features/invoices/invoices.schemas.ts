@@ -4,16 +4,12 @@ import {
   createClientSchema,
 } from "../clients/clients.schemas";
 import { businessEntitySchema } from "../businesses/businesses.schemas";
+import { paymentEntitySchema } from "../payments/payments.schemas";
+import { InvoiceStatus } from "../../generated/prisma/enums";
 
 // ===== ENUMS =====
 
-export const InvoiceStatusEnum = z.enum([
-  "DRAFT",
-  "SENT",
-  "VIEWED",
-  "PAID",
-  "OVERDUE",
-]);
+export const InvoiceStatusEnum = z.nativeEnum(InvoiceStatus);
 
 export const TaxModeEnum = z.enum(["BY_PRODUCT", "BY_TOTAL", "NONE"]);
 
@@ -24,7 +20,8 @@ export const DiscountTypeEnum = z.enum(["PERCENTAGE", "FIXED", "NONE"]);
 // ===== VALIDATION SCHEMAS (for middleware) =====
 
 /**
- * Schema for listing invoices
+ * Schema for listing invoices.
+ * status: optional string, can be a single value or comma-separated (e.g. SENT,VIEWED).
  */
 export const listInvoicesSchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
@@ -46,6 +43,13 @@ export const getInvoiceBySequenceSchema = z.object({
 });
 
 /**
+ * Schema for GET /invoices/next-number query (businessId required)
+ */
+export const getNextInvoiceNumberQuerySchema = z.object({
+  businessId: z.coerce.number().int().positive("businessId is required"),
+});
+
+/**
  * Schema for getting invoice by ID
  */
 export const getInvoiceByIdSchema = z.object({
@@ -53,6 +57,15 @@ export const getInvoiceByIdSchema = z.object({
     .number()
     .int()
     .positive("The ID must be a positive number"),
+});
+
+/**
+ * Schema for POST /invoices/:sequence/send (enqueue send invoice)
+ */
+export const sendInvoiceBodySchema = z.object({
+  email: z.string().trim().email("Valid email is required"),
+  subject: z.string().trim().min(1, "Subject is required"),
+  message: z.string().trim().min(1, "Message is required"),
 });
 
 /**
@@ -305,45 +318,6 @@ export const getInvoiceItemByIdSchema = z.object({
 });
 
 /**
- * Schema for creating a payment
- */
-export const createPaymentSchema = z.object({
-  amount: z.coerce
-    .number()
-    .positive("Payment amount must be greater than 0")
-    .or(z.string().transform((val) => parseFloat(val))),
-  paymentMethod: z
-    .string()
-    .trim()
-    .min(1, "Payment method is required")
-    .max(50, "Payment method is too long"),
-  transactionId: z
-    .string()
-    .trim()
-    .max(255, "Transaction ID is too long")
-    .nullish(),
-  details: z.string().trim().max(1000).nullish(),
-  paidAt: z.coerce.date().optional(),
-});
-
-/**
- * Schema for payment entity
- */
-export const paymentEntitySchema = createPaymentSchema.extend({
-  id: z.number().int().positive(),
-  workspaceId: z.number().int().positive(),
-  invoiceId: z.number().int().positive(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  deletedAt: z.date().nullable(),
-});
-
-/**
- * Schema for updating a payment
- */
-export const updatePaymentSchema = createPaymentSchema.partial();
-
-/**
  * Schema for getting payment by ID (invoiceId + paymentId in path)
  */
 export const getPaymentByIdSchema = getInvoiceByIdSchema.extend({
@@ -371,23 +345,34 @@ export const invoiceEntitySchema = baseInvoiceSchema
     paidAt: z.date().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    deletedAt: z.date().nullable(),
-
-    business: businessEntitySchema,
-    client: clientEntitySchema,
-    items: z.array(invoiceItemEntitySchema).optional(),
-    payments: z.array(paymentEntitySchema).optional(),
   })
   .omit({
     createClient: true,
     clientData: true,
   });
 
+export const invoiceEntityWithRelationsSchema = invoiceEntitySchema.extend({
+  business: businessEntitySchema,
+  client: clientEntitySchema,
+  items: z.array(invoiceItemEntitySchema).optional(),
+  payments: z.array(paymentEntitySchema).optional(),
+});
+
+/**
+ * Schema for payment detail (get by ID) with full invoice, client, and business.
+ * Omits invoice.payments to avoid circular schema.
+ */
+export const paymentDetailSchema = paymentEntitySchema.extend({
+  invoice: invoiceEntityWithRelationsSchema,
+});
+
 // ===== DTOs (for the service) =====
 
 export type InvoiceEntity = z.infer<typeof invoiceEntitySchema>;
 export type InvoiceItemEntity = z.infer<typeof invoiceItemEntitySchema>;
-export type PaymentEntity = z.infer<typeof paymentEntitySchema>;
+export type InvoiceEntityWithRelations = z.infer<
+  typeof invoiceEntityWithRelationsSchema
+>;
 export type ListInvoicesQuery = z.infer<typeof listInvoicesSchema>;
 export type GetInvoiceBySequenceParams = z.infer<
   typeof getInvoiceBySequenceSchema
@@ -399,6 +384,6 @@ export type InvoiceItemDto = z.infer<typeof invoiceItemSchema>;
 export type CreateInvoiceItemDto = z.infer<typeof createInvoiceItemSchema>;
 export type UpdateInvoiceItemDto = z.infer<typeof updateInvoiceItemSchema>;
 export type GetInvoiceItemByIdParams = z.infer<typeof getInvoiceItemByIdSchema>;
-export type CreatePaymentDto = z.infer<typeof createPaymentSchema>;
-export type UpdatePaymentDto = z.infer<typeof updatePaymentSchema>;
-export type GetPaymentByIdParams = z.infer<typeof getPaymentByIdSchema>;
+
+// Payment related types
+export type PaymentDetail = z.infer<typeof paymentDetailSchema>;

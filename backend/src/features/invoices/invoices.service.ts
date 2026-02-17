@@ -1,23 +1,28 @@
+import {
+  BusinessEntity,
+  businessEntitySchema,
+} from "./../businesses/businesses.schemas";
 import prisma from "../../core/db";
 import type { Prisma } from "../../generated/prisma/client";
 import type {
   ListInvoicesQuery,
   CreateInvoiceDto,
   UpdateInvoiceDto,
-  InvoiceEntity,
-  // InvoiceItemEntity,
-  // PaymentEntity,
+  InvoiceEntityWithRelations,
   CreateInvoiceItemDto,
   UpdateInvoiceItemDto,
+  InvoiceItemEntity,
+} from "./invoices.schemas";
+import {
+  PaymentEntity,
   CreatePaymentDto,
   UpdatePaymentDto,
-  InvoiceItemEntity,
-  PaymentEntity,
-} from "./invoices.schemas";
+} from "../payments/payments.schemas";
 import {
   EntityNotFoundError,
   EntityValidationError,
 } from "../../errors/EntityErrors";
+import { ClientEntity } from "../clients/clients.schemas";
 
 // ===== HELPER FUNCTIONS =====
 
@@ -61,8 +66,8 @@ export function calculateItemTotal(
     taxAmount = (itemTotalAfterDiscount * invoiceTaxPercentage) / 100;
   }
 
-  // 4. Final item total
-  return itemTotalAfterDiscount + taxAmount;
+  // 4. Final item total without tax so the tax is not added in the item but on the invoice level
+  return itemTotalAfterDiscount;
 }
 
 /**
@@ -159,9 +164,10 @@ function extractNumberFromInvoiceNumber(invoiceNumber: string): number | null {
  */
 async function getNextInvoiceNumber(
   tx: Prisma.TransactionClient,
+  businessId: number,
   workspaceId: number,
 ): Promise<string> {
-  return await getNextInvoiceNumberInternal(tx, workspaceId);
+  return await getNextInvoiceNumberInternal(tx, businessId, workspaceId);
 }
 
 /**
@@ -170,8 +176,9 @@ async function getNextInvoiceNumber(
  */
 export async function getNextInvoiceNumberForWorkspace(
   workspaceId: number,
+  businessId: number,
 ): Promise<string> {
-  return await getNextInvoiceNumberInternal(prisma, workspaceId);
+  return await getNextInvoiceNumberInternal(prisma, businessId, workspaceId);
 }
 
 /**
@@ -180,6 +187,7 @@ export async function getNextInvoiceNumberForWorkspace(
  */
 async function getNextInvoiceNumberInternal(
   client: Prisma.TransactionClient | typeof prisma,
+  businessId: number,
   workspaceId: number,
 ): Promise<string> {
   // Get workspace to get invoice prefix
@@ -195,7 +203,8 @@ async function getNextInvoiceNumberInternal(
     const lastInvoiceWithPrefix = await client.invoice.findFirst({
       where: {
         workspaceId,
-        deletedAt: null,
+        businessId,
+
         invoiceNumber: {
           startsWith: prefix,
         },
@@ -231,7 +240,7 @@ async function getNextInvoiceNumberInternal(
     const lastInvoice = await client.invoice.findFirst({
       where: {
         workspaceId,
-        deletedAt: null,
+        businessId,
       },
       orderBy: {
         invoiceNumber: "desc",
@@ -285,7 +294,6 @@ async function handleCatalogIntegration(
       workspaceId,
       businessId,
       name: itemData.name,
-      deletedAt: null,
     },
     select: {
       id: true,
@@ -302,8 +310,6 @@ async function handleCatalogIntegration(
   const lastCatalog = await tx.catalog.findFirst({
     where: {
       workspaceId,
-      businessId,
-      deletedAt: null,
     },
     orderBy: {
       sequence: "desc",
@@ -339,17 +345,32 @@ export async function listInvoices(
   workspaceId: number,
   query: ListInvoicesQuery,
 ): Promise<{
-  invoices: InvoiceEntity[];
+  invoices: InvoiceEntityWithRelations[];
   total: number;
+  stats: {
+    total: number;
+    paidCount: number;
+    pendingCount: number;
+    revenue: number;
+    totalInvoiced: number;
+    outstanding: number;
+  };
   page: number;
   limit: number;
 }> {
-  const { page, limit, search, status, clientId, businessId } = query;
+  const {
+    page,
+    limit,
+    search,
+    status: statusParam,
+    clientId,
+    businessId,
+  } = query;
   const skip = (page - 1) * limit;
 
   const where: Prisma.InvoiceWhereInput = {
     workspaceId,
-    deletedAt: null,
+
     ...(search && {
       OR: [
         { invoiceNumber: { contains: search, mode: "insensitive" } },
@@ -357,12 +378,27 @@ export async function listInvoices(
         { client: { businessName: { contains: search, mode: "insensitive" } } },
       ],
     }),
-    ...(status && { status }),
+    // Only allowed statuses (DRAFT, SENT, PAID, OVERDUE); VIEWED excluded from filter
+    ...(statusParam && { status: statusParam }),
     ...(clientId && { clientId }),
     ...(businessId && { businessId }),
   };
 
-  const [invoices, total] = await Promise.all([
+  const wherePaid: Prisma.InvoiceWhereInput = { ...where, status: "PAID" };
+  const whereOverdue: Prisma.InvoiceWhereInput = {
+    ...where,
+    status: "OVERDUE",
+  };
+
+  const [
+    invoices,
+    total,
+    paidCount,
+    pendingCount,
+    revenueAgg,
+    totalInvoicedAgg,
+    outstandingAgg,
+  ] = await Promise.all([
     prisma.invoice.findMany({
       where,
       skip,
@@ -374,6 +410,14 @@ export async function listInvoices(
       },
     }),
     prisma.invoice.count({ where }),
+    prisma.invoice.count({ where: wherePaid }),
+    prisma.invoice.count({ where: whereOverdue }),
+    prisma.payment.aggregate({
+      where: { invoice: where },
+      _sum: { amount: true },
+    }),
+    prisma.invoice.aggregate({ where, _sum: { total: true } }),
+    prisma.invoice.aggregate({ where, _sum: { balance: true } }),
   ]);
 
   return {
@@ -386,9 +430,24 @@ export async function listInvoices(
         taxPercentage: inv.taxPercentage ? Number(inv.taxPercentage) : null,
         total: Number(inv.total),
         balance: Number(inv.balance),
+        business: {
+          ...inv.business,
+          defaultTaxPercentage: inv.business.defaultTaxPercentage
+            ? Number(inv.business.defaultTaxPercentage)
+            : null,
+          defaultTaxMode: inv.business.defaultTaxMode,
+        },
       };
     }),
     total,
+    stats: {
+      total,
+      paidCount,
+      pendingCount,
+      revenue: Number(revenueAgg._sum?.amount ?? 0),
+      totalInvoiced: Number(totalInvoicedAgg._sum?.total ?? 0),
+      outstanding: Number(outstandingAgg._sum?.balance ?? 0),
+    },
     page,
     limit,
   };
@@ -400,7 +459,7 @@ export async function listInvoices(
 export async function getInvoiceBySequence(
   workspaceId: number,
   sequence: number,
-): Promise<InvoiceEntity> {
+): Promise<InvoiceEntityWithRelations> {
   const invoice = await prisma.invoice.findUnique({
     where: {
       workspaceId_sequence: {
@@ -414,18 +473,13 @@ export async function getInvoiceBySequence(
         orderBy: { name: "asc" },
       },
       payments: {
-        where: { deletedAt: null },
         orderBy: { paidAt: "desc" },
       },
       client: true,
     },
   });
 
-  if (
-    !invoice ||
-    invoice.deletedAt !== null ||
-    invoice.workspaceId !== workspaceId
-  ) {
+  if (!invoice || invoice.workspaceId !== workspaceId) {
     throw new EntityNotFoundError({
       message: "Invoice not found",
       statusCode: 404,
@@ -453,6 +507,258 @@ export async function getInvoiceBySequence(
       ...payment,
       amount: Number(payment.amount),
     })),
+    business: {
+      ...invoice.business,
+      defaultTaxPercentage: invoice.business.defaultTaxPercentage
+        ? Number(invoice.business.defaultTaxPercentage)
+        : null,
+      defaultTaxMode: invoice.business.defaultTaxMode as
+        | "NONE"
+        | "BY_PRODUCT"
+        | "BY_TOTAL"
+        | null
+        | undefined,
+    },
+  };
+}
+
+/**
+ * Get invoice by ID with items and relations (same shape as getInvoiceBySequence).
+ * Used by the send-receipt queue worker to build the invoice PDF.
+ */
+export async function getInvoiceById(
+  workspaceId: number,
+  invoiceId: number,
+): Promise<InvoiceEntityWithRelations> {
+  const invoice = await prisma.invoice.findFirst({
+    where: {
+      id: invoiceId,
+      workspaceId,
+    },
+    include: {
+      business: true,
+      items: { orderBy: { name: "asc" } },
+      payments: {
+        orderBy: { paidAt: "desc" },
+      },
+      client: true,
+    },
+  });
+
+  if (!invoice) {
+    throw new EntityNotFoundError({
+      message: "Invoice not found",
+      statusCode: 404,
+      code: "ERR_NF",
+    });
+  }
+
+  return {
+    ...invoice,
+    subtotal: Number(invoice.subtotal),
+    totalTax: Number(invoice.totalTax),
+    discount: Number(invoice.discount),
+    taxPercentage: invoice.taxPercentage ? Number(invoice.taxPercentage) : null,
+    total: Number(invoice.total),
+    balance: Number(invoice.balance),
+    items: invoice.items.map((item) => ({
+      ...item,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+      discount: Number(item.discount),
+      tax: Number(item.tax),
+      total: Number(item.total),
+    })),
+    payments: invoice.payments.map((payment) => ({
+      ...payment,
+      amount: Number(payment.amount),
+    })),
+    business: {
+      ...invoice.business,
+      defaultTaxPercentage: invoice.business.defaultTaxPercentage
+        ? Number(invoice.business.defaultTaxPercentage)
+        : null,
+      defaultTaxMode: invoice.business.defaultTaxMode as
+        | "NONE"
+        | "BY_PRODUCT"
+        | "BY_TOTAL"
+        | null
+        | undefined,
+    },
+  };
+}
+
+/**
+ * Build the payload expected by the PDF service for invoice generation.
+ * Used by the controller (getInvoicePdf) and by the send-invoice queue worker.
+ */
+export function buildInvoicePdfPayload(invoice: InvoiceEntityWithRelations): {
+  invoice: Omit<InvoiceEntityWithRelations, "issueDate" | "dueDate"> & {
+    issueDate: string;
+    dueDate: string;
+    totalPaid?: number;
+  };
+  client: ClientEntity;
+  company: BusinessEntity;
+  items: InvoiceItemEntity[];
+} {
+  const invoiceDiscountFixed =
+    invoice.discountType === "PERCENTAGE"
+      ? (Number(invoice.subtotal) * Number(invoice.discount)) / 100
+      : invoice.discountType === "FIXED"
+        ? Number(invoice.discount)
+        : 0;
+
+  return {
+    invoice: {
+      ...invoice,
+      invoiceNumber: invoice.invoiceNumber,
+      issueDate:
+        typeof invoice.issueDate === "string"
+          ? invoice.issueDate
+          : invoice.issueDate.toISOString(),
+      dueDate:
+        typeof invoice.dueDate === "string"
+          ? invoice.dueDate
+          : invoice.dueDate.toISOString(),
+      purchaseOrder: invoice.purchaseOrder,
+      currency: invoice.currency,
+      subtotal: invoice.subtotal,
+      discount: invoiceDiscountFixed,
+      totalTax: invoice.totalTax,
+      total: invoice.total,
+      totalPaid: (invoice.payments ?? []).reduce(
+        (sum, p) => sum + Number(p.amount),
+        0,
+      ),
+      balance: Number(invoice.balance ?? 0),
+      notes: invoice.notes,
+      terms: invoice.terms,
+    },
+    client: {
+      ...invoice.client,
+      name: invoice.client!.name,
+      businessName: invoice.client!.businessName ?? null,
+      address: invoice.client!.address ?? null,
+      phone: invoice.client!.phone ?? null,
+      email: invoice.client!.email ?? null,
+      nit: invoice.client!.nit ?? null,
+    },
+    company: {
+      ...invoice.business,
+      name: invoice.business.name,
+      address: invoice.business.address ?? null,
+      email: invoice.business.email ?? null,
+      phone: invoice.business.phone ?? null,
+      nit: invoice.business.nit ?? null,
+      logo: invoice.business.logo ?? null,
+    },
+    items: (invoice.items || []).map((item) => {
+      const qty = Number(item.quantity ?? 0);
+      const unitPrice = Number(item.unitPrice ?? 0);
+      const discount = Number(item.discount ?? 0);
+      const base = qty * unitPrice;
+      const discountAmount =
+        item.discountType === "PERCENTAGE"
+          ? (base * discount) / 100
+          : item.discountType === "FIXED"
+            ? discount
+            : 0;
+      return {
+        ...item,
+        name: item.name,
+        description: item.description ?? null,
+        quantity: qty,
+        quantityUnit: item.quantityUnit,
+        unitPrice,
+        tax: Number(item.tax ?? 0),
+        discountAmount,
+        total: Number(item.total ?? 0),
+      };
+    }),
+  };
+}
+
+/**
+ * Payload for the pdf-service POST /generate-receipt endpoint.
+ * Shape must match pdf-service receiptPdfPayloadSchema.
+ */
+export interface ReceiptPdfPayload {
+  company: { name: string; logo: string | null; address: string | null };
+  client: { name: string; email: string | null };
+  invoice: {
+    invoiceNumber: string;
+    total: number;
+    currency: string;
+    status: string;
+    totalPaid: number;
+    balance: number;
+  };
+  payment: {
+    id: string;
+    amount: number;
+    method: string;
+    date: string;
+    notes: string | null;
+  };
+  payments: Array<{ date: string; method: string; amount: number }>;
+}
+
+/**
+ * Build the payload for pdf-service receipt PDF generation.
+ * Used by the send-receipt queue worker.
+ */
+export function buildReceiptPdfPayload(
+  invoice: InvoiceEntityWithRelations,
+  payment: PaymentEntity,
+): ReceiptPdfPayload {
+  const totalPaid = (invoice.payments ?? []).reduce(
+    (sum, p) => sum + Number(p.amount),
+    0,
+  );
+  const balance = Number(invoice.balance);
+  const formatDate = (d: Date | string | undefined) =>
+    d ? new Date(d).toLocaleDateString() : "";
+
+  return {
+    company: {
+      name: invoice.business.name,
+      logo: invoice.business.logo ?? null,
+      address: invoice.business.address ?? null,
+    },
+    client: {
+      name: invoice.client!.name,
+      email: invoice.clientEmail ?? invoice.client!.email ?? null,
+    },
+    invoice: {
+      invoiceNumber: invoice.invoiceNumber,
+      total: Number(invoice.total),
+      currency: invoice.currency,
+      status: invoice.status,
+      totalPaid,
+      balance,
+    },
+    payment: {
+      id: String(payment.id),
+      amount: Number(payment.amount),
+      method: payment.paymentMethod,
+      date: formatDate(payment.paidAt),
+      notes: payment.details ?? null,
+    },
+    payments: (invoice.payments ?? [])
+      .slice()
+      .sort((a, b) => {
+        const pa = (a as { paidAt?: Date }).paidAt;
+        const pb = (b as { paidAt?: Date }).paidAt;
+        return (
+          (pb ? new Date(pb).getTime() : 0) - (pa ? new Date(pa).getTime() : 0)
+        );
+      })
+      .map((p) => ({
+        date: formatDate((p as { paidAt?: Date }).paidAt),
+        method: (p as { paymentMethod: string }).paymentMethod,
+        amount: Number(p.amount),
+      })),
   };
 }
 
@@ -462,13 +768,12 @@ export async function getInvoiceBySequence(
 export async function createInvoice(
   workspaceId: number,
   data: CreateInvoiceDto,
-): Promise<InvoiceEntity> {
+): Promise<InvoiceEntityWithRelations> {
   return await prisma.$transaction(async (tx) => {
     // Check if workspace has at least one business
     const businessCount = await tx.business.count({
       where: {
         workspaceId,
-        deletedAt: null,
       },
     });
 
@@ -485,7 +790,6 @@ export async function createInvoice(
       where: {
         id: data.businessId,
         workspaceId,
-        deletedAt: null,
       },
     });
 
@@ -500,18 +804,19 @@ export async function createInvoice(
     // Generate invoice number if not provided
     let invoiceNumber = data.invoiceNumber;
     if (!invoiceNumber) {
-      invoiceNumber = await getNextInvoiceNumber(tx, workspaceId);
+      invoiceNumber = await getNextInvoiceNumber(tx, business.id, workspaceId);
     } else {
       // Check if invoice number already exists
       const existing = await tx.invoice.findUnique({
         where: {
-          workspaceId_invoiceNumber: {
+          workspaceId_businessId_invoiceNumber: {
             workspaceId,
+            businessId: data.businessId,
             invoiceNumber,
           },
         },
       });
-      if (existing && existing.deletedAt === null) {
+      if (existing) {
         throw new EntityValidationError({
           message: "Invoice number already exists",
           statusCode: 400,
@@ -534,7 +839,7 @@ export async function createInvoice(
                 where: { id: item.catalogId },
               });
 
-              if (!catalog || catalog.deletedAt !== null) {
+              if (!catalog) {
                 throw new EntityNotFoundError({
                   message: "Catalog item not found",
                   statusCode: 404,
@@ -624,7 +929,6 @@ export async function createInvoice(
     const lastInvoice = await tx.invoice.findFirst({
       where: {
         workspaceId,
-        deletedAt: null,
       },
       orderBy: {
         sequence: "desc",
@@ -647,7 +951,6 @@ export async function createInvoice(
       const lastClient = await tx.client.findFirst({
         where: {
           workspaceId,
-          deletedAt: null,
         },
         orderBy: {
           sequence: "desc",
@@ -669,6 +972,10 @@ export async function createInvoice(
           address: data.clientData.address,
           nit: data.clientData.nit,
           businessName: data.clientData.businessName,
+          reminderBeforeDueIntervalDays:
+            data.clientData.reminderBeforeDueIntervalDays,
+          reminderAfterDueIntervalDays:
+            data.clientData.reminderAfterDueIntervalDays,
         },
       });
 
@@ -756,6 +1063,13 @@ export async function createInvoice(
 
     return {
       ...invoice,
+      business: {
+        ...invoice.business,
+        defaultTaxPercentage: invoice.business.defaultTaxPercentage
+          ? Number(invoice.business.defaultTaxPercentage)
+          : null,
+        defaultTaxMode: invoice.business.defaultTaxMode,
+      },
       sequence: Number(invoice.sequence),
       subtotal: Number(invoice.subtotal),
       totalTax: Number(invoice.totalTax),
@@ -784,18 +1098,14 @@ export async function updateInvoice(
   workspaceId: number,
   id: number,
   data: UpdateInvoiceDto,
-): Promise<InvoiceEntity> {
+): Promise<InvoiceEntityWithRelations> {
   return await prisma.$transaction(async (tx) => {
     // Verify invoice exists and belongs to workspace
     const existingInvoice = await tx.invoice.findUnique({
       where: { id },
     });
 
-    if (
-      !existingInvoice ||
-      existingInvoice.deletedAt !== null ||
-      existingInvoice.workspaceId !== workspaceId
-    ) {
+    if (!existingInvoice || existingInvoice.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
         message: "Invoice not found",
         statusCode: 404,
@@ -833,7 +1143,6 @@ export async function updateInvoice(
       const lastClient = await tx.client.findFirst({
         where: {
           workspaceId,
-          deletedAt: null,
         },
         orderBy: {
           sequence: "desc",
@@ -855,6 +1164,10 @@ export async function updateInvoice(
           address: data.clientData.address,
           nit: data.clientData.nit,
           businessName: data.clientData.businessName,
+          reminderBeforeDueIntervalDays:
+            data.clientData.reminderBeforeDueIntervalDays,
+          reminderAfterDueIntervalDays:
+            data.clientData.reminderAfterDueIntervalDays,
         },
       });
 
@@ -1056,6 +1369,13 @@ export async function updateInvoice(
 
     return {
       ...updatedInvoice,
+      business: {
+        ...updatedInvoice.business,
+        defaultTaxPercentage: updatedInvoice.business.defaultTaxPercentage
+          ? Number(updatedInvoice.business.defaultTaxPercentage)
+          : null,
+        defaultTaxMode: updatedInvoice.business.defaultTaxMode,
+      },
       subtotal: Number(updatedInvoice.subtotal),
       totalTax: Number(updatedInvoice.totalTax),
       discount: Number(updatedInvoice.discount),
@@ -1089,11 +1409,7 @@ export async function deleteInvoice(
       include: { payments: true },
     });
 
-    if (
-      !existingInvoice ||
-      existingInvoice.deletedAt !== null ||
-      existingInvoice.workspaceId !== workspaceId
-    ) {
+    if (!existingInvoice || existingInvoice.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
         message: "Invoice not found",
         statusCode: 404,
@@ -1130,7 +1446,7 @@ export async function deleteInvoice(
 export async function markInvoiceAsSent(
   workspaceId: number,
   invoiceId: number,
-): Promise<InvoiceEntity> {
+): Promise<InvoiceEntityWithRelations> {
   const invoice = await prisma.invoice.findUnique({
     where: {
       id: invoiceId,
@@ -1138,11 +1454,7 @@ export async function markInvoiceAsSent(
     include: { _count: { select: { items: true } } },
   });
 
-  if (
-    !invoice ||
-    invoice.deletedAt !== null ||
-    invoice.workspaceId !== workspaceId
-  ) {
+  if (!invoice || invoice.workspaceId !== workspaceId) {
     throw new EntityNotFoundError({
       message: "Invoice not found",
       statusCode: 404,
@@ -1158,13 +1470,36 @@ export async function markInvoiceAsSent(
     });
   }
 
-  // Only update if not already sent (idempotent)
-  if (invoice.status === "SENT" && invoice.sentAt) {
-    throw new EntityValidationError({
-      message: "Invoice already sent",
-      statusCode: 400,
-      code: "ERR_VALID",
+  // Idempotent: if already sent (SENT, VIEWED, or PAID), don't overwrite status—return current state
+  if (["SENT", "VIEWED", "PAID"].includes(invoice.status) && invoice.sentAt) {
+    const existing = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: { business: true, client: true },
     });
+    if (!existing)
+      throw new EntityNotFoundError({
+        message: "Invoice not found",
+        statusCode: 404,
+        code: "ERR_NF",
+      });
+    return {
+      ...existing,
+      business: {
+        ...existing.business,
+        defaultTaxPercentage: existing.business.defaultTaxPercentage
+          ? Number(existing.business.defaultTaxPercentage)
+          : null,
+        defaultTaxMode: existing.business.defaultTaxMode,
+      },
+      subtotal: Number(existing.subtotal),
+      totalTax: Number(existing.totalTax),
+      discount: Number(existing.discount),
+      taxPercentage: existing.taxPercentage
+        ? Number(existing.taxPercentage)
+        : null,
+      total: Number(existing.total),
+      balance: Number(existing.balance),
+    };
   }
 
   const updatedInvoice = await prisma.invoice.update({
@@ -1184,6 +1519,13 @@ export async function markInvoiceAsSent(
 
   return {
     ...updatedInvoice,
+    business: {
+      ...updatedInvoice.business,
+      defaultTaxPercentage: updatedInvoice.business.defaultTaxPercentage
+        ? Number(updatedInvoice.business.defaultTaxPercentage)
+        : null,
+      defaultTaxMode: updatedInvoice.business.defaultTaxMode,
+    },
     subtotal: Number(updatedInvoice.subtotal),
     totalTax: Number(updatedInvoice.totalTax),
     discount: Number(updatedInvoice.discount),
@@ -1193,6 +1535,35 @@ export async function markInvoiceAsSent(
     total: Number(updatedInvoice.total),
     balance: Number(updatedInvoice.balance),
   };
+}
+
+/**
+ * Revert an invoice from SENT back to DRAFT (e.g. when send-invoice worker fails).
+ * No-op if invoice is not SENT.
+ */
+export async function revertInvoiceToDraft(
+  workspaceId: number,
+  invoiceId: number,
+): Promise<void> {
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+  });
+
+  if (!invoice || invoice.workspaceId !== workspaceId) {
+    return;
+  }
+
+  if (invoice.status !== "SENT") {
+    return;
+  }
+
+  await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: {
+      status: "DRAFT",
+      sentAt: null,
+    },
+  });
 }
 
 // ===== INVOICE ITEM OPERATIONS =====
@@ -1211,11 +1582,7 @@ export async function addInvoiceItem(
       where: { id: invoiceId },
     });
 
-    if (
-      !invoice ||
-      invoice.deletedAt !== null ||
-      invoice.workspaceId !== workspaceId
-    ) {
+    if (!invoice || invoice.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
         message: "Invoice not found",
         statusCode: 404,
@@ -1241,7 +1608,7 @@ export async function addInvoiceItem(
         where: { id: data.catalogId },
       });
 
-      if (!catalog || catalog.deletedAt !== null) {
+      if (!catalog) {
         throw new EntityNotFoundError({
           message: "Catalog item not found",
           statusCode: 404,
@@ -1452,11 +1819,7 @@ export async function updateInvoiceItem(
       where: { id: invoiceId },
     });
 
-    if (
-      !invoice ||
-      invoice.deletedAt !== null ||
-      invoice.workspaceId !== workspaceId
-    ) {
+    if (!invoice || invoice.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
         message: "Invoice not found",
         statusCode: 404,
@@ -1499,7 +1862,7 @@ export async function updateInvoiceItem(
           where: { id: data.catalogId },
         });
 
-        if (!catalog || catalog.deletedAt !== null) {
+        if (!catalog) {
           throw new EntityNotFoundError({
             message: "Catalog item not found",
             statusCode: 404,
@@ -1774,11 +2137,7 @@ export async function deleteInvoiceItem(
       where: { id: invoiceId },
     });
 
-    if (
-      !invoice ||
-      invoice.deletedAt !== null ||
-      invoice.workspaceId !== workspaceId
-    ) {
+    if (!invoice || invoice.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
         message: "Invoice not found",
         statusCode: 404,
@@ -1865,7 +2224,6 @@ async function updateInvoiceBalanceAndStatus(
   const payments = await tx.payment.findMany({
     where: {
       invoiceId,
-      deletedAt: null,
     },
     select: {
       amount: true,
@@ -1901,7 +2259,9 @@ async function updateInvoiceBalanceAndStatus(
   };
 
   // Update status based on balance
-  if (balance <= 0) {
+  // Only mark as PAID when there was an amount to pay (invoiceTotal > 0) and it's fully covered.
+  // When total is 0 (e.g. all items deleted), balance is 0 but we must not set PAID.
+  if (balance <= 0 && invoiceTotal > 0) {
     // Invoice is fully paid
     updateData.status = "PAID";
     if (!invoice.paidAt) {
@@ -1931,25 +2291,24 @@ async function updateInvoiceBalanceAndStatus(
 }
 
 /**
- * Add a payment to an invoice
+ * Add a payment to an invoice.
+ * If data.sendReceipt is true, enqueues a job to send a receipt email (not persisted).
  */
 export async function addPayment(
   workspaceId: number,
   invoiceId: number,
   data: CreatePaymentDto,
 ): Promise<PaymentEntity> {
-  return await prisma.$transaction(async (tx) => {
+  const { sendReceipt, ...paymentData } = data;
+
+  const payment = await prisma.$transaction(async (tx) => {
     // Verify invoice exists and belongs to workspace
     const invoice = await tx.invoice.findUnique({
       where: { id: invoiceId },
       include: { _count: { select: { items: true } } },
     });
 
-    if (
-      !invoice ||
-      invoice.deletedAt !== null ||
-      invoice.workspaceId !== workspaceId
-    ) {
+    if (!invoice || invoice.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
         message: "Invoice not found",
         statusCode: 404,
@@ -1974,31 +2333,18 @@ export async function addPayment(
     }
 
     // Check if transactionId already exists only when provided
-    const transactionId = data.transactionId ?? null;
-    if (transactionId) {
-      const existingPayment = await tx.payment.findUnique({
-        where: { transactionId },
-      });
-
-      if (existingPayment) {
-        throw new EntityValidationError({
-          message: "Transaction ID already exists",
-          statusCode: 400,
-          code: "ERR_VALID",
-        });
-      }
-    }
+    const transactionId = paymentData.transactionId ?? null;
 
     // Create payment
-    const payment = await tx.payment.create({
+    const created = await tx.payment.create({
       data: {
         workspaceId,
         invoiceId,
-        amount: data.amount,
-        paymentMethod: data.paymentMethod,
+        amount: paymentData.amount,
+        paymentMethod: paymentData.paymentMethod,
         transactionId,
-        details: data.details,
-        paidAt: data.paidAt || new Date(),
+        details: paymentData.details,
+        paidAt: paymentData.paidAt || new Date(),
       },
     });
 
@@ -2006,10 +2352,21 @@ export async function addPayment(
     await updateInvoiceBalanceAndStatus(tx, invoiceId, Number(invoice.total));
 
     return {
-      ...payment,
-      amount: Number(payment.amount),
+      ...created,
+      amount: Number(created.amount),
     } as PaymentEntity;
   });
+
+  if (sendReceipt) {
+    const { sendReceiptQueue } = await import("../../queue/queues");
+    await sendReceiptQueue.add("send-receipt", {
+      paymentId: payment.id,
+      invoiceId,
+      workspaceId,
+    });
+  }
+
+  return payment;
 }
 
 /**
@@ -2027,11 +2384,7 @@ export async function updatePayment(
       where: { id: invoiceId },
     });
 
-    if (
-      !invoice ||
-      invoice.deletedAt !== null ||
-      invoice.workspaceId !== workspaceId
-    ) {
+    if (!invoice || invoice.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
         message: "Invoice not found",
         statusCode: 404,
@@ -2044,34 +2397,12 @@ export async function updatePayment(
       where: { id: paymentId },
     });
 
-    if (
-      !existingPayment ||
-      existingPayment.invoiceId !== invoiceId ||
-      existingPayment.deletedAt !== null
-    ) {
+    if (!existingPayment || existingPayment.invoiceId !== invoiceId) {
       throw new EntityNotFoundError({
         message: "Payment not found",
         statusCode: 404,
         code: "ERR_NF",
       });
-    }
-
-    // Check transactionId uniqueness if being updated
-    if (
-      data.transactionId &&
-      data.transactionId !== existingPayment.transactionId
-    ) {
-      const duplicatePayment = await tx.payment.findUnique({
-        where: { transactionId: data.transactionId },
-      });
-
-      if (duplicatePayment) {
-        throw new EntityValidationError({
-          message: "Transaction ID already exists",
-          statusCode: 400,
-          code: "ERR_VALID",
-        });
-      }
     }
 
     // Update payment
@@ -2113,11 +2444,7 @@ export async function deletePayment(
       where: { id: invoiceId },
     });
 
-    if (
-      !invoice ||
-      invoice.deletedAt !== null ||
-      invoice.workspaceId !== workspaceId
-    ) {
+    if (!invoice || invoice.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
         message: "Invoice not found",
         statusCode: 404,
@@ -2130,11 +2457,7 @@ export async function deletePayment(
       where: { id: paymentId },
     });
 
-    if (
-      !existingPayment ||
-      existingPayment.invoiceId !== invoiceId ||
-      existingPayment.deletedAt !== null
-    ) {
+    if (!existingPayment || existingPayment.invoiceId !== invoiceId) {
       throw new EntityNotFoundError({
         message: "Payment not found",
         statusCode: 404,
@@ -2142,11 +2465,8 @@ export async function deletePayment(
       });
     }
 
-    await tx.payment.update({
+    await tx.payment.delete({
       where: { id: paymentId },
-      data: {
-        deletedAt: new Date(),
-      },
     });
 
     // Update invoice balance and status
