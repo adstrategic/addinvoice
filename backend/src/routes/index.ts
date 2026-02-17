@@ -8,6 +8,7 @@ import { invoicesRoutes } from "../features/invoices/invoices.routes";
 import { businessesRoutes } from "../features/businesses/businesses.routes";
 import { catalogRoutes } from "../features/catalog/catalog.routes";
 import { dashboardRoutes } from "../features/dashboard/dashboard.routes";
+import { paymentsRoutes } from "../features/payments/payments.routes";
 import { subscriptionsRoutes } from "../features/subscriptions/subscriptions.routes";
 import { livekitRouter } from "./livekit.routes";
 
@@ -52,6 +53,7 @@ apiRouter.use("/invoices", invoicesRoutes);
 apiRouter.use("/businesses", businessesRoutes);
 apiRouter.use("/catalog", catalogRoutes);
 apiRouter.use("/dashboard", dashboardRoutes);
+apiRouter.use("/payments", paymentsRoutes);
 apiRouter.use("/livekit", livekitRouter);
 // TODO: Add other feature routes
 // apiRouter.use("/estimates", estimatesRoutes);

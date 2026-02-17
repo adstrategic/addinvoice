@@ -35,7 +35,6 @@ export async function verifyWorkspaceAccess(
     let workspace = await prisma.workspace.findFirst({
       where: {
         clerkId: userId,
-        deletedAt: null,
       },
     });
 

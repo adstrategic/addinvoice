@@ -19,7 +19,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
-  })
+  }),
 );
 
 app.use(clerkMiddleware());
@@ -34,7 +34,7 @@ app.use(clerkMiddleware());
 app.post(
   "/api/v1/subscription/webhooks/stripe",
   express.raw({ type: "application/json" }),
-  asyncHandler(handleStripeWebhook)
+  asyncHandler(handleStripeWebhook),
 );
 
 // Clerk webhook - can use JSON body
@@ -42,7 +42,7 @@ app.use(express.json());
 
 app.post(
   "/api/v1/subscription/webhooks/clerk",
-  asyncHandler(handleClerkWebhook)
+  asyncHandler(handleClerkWebhook),
 );
 
 // Rate limiting
