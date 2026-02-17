@@ -24,6 +24,15 @@ export type QuantityUnit = "DAYS" | "HOURS" | "UNITS";
  */
 export type DiscountType = "PERCENTAGE" | "FIXED" | "NONE";
 
+/** URL/UI filter values for invoice list (single source of truth) */
+export const INVOICE_FILTER_VALUES = [
+  "all",
+  "paid",
+  "overdue",
+  "issued",
+  "draft",
+] as const;
+
 /**
  * Map backend status to UI status string
  */
@@ -33,7 +42,7 @@ export function mapStatusToUI(status: InvoiceStatus): string {
     SENT: "issued",
     VIEWED: "issued",
     PAID: "paid",
-    OVERDUE: "pending",
+    OVERDUE: "overdue",
   };
   return statusMap[status] || "draft";
 }
@@ -45,8 +54,20 @@ export function mapUIToStatus(uiStatus: string): InvoiceStatus | null {
   const statusMap: Record<string, InvoiceStatus> = {
     draft: "DRAFT",
     issued: "SENT",
-    pending: "OVERDUE",
+    overdue: "OVERDUE",
     paid: "PAID",
   };
   return statusMap[uiStatus] || null;
+}
+
+/**
+ * Map URL status filter (UI value) to API list param.
+ * "all" → undefined; "issued" → SENT only (VIEWED not used in list filter); others → single backend status.
+ */
+export function statusFilterToApiParam(
+  statusFilter: string,
+): string | undefined {
+  if (!statusFilter || statusFilter === "all") return undefined;
+  const single = mapUIToStatus(statusFilter);
+  return single ?? undefined;
 }

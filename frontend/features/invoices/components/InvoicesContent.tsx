@@ -20,11 +20,20 @@ import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { BusinessSelectionDialog } from "@/components/business-selection-dialog";
 import { InvoiceForm } from "../forms/InvoiceForm";
 import type { InvoiceResponse } from "../schemas/invoice.schema";
-import { mapStatusToUI } from "../types/api";
+import { statusFilterToApiParam } from "../types/api";
 import { useInvoiceManager } from "../hooks/useInvoiceFormManager";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+
+const VALID_STATUSES = ["all", "paid", "overdue", "issued", "draft"] as const;
+
+function parseStatusParam(value: string | null): string {
+  if (!value) return "all";
+  return VALID_STATUSES.includes(value as (typeof VALID_STATUSES)[number])
+    ? value
+    : "all";
+}
 
 /**
  * Invoices page component
@@ -33,18 +42,29 @@ import { useToast } from "@/hooks/use-toast";
 export default function InvoicesContent() {
   const { currentPage, setPage, debouncedSearch, searchTerm, setSearch } =
     useDebouncedTableParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const statusFilter = parseStatusParam(searchParams.get("status"));
+  const setStatusFilter = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value === "all") {
+      params.delete("status");
+    } else {
+      params.set("status", value);
+    }
+    params.set("page", "1");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedInvoiceForSend, setSelectedInvoiceForSend] = useState<
     InvoiceResponse | undefined
   >(undefined);
   const paymentDialog = usePaymentDialog();
-  const router = useRouter();
   const { toast } = useToast();
-  // Fetch invoices with pagination and search
-  // Note: Status and tab filtering are done client-side to match original behavior
+  // Fetch invoices with pagination, search, and status (server-side)
   const {
     data: invoicesData,
     isLoading,
@@ -52,6 +72,7 @@ export default function InvoicesContent() {
   } = useInvoices({
     page: currentPage,
     search: debouncedSearch || undefined,
+    status: statusFilterToApiParam(statusFilter),
   });
 
   const invoiceManager = useInvoiceManager();
@@ -119,44 +140,9 @@ export default function InvoicesContent() {
     );
   }
 
-  // Extract invoices and pagination info
+  // Extract invoices and pagination info (already filtered by server)
   const invoices = invoicesData.data;
   const pagination = invoicesData.pagination;
-
-  // Filter invoices by tab and status (client-side filtering)
-  const filteredInvoices = invoices.filter((invoice) => {
-    const uiStatus = mapStatusToUI(invoice.status);
-    const clientName =
-      invoice.client?.name || invoice.client?.businessName || "";
-    const invoiceAmount = invoice.total || 0;
-
-    // Search filtering (if search is done client-side)
-    const matchesSearch =
-      !debouncedSearch ||
-      invoice.invoiceNumber
-        .toLowerCase()
-        .includes(debouncedSearch.toLowerCase()) ||
-      clientName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      invoiceAmount.toString().includes(debouncedSearch);
-
-    // Status filter dropdown
-    const matchesStatus = statusFilter === "all" || uiStatus === statusFilter;
-
-    // Tab filtering
-    let matchesTab = true;
-    if (activeTab === "emitted") {
-      matchesTab =
-        uiStatus === "issued" || uiStatus === "pending" || uiStatus === "paid";
-    } else if (activeTab === "paid") {
-      matchesTab = uiStatus === "paid";
-    } else if (activeTab === "pending") {
-      matchesTab = uiStatus === "pending";
-    } else if (activeTab === "drafts") {
-      matchesTab = uiStatus === "draft";
-    }
-
-    return matchesSearch && matchesStatus && matchesTab;
-  });
 
   // If business is selected, show invoice form instead of list
   if (invoiceManager.isFormOpen && invoiceManager.selectedBusiness) {
@@ -179,7 +165,7 @@ export default function InvoicesContent() {
 
   return (
     <>
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="mt-16 sm:mt-0 container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Header */}
         <motion.div
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8"
@@ -200,21 +186,19 @@ export default function InvoicesContent() {
           />
         </motion.div>
 
-        <InvoiceStats invoices={invoices} />
+        <InvoiceStats stats={invoicesData.stats} />
 
         <InvoiceFilters
           searchTerm={searchTerm}
           onSearchChange={setSearch}
           statusFilter={statusFilter}
           onStatusChange={setStatusFilter}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
         />
 
         {/* Invoices List */}
         <InvoiceList
-          invoices={filteredInvoices}
-          activeTab={activeTab}
+          invoices={invoices}
+          statusFilter={statusFilter}
           onEdit={(sequence) => router.push(`/invoices/${sequence}/edit`)}
           onView={(sequence) => router.push(`/invoices/${sequence}`)}
           onDownload={handleDownloadPDF}
@@ -245,23 +229,21 @@ export default function InvoicesContent() {
         isDeleting={invoiceDelete.isDeleting}
       />
 
-      <SendInvoiceDialog
-        open={sendDialogOpen}
-        onOpenChange={(open) => {
-          setSendDialogOpen(open);
-          if (!open) {
-            setSelectedInvoiceForSend(undefined);
-          }
-        }}
-        invoiceSequence={selectedInvoiceForSend?.sequence}
-        invoiceNumber={selectedInvoiceForSend?.invoiceNumber}
-        clientName={
-          selectedInvoiceForSend?.client?.name ||
-          selectedInvoiceForSend?.client?.businessName ||
-          "Client"
-        }
-        clientEmail={selectedInvoiceForSend?.client?.email}
-      />
+      {selectedInvoiceForSend && (
+        <SendInvoiceDialog
+          open={sendDialogOpen}
+          onOpenChange={(open) => {
+            setSendDialogOpen(open);
+            if (!open) {
+              setSelectedInvoiceForSend(undefined);
+            }
+          }}
+          invoiceSequence={selectedInvoiceForSend?.sequence}
+          invoiceNumber={selectedInvoiceForSend?.invoiceNumber}
+          clientName={selectedInvoiceForSend?.client?.name || "Client"}
+          clientEmail={selectedInvoiceForSend?.clientEmail}
+        />
+      )}
 
       <PaymentFormDialog
         open={paymentDialog.isPaymentDialogOpen}

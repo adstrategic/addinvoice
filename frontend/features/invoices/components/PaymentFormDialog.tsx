@@ -28,9 +28,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  paymentCreateSchema,
-  type PaymentCreateInput,
-} from "../schemas/invoice.schema";
+  createPaymentSchema,
+  type CreatePaymentDto,
+} from "@/features/payments/schemas/payments.schema";
 import { useCreatePayment } from "../hooks/usePayments";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -43,6 +43,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { NumericFormat } from "react-number-format";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface PaymentFormDialogProps {
   open: boolean;
@@ -59,18 +60,27 @@ export function PaymentFormDialog({
 }: PaymentFormDialogProps) {
   const createPayment = useCreatePayment();
 
-  const defaultValues: DefaultValues<PaymentCreateInput> = {
+  const getDefaultValues = (): DefaultValues<CreatePaymentDto> => ({
     paidAt: new Date(),
-  };
+    sendReceipt: false,
+  });
 
-  const form = useForm<PaymentCreateInput>({
-    resolver: zodResolver(paymentCreateSchema),
+  const defaultValues = getDefaultValues();
+
+  const form = useForm<CreatePaymentDto>({
+    resolver: zodResolver(createPaymentSchema),
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues,
   });
 
-  const onSubmit = async (data: PaymentCreateInput) => {
+  useEffect(() => {
+    if (!open) {
+      form.reset(getDefaultValues());
+    }
+  }, [open, form]);
+
+  const onSubmit = async (data: CreatePaymentDto) => {
     if (!invoiceId || !invoiceSequence) {
       throw new Error("Invoice ID and sequence are required");
     }
@@ -81,12 +91,12 @@ export function PaymentFormDialog({
       data,
     });
     onOpenChange(false);
-    form.reset(defaultValues);
+    form.reset(getDefaultValues());
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Payment</DialogTitle>
           <DialogDescription>
@@ -237,6 +247,28 @@ export function PaymentFormDialog({
                 </Field>
               )}
             />
+
+            <Controller
+              name="sendReceipt"
+              control={form.control}
+              render={({ field }) => (
+                <Field>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="sendReceipt"
+                      checked={field.value ?? false}
+                      onCheckedChange={field.onChange}
+                    />
+                    <FieldLabel
+                      htmlFor="sendReceipt"
+                      className="font-normal cursor-pointer"
+                    >
+                      Send payment receipt to client
+                    </FieldLabel>
+                  </div>
+                </Field>
+              )}
+            />
           </FieldGroup>
         </form>
         <DialogFooter>
@@ -245,7 +277,7 @@ export function PaymentFormDialog({
             variant="outline"
             onClick={() => {
               onOpenChange(false);
-              form.reset();
+              form.reset(getDefaultValues());
             }}
           >
             Cancel

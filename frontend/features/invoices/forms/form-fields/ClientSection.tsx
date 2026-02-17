@@ -25,6 +25,7 @@ import type {
 } from "../../schemas/invoice.schema";
 import type { ClientResponse } from "@/features/clients";
 import { useInvoiceAutofill } from "../../hooks/useInvoiceAutofill";
+import { NumericFormat } from "react-number-format";
 
 interface ClientSectionProps {
   form: UseFormReturn<CreateInvoiceDTO>;
@@ -220,6 +221,56 @@ export const ClientSection = ({
                         {...field}
                         placeholder="Enter address..."
                         value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Reminder before due (days) - optional */}
+              <FormField
+                control={form.control}
+                name="clientData.reminderBeforeDueIntervalDays"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reminder before due (days)</FormLabel>
+                    <FormControl>
+                      <NumericFormat
+                        value={field.value}
+                        onValueChange={(values) => {
+                          field.onChange(values.floatValue);
+                        }}
+                        placeholder="e.g. 3 (every 3 days)"
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        decimalScale={0}
+                        customInput={Input}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Reminder after due (days) - optional */}
+              <FormField
+                control={form.control}
+                name="clientData.reminderAfterDueIntervalDays"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reminder after due (days)</FormLabel>
+                    <FormControl>
+                      <NumericFormat
+                        value={field.value}
+                        onValueChange={(values) => {
+                          field.onChange(values.floatValue);
+                        }}
+                        placeholder="e.g. 3 (every 3 days)"
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        decimalScale={0}
+                        customInput={Input}
                       />
                     </FormControl>
                     <FormMessage />

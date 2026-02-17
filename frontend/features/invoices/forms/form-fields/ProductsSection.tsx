@@ -1,9 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Edit, Package } from "lucide-react";
+import { Plus, Trash2, Edit, Package, Loader2 } from "lucide-react";
 import type { InvoiceItemResponse } from "../../schemas/invoice.schema";
 import type { DiscountType } from "../../types/api";
 import { ProductFormDialog } from "../../components/ProductFormDialog";
@@ -56,8 +66,10 @@ export function ProductsSection({
 }: ProductsSectionProps) {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showCatalogModal, setShowCatalogModal] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<InvoiceItemResponse | null>(
-    null
+    null,
   );
 
   const deleteItem = useDeleteInvoiceItem();
@@ -100,13 +112,28 @@ export function ProductsSection({
     setShowProductDialog(true);
   };
 
-  const handleDeleteProduct = async (itemId: number) => {
+  const handleDeleteProduct = (itemId: number) => {
     if (!invoiceId) return;
+    setDeleteItemId(itemId);
+    setDeleteDialogOpen(true);
+  };
 
-    if (confirm("Are you sure you want to delete this product?")) {
-      await deleteItem.mutateAsync({ invoiceId, itemId });
+  const handleDeleteDialogOpenChange = (open: boolean) => {
+    if (!open && !deleteItem.isPending) {
+      setDeleteDialogOpen(false);
+      setDeleteItemId(null);
     }
   };
+
+  const handleConfirmDelete = async () => {
+    if (!invoiceId || deleteItemId === null) return;
+
+    await deleteItem.mutateAsync({ invoiceId, itemId: deleteItemId });
+    setDeleteDialogOpen(false);
+    setDeleteItemId(null);
+  };
+
+  const isDeleting = deleteItem.isPending;
 
   const handleAddFromCatalog = () => {
     // Get businessId from existing invoice or form
@@ -243,11 +270,11 @@ export function ProductsSection({
     <>
       <Card className="bg-card border-border">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-bold text-foreground">
+          <div className="sm:flex items-center justify-between">
+            <CardTitle className="text-lg font-bold text-foreground  mb-4 sm:mb-0">
               Items / Services
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
                 onClick={handleAddFromCatalog}
@@ -391,7 +418,7 @@ export function ProductsSection({
                       {formatCurrency(
                         totals.discountType === "PERCENTAGE"
                           ? (totals.itemsSubtotal * totals.discount) / 100
-                          : totals.discount
+                          : totals.discount,
                       )}
                     </span>
                   </div>
@@ -449,6 +476,38 @@ export function ProductsSection({
           onSuccess={handleCatalogSuccess}
         />
       )}
+
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={handleDeleteDialogOpenChange}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this product? This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting…
+                </span>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

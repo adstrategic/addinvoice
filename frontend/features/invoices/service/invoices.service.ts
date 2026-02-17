@@ -5,13 +5,13 @@ import {
   invoiceResponseSchema,
   invoiceResponseListSchema,
   invoiceItemResponseSchema,
-  paymentResponseSchema,
   type InvoiceResponse,
   type InvoiceItemResponse,
   type PaymentResponse,
   type InvoiceResponseList,
 } from "../schemas/invoice.schema";
 import { ZodError, z } from "zod";
+import { paymentResponseSchema } from "@/features/payments/schemas/payments.schema";
 
 /**
  * Base URL for invoices API endpoints
@@ -62,13 +62,15 @@ async function listInvoices(
 }
 
 /**
- * Get next suggested invoice number
+ * Get next suggested invoice number for the given business
  */
-async function getNextInvoiceNumber(): Promise<string> {
+async function getNextInvoiceNumber(businessId: number): Promise<string> {
   try {
     const { data } = await apiClient.get<
       ApiSuccessResponse<{ invoiceNumber: string }>
-    >(`${BASE_URL}/next-number`);
+    >(`${BASE_URL}/next-number`, {
+      params: { businessId },
+    });
 
     return data.data.invoiceNumber;
   } catch (error) {

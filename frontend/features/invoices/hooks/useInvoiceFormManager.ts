@@ -66,9 +66,12 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     }
   }, [existingInvoice]);
 
-  // Get next invoice number when in create mode and form is open
+  // Get next invoice number when in create mode, form is open, and a business is selected
   const { data: nextInvoiceNumber, isLoading: isLoadingNextNumber } =
-    useNextInvoiceNumber(mode === "create" && isFormOpen);
+    useNextInvoiceNumber(
+      mode === "create" && isFormOpen,
+      selectedBusiness?.id ?? null,
+    );
 
   // === ACCIONES ===
   const actions = useInvoiceActions();
@@ -79,22 +82,50 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
   const createItem = useCreateInvoiceItem();
 
   // === CONFIGURACIÓN DEL FORMULARIO ===
-  const defaultValues: DefaultValues<CreateInvoiceDTO> = {
-    issueDate: new Date(),
-    dueDate: new Date(),
-    taxPercentage: null,
-    taxName: null,
-    discountType: "NONE",
-    taxMode: "NONE",
-    currency: "USD",
-    createClient: false,
-  };
+  function getDefaultValues(
+    business?: BusinessResponse | null,
+  ): DefaultValues<CreateInvoiceDTO> {
+    const base: DefaultValues<CreateInvoiceDTO> = {
+      issueDate: new Date(),
+      dueDate: new Date(),
+      taxPercentage: null,
+      taxName: null,
+      discountType: "NONE",
+      taxMode: "NONE",
+      currency: "USD",
+      createClient: false,
+      notes: "",
+      terms: "",
+      discount: 0,
+      clientId: 0,
+      businessId: business?.id ?? 0,
+      invoiceNumber: "",
+    };
+    if (!business) return base;
+    return {
+      ...base,
+      businessId: business.id,
+      taxMode:
+        business.defaultTaxMode === "NONE" ||
+        business.defaultTaxMode === "BY_PRODUCT" ||
+        business.defaultTaxMode === "BY_TOTAL"
+          ? business.defaultTaxMode
+          : "NONE",
+      taxName: business.defaultTaxName ?? null,
+      taxPercentage:
+        business.defaultTaxPercentage != null
+          ? Number(business.defaultTaxPercentage)
+          : null,
+      notes: business.defaultNotes ?? "",
+      terms: business.defaultTerms ?? "",
+    };
+  }
 
   const form = useForm<CreateInvoiceDTO>({
     resolver: zodResolver(createInvoiceSchema),
     mode: "onSubmit",
     reValidateMode: "onChange",
-    defaultValues,
+    defaultValues: getDefaultValues(null),
   });
 
   // Add this useEffect after the form declaration
@@ -144,18 +175,21 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
   // === HANDLERS ===
 
   // Abrir modal en modo Crear
-  const openCreate = useCallback(() => {
-    setMode("create");
-    setInvoiceSequence(null);
-    form.reset(defaultValues);
-    setIsFormOpen(true);
-  }, [form, selectedBusiness]);
+  const openCreate = useCallback(
+    (business?: BusinessResponse | null) => {
+      setMode("create");
+      setInvoiceSequence(null);
+      form.reset(getDefaultValues(business ?? selectedBusiness));
+      setIsFormOpen(true);
+    },
+    [form, selectedBusiness],
+  );
 
   const selectBusiness = useCallback(
     (business: BusinessResponse) => {
       setSelectedBusiness(business);
       setShowBusinessDialog(false);
-      openCreate();
+      openCreate(business);
     },
     [openCreate],
   );
@@ -253,6 +287,10 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
                 address: formValues.clientData!.address ?? null,
                 nit: formValues.clientData!.nit ?? null,
                 businessName: formValues.clientData!.businessName ?? null,
+                reminderBeforeDueIntervalDays:
+                  formValues.clientData!.reminderBeforeDueIntervalDays ?? null,
+                reminderAfterDueIntervalDays:
+                  formValues.clientData!.reminderAfterDueIntervalDays ?? null,
               },
             }
           : {
@@ -319,6 +357,10 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
             address: clientData.address ?? null,
             nit: clientData.nit ?? null,
             businessName: clientData.businessName ?? null,
+            reminderBeforeDueIntervalDays:
+              clientData.reminderBeforeDueIntervalDays ?? null,
+            reminderAfterDueIntervalDays:
+              clientData.reminderAfterDueIntervalDays ?? null,
           };
         }
 

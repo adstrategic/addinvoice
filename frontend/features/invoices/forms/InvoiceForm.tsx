@@ -117,11 +117,16 @@ export function InvoiceForm({
   }
 
   return (
-    <div className="container mx-auto px-6 py-8 max-w-7xl">
+    <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 max-w-7xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onCancel}>
+      <div className="sm:flex items-center justify-between mb-8">
+        <div className="flex mb-4 sm:mb-0 items-center gap-4">
+          <Button
+            className="hidden sm:block"
+            variant="ghost"
+            size="icon"
+            onClick={onCancel}
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -135,7 +140,7 @@ export function InvoiceForm({
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {mode === "edit" && existingInvoice ? (
             <>
               <Button
@@ -404,7 +409,7 @@ export function InvoiceForm({
           invoiceSequence={existingInvoice.sequence}
           invoiceNumber={existingInvoice.invoiceNumber}
           clientName={existingInvoice.client?.name ?? "Client"}
-          clientEmail={existingInvoice.client?.email}
+          clientEmail={existingInvoice.clientEmail}
         />
       )}
     </div>

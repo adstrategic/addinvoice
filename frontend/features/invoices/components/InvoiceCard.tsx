@@ -20,6 +20,7 @@ import {
   Plus,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { mapStatusToUI } from "../types/api";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -30,8 +31,8 @@ const statusConfig = {
     label: "Paid",
     className: "bg-primary/20 text-primary hover:bg-primary/30",
   },
-  pending: {
-    label: "Pending",
+  overdue: {
+    label: "Overdue",
     className: "bg-chart-4/20 text-chart-4 hover:bg-chart-4/30",
   },
   issued: {
@@ -53,6 +54,7 @@ interface InvoiceCardProps {
   onSend: (invoice: InvoiceResponse) => void;
   onAddPayment: (invoice: InvoiceResponse) => void;
   onDelete: (invoice: InvoiceResponse) => void;
+  linkOnly?: boolean;
 }
 
 /**
@@ -67,9 +69,11 @@ export function InvoiceCard({
   onSend,
   onAddPayment,
   onDelete,
+  linkOnly = false,
 }: InvoiceCardProps) {
   const clientName =
     invoice.client?.name || invoice.client?.businessName || "Unknown Client";
+  const businessName = invoice.business?.name;
   const uiStatus = mapStatusToUI(invoice.status);
   const statusInfo = statusConfig[uiStatus as keyof typeof statusConfig] || {
     label: uiStatus,
@@ -77,9 +81,9 @@ export function InvoiceCard({
   };
   const hasItems = (invoice.items?.length ?? 0) > 0;
   const hasBalance = (invoice.balance ?? 0) > 0;
-  const canAddPayment = uiStatus !== "paid" && hasItems && hasBalance;
+  const canAddPayment = uiStatus !== "paid" && hasBalance;
 
-  return (
+  const cardContent = (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
@@ -95,6 +99,9 @@ export function InvoiceCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <p className="text-sm font-semibold text-muted-foreground truncate">
+              {businessName}
+            </p>
             <p className="font-semibold text-foreground text-sm sm:text-base">
               {invoice.invoiceNumber}
             </p>
@@ -124,52 +131,70 @@ export function InvoiceCard({
             Due: {new Date(invoice.dueDate).toLocaleDateString()}
           </p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0 hover:bg-primary/10 hover:text-primary transition-colors duration-300"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onView(invoice.sequence)}>
-              <Eye className="h-4 w-4 mr-2" />
-              View
-            </DropdownMenuItem>
-            {invoice.status === "DRAFT" && (
-              <DropdownMenuItem onClick={() => onEdit(invoice.sequence)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
+        {!linkOnly && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 hover:bg-primary/10 hover:text-primary transition-colors duration-300"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onView(invoice.sequence)}>
+                <Eye className="h-4 w-4 mr-2" />
+                View
               </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={() => onDownload(invoice)}>
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onSend(invoice)}>
-              <Send className="h-4 w-4 mr-2" />
-              Send
-            </DropdownMenuItem>
-            {canAddPayment && (
-              <DropdownMenuItem onClick={() => onAddPayment(invoice)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Payment
+              {invoice.status === "DRAFT" && (
+                <DropdownMenuItem onClick={() => onEdit(invoice.sequence)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => onDownload(invoice)}>
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
               </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => onDelete(invoice)}
-              className="text-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem onClick={() => onSend(invoice)}>
+                <Send className="h-4 w-4 mr-2" />
+                Send
+              </DropdownMenuItem>
+              {canAddPayment && (
+                <DropdownMenuItem onClick={() => onAddPayment(invoice)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Payment
+                </DropdownMenuItem>
+              )}
+
+              {invoice.status === "DRAFT" && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onDelete(invoice)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </motion.div>
   );
+
+  if (linkOnly) {
+    return (
+      <Link href={`/invoices/${invoice.sequence}`} className="block">
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return cardContent;
 }

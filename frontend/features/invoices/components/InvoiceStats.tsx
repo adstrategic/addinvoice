@@ -3,11 +3,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, DollarSign, Calendar } from "lucide-react";
 import { motion, Variants } from "framer-motion";
-import type { InvoiceResponse } from "../schemas/invoice.schema";
-import { mapStatusToUI } from "../types/api";
+import type { z } from "zod";
+import type { invoiceListStatsSchema } from "../schemas/invoice.schema";
+import { formatCurrency } from "@/lib/utils";
+
+type InvoiceListStats = z.infer<typeof invoiceListStatsSchema>;
 
 interface InvoiceStatsProps {
-  invoices: InvoiceResponse[];
+  stats: InvoiceListStats;
 }
 
 // Framer Motion variants
@@ -35,28 +38,18 @@ const cardVariants: Variants = {
 
 /**
  * Invoice statistics cards component
- * Displays total invoices, paid, pending, and revenue
+ * Displays total invoices, paid, overdue, and revenue (from API aggregates)
  */
-export function InvoiceStats({ invoices }: InvoiceStatsProps) {
-  const stats = {
-    total: invoices.length,
-    paid: invoices.filter((inv) => mapStatusToUI(inv.status) === "paid").length,
-    pending: invoices.filter((inv) => mapStatusToUI(inv.status) === "pending")
-      .length,
-    revenue: invoices
-      .filter((inv) => mapStatusToUI(inv.status) === "paid")
-      .reduce((sum, inv) => sum + (inv.total || 0), 0),
-  };
-
+export function InvoiceStats({ stats }: InvoiceStatsProps) {
   return (
     <motion.div
-      className="grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-4 mb-6 sm:mb-8"
+      className="grid gap-4 sm:gap-6 sm:grid-cols-2 md:grid-cols-4 mb-6 sm:mb-8"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
       <motion.div variants={cardVariants}>
-        <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1">
+        <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
               Total
@@ -72,7 +65,7 @@ export function InvoiceStats({ invoices }: InvoiceStatsProps) {
       </motion.div>
 
       <motion.div variants={cardVariants}>
-        <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1">
+        <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
               Paid
@@ -81,30 +74,30 @@ export function InvoiceStats({ invoices }: InvoiceStatsProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl sm:text-3xl font-bold text-foreground">
-              {stats.paid}
+              {stats.paidCount}
             </div>
           </CardContent>
         </Card>
       </motion.div>
 
       <motion.div variants={cardVariants}>
-        <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1">
+        <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
-              Pending
+              Overdue
             </CardTitle>
             <Calendar className="h-4 w-4 text-chart-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl sm:text-3xl font-bold text-foreground">
-              {stats.pending}
+              {stats.pendingCount}
             </div>
           </CardContent>
         </Card>
       </motion.div>
 
       <motion.div variants={cardVariants}>
-        <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1">
+        <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
               Revenue
@@ -113,8 +106,13 @@ export function InvoiceStats({ invoices }: InvoiceStatsProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl sm:text-3xl font-bold text-foreground">
-              ${(stats.revenue / 1000).toFixed(1)}K
+              {formatCurrency(stats.revenue)}
             </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Invoiced: {formatCurrency(stats.totalInvoiced)}
+              <br />
+              Outstanding: {formatCurrency(stats.outstanding)}
+            </p>
           </CardContent>
         </Card>
       </motion.div>

@@ -15,7 +15,8 @@ export const invoiceKeys = {
     [...invoiceKeys.lists(), params] as const,
   details: () => [...invoiceKeys.all, "detail"] as const,
   detail: (id: number) => [...invoiceKeys.details(), id] as const,
-  nextNumber: () => [...invoiceKeys.all, "next-number"] as const,
+  nextNumber: (businessId: number | null) =>
+    [...invoiceKeys.all, "next-number", businessId] as const,
 };
 
 /**
@@ -48,13 +49,17 @@ export function useInvoiceBySequence(
 }
 
 /**
- * Hook to get the next suggested invoice number
+ * Hook to get the next suggested invoice number for the given business
  */
-export function useNextInvoiceNumber(enabled: boolean = true) {
+export function useNextInvoiceNumber(
+  enabled: boolean,
+  businessId: number | null,
+) {
   return useQuery({
-    queryKey: invoiceKeys.nextNumber(),
-    queryFn: () => invoicesService.getNextInvoiceNumber(),
-    enabled,
+    queryKey: invoiceKeys.nextNumber(businessId),
+    queryFn: () =>
+      invoicesService.getNextInvoiceNumber(businessId!),
+    enabled: enabled && businessId != null,
     staleTime: 0, // Always fetch fresh data when enabled
     retry: 1, // Only retry once on failure
   });
@@ -72,6 +77,9 @@ export function useCreateInvoice() {
     mutationFn: (data: CreateInvoiceDTO) => invoicesService.create(data),
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.nextNumber(variables.businessId),
+      });
 
       if (variables.createClient) {
         queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
@@ -102,6 +110,9 @@ export function useUpdateInvoice() {
       queryClient.invalidateQueries({
         queryKey: invoiceKeys.detail(updatedInvoice.sequence),
       });
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.nextNumber(updatedInvoice.business.id),
+      });
       if (variables.data.createClient) {
         queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
       }
@@ -127,7 +138,11 @@ export function useDeleteInvoice() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: invoiceKeys.detail(variables.id),
+        queryKey: invoiceKeys.detail(variables.sequence),
+      });
+      // Invalidate all next-number caches (we don't have businessId on delete)
+      queryClient.invalidateQueries({
+        queryKey: [...invoiceKeys.all, "next-number"],
       });
       toast({
         title: "Invoice deleted",

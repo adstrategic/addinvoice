@@ -5,11 +5,18 @@ import { FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { InvoiceCard } from "./InvoiceCard";
 import type { InvoiceResponse } from "../schemas/invoice.schema";
-import { mapStatusToUI } from "../types/api";
+
+const STATUS_TO_TITLE: Record<string, string> = {
+  all: "All Invoices",
+  paid: "Paid Invoices",
+  overdue: "Overdue Invoices",
+  issued: "Issued Invoices",
+  draft: "Draft Invoices",
+};
 
 interface InvoiceListProps {
   invoices: InvoiceResponse[];
-  activeTab: string;
+  statusFilter: string;
   onView: (sequence: number | string) => void;
   onEdit: (sequence: number) => void;
   onDownload: (invoice: InvoiceResponse) => void;
@@ -21,11 +28,11 @@ interface InvoiceListProps {
 
 /**
  * Invoice list component
- * Displays a list of invoices with tab title
+ * Displays a list of invoices with title derived from status filter
  */
 export function InvoiceList({
   invoices,
-  activeTab,
+  statusFilter,
   onView,
   onEdit,
   onDownload,
@@ -34,22 +41,8 @@ export function InvoiceList({
   onDelete,
   children,
 }: InvoiceListProps) {
-  const getTabTitle = () => {
-    switch (activeTab) {
-      case "all":
-        return "All Invoices";
-      case "emitted":
-        return "Emitted Invoices";
-      case "paid":
-        return "Paid Invoices";
-      case "pending":
-        return "Pending Invoices";
-      case "drafts":
-        return "Draft Invoices";
-      default:
-        return "All Invoices";
-    }
-  };
+  const listTitle =
+    STATUS_TO_TITLE[statusFilter] ?? STATUS_TO_TITLE.all;
 
   return (
     <motion.div
@@ -57,10 +50,13 @@ export function InvoiceList({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.4 }}
     >
-      <Card className="bg-card border-border shadow-sm hover:shadow-md transition-shadow duration-300">
+      <Card
+        data-tour-id="invoices-list"
+        className="bg-card border-border shadow-sm hover:shadow-md transition-shadow duration-300"
+      >
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl font-bold text-foreground">
-            {getTabTitle()}
+            {listTitle}
             {invoices.length > 0 && ` (${invoices.length})`}
           </CardTitle>
         </CardHeader>

@@ -359,7 +359,11 @@ export function ProductFormDialog({
                           thousandSeparator="."
                           decimalSeparator=","
                           decimalScale={2}
-                          prefix="$"
+                          prefix={
+                            form.watch("discountType") === "FIXED"
+                              ? "$"
+                              : undefined
+                          }
                           customInput={Input}
                         />
                         {fieldState.invalid && (
@@ -433,6 +437,7 @@ export function ProductFormDialog({
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field
+                  className="mb-4 sm:mb-0"
                   orientation="horizontal"
                   data-invalid={fieldState.invalid}
                 >

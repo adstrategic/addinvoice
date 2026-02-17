@@ -16,19 +16,8 @@ export function InvoiceActions({
   onCreateByVoice,
 }: InvoiceActionsProps) {
   return (
-    <div className="flex gap-2 w-full sm:w-auto">
-      <Link href="/invoices/voice" className="flex-1 sm:flex-none">
-        <Button
-          size="lg"
-          variant="outline"
-          className="gap-2 w-full hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 bg-transparent"
-        >
-          <Mic className="h-5 w-5" />
-          Create by Voice
-        </Button>
-      </Link>
-
-      <div className="flex-1 sm:flex-none">
+    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+      <div className="flex-1 sm:flex-none" data-tour-id="invoices-create-btn">
         <Button
           onClick={onCreateInvoice}
           size="lg"

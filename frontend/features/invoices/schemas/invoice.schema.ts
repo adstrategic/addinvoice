@@ -3,11 +3,7 @@ import { paginationMetaSchema } from "@/lib/api/types";
 import { businessResponseSchema } from "@/features/businesses";
 import { clientResponseSchema, createClientSchema } from "@/features/clients";
 import { nullableOptional } from "@/lib/utils";
-
-/**
- * Zod schemas for invoice form validation
- * These match the backend DTOs and API structure
- */
+import { paymentResponseSchema } from "@/features/payments/schemas/payments.schema";
 
 /**
  * Helper schema for optional string fields that should be null when empty
@@ -98,19 +94,6 @@ export const invoiceItemSchema = z.object({
 //       path: ["taxName"],
 //     }
 //   );
-
-/**
- * Payment schema
- */
-export const paymentSchema = z.object({
-  amount: z.number().min(0.01, "Amount must be greater than 0"),
-  paymentMethod: z.string().min(1, "Payment method is required"),
-  transactionId: nullableOptional(
-    z.string().trim().max(255, "Transaction ID is too long"),
-  ),
-  paidAt: z.coerce.date(),
-  details: z.string().optional().nullable(),
-});
 
 //   name: z
 //     .string()
@@ -308,16 +291,6 @@ export const invoiceItemCreateSchema = invoiceItemSchema;
 export const invoiceItemUpdateSchema = invoiceItemSchema.partial();
 
 /**
- * Payment create schema
- */
-export const paymentCreateSchema = paymentSchema;
-
-/**
- * Payment update schema
- */
-export const paymentUpdateSchema = paymentSchema.partial();
-
-/**
  * TypeScript types inferred from schemas
  */
 /**
@@ -340,24 +313,6 @@ export const invoiceItemResponseSchema = z.object({
   catalogId: z.number().int().positive().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-});
-
-/**
- * Payment response schema from API
- * Matches PaymentEntity from backend
- */
-export const paymentResponseSchema = z.object({
-  id: z.number().int().positive(),
-  workspaceId: z.number().int().positive(),
-  invoiceId: z.number().int().positive(),
-  amount: z.number(),
-  paymentMethod: z.string(),
-  transactionId: z.string().nullable(),
-  details: z.string().nullable(),
-  paidAt: z.coerce.date(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-  deletedAt: z.coerce.date().nullable(),
 });
 
 /**
@@ -384,7 +339,6 @@ export const invoiceResponseSchema = baseInvoiceSchema
     paidAt: z.coerce.date().nullable(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
-    deletedAt: z.coerce.date().nullable(),
 
     business: businessResponseSchema,
     client: clientResponseSchema,
@@ -397,27 +351,49 @@ export const invoiceResponseSchema = baseInvoiceSchema
   });
 
 /**
- * Invoice list response schema with pagination
+ * Invoice list stats (aggregates for the filtered set)
+ */
+export const invoiceListStatsSchema = z.object({
+  total: z.number(),
+  paidCount: z.number(),
+  pendingCount: z.number(),
+  revenue: z.number(),
+  totalInvoiced: z.number(),
+  outstanding: z.number(),
+});
+
+/**
+ * Invoice list response schema with pagination and stats
  */
 export const invoiceResponseListSchema = z.object({
   data: z.array(invoiceResponseSchema),
   pagination: paginationMetaSchema,
+  stats: invoiceListStatsSchema,
+});
+
+/**
+ * Payment detail (from GET /payments/:id)
+ * Uses the same invoice summary as payment list for consistency
+ */
+export const paymentDetailResponseSchema = paymentResponseSchema.extend({
+  invoice: invoiceResponseSchema,
 });
 
 // DTO types
 export type InvoiceHeaderInput = z.infer<typeof invoiceHeaderSchema>;
 export type ClientInput = z.infer<typeof clientSchema>;
 export type InvoiceItemInput = z.infer<typeof invoiceItemSchema>;
-export type PaymentInput = z.infer<typeof paymentSchema>;
+
 export type CreateInvoiceDTO = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoiceDTO = z.infer<typeof updateInvoiceSchema>;
 export type InvoiceItemCreateInput = z.infer<typeof invoiceItemCreateSchema>;
 export type InvoiceItemUpdateInput = z.infer<typeof invoiceItemUpdateSchema>;
-export type PaymentCreateInput = z.infer<typeof paymentCreateSchema>;
-export type PaymentUpdateInput = z.infer<typeof paymentUpdateSchema>;
 
 // Response types
 export type InvoiceItemResponse = z.infer<typeof invoiceItemResponseSchema>;
 export type PaymentResponse = z.infer<typeof paymentResponseSchema>;
 export type InvoiceResponse = z.infer<typeof invoiceResponseSchema>;
 export type InvoiceResponseList = z.infer<typeof invoiceResponseListSchema>;
+
+// Payment types
+export type PaymentDetailResponse = z.infer<typeof paymentDetailResponseSchema>;
