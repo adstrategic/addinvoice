@@ -34,21 +34,21 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
     error: catalogError,
   } = useCatalogBySequence(
     catalogSequence || 0,
-    mode === "edit" && !!catalogSequence
+    mode === "edit" && !!catalogSequence,
   );
 
   // === ACCIONES ===
   const actions = useCatalogActions();
 
-  // === BUSINESS FETCHING ===
-  // Fetch business data when editing
-  const {
-    data: businessData,
-    isLoading: isLoadingBusiness,
-  } = useBusiness(
-    existingCatalog?.businessId || null,
-    mode === "edit" && !!existingCatalog?.businessId
-  );
+  // // === BUSINESS FETCHING ===
+  // // Fetch business data when editing
+  // const {
+  //   data: businessData,
+  //   isLoading: isLoadingBusiness,
+  // } = useBusiness(
+  //   existingCatalog?.businessId || null,
+  //   mode === "edit" && !!existingCatalog?.businessId
+  // );
 
   // === CONFIGURACIÓN DEL FORMULARIO ===
   const defaultValues: CreateCatalogDto = {
@@ -136,7 +136,7 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
 
           await actions.handleUpdate(
             existingCatalog.id,
-            apiData as UpdateCatalogDto
+            apiData as UpdateCatalogDto,
           );
         } else {
           await actions.handleCreate(apiData as CreateCatalogDto);
@@ -153,7 +153,7 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
       if (firstErrorField) {
         scrollToField(firstErrorField);
       }
-    }
+    },
   );
 
   return {
@@ -170,8 +170,7 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
     catalogError,
 
     // Business data for form
-    business: businessData || null,
-    isLoadingBusiness,
+    business: existingCatalog?.business || null,
 
     // Formulario
     form,
@@ -179,4 +178,3 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
     isMutating: actions.isMutating,
   };
 }
-

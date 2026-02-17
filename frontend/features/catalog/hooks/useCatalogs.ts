@@ -5,13 +5,12 @@ import {
   type UpdateCatalogDto,
   catalogService,
 } from "@/features/catalog";
+import type { ListCatalogsParams as ListCatalogsParamsSchema } from "../schema/catalog.schema";
 import { CatalogResponseList } from "../schema/catalog.schema";
 
-type ListCatalogsParams = {
-  page?: number;
-  search?: string;
+type ListCatalogsParams = ListCatalogsParamsSchema & {
   enabled?: boolean;
-  initialData?: CatalogResponseList; // Opcional: datos iniciales para React Query
+  initialData?: CatalogResponseList;
 };
 
 /**

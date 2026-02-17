@@ -42,7 +42,10 @@ export function CatalogList({
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div
+        data-tour-id="catalog-list"
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+      >
         {catalogs.map((catalog) => (
           <CatalogCard
             key={catalog.id}
@@ -56,4 +59,3 @@ export function CatalogList({
     </>
   );
 }
-

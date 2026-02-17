@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import {
   CatalogList,
   CatalogFilters,
@@ -15,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import LoadingComponent from "@/components/loading-component";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { Package } from "lucide-react";
+import type { CatalogSortBy } from "./CatalogFilters";
 
 /**
  * Catalog page component
@@ -24,9 +26,29 @@ export default function CatalogContent() {
   const { currentPage, setPage, debouncedSearch, searchTerm, setSearch } =
     useDebouncedTableParams();
 
+  const [businessIdFilter, setBusinessIdFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<CatalogSortBy>("sequence");
+  const sortOrder = "asc" as const;
+
   const catalogManager = useCatalogFormManager();
 
-  // Fetch catalogs with pagination and search
+  const handleBusinessIdChange = useCallback(
+    (value: string) => {
+      setBusinessIdFilter(value);
+      setPage(1);
+    },
+    [setPage],
+  );
+
+  const handleSortByChange = useCallback(
+    (value: CatalogSortBy) => {
+      setSortBy(value);
+      setPage(1);
+    },
+    [setPage],
+  );
+
+  // Fetch catalogs with pagination, search, business filter, and sort
   const {
     data: catalogsData,
     isLoading,
@@ -34,6 +56,10 @@ export default function CatalogContent() {
   } = useCatalogs({
     page: currentPage,
     search: debouncedSearch || undefined,
+    businessId:
+      businessIdFilter === "all" ? undefined : Number(businessIdFilter),
+    sortBy,
+    sortOrder,
   });
 
   const catalogDelete = useCatalogDelete();
@@ -72,7 +98,7 @@ export default function CatalogContent() {
 
   return (
     <>
-      <div className="container mx-auto px-6 py-8 max-w-6xl">
+      <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 max-w-6xl">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
@@ -88,7 +114,14 @@ export default function CatalogContent() {
           <CatalogActions onOpenCreateModal={catalogManager.openCreate} />
         </div>
 
-        <CatalogFilters searchTerm={searchTerm} onSearchChange={setSearch} />
+        <CatalogFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearch}
+          businessId={businessIdFilter}
+          onBusinessIdChange={handleBusinessIdChange}
+          sortBy={sortBy}
+          onSortByChange={handleSortByChange}
+        />
 
         {/* Catalog List */}
         <CatalogList

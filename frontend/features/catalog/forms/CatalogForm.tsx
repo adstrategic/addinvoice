@@ -27,12 +27,14 @@ import type {
   CreateCatalogDto,
 } from "../schema/catalog.schema";
 import { BusinessSelector } from "@/components/shared/BusinessSelector";
+import { BusinessResponse } from "@/features/businesses";
+import { NumericFormat } from "react-number-format";
 
 interface CatalogFormProps {
   form: UseFormReturn<CreateCatalogDto>;
   mode: "create" | "edit";
   initialData?: CatalogResponse;
-  business?: { id: number; name: string } | null;
+  business?: BusinessResponse | null;
   onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   onCancel?: () => void;
   isLoading?: boolean;
@@ -155,17 +157,17 @@ export function CatalogForm({
                       Price <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        disabled={isLoading}
-                        {...field}
-                        value={field.value || ""}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
+                      <NumericFormat
+                        value={field.value}
+                        onValueChange={(values) => {
+                          field.onChange(values.floatValue);
+                        }}
+                        placeholder="0,00"
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        decimalScale={2}
+                        prefix="$"
+                        customInput={Input}
                       />
                     </FormControl>
                     <FormMessage />

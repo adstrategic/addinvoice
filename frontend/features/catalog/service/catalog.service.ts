@@ -28,7 +28,7 @@ const BASE_URL = "/catalog";
  * List all catalogs with pagination and search
  */
 async function listCatalogs(
-  params?: ListCatalogsParams
+  params?: ListCatalogsParams,
 ): Promise<CatalogResponseList> {
   try {
     const { data } = await apiClient.get<CatalogResponseList>(BASE_URL, {
@@ -36,11 +36,13 @@ async function listCatalogs(
         page: params?.page ?? 1,
         limit: params?.limit ?? 10,
         search: params?.search,
+        businessId: params?.businessId,
+        sortBy: params?.sortBy ?? "sequence",
+        sortOrder: params?.sortOrder ?? "asc",
       },
     });
 
     const validatedData = catalogResponseListSchema.parse(data);
-    console.log("validatedData", validatedData);
     return {
       data: validatedData.data,
       pagination: validatedData.pagination,
@@ -54,11 +56,11 @@ async function listCatalogs(
  * Get a catalog by sequence number
  */
 async function getCatalogBySequence(
-  sequence: number
+  sequence: number,
 ): Promise<CatalogResponse> {
   try {
     const { data } = await apiClient.get<ApiSuccessResponse<CatalogResponse>>(
-      `${BASE_URL}/${sequence}`
+      `${BASE_URL}/${sequence}`,
     );
 
     // Validate response data with Zod
@@ -75,7 +77,7 @@ async function createCatalog(dto: CreateCatalogDto): Promise<CatalogResponse> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<CatalogResponse>>(
       BASE_URL,
-      dto
+      dto,
     );
 
     // Validate response data with Zod
@@ -90,12 +92,12 @@ async function createCatalog(dto: CreateCatalogDto): Promise<CatalogResponse> {
  */
 async function updateCatalog(
   id: number,
-  dto: UpdateCatalogDto
+  dto: UpdateCatalogDto,
 ): Promise<CatalogResponse> {
   try {
     const { data } = await apiClient.patch<ApiSuccessResponse<CatalogResponse>>(
       `${BASE_URL}/${id}`,
-      dto
+      dto,
     );
 
     // Validate response data with Zod

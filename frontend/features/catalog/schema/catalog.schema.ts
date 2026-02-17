@@ -1,3 +1,4 @@
+import { businessResponseSchema } from "@/features/businesses";
 import { paginationMetaSchema } from "@/lib/api/types";
 import { z } from "zod";
 
@@ -8,6 +9,9 @@ export const listCatalogsSchema = z.object({
   page: z.coerce.number().int().optional(),
   limit: z.coerce.number().int().max(30).optional(),
   search: z.string().optional(),
+  businessId: z.coerce.number().int().positive().optional(),
+  sortBy: z.enum(["sequence", "name", "price"]).optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional(),
 });
 
 /**
@@ -48,7 +52,7 @@ export const catalogResponseSchema = createCatalogSchema.extend({
   workspaceId: z.number().int().positive(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-  deletedAt: z.string().datetime().nullable(),
+  business: businessResponseSchema,
 });
 
 /**

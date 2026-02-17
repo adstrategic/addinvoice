@@ -15,13 +15,14 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ErrorBoundary } from "@/components/error-boundary";
 import LoadingComponent from "@/components/loading-component";
+import { BusinessResponse } from "@/features/businesses";
 
 interface CatalogFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: "create" | "edit";
   initialData?: CatalogResponse;
-  business?: { id: number; name: string } | null;
+  business?: BusinessResponse | null;
   form: UseFormReturn<CreateCatalogDto>;
   onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   isLoading?: boolean;
@@ -41,7 +42,8 @@ export function CatalogFormModal({
   isLoadingCatalog = false,
   catalogError = null,
 }: CatalogFormModalProps) {
-  const modalTitle = mode === "create" ? "Create New Catalog Item" : "Edit Catalog Item";
+  const modalTitle =
+    mode === "create" ? "Create New Catalog Item" : "Edit Catalog Item";
 
   // Handle error state - if catalog was not found, show error and close modal
   if (catalogError && mode === "edit") {
@@ -104,4 +106,3 @@ export function CatalogFormModal({
     </Dialog>
   );
 }
-

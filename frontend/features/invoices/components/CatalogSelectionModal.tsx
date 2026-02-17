@@ -56,41 +56,36 @@ export function CatalogSelectionModal({
   const router = useRouter();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const debouncedSearch = useDebouncedValue(searchTerm, 300);
   const createItem = useCreateInvoiceItem();
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
 
-  // Fetch catalogs with search and pagination
+  // Fetch catalogs with search, pagination, and business filter (backend filters by businessId)
   const {
     data: catalogsData,
     isLoading,
     error,
   } = useCatalogs({
-    page: currentPage,
     search: debouncedSearch || undefined,
+    businessId: businessId ?? undefined,
   });
 
-  // Filter catalogs by businessId and exclude already added items
+  // Exclude already added items (backend already filters by businessId)
   const availableCatalogs = useMemo(() => {
-    if (!catalogsData?.data || !businessId) return [];
+    if (!catalogsData?.data) return [];
 
-    // Get catalog IDs that are already in the invoice
     const existingCatalogIds = existingItems
       .map((item) => item.catalogId)
       .filter((id): id is number => id !== null && id !== undefined);
 
-    // Filter by businessId and exclude already added items
     return catalogsData.data.filter(
-      (catalog) =>
-        catalog.businessId === businessId &&
-        !existingCatalogIds.includes(catalog.id)
+      (catalog) => !existingCatalogIds.includes(catalog.id),
     );
-  }, [catalogsData?.data, businessId, existingItems]);
+  }, [catalogsData?.data, existingItems]);
 
   // Map catalog item to invoice item input
   const catalogItemToInvoiceItem = (
-    catalog: CatalogResponse
+    catalog: CatalogResponse,
   ): InvoiceItemCreateInput => {
     return {
       name: catalog.name,
@@ -201,7 +196,6 @@ export function CatalogSelectionModal({
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page on search
               }}
             />
           </div>
@@ -229,8 +223,8 @@ export function CatalogSelectionModal({
                   {searchTerm
                     ? "No catalog items match your search."
                     : businessId
-                    ? "No catalog items found for this business, or all items are already in the invoice."
-                    : "Please select a business first."}
+                      ? "No catalog items found for this business, or all items are already in the invoice."
+                      : "Please select a business first."}
                 </p>
               </div>
             ) : (
@@ -266,20 +260,6 @@ export function CatalogSelectionModal({
               </div>
             )}
           </div>
-
-          {/* Pagination */}
-          {catalogsData?.pagination && availableCatalogs.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <TablePagination
-                currentPage={currentPage}
-                totalPages={catalogsData.pagination.totalPages}
-                totalItems={catalogsData.pagination.total}
-                onPageChange={setCurrentPage}
-                emptyMessage="No catalog items found"
-                itemLabel="items"
-              />
-            </div>
-          )}
         </div>
 
         <DialogFooter>
@@ -289,7 +269,6 @@ export function CatalogSelectionModal({
             onClick={() => {
               onOpenChange(false);
               setSearchTerm("");
-              setCurrentPage(1);
             }}
           >
             Cancel
