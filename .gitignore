@@ -1,2 +1,14 @@
 docs/*.md
-.cursor/* */
+.cursor/*
+node_modules/
+
+# Lockfiles from other package managers (use pnpm-lock.yaml at root)
+yarn.lock
+package-lock.json
+
+# Turborepo and pnpm
+.turbo/
+.pnpm-store
+
+# Prisma generated files
+packages/db/src/generated/prisma/

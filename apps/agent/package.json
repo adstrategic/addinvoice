@@ -1,0 +1,32 @@
+{
+  "name": "@addinvoice/agent",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "LiveKit Voice Agent for Invoice Creation",
+  "main": "dist/agent.js",
+  "scripts": {
+    "dev": "tsx src/agent.ts dev",
+    "start": "node dist/agent.js start",
+    "build": "tsc",
+    "download-files": "tsc && node dist/agent.js download-files"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^25.0.9",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@addinvoice/db": "workspace:*",
+    "@addinvoice/schemas": "workspace:*",
+    "@livekit/agents": "~1.0.36",
+    "@livekit/agents-plugin-livekit": "~1.0.36",
+    "@livekit/agents-plugin-silero": "~1.0.36",
+    "@livekit/noise-cancellation-node": "~0.1.9",
+    "dotenv": "^17.2.3",
+    "zod": "^3.25.67",
+    "@prisma/adapter-pg": "^7.2.0"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "addinvoice",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "dev:backend": "turbo run dev --filter=@addinvoice/backend",
+    "dev:frontend": "turbo run dev --filter=@addinvoice/frontend",
+    "dev:pdf-service": "turbo run dev --filter=@addinvoice/pdf-service",
+    "dev:agent": "turbo run dev --filter=@addinvoice/agent"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@addinvoice/db",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "build": "pnpm run generate && tsc",
+    "clean": "rm -rf dist",
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/client": "^7.0.0"
+  },
+  "devDependencies": {
+    "prisma": "^7.0.0",
+    "typescript": "^5.8.3",
+    "@types/node": "^24.0.0",
+    "dotenv": "^16.5.0"
+  }
+}

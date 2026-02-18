@@ -1,0 +1,2962 @@
+import type * as runtime from "@prisma/client/runtime/client";
+import type * as $Enums from "../enums";
+import type * as Prisma from "../internal/prismaNamespace";
+/**
+ * Model Workspace
+ *
+ */
+export type WorkspaceModel = runtime.Types.Result.DefaultSelection<Prisma.$WorkspacePayload>;
+export type AggregateWorkspace = {
+    _count: WorkspaceCountAggregateOutputType | null;
+    _avg: WorkspaceAvgAggregateOutputType | null;
+    _sum: WorkspaceSumAggregateOutputType | null;
+    _min: WorkspaceMinAggregateOutputType | null;
+    _max: WorkspaceMaxAggregateOutputType | null;
+};
+export type WorkspaceAvgAggregateOutputType = {
+    id: number | null;
+    defaultTaxRate: runtime.Decimal | null;
+};
+export type WorkspaceSumAggregateOutputType = {
+    id: number | null;
+    defaultTaxRate: runtime.Decimal | null;
+};
+export type WorkspaceMinAggregateOutputType = {
+    id: number | null;
+    clerkId: string | null;
+    name: string | null;
+    companyName: string | null;
+    companyAddress: string | null;
+    companyPhone: string | null;
+    companyEmail: string | null;
+    companyTaxId: string | null;
+    companyLogo: string | null;
+    invoiceNumberPrefix: string | null;
+    defaultCurrency: string | null;
+    defaultPaymentTerms: string | null;
+    defaultTaxRate: runtime.Decimal | null;
+    invoiceFooterText: string | null;
+    invoiceColor: string | null;
+    createdAt: Date | null;
+    updatedAt: Date | null;
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string | null;
+    subscriptionPlan: $Enums.SubscriptionPlan | null;
+    subscriptionStatus: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt: Date | null;
+    lastStripeSync: Date | null;
+};
+export type WorkspaceMaxAggregateOutputType = {
+    id: number | null;
+    clerkId: string | null;
+    name: string | null;
+    companyName: string | null;
+    companyAddress: string | null;
+    companyPhone: string | null;
+    companyEmail: string | null;
+    companyTaxId: string | null;
+    companyLogo: string | null;
+    invoiceNumberPrefix: string | null;
+    defaultCurrency: string | null;
+    defaultPaymentTerms: string | null;
+    defaultTaxRate: runtime.Decimal | null;
+    invoiceFooterText: string | null;
+    invoiceColor: string | null;
+    createdAt: Date | null;
+    updatedAt: Date | null;
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string | null;
+    subscriptionPlan: $Enums.SubscriptionPlan | null;
+    subscriptionStatus: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt: Date | null;
+    lastStripeSync: Date | null;
+};
+export type WorkspaceCountAggregateOutputType = {
+    id: number;
+    clerkId: number;
+    name: number;
+    companyName: number;
+    companyAddress: number;
+    companyPhone: number;
+    companyEmail: number;
+    companyTaxId: number;
+    companyLogo: number;
+    invoiceNumberPrefix: number;
+    defaultCurrency: number;
+    defaultPaymentTerms: number;
+    defaultTaxRate: number;
+    invoiceFooterText: number;
+    invoiceColor: number;
+    createdAt: number;
+    updatedAt: number;
+    stripeCustomerId: number;
+    stripeSubscriptionId: number;
+    subscriptionPlan: number;
+    subscriptionStatus: number;
+    subscriptionEndsAt: number;
+    lastStripeSync: number;
+    _all: number;
+};
+export type WorkspaceAvgAggregateInputType = {
+    id?: true;
+    defaultTaxRate?: true;
+};
+export type WorkspaceSumAggregateInputType = {
+    id?: true;
+    defaultTaxRate?: true;
+};
+export type WorkspaceMinAggregateInputType = {
+    id?: true;
+    clerkId?: true;
+    name?: true;
+    companyName?: true;
+    companyAddress?: true;
+    companyPhone?: true;
+    companyEmail?: true;
+    companyTaxId?: true;
+    companyLogo?: true;
+    invoiceNumberPrefix?: true;
+    defaultCurrency?: true;
+    defaultPaymentTerms?: true;
+    defaultTaxRate?: true;
+    invoiceFooterText?: true;
+    invoiceColor?: true;
+    createdAt?: true;
+    updatedAt?: true;
+    stripeCustomerId?: true;
+    stripeSubscriptionId?: true;
+    subscriptionPlan?: true;
+    subscriptionStatus?: true;
+    subscriptionEndsAt?: true;
+    lastStripeSync?: true;
+};
+export type WorkspaceMaxAggregateInputType = {
+    id?: true;
+    clerkId?: true;
+    name?: true;
+    companyName?: true;
+    companyAddress?: true;
+    companyPhone?: true;
+    companyEmail?: true;
+    companyTaxId?: true;
+    companyLogo?: true;
+    invoiceNumberPrefix?: true;
+    defaultCurrency?: true;
+    defaultPaymentTerms?: true;
+    defaultTaxRate?: true;
+    invoiceFooterText?: true;
+    invoiceColor?: true;
+    createdAt?: true;
+    updatedAt?: true;
+    stripeCustomerId?: true;
+    stripeSubscriptionId?: true;
+    subscriptionPlan?: true;
+    subscriptionStatus?: true;
+    subscriptionEndsAt?: true;
+    lastStripeSync?: true;
+};
+export type WorkspaceCountAggregateInputType = {
+    id?: true;
+    clerkId?: true;
+    name?: true;
+    companyName?: true;
+    companyAddress?: true;
+    companyPhone?: true;
+    companyEmail?: true;
+    companyTaxId?: true;
+    companyLogo?: true;
+    invoiceNumberPrefix?: true;
+    defaultCurrency?: true;
+    defaultPaymentTerms?: true;
+    defaultTaxRate?: true;
+    invoiceFooterText?: true;
+    invoiceColor?: true;
+    createdAt?: true;
+    updatedAt?: true;
+    stripeCustomerId?: true;
+    stripeSubscriptionId?: true;
+    subscriptionPlan?: true;
+    subscriptionStatus?: true;
+    subscriptionEndsAt?: true;
+    lastStripeSync?: true;
+    _all?: true;
+};
+export type WorkspaceAggregateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Filter which Workspace to aggregate.
+     */
+    where?: Prisma.WorkspaceWhereInput;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of Workspaces to fetch.
+     */
+    orderBy?: Prisma.WorkspaceOrderByWithRelationInput | Prisma.WorkspaceOrderByWithRelationInput[];
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the start position
+     */
+    cursor?: Prisma.WorkspaceWhereUniqueInput;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` Workspaces from the position of the cursor.
+     */
+    take?: number;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` Workspaces.
+     */
+    skip?: number;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Count returned Workspaces
+    **/
+    _count?: true | WorkspaceCountAggregateInputType;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to average
+    **/
+    _avg?: WorkspaceAvgAggregateInputType;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to sum
+    **/
+    _sum?: WorkspaceSumAggregateInputType;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to find the minimum value
+    **/
+    _min?: WorkspaceMinAggregateInputType;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to find the maximum value
+    **/
+    _max?: WorkspaceMaxAggregateInputType;
+};
+export type GetWorkspaceAggregateType<T extends WorkspaceAggregateArgs> = {
+    [P in keyof T & keyof AggregateWorkspace]: P extends '_count' | 'count' ? T[P] extends true ? number : Prisma.GetScalarType<T[P], AggregateWorkspace[P]> : Prisma.GetScalarType<T[P], AggregateWorkspace[P]>;
+};
+export type WorkspaceGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    where?: Prisma.WorkspaceWhereInput;
+    orderBy?: Prisma.WorkspaceOrderByWithAggregationInput | Prisma.WorkspaceOrderByWithAggregationInput[];
+    by: Prisma.WorkspaceScalarFieldEnum[] | Prisma.WorkspaceScalarFieldEnum;
+    having?: Prisma.WorkspaceScalarWhereWithAggregatesInput;
+    take?: number;
+    skip?: number;
+    _count?: WorkspaceCountAggregateInputType | true;
+    _avg?: WorkspaceAvgAggregateInputType;
+    _sum?: WorkspaceSumAggregateInputType;
+    _min?: WorkspaceMinAggregateInputType;
+    _max?: WorkspaceMaxAggregateInputType;
+};
+export type WorkspaceGroupByOutputType = {
+    id: number;
+    clerkId: string;
+    name: string;
+    companyName: string | null;
+    companyAddress: string | null;
+    companyPhone: string | null;
+    companyEmail: string | null;
+    companyTaxId: string | null;
+    companyLogo: string | null;
+    invoiceNumberPrefix: string | null;
+    defaultCurrency: string | null;
+    defaultPaymentTerms: string | null;
+    defaultTaxRate: runtime.Decimal | null;
+    invoiceFooterText: string | null;
+    invoiceColor: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string | null;
+    subscriptionPlan: $Enums.SubscriptionPlan | null;
+    subscriptionStatus: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt: Date | null;
+    lastStripeSync: Date | null;
+    _count: WorkspaceCountAggregateOutputType | null;
+    _avg: WorkspaceAvgAggregateOutputType | null;
+    _sum: WorkspaceSumAggregateOutputType | null;
+    _min: WorkspaceMinAggregateOutputType | null;
+    _max: WorkspaceMaxAggregateOutputType | null;
+};
+type GetWorkspaceGroupByPayload<T extends WorkspaceGroupByArgs> = Prisma.PrismaPromise<Array<Prisma.PickEnumerable<WorkspaceGroupByOutputType, T['by']> & {
+    [P in ((keyof T) & (keyof WorkspaceGroupByOutputType))]: P extends '_count' ? T[P] extends boolean ? number : Prisma.GetScalarType<T[P], WorkspaceGroupByOutputType[P]> : Prisma.GetScalarType<T[P], WorkspaceGroupByOutputType[P]>;
+}>>;
+export type WorkspaceWhereInput = {
+    AND?: Prisma.WorkspaceWhereInput | Prisma.WorkspaceWhereInput[];
+    OR?: Prisma.WorkspaceWhereInput[];
+    NOT?: Prisma.WorkspaceWhereInput | Prisma.WorkspaceWhereInput[];
+    id?: Prisma.IntFilter<"Workspace"> | number;
+    clerkId?: Prisma.StringFilter<"Workspace"> | string;
+    name?: Prisma.StringFilter<"Workspace"> | string;
+    companyName?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    companyAddress?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    companyPhone?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    companyEmail?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    companyTaxId?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    companyLogo?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    invoiceNumberPrefix?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    defaultCurrency?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    defaultPaymentTerms?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    defaultTaxRate?: Prisma.DecimalNullableFilter<"Workspace"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    invoiceColor?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    createdAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string;
+    updatedAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string;
+    stripeCustomerId?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    stripeSubscriptionId?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    subscriptionPlan?: Prisma.EnumSubscriptionPlanNullableFilter<"Workspace"> | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.EnumSubscriptionStatusNullableFilter<"Workspace"> | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.DateTimeNullableFilter<"Workspace"> | Date | string | null;
+    lastStripeSync?: Prisma.DateTimeNullableFilter<"Workspace"> | Date | string | null;
+    clients?: Prisma.ClientListRelationFilter;
+    invoices?: Prisma.InvoiceListRelationFilter;
+    estimates?: Prisma.EstimateListRelationFilter;
+    payments?: Prisma.PaymentListRelationFilter;
+    catalogs?: Prisma.CatalogListRelationFilter;
+    businesses?: Prisma.BusinessListRelationFilter;
+    paymentMethods?: Prisma.WorkspacePaymentMethodListRelationFilter;
+};
+export type WorkspaceOrderByWithRelationInput = {
+    id?: Prisma.SortOrder;
+    clerkId?: Prisma.SortOrder;
+    name?: Prisma.SortOrder;
+    companyName?: Prisma.SortOrderInput | Prisma.SortOrder;
+    companyAddress?: Prisma.SortOrderInput | Prisma.SortOrder;
+    companyPhone?: Prisma.SortOrderInput | Prisma.SortOrder;
+    companyEmail?: Prisma.SortOrderInput | Prisma.SortOrder;
+    companyTaxId?: Prisma.SortOrderInput | Prisma.SortOrder;
+    companyLogo?: Prisma.SortOrderInput | Prisma.SortOrder;
+    invoiceNumberPrefix?: Prisma.SortOrderInput | Prisma.SortOrder;
+    defaultCurrency?: Prisma.SortOrderInput | Prisma.SortOrder;
+    defaultPaymentTerms?: Prisma.SortOrderInput | Prisma.SortOrder;
+    defaultTaxRate?: Prisma.SortOrderInput | Prisma.SortOrder;
+    invoiceFooterText?: Prisma.SortOrderInput | Prisma.SortOrder;
+    invoiceColor?: Prisma.SortOrderInput | Prisma.SortOrder;
+    createdAt?: Prisma.SortOrder;
+    updatedAt?: Prisma.SortOrder;
+    stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder;
+    stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder;
+    subscriptionPlan?: Prisma.SortOrderInput | Prisma.SortOrder;
+    subscriptionStatus?: Prisma.SortOrderInput | Prisma.SortOrder;
+    subscriptionEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder;
+    lastStripeSync?: Prisma.SortOrderInput | Prisma.SortOrder;
+    clients?: Prisma.ClientOrderByRelationAggregateInput;
+    invoices?: Prisma.InvoiceOrderByRelationAggregateInput;
+    estimates?: Prisma.EstimateOrderByRelationAggregateInput;
+    payments?: Prisma.PaymentOrderByRelationAggregateInput;
+    catalogs?: Prisma.CatalogOrderByRelationAggregateInput;
+    businesses?: Prisma.BusinessOrderByRelationAggregateInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodOrderByRelationAggregateInput;
+};
+export type WorkspaceWhereUniqueInput = Prisma.AtLeast<{
+    id?: number;
+    clerkId?: string;
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    AND?: Prisma.WorkspaceWhereInput | Prisma.WorkspaceWhereInput[];
+    OR?: Prisma.WorkspaceWhereInput[];
+    NOT?: Prisma.WorkspaceWhereInput | Prisma.WorkspaceWhereInput[];
+    name?: Prisma.StringFilter<"Workspace"> | string;
+    companyName?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    companyAddress?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    companyPhone?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    companyEmail?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    companyTaxId?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    companyLogo?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    invoiceNumberPrefix?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    defaultCurrency?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    defaultPaymentTerms?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    defaultTaxRate?: Prisma.DecimalNullableFilter<"Workspace"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    invoiceColor?: Prisma.StringNullableFilter<"Workspace"> | string | null;
+    createdAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string;
+    updatedAt?: Prisma.DateTimeFilter<"Workspace"> | Date | string;
+    subscriptionPlan?: Prisma.EnumSubscriptionPlanNullableFilter<"Workspace"> | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.EnumSubscriptionStatusNullableFilter<"Workspace"> | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.DateTimeNullableFilter<"Workspace"> | Date | string | null;
+    lastStripeSync?: Prisma.DateTimeNullableFilter<"Workspace"> | Date | string | null;
+    clients?: Prisma.ClientListRelationFilter;
+    invoices?: Prisma.InvoiceListRelationFilter;
+    estimates?: Prisma.EstimateListRelationFilter;
+    payments?: Prisma.PaymentListRelationFilter;
+    catalogs?: Prisma.CatalogListRelationFilter;
+    businesses?: Prisma.BusinessListRelationFilter;
+    paymentMethods?: Prisma.WorkspacePaymentMethodListRelationFilter;
+}, "id" | "clerkId" | "stripeCustomerId" | "stripeSubscriptionId">;
+export type WorkspaceOrderByWithAggregationInput = {
+    id?: Prisma.SortOrder;
+    clerkId?: Prisma.SortOrder;
+    name?: Prisma.SortOrder;
+    companyName?: Prisma.SortOrderInput | Prisma.SortOrder;
+    companyAddress?: Prisma.SortOrderInput | Prisma.SortOrder;
+    companyPhone?: Prisma.SortOrderInput | Prisma.SortOrder;
+    companyEmail?: Prisma.SortOrderInput | Prisma.SortOrder;
+    companyTaxId?: Prisma.SortOrderInput | Prisma.SortOrder;
+    companyLogo?: Prisma.SortOrderInput | Prisma.SortOrder;
+    invoiceNumberPrefix?: Prisma.SortOrderInput | Prisma.SortOrder;
+    defaultCurrency?: Prisma.SortOrderInput | Prisma.SortOrder;
+    defaultPaymentTerms?: Prisma.SortOrderInput | Prisma.SortOrder;
+    defaultTaxRate?: Prisma.SortOrderInput | Prisma.SortOrder;
+    invoiceFooterText?: Prisma.SortOrderInput | Prisma.SortOrder;
+    invoiceColor?: Prisma.SortOrderInput | Prisma.SortOrder;
+    createdAt?: Prisma.SortOrder;
+    updatedAt?: Prisma.SortOrder;
+    stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder;
+    stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder;
+    subscriptionPlan?: Prisma.SortOrderInput | Prisma.SortOrder;
+    subscriptionStatus?: Prisma.SortOrderInput | Prisma.SortOrder;
+    subscriptionEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder;
+    lastStripeSync?: Prisma.SortOrderInput | Prisma.SortOrder;
+    _count?: Prisma.WorkspaceCountOrderByAggregateInput;
+    _avg?: Prisma.WorkspaceAvgOrderByAggregateInput;
+    _max?: Prisma.WorkspaceMaxOrderByAggregateInput;
+    _min?: Prisma.WorkspaceMinOrderByAggregateInput;
+    _sum?: Prisma.WorkspaceSumOrderByAggregateInput;
+};
+export type WorkspaceScalarWhereWithAggregatesInput = {
+    AND?: Prisma.WorkspaceScalarWhereWithAggregatesInput | Prisma.WorkspaceScalarWhereWithAggregatesInput[];
+    OR?: Prisma.WorkspaceScalarWhereWithAggregatesInput[];
+    NOT?: Prisma.WorkspaceScalarWhereWithAggregatesInput | Prisma.WorkspaceScalarWhereWithAggregatesInput[];
+    id?: Prisma.IntWithAggregatesFilter<"Workspace"> | number;
+    clerkId?: Prisma.StringWithAggregatesFilter<"Workspace"> | string;
+    name?: Prisma.StringWithAggregatesFilter<"Workspace"> | string;
+    companyName?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    companyAddress?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    companyPhone?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    companyEmail?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    companyTaxId?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    companyLogo?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    invoiceNumberPrefix?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    defaultCurrency?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    defaultPaymentTerms?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    defaultTaxRate?: Prisma.DecimalNullableWithAggregatesFilter<"Workspace"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    invoiceColor?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    createdAt?: Prisma.DateTimeWithAggregatesFilter<"Workspace"> | Date | string;
+    updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Workspace"> | Date | string;
+    stripeCustomerId?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    stripeSubscriptionId?: Prisma.StringNullableWithAggregatesFilter<"Workspace"> | string | null;
+    subscriptionPlan?: Prisma.EnumSubscriptionPlanNullableWithAggregatesFilter<"Workspace"> | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.EnumSubscriptionStatusNullableWithAggregatesFilter<"Workspace"> | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Workspace"> | Date | string | null;
+    lastStripeSync?: Prisma.DateTimeNullableWithAggregatesFilter<"Workspace"> | Date | string | null;
+};
+export type WorkspaceCreateInput = {
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceUncheckedCreateInput = {
+    id?: number;
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientUncheckedCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateUncheckedCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogUncheckedCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessUncheckedCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceUpdateInput = {
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceUncheckedUpdateInput = {
+    id?: Prisma.IntFieldUpdateOperationsInput | number;
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceCreateManyInput = {
+    id?: number;
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+};
+export type WorkspaceUpdateManyMutationInput = {
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+};
+export type WorkspaceUncheckedUpdateManyInput = {
+    id?: Prisma.IntFieldUpdateOperationsInput | number;
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+};
+export type WorkspaceCountOrderByAggregateInput = {
+    id?: Prisma.SortOrder;
+    clerkId?: Prisma.SortOrder;
+    name?: Prisma.SortOrder;
+    companyName?: Prisma.SortOrder;
+    companyAddress?: Prisma.SortOrder;
+    companyPhone?: Prisma.SortOrder;
+    companyEmail?: Prisma.SortOrder;
+    companyTaxId?: Prisma.SortOrder;
+    companyLogo?: Prisma.SortOrder;
+    invoiceNumberPrefix?: Prisma.SortOrder;
+    defaultCurrency?: Prisma.SortOrder;
+    defaultPaymentTerms?: Prisma.SortOrder;
+    defaultTaxRate?: Prisma.SortOrder;
+    invoiceFooterText?: Prisma.SortOrder;
+    invoiceColor?: Prisma.SortOrder;
+    createdAt?: Prisma.SortOrder;
+    updatedAt?: Prisma.SortOrder;
+    stripeCustomerId?: Prisma.SortOrder;
+    stripeSubscriptionId?: Prisma.SortOrder;
+    subscriptionPlan?: Prisma.SortOrder;
+    subscriptionStatus?: Prisma.SortOrder;
+    subscriptionEndsAt?: Prisma.SortOrder;
+    lastStripeSync?: Prisma.SortOrder;
+};
+export type WorkspaceAvgOrderByAggregateInput = {
+    id?: Prisma.SortOrder;
+    defaultTaxRate?: Prisma.SortOrder;
+};
+export type WorkspaceMaxOrderByAggregateInput = {
+    id?: Prisma.SortOrder;
+    clerkId?: Prisma.SortOrder;
+    name?: Prisma.SortOrder;
+    companyName?: Prisma.SortOrder;
+    companyAddress?: Prisma.SortOrder;
+    companyPhone?: Prisma.SortOrder;
+    companyEmail?: Prisma.SortOrder;
+    companyTaxId?: Prisma.SortOrder;
+    companyLogo?: Prisma.SortOrder;
+    invoiceNumberPrefix?: Prisma.SortOrder;
+    defaultCurrency?: Prisma.SortOrder;
+    defaultPaymentTerms?: Prisma.SortOrder;
+    defaultTaxRate?: Prisma.SortOrder;
+    invoiceFooterText?: Prisma.SortOrder;
+    invoiceColor?: Prisma.SortOrder;
+    createdAt?: Prisma.SortOrder;
+    updatedAt?: Prisma.SortOrder;
+    stripeCustomerId?: Prisma.SortOrder;
+    stripeSubscriptionId?: Prisma.SortOrder;
+    subscriptionPlan?: Prisma.SortOrder;
+    subscriptionStatus?: Prisma.SortOrder;
+    subscriptionEndsAt?: Prisma.SortOrder;
+    lastStripeSync?: Prisma.SortOrder;
+};
+export type WorkspaceMinOrderByAggregateInput = {
+    id?: Prisma.SortOrder;
+    clerkId?: Prisma.SortOrder;
+    name?: Prisma.SortOrder;
+    companyName?: Prisma.SortOrder;
+    companyAddress?: Prisma.SortOrder;
+    companyPhone?: Prisma.SortOrder;
+    companyEmail?: Prisma.SortOrder;
+    companyTaxId?: Prisma.SortOrder;
+    companyLogo?: Prisma.SortOrder;
+    invoiceNumberPrefix?: Prisma.SortOrder;
+    defaultCurrency?: Prisma.SortOrder;
+    defaultPaymentTerms?: Prisma.SortOrder;
+    defaultTaxRate?: Prisma.SortOrder;
+    invoiceFooterText?: Prisma.SortOrder;
+    invoiceColor?: Prisma.SortOrder;
+    createdAt?: Prisma.SortOrder;
+    updatedAt?: Prisma.SortOrder;
+    stripeCustomerId?: Prisma.SortOrder;
+    stripeSubscriptionId?: Prisma.SortOrder;
+    subscriptionPlan?: Prisma.SortOrder;
+    subscriptionStatus?: Prisma.SortOrder;
+    subscriptionEndsAt?: Prisma.SortOrder;
+    lastStripeSync?: Prisma.SortOrder;
+};
+export type WorkspaceSumOrderByAggregateInput = {
+    id?: Prisma.SortOrder;
+    defaultTaxRate?: Prisma.SortOrder;
+};
+export type WorkspaceScalarRelationFilter = {
+    is?: Prisma.WorkspaceWhereInput;
+    isNot?: Prisma.WorkspaceWhereInput;
+};
+export type StringFieldUpdateOperationsInput = {
+    set?: string;
+};
+export type NullableStringFieldUpdateOperationsInput = {
+    set?: string | null;
+};
+export type NullableDecimalFieldUpdateOperationsInput = {
+    set?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    increment?: runtime.Decimal | runtime.DecimalJsLike | number | string;
+    decrement?: runtime.Decimal | runtime.DecimalJsLike | number | string;
+    multiply?: runtime.Decimal | runtime.DecimalJsLike | number | string;
+    divide?: runtime.Decimal | runtime.DecimalJsLike | number | string;
+};
+export type DateTimeFieldUpdateOperationsInput = {
+    set?: Date | string;
+};
+export type NullableEnumSubscriptionPlanFieldUpdateOperationsInput = {
+    set?: $Enums.SubscriptionPlan | null;
+};
+export type NullableEnumSubscriptionStatusFieldUpdateOperationsInput = {
+    set?: $Enums.SubscriptionStatus | null;
+};
+export type NullableDateTimeFieldUpdateOperationsInput = {
+    set?: Date | string | null;
+};
+export type IntFieldUpdateOperationsInput = {
+    set?: number;
+    increment?: number;
+    decrement?: number;
+    multiply?: number;
+    divide?: number;
+};
+export type WorkspaceCreateNestedOneWithoutClientsInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutClientsInput, Prisma.WorkspaceUncheckedCreateWithoutClientsInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutClientsInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+};
+export type WorkspaceUpdateOneRequiredWithoutClientsNestedInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutClientsInput, Prisma.WorkspaceUncheckedCreateWithoutClientsInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutClientsInput;
+    upsert?: Prisma.WorkspaceUpsertWithoutClientsInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+    update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutClientsInput, Prisma.WorkspaceUpdateWithoutClientsInput>, Prisma.WorkspaceUncheckedUpdateWithoutClientsInput>;
+};
+export type WorkspaceCreateNestedOneWithoutCatalogsInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutCatalogsInput, Prisma.WorkspaceUncheckedCreateWithoutCatalogsInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutCatalogsInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+};
+export type WorkspaceUpdateOneRequiredWithoutCatalogsNestedInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutCatalogsInput, Prisma.WorkspaceUncheckedCreateWithoutCatalogsInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutCatalogsInput;
+    upsert?: Prisma.WorkspaceUpsertWithoutCatalogsInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+    update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutCatalogsInput, Prisma.WorkspaceUpdateWithoutCatalogsInput>, Prisma.WorkspaceUncheckedUpdateWithoutCatalogsInput>;
+};
+export type WorkspaceCreateNestedOneWithoutPaymentMethodsInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutPaymentMethodsInput, Prisma.WorkspaceUncheckedCreateWithoutPaymentMethodsInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutPaymentMethodsInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+};
+export type WorkspaceUpdateOneRequiredWithoutPaymentMethodsNestedInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutPaymentMethodsInput, Prisma.WorkspaceUncheckedCreateWithoutPaymentMethodsInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutPaymentMethodsInput;
+    upsert?: Prisma.WorkspaceUpsertWithoutPaymentMethodsInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+    update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutPaymentMethodsInput, Prisma.WorkspaceUpdateWithoutPaymentMethodsInput>, Prisma.WorkspaceUncheckedUpdateWithoutPaymentMethodsInput>;
+};
+export type WorkspaceCreateNestedOneWithoutInvoicesInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutInvoicesInput, Prisma.WorkspaceUncheckedCreateWithoutInvoicesInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutInvoicesInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+};
+export type WorkspaceUpdateOneRequiredWithoutInvoicesNestedInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutInvoicesInput, Prisma.WorkspaceUncheckedCreateWithoutInvoicesInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutInvoicesInput;
+    upsert?: Prisma.WorkspaceUpsertWithoutInvoicesInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+    update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutInvoicesInput, Prisma.WorkspaceUpdateWithoutInvoicesInput>, Prisma.WorkspaceUncheckedUpdateWithoutInvoicesInput>;
+};
+export type WorkspaceCreateNestedOneWithoutPaymentsInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutPaymentsInput, Prisma.WorkspaceUncheckedCreateWithoutPaymentsInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutPaymentsInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+};
+export type WorkspaceUpdateOneRequiredWithoutPaymentsNestedInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutPaymentsInput, Prisma.WorkspaceUncheckedCreateWithoutPaymentsInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutPaymentsInput;
+    upsert?: Prisma.WorkspaceUpsertWithoutPaymentsInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+    update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutPaymentsInput, Prisma.WorkspaceUpdateWithoutPaymentsInput>, Prisma.WorkspaceUncheckedUpdateWithoutPaymentsInput>;
+};
+export type WorkspaceCreateNestedOneWithoutEstimatesInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutEstimatesInput, Prisma.WorkspaceUncheckedCreateWithoutEstimatesInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutEstimatesInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+};
+export type WorkspaceUpdateOneRequiredWithoutEstimatesNestedInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutEstimatesInput, Prisma.WorkspaceUncheckedCreateWithoutEstimatesInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutEstimatesInput;
+    upsert?: Prisma.WorkspaceUpsertWithoutEstimatesInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+    update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutEstimatesInput, Prisma.WorkspaceUpdateWithoutEstimatesInput>, Prisma.WorkspaceUncheckedUpdateWithoutEstimatesInput>;
+};
+export type WorkspaceCreateNestedOneWithoutBusinessesInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutBusinessesInput, Prisma.WorkspaceUncheckedCreateWithoutBusinessesInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutBusinessesInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+};
+export type WorkspaceUpdateOneRequiredWithoutBusinessesNestedInput = {
+    create?: Prisma.XOR<Prisma.WorkspaceCreateWithoutBusinessesInput, Prisma.WorkspaceUncheckedCreateWithoutBusinessesInput>;
+    connectOrCreate?: Prisma.WorkspaceCreateOrConnectWithoutBusinessesInput;
+    upsert?: Prisma.WorkspaceUpsertWithoutBusinessesInput;
+    connect?: Prisma.WorkspaceWhereUniqueInput;
+    update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceUpdateToOneWithWhereWithoutBusinessesInput, Prisma.WorkspaceUpdateWithoutBusinessesInput>, Prisma.WorkspaceUncheckedUpdateWithoutBusinessesInput>;
+};
+export type WorkspaceCreateWithoutClientsInput = {
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    invoices?: Prisma.InvoiceCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceUncheckedCreateWithoutClientsInput = {
+    id?: number;
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateUncheckedCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogUncheckedCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessUncheckedCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceCreateOrConnectWithoutClientsInput = {
+    where: Prisma.WorkspaceWhereUniqueInput;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutClientsInput, Prisma.WorkspaceUncheckedCreateWithoutClientsInput>;
+};
+export type WorkspaceUpsertWithoutClientsInput = {
+    update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutClientsInput, Prisma.WorkspaceUncheckedUpdateWithoutClientsInput>;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutClientsInput, Prisma.WorkspaceUncheckedCreateWithoutClientsInput>;
+    where?: Prisma.WorkspaceWhereInput;
+};
+export type WorkspaceUpdateToOneWithWhereWithoutClientsInput = {
+    where?: Prisma.WorkspaceWhereInput;
+    data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutClientsInput, Prisma.WorkspaceUncheckedUpdateWithoutClientsInput>;
+};
+export type WorkspaceUpdateWithoutClientsInput = {
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    invoices?: Prisma.InvoiceUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceUncheckedUpdateWithoutClientsInput = {
+    id?: Prisma.IntFieldUpdateOperationsInput | number;
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceCreateWithoutCatalogsInput = {
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceUncheckedCreateWithoutCatalogsInput = {
+    id?: number;
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientUncheckedCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateUncheckedCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessUncheckedCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceCreateOrConnectWithoutCatalogsInput = {
+    where: Prisma.WorkspaceWhereUniqueInput;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutCatalogsInput, Prisma.WorkspaceUncheckedCreateWithoutCatalogsInput>;
+};
+export type WorkspaceUpsertWithoutCatalogsInput = {
+    update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutCatalogsInput, Prisma.WorkspaceUncheckedUpdateWithoutCatalogsInput>;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutCatalogsInput, Prisma.WorkspaceUncheckedCreateWithoutCatalogsInput>;
+    where?: Prisma.WorkspaceWhereInput;
+};
+export type WorkspaceUpdateToOneWithWhereWithoutCatalogsInput = {
+    where?: Prisma.WorkspaceWhereInput;
+    data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutCatalogsInput, Prisma.WorkspaceUncheckedUpdateWithoutCatalogsInput>;
+};
+export type WorkspaceUpdateWithoutCatalogsInput = {
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceUncheckedUpdateWithoutCatalogsInput = {
+    id?: Prisma.IntFieldUpdateOperationsInput | number;
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceCreateWithoutPaymentMethodsInput = {
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceUncheckedCreateWithoutPaymentMethodsInput = {
+    id?: number;
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientUncheckedCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateUncheckedCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogUncheckedCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessUncheckedCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceCreateOrConnectWithoutPaymentMethodsInput = {
+    where: Prisma.WorkspaceWhereUniqueInput;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutPaymentMethodsInput, Prisma.WorkspaceUncheckedCreateWithoutPaymentMethodsInput>;
+};
+export type WorkspaceUpsertWithoutPaymentMethodsInput = {
+    update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutPaymentMethodsInput, Prisma.WorkspaceUncheckedUpdateWithoutPaymentMethodsInput>;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutPaymentMethodsInput, Prisma.WorkspaceUncheckedCreateWithoutPaymentMethodsInput>;
+    where?: Prisma.WorkspaceWhereInput;
+};
+export type WorkspaceUpdateToOneWithWhereWithoutPaymentMethodsInput = {
+    where?: Prisma.WorkspaceWhereInput;
+    data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutPaymentMethodsInput, Prisma.WorkspaceUncheckedUpdateWithoutPaymentMethodsInput>;
+};
+export type WorkspaceUpdateWithoutPaymentMethodsInput = {
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceUncheckedUpdateWithoutPaymentMethodsInput = {
+    id?: Prisma.IntFieldUpdateOperationsInput | number;
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUncheckedUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceCreateWithoutInvoicesInput = {
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceUncheckedCreateWithoutInvoicesInput = {
+    id?: number;
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientUncheckedCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateUncheckedCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogUncheckedCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessUncheckedCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceCreateOrConnectWithoutInvoicesInput = {
+    where: Prisma.WorkspaceWhereUniqueInput;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutInvoicesInput, Prisma.WorkspaceUncheckedCreateWithoutInvoicesInput>;
+};
+export type WorkspaceUpsertWithoutInvoicesInput = {
+    update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutInvoicesInput, Prisma.WorkspaceUncheckedUpdateWithoutInvoicesInput>;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutInvoicesInput, Prisma.WorkspaceUncheckedCreateWithoutInvoicesInput>;
+    where?: Prisma.WorkspaceWhereInput;
+};
+export type WorkspaceUpdateToOneWithWhereWithoutInvoicesInput = {
+    where?: Prisma.WorkspaceWhereInput;
+    data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutInvoicesInput, Prisma.WorkspaceUncheckedUpdateWithoutInvoicesInput>;
+};
+export type WorkspaceUpdateWithoutInvoicesInput = {
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceUncheckedUpdateWithoutInvoicesInput = {
+    id?: Prisma.IntFieldUpdateOperationsInput | number;
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceCreateWithoutPaymentsInput = {
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceUncheckedCreateWithoutPaymentsInput = {
+    id?: number;
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientUncheckedCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateUncheckedCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogUncheckedCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessUncheckedCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceCreateOrConnectWithoutPaymentsInput = {
+    where: Prisma.WorkspaceWhereUniqueInput;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutPaymentsInput, Prisma.WorkspaceUncheckedCreateWithoutPaymentsInput>;
+};
+export type WorkspaceUpsertWithoutPaymentsInput = {
+    update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutPaymentsInput, Prisma.WorkspaceUncheckedUpdateWithoutPaymentsInput>;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutPaymentsInput, Prisma.WorkspaceUncheckedCreateWithoutPaymentsInput>;
+    where?: Prisma.WorkspaceWhereInput;
+};
+export type WorkspaceUpdateToOneWithWhereWithoutPaymentsInput = {
+    where?: Prisma.WorkspaceWhereInput;
+    data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutPaymentsInput, Prisma.WorkspaceUncheckedUpdateWithoutPaymentsInput>;
+};
+export type WorkspaceUpdateWithoutPaymentsInput = {
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceUncheckedUpdateWithoutPaymentsInput = {
+    id?: Prisma.IntFieldUpdateOperationsInput | number;
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceCreateWithoutEstimatesInput = {
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceUncheckedCreateWithoutEstimatesInput = {
+    id?: number;
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientUncheckedCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogUncheckedCreateNestedManyWithoutWorkspaceInput;
+    businesses?: Prisma.BusinessUncheckedCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceCreateOrConnectWithoutEstimatesInput = {
+    where: Prisma.WorkspaceWhereUniqueInput;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutEstimatesInput, Prisma.WorkspaceUncheckedCreateWithoutEstimatesInput>;
+};
+export type WorkspaceUpsertWithoutEstimatesInput = {
+    update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutEstimatesInput, Prisma.WorkspaceUncheckedUpdateWithoutEstimatesInput>;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutEstimatesInput, Prisma.WorkspaceUncheckedCreateWithoutEstimatesInput>;
+    where?: Prisma.WorkspaceWhereInput;
+};
+export type WorkspaceUpdateToOneWithWhereWithoutEstimatesInput = {
+    where?: Prisma.WorkspaceWhereInput;
+    data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutEstimatesInput, Prisma.WorkspaceUncheckedUpdateWithoutEstimatesInput>;
+};
+export type WorkspaceUpdateWithoutEstimatesInput = {
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceUncheckedUpdateWithoutEstimatesInput = {
+    id?: Prisma.IntFieldUpdateOperationsInput | number;
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    businesses?: Prisma.BusinessUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceCreateWithoutBusinessesInput = {
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceUncheckedCreateWithoutBusinessesInput = {
+    id?: number;
+    clerkId: string;
+    name: string;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    companyTaxId?: string | null;
+    companyLogo?: string | null;
+    invoiceNumberPrefix?: string | null;
+    defaultCurrency?: string | null;
+    defaultPaymentTerms?: string | null;
+    defaultTaxRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: string | null;
+    invoiceColor?: string | null;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionPlan?: $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Date | string | null;
+    lastStripeSync?: Date | string | null;
+    clients?: Prisma.ClientUncheckedCreateNestedManyWithoutWorkspaceInput;
+    invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutWorkspaceInput;
+    estimates?: Prisma.EstimateUncheckedCreateNestedManyWithoutWorkspaceInput;
+    payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutWorkspaceInput;
+    catalogs?: Prisma.CatalogUncheckedCreateNestedManyWithoutWorkspaceInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedCreateNestedManyWithoutWorkspaceInput;
+};
+export type WorkspaceCreateOrConnectWithoutBusinessesInput = {
+    where: Prisma.WorkspaceWhereUniqueInput;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutBusinessesInput, Prisma.WorkspaceUncheckedCreateWithoutBusinessesInput>;
+};
+export type WorkspaceUpsertWithoutBusinessesInput = {
+    update: Prisma.XOR<Prisma.WorkspaceUpdateWithoutBusinessesInput, Prisma.WorkspaceUncheckedUpdateWithoutBusinessesInput>;
+    create: Prisma.XOR<Prisma.WorkspaceCreateWithoutBusinessesInput, Prisma.WorkspaceUncheckedCreateWithoutBusinessesInput>;
+    where?: Prisma.WorkspaceWhereInput;
+};
+export type WorkspaceUpdateToOneWithWhereWithoutBusinessesInput = {
+    where?: Prisma.WorkspaceWhereInput;
+    data: Prisma.XOR<Prisma.WorkspaceUpdateWithoutBusinessesInput, Prisma.WorkspaceUncheckedUpdateWithoutBusinessesInput>;
+};
+export type WorkspaceUpdateWithoutBusinessesInput = {
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUpdateManyWithoutWorkspaceNestedInput;
+};
+export type WorkspaceUncheckedUpdateWithoutBusinessesInput = {
+    id?: Prisma.IntFieldUpdateOperationsInput | number;
+    clerkId?: Prisma.StringFieldUpdateOperationsInput | string;
+    name?: Prisma.StringFieldUpdateOperationsInput | string;
+    companyName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyTaxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    companyLogo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceNumberPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultCurrency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultPaymentTerms?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    defaultTaxRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null;
+    invoiceFooterText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    invoiceColor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+    stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null;
+    subscriptionPlan?: Prisma.NullableEnumSubscriptionPlanFieldUpdateOperationsInput | $Enums.SubscriptionPlan | null;
+    subscriptionStatus?: Prisma.NullableEnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus | null;
+    subscriptionEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    lastStripeSync?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null;
+    clients?: Prisma.ClientUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    estimates?: Prisma.EstimateUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    payments?: Prisma.PaymentUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    catalogs?: Prisma.CatalogUncheckedUpdateManyWithoutWorkspaceNestedInput;
+    paymentMethods?: Prisma.WorkspacePaymentMethodUncheckedUpdateManyWithoutWorkspaceNestedInput;
+};
+/**
+ * Count Type WorkspaceCountOutputType
+ */
+export type WorkspaceCountOutputType = {
+    clients: number;
+    invoices: number;
+    estimates: number;
+    payments: number;
+    catalogs: number;
+    businesses: number;
+    paymentMethods: number;
+};
+export type WorkspaceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    clients?: boolean | WorkspaceCountOutputTypeCountClientsArgs;
+    invoices?: boolean | WorkspaceCountOutputTypeCountInvoicesArgs;
+    estimates?: boolean | WorkspaceCountOutputTypeCountEstimatesArgs;
+    payments?: boolean | WorkspaceCountOutputTypeCountPaymentsArgs;
+    catalogs?: boolean | WorkspaceCountOutputTypeCountCatalogsArgs;
+    businesses?: boolean | WorkspaceCountOutputTypeCountBusinessesArgs;
+    paymentMethods?: boolean | WorkspaceCountOutputTypeCountPaymentMethodsArgs;
+};
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkspaceCountOutputType
+     */
+    select?: Prisma.WorkspaceCountOutputTypeSelect<ExtArgs> | null;
+};
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountClientsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    where?: Prisma.ClientWhereInput;
+};
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountInvoicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    where?: Prisma.InvoiceWhereInput;
+};
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountEstimatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    where?: Prisma.EstimateWhereInput;
+};
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountPaymentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    where?: Prisma.PaymentWhereInput;
+};
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountCatalogsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    where?: Prisma.CatalogWhereInput;
+};
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountBusinessesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    where?: Prisma.BusinessWhereInput;
+};
+/**
+ * WorkspaceCountOutputType without action
+ */
+export type WorkspaceCountOutputTypeCountPaymentMethodsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    where?: Prisma.WorkspacePaymentMethodWhereInput;
+};
+export type WorkspaceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+    id?: boolean;
+    clerkId?: boolean;
+    name?: boolean;
+    companyName?: boolean;
+    companyAddress?: boolean;
+    companyPhone?: boolean;
+    companyEmail?: boolean;
+    companyTaxId?: boolean;
+    companyLogo?: boolean;
+    invoiceNumberPrefix?: boolean;
+    defaultCurrency?: boolean;
+    defaultPaymentTerms?: boolean;
+    defaultTaxRate?: boolean;
+    invoiceFooterText?: boolean;
+    invoiceColor?: boolean;
+    createdAt?: boolean;
+    updatedAt?: boolean;
+    stripeCustomerId?: boolean;
+    stripeSubscriptionId?: boolean;
+    subscriptionPlan?: boolean;
+    subscriptionStatus?: boolean;
+    subscriptionEndsAt?: boolean;
+    lastStripeSync?: boolean;
+    clients?: boolean | Prisma.Workspace$clientsArgs<ExtArgs>;
+    invoices?: boolean | Prisma.Workspace$invoicesArgs<ExtArgs>;
+    estimates?: boolean | Prisma.Workspace$estimatesArgs<ExtArgs>;
+    payments?: boolean | Prisma.Workspace$paymentsArgs<ExtArgs>;
+    catalogs?: boolean | Prisma.Workspace$catalogsArgs<ExtArgs>;
+    businesses?: boolean | Prisma.Workspace$businessesArgs<ExtArgs>;
+    paymentMethods?: boolean | Prisma.Workspace$paymentMethodsArgs<ExtArgs>;
+    _count?: boolean | Prisma.WorkspaceCountOutputTypeDefaultArgs<ExtArgs>;
+}, ExtArgs["result"]["workspace"]>;
+export type WorkspaceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+    id?: boolean;
+    clerkId?: boolean;
+    name?: boolean;
+    companyName?: boolean;
+    companyAddress?: boolean;
+    companyPhone?: boolean;
+    companyEmail?: boolean;
+    companyTaxId?: boolean;
+    companyLogo?: boolean;
+    invoiceNumberPrefix?: boolean;
+    defaultCurrency?: boolean;
+    defaultPaymentTerms?: boolean;
+    defaultTaxRate?: boolean;
+    invoiceFooterText?: boolean;
+    invoiceColor?: boolean;
+    createdAt?: boolean;
+    updatedAt?: boolean;
+    stripeCustomerId?: boolean;
+    stripeSubscriptionId?: boolean;
+    subscriptionPlan?: boolean;
+    subscriptionStatus?: boolean;
+    subscriptionEndsAt?: boolean;
+    lastStripeSync?: boolean;
+}, ExtArgs["result"]["workspace"]>;
+export type WorkspaceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+    id?: boolean;
+    clerkId?: boolean;
+    name?: boolean;
+    companyName?: boolean;
+    companyAddress?: boolean;
+    companyPhone?: boolean;
+    companyEmail?: boolean;
+    companyTaxId?: boolean;
+    companyLogo?: boolean;
+    invoiceNumberPrefix?: boolean;
+    defaultCurrency?: boolean;
+    defaultPaymentTerms?: boolean;
+    defaultTaxRate?: boolean;
+    invoiceFooterText?: boolean;
+    invoiceColor?: boolean;
+    createdAt?: boolean;
+    updatedAt?: boolean;
+    stripeCustomerId?: boolean;
+    stripeSubscriptionId?: boolean;
+    subscriptionPlan?: boolean;
+    subscriptionStatus?: boolean;
+    subscriptionEndsAt?: boolean;
+    lastStripeSync?: boolean;
+}, ExtArgs["result"]["workspace"]>;
+export type WorkspaceSelectScalar = {
+    id?: boolean;
+    clerkId?: boolean;
+    name?: boolean;
+    companyName?: boolean;
+    companyAddress?: boolean;
+    companyPhone?: boolean;
+    companyEmail?: boolean;
+    companyTaxId?: boolean;
+    companyLogo?: boolean;
+    invoiceNumberPrefix?: boolean;
+    defaultCurrency?: boolean;
+    defaultPaymentTerms?: boolean;
+    defaultTaxRate?: boolean;
+    invoiceFooterText?: boolean;
+    invoiceColor?: boolean;
+    createdAt?: boolean;
+    updatedAt?: boolean;
+    stripeCustomerId?: boolean;
+    stripeSubscriptionId?: boolean;
+    subscriptionPlan?: boolean;
+    subscriptionStatus?: boolean;
+    subscriptionEndsAt?: boolean;
+    lastStripeSync?: boolean;
+};
+export type WorkspaceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "clerkId" | "name" | "companyName" | "companyAddress" | "companyPhone" | "companyEmail" | "companyTaxId" | "companyLogo" | "invoiceNumberPrefix" | "defaultCurrency" | "defaultPaymentTerms" | "defaultTaxRate" | "invoiceFooterText" | "invoiceColor" | "createdAt" | "updatedAt" | "stripeCustomerId" | "stripeSubscriptionId" | "subscriptionPlan" | "subscriptionStatus" | "subscriptionEndsAt" | "lastStripeSync", ExtArgs["result"]["workspace"]>;
+export type WorkspaceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    clients?: boolean | Prisma.Workspace$clientsArgs<ExtArgs>;
+    invoices?: boolean | Prisma.Workspace$invoicesArgs<ExtArgs>;
+    estimates?: boolean | Prisma.Workspace$estimatesArgs<ExtArgs>;
+    payments?: boolean | Prisma.Workspace$paymentsArgs<ExtArgs>;
+    catalogs?: boolean | Prisma.Workspace$catalogsArgs<ExtArgs>;
+    businesses?: boolean | Prisma.Workspace$businessesArgs<ExtArgs>;
+    paymentMethods?: boolean | Prisma.Workspace$paymentMethodsArgs<ExtArgs>;
+    _count?: boolean | Prisma.WorkspaceCountOutputTypeDefaultArgs<ExtArgs>;
+};
+export type WorkspaceIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {};
+export type WorkspaceIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {};
+export type $WorkspacePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    name: "Workspace";
+    objects: {
+        clients: Prisma.$ClientPayload<ExtArgs>[];
+        invoices: Prisma.$InvoicePayload<ExtArgs>[];
+        estimates: Prisma.$EstimatePayload<ExtArgs>[];
+        payments: Prisma.$PaymentPayload<ExtArgs>[];
+        catalogs: Prisma.$CatalogPayload<ExtArgs>[];
+        businesses: Prisma.$BusinessPayload<ExtArgs>[];
+        paymentMethods: Prisma.$WorkspacePaymentMethodPayload<ExtArgs>[];
+    };
+    scalars: runtime.Types.Extensions.GetPayloadResult<{
+        id: number;
+        clerkId: string;
+        name: string;
+        companyName: string | null;
+        companyAddress: string | null;
+        companyPhone: string | null;
+        companyEmail: string | null;
+        companyTaxId: string | null;
+        companyLogo: string | null;
+        invoiceNumberPrefix: string | null;
+        defaultCurrency: string | null;
+        defaultPaymentTerms: string | null;
+        defaultTaxRate: runtime.Decimal | null;
+        invoiceFooterText: string | null;
+        invoiceColor: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        stripeCustomerId: string | null;
+        stripeSubscriptionId: string | null;
+        subscriptionPlan: $Enums.SubscriptionPlan | null;
+        subscriptionStatus: $Enums.SubscriptionStatus | null;
+        subscriptionEndsAt: Date | null;
+        lastStripeSync: Date | null;
+    }, ExtArgs["result"]["workspace"]>;
+    composites: {};
+};
+export type WorkspaceGetPayload<S extends boolean | null | undefined | WorkspaceDefaultArgs> = runtime.Types.Result.GetResult<Prisma.$WorkspacePayload, S>;
+export type WorkspaceCountArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = Omit<WorkspaceFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+    select?: WorkspaceCountAggregateInputType | true;
+};
+export interface WorkspaceDelegate<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: {
+        types: Prisma.TypeMap<ExtArgs>['model']['Workspace'];
+        meta: {
+            name: 'Workspace';
+        };
+    };
+    /**
+     * Find zero or one Workspace that matches the filter.
+     * @param {WorkspaceFindUniqueArgs} args - Arguments to find a Workspace
+     * @example
+     * // Get one Workspace
+     * const workspace = await prisma.workspace.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends WorkspaceFindUniqueArgs>(args: Prisma.SelectSubset<T, WorkspaceFindUniqueArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>;
+    /**
+     * Find one Workspace that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {WorkspaceFindUniqueOrThrowArgs} args - Arguments to find a Workspace
+     * @example
+     * // Get one Workspace
+     * const workspace = await prisma.workspace.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends WorkspaceFindUniqueOrThrowArgs>(args: Prisma.SelectSubset<T, WorkspaceFindUniqueOrThrowArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>;
+    /**
+     * Find the first Workspace that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkspaceFindFirstArgs} args - Arguments to find a Workspace
+     * @example
+     * // Get one Workspace
+     * const workspace = await prisma.workspace.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends WorkspaceFindFirstArgs>(args?: Prisma.SelectSubset<T, WorkspaceFindFirstArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>;
+    /**
+     * Find the first Workspace that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkspaceFindFirstOrThrowArgs} args - Arguments to find a Workspace
+     * @example
+     * // Get one Workspace
+     * const workspace = await prisma.workspace.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends WorkspaceFindFirstOrThrowArgs>(args?: Prisma.SelectSubset<T, WorkspaceFindFirstOrThrowArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>;
+    /**
+     * Find zero or more Workspaces that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkspaceFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Workspaces
+     * const workspaces = await prisma.workspace.findMany()
+     *
+     * // Get first 10 Workspaces
+     * const workspaces = await prisma.workspace.findMany({ take: 10 })
+     *
+     * // Only select the `id`
+     * const workspaceWithIdOnly = await prisma.workspace.findMany({ select: { id: true } })
+     *
+     */
+    findMany<T extends WorkspaceFindManyArgs>(args?: Prisma.SelectSubset<T, WorkspaceFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>;
+    /**
+     * Create a Workspace.
+     * @param {WorkspaceCreateArgs} args - Arguments to create a Workspace.
+     * @example
+     * // Create one Workspace
+     * const Workspace = await prisma.workspace.create({
+     *   data: {
+     *     // ... data to create a Workspace
+     *   }
+     * })
+     *
+     */
+    create<T extends WorkspaceCreateArgs>(args: Prisma.SelectSubset<T, WorkspaceCreateArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>;
+    /**
+     * Create many Workspaces.
+     * @param {WorkspaceCreateManyArgs} args - Arguments to create many Workspaces.
+     * @example
+     * // Create many Workspaces
+     * const workspace = await prisma.workspace.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *
+     */
+    createMany<T extends WorkspaceCreateManyArgs>(args?: Prisma.SelectSubset<T, WorkspaceCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>;
+    /**
+     * Create many Workspaces and returns the data saved in the database.
+     * @param {WorkspaceCreateManyAndReturnArgs} args - Arguments to create many Workspaces.
+     * @example
+     * // Create many Workspaces
+     * const workspace = await prisma.workspace.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *
+     * // Create many Workspaces and only return the `id`
+     * const workspaceWithIdOnly = await prisma.workspace.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     *
+     */
+    createManyAndReturn<T extends WorkspaceCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, WorkspaceCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>;
+    /**
+     * Delete a Workspace.
+     * @param {WorkspaceDeleteArgs} args - Arguments to delete one Workspace.
+     * @example
+     * // Delete one Workspace
+     * const Workspace = await prisma.workspace.delete({
+     *   where: {
+     *     // ... filter to delete one Workspace
+     *   }
+     * })
+     *
+     */
+    delete<T extends WorkspaceDeleteArgs>(args: Prisma.SelectSubset<T, WorkspaceDeleteArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>;
+    /**
+     * Update one Workspace.
+     * @param {WorkspaceUpdateArgs} args - Arguments to update one Workspace.
+     * @example
+     * // Update one Workspace
+     * const workspace = await prisma.workspace.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     *
+     */
+    update<T extends WorkspaceUpdateArgs>(args: Prisma.SelectSubset<T, WorkspaceUpdateArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>;
+    /**
+     * Delete zero or more Workspaces.
+     * @param {WorkspaceDeleteManyArgs} args - Arguments to filter Workspaces to delete.
+     * @example
+     * // Delete a few Workspaces
+     * const { count } = await prisma.workspace.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     *
+     */
+    deleteMany<T extends WorkspaceDeleteManyArgs>(args?: Prisma.SelectSubset<T, WorkspaceDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>;
+    /**
+     * Update zero or more Workspaces.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkspaceUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Workspaces
+     * const workspace = await prisma.workspace.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     *
+     */
+    updateMany<T extends WorkspaceUpdateManyArgs>(args: Prisma.SelectSubset<T, WorkspaceUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>;
+    /**
+     * Update zero or more Workspaces and returns the data updated in the database.
+     * @param {WorkspaceUpdateManyAndReturnArgs} args - Arguments to update many Workspaces.
+     * @example
+     * // Update many Workspaces
+     * const workspace = await prisma.workspace.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *
+     * // Update zero or more Workspaces and only return the `id`
+     * const workspaceWithIdOnly = await prisma.workspace.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     *
+     */
+    updateManyAndReturn<T extends WorkspaceUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, WorkspaceUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>;
+    /**
+     * Create or update one Workspace.
+     * @param {WorkspaceUpsertArgs} args - Arguments to update or create a Workspace.
+     * @example
+     * // Update or create a Workspace
+     * const workspace = await prisma.workspace.upsert({
+     *   create: {
+     *     // ... data to create a Workspace
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Workspace we want to update
+     *   }
+     * })
+     */
+    upsert<T extends WorkspaceUpsertArgs>(args: Prisma.SelectSubset<T, WorkspaceUpsertArgs<ExtArgs>>): Prisma.Prisma__WorkspaceClient<runtime.Types.Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>;
+    /**
+     * Count the number of Workspaces.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkspaceCountArgs} args - Arguments to filter Workspaces to count.
+     * @example
+     * // Count the number of Workspaces
+     * const count = await prisma.workspace.count({
+     *   where: {
+     *     // ... the filter for the Workspaces we want to count
+     *   }
+     * })
+    **/
+    count<T extends WorkspaceCountArgs>(args?: Prisma.Subset<T, WorkspaceCountArgs>): Prisma.PrismaPromise<T extends runtime.Types.Utils.Record<'select', any> ? T['select'] extends true ? number : Prisma.GetScalarType<T['select'], WorkspaceCountAggregateOutputType> : number>;
+    /**
+     * Allows you to perform aggregations operations on a Workspace.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkspaceAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends WorkspaceAggregateArgs>(args: Prisma.Subset<T, WorkspaceAggregateArgs>): Prisma.PrismaPromise<GetWorkspaceAggregateType<T>>;
+    /**
+     * Group by Workspace.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {WorkspaceGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     *
+    **/
+    groupBy<T extends WorkspaceGroupByArgs, HasSelectOrTake extends Prisma.Or<Prisma.Extends<'skip', Prisma.Keys<T>>, Prisma.Extends<'take', Prisma.Keys<T>>>, OrderByArg extends Prisma.True extends HasSelectOrTake ? {
+        orderBy: WorkspaceGroupByArgs['orderBy'];
+    } : {
+        orderBy?: WorkspaceGroupByArgs['orderBy'];
+    }, OrderFields extends Prisma.ExcludeUnderscoreKeys<Prisma.Keys<Prisma.MaybeTupleToUnion<T['orderBy']>>>, ByFields extends Prisma.MaybeTupleToUnion<T['by']>, ByValid extends Prisma.Has<ByFields, OrderFields>, HavingFields extends Prisma.GetHavingFields<T['having']>, HavingValid extends Prisma.Has<ByFields, HavingFields>, ByEmpty extends T['by'] extends never[] ? Prisma.True : Prisma.False, InputErrors extends ByEmpty extends Prisma.True ? `Error: "by" must not be empty.` : HavingValid extends Prisma.False ? {
+        [P in HavingFields]: P extends ByFields ? never : P extends string ? `Error: Field "${P}" used in "having" needs to be provided in "by".` : [
+            Error,
+            'Field ',
+            P,
+            ` in "having" needs to be provided in "by"`
+        ];
+    }[HavingFields] : 'take' extends Prisma.Keys<T> ? 'orderBy' extends Prisma.Keys<T> ? ByValid extends Prisma.True ? {} : {
+        [P in OrderFields]: P extends ByFields ? never : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`;
+    }[OrderFields] : 'Error: If you provide "take", you also need to provide "orderBy"' : 'skip' extends Prisma.Keys<T> ? 'orderBy' extends Prisma.Keys<T> ? ByValid extends Prisma.True ? {} : {
+        [P in OrderFields]: P extends ByFields ? never : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`;
+    }[OrderFields] : 'Error: If you provide "skip", you also need to provide "orderBy"' : ByValid extends Prisma.True ? {} : {
+        [P in OrderFields]: P extends ByFields ? never : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`;
+    }[OrderFields]>(args: Prisma.SubsetIntersection<T, WorkspaceGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetWorkspaceGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>;
+    /**
+     * Fields of the Workspace model
+     */
+    readonly fields: WorkspaceFieldRefs;
+}
+/**
+ * The delegate class that acts as a "Promise-like" for Workspace.
+ * Why is this prefixed with `Prisma__`?
+ * Because we want to prevent naming conflicts as mentioned in
+ * https://github.com/prisma/prisma-client-js/issues/707
+ */
+export interface Prisma__WorkspaceClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise";
+    clients<T extends Prisma.Workspace$clientsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$clientsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ClientPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>;
+    invoices<T extends Prisma.Workspace$invoicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$invoicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>;
+    estimates<T extends Prisma.Workspace$estimatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$estimatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EstimatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>;
+    payments<T extends Prisma.Workspace$paymentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$paymentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PaymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>;
+    catalogs<T extends Prisma.Workspace$catalogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$catalogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>;
+    businesses<T extends Prisma.Workspace$businessesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$businessesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BusinessPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>;
+    paymentMethods<T extends Prisma.Workspace$paymentMethodsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Workspace$paymentMethodsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkspacePaymentMethodPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>;
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): runtime.Types.Utils.JsPromise<TResult1 | TResult2>;
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): runtime.Types.Utils.JsPromise<T | TResult>;
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): runtime.Types.Utils.JsPromise<T>;
+}
+/**
+ * Fields of the Workspace model
+ */
+export interface WorkspaceFieldRefs {
+    readonly id: Prisma.FieldRef<"Workspace", 'Int'>;
+    readonly clerkId: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly name: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly companyName: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly companyAddress: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly companyPhone: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly companyEmail: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly companyTaxId: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly companyLogo: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly invoiceNumberPrefix: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly defaultCurrency: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly defaultPaymentTerms: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly defaultTaxRate: Prisma.FieldRef<"Workspace", 'Decimal'>;
+    readonly invoiceFooterText: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly invoiceColor: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly createdAt: Prisma.FieldRef<"Workspace", 'DateTime'>;
+    readonly updatedAt: Prisma.FieldRef<"Workspace", 'DateTime'>;
+    readonly stripeCustomerId: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly stripeSubscriptionId: Prisma.FieldRef<"Workspace", 'String'>;
+    readonly subscriptionPlan: Prisma.FieldRef<"Workspace", 'SubscriptionPlan'>;
+    readonly subscriptionStatus: Prisma.FieldRef<"Workspace", 'SubscriptionStatus'>;
+    readonly subscriptionEndsAt: Prisma.FieldRef<"Workspace", 'DateTime'>;
+    readonly lastStripeSync: Prisma.FieldRef<"Workspace", 'DateTime'>;
+}
+/**
+ * Workspace findUnique
+ */
+export type WorkspaceFindUniqueArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.WorkspaceInclude<ExtArgs> | null;
+    /**
+     * Filter, which Workspace to fetch.
+     */
+    where: Prisma.WorkspaceWhereUniqueInput;
+};
+/**
+ * Workspace findUniqueOrThrow
+ */
+export type WorkspaceFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.WorkspaceInclude<ExtArgs> | null;
+    /**
+     * Filter, which Workspace to fetch.
+     */
+    where: Prisma.WorkspaceWhereUniqueInput;
+};
+/**
+ * Workspace findFirst
+ */
+export type WorkspaceFindFirstArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.WorkspaceInclude<ExtArgs> | null;
+    /**
+     * Filter, which Workspace to fetch.
+     */
+    where?: Prisma.WorkspaceWhereInput;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of Workspaces to fetch.
+     */
+    orderBy?: Prisma.WorkspaceOrderByWithRelationInput | Prisma.WorkspaceOrderByWithRelationInput[];
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for searching for Workspaces.
+     */
+    cursor?: Prisma.WorkspaceWhereUniqueInput;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` Workspaces from the position of the cursor.
+     */
+    take?: number;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` Workspaces.
+     */
+    skip?: number;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of Workspaces.
+     */
+    distinct?: Prisma.WorkspaceScalarFieldEnum | Prisma.WorkspaceScalarFieldEnum[];
+};
+/**
+ * Workspace findFirstOrThrow
+ */
+export type WorkspaceFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.WorkspaceInclude<ExtArgs> | null;
+    /**
+     * Filter, which Workspace to fetch.
+     */
+    where?: Prisma.WorkspaceWhereInput;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of Workspaces to fetch.
+     */
+    orderBy?: Prisma.WorkspaceOrderByWithRelationInput | Prisma.WorkspaceOrderByWithRelationInput[];
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for searching for Workspaces.
+     */
+    cursor?: Prisma.WorkspaceWhereUniqueInput;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` Workspaces from the position of the cursor.
+     */
+    take?: number;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` Workspaces.
+     */
+    skip?: number;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of Workspaces.
+     */
+    distinct?: Prisma.WorkspaceScalarFieldEnum | Prisma.WorkspaceScalarFieldEnum[];
+};
+/**
+ * Workspace findMany
+ */
+export type WorkspaceFindManyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.WorkspaceInclude<ExtArgs> | null;
+    /**
+     * Filter, which Workspaces to fetch.
+     */
+    where?: Prisma.WorkspaceWhereInput;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of Workspaces to fetch.
+     */
+    orderBy?: Prisma.WorkspaceOrderByWithRelationInput | Prisma.WorkspaceOrderByWithRelationInput[];
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for listing Workspaces.
+     */
+    cursor?: Prisma.WorkspaceWhereUniqueInput;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` Workspaces from the position of the cursor.
+     */
+    take?: number;
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` Workspaces.
+     */
+    skip?: number;
+    distinct?: Prisma.WorkspaceScalarFieldEnum | Prisma.WorkspaceScalarFieldEnum[];
+};
+/**
+ * Workspace create
+ */
+export type WorkspaceCreateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.WorkspaceInclude<ExtArgs> | null;
+    /**
+     * The data needed to create a Workspace.
+     */
+    data: Prisma.XOR<Prisma.WorkspaceCreateInput, Prisma.WorkspaceUncheckedCreateInput>;
+};
+/**
+ * Workspace createMany
+ */
+export type WorkspaceCreateManyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many Workspaces.
+     */
+    data: Prisma.WorkspaceCreateManyInput | Prisma.WorkspaceCreateManyInput[];
+    skipDuplicates?: boolean;
+};
+/**
+ * Workspace createManyAndReturn
+ */
+export type WorkspaceCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelectCreateManyAndReturn<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * The data used to create many Workspaces.
+     */
+    data: Prisma.WorkspaceCreateManyInput | Prisma.WorkspaceCreateManyInput[];
+    skipDuplicates?: boolean;
+};
+/**
+ * Workspace update
+ */
+export type WorkspaceUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.WorkspaceInclude<ExtArgs> | null;
+    /**
+     * The data needed to update a Workspace.
+     */
+    data: Prisma.XOR<Prisma.WorkspaceUpdateInput, Prisma.WorkspaceUncheckedUpdateInput>;
+    /**
+     * Choose, which Workspace to update.
+     */
+    where: Prisma.WorkspaceWhereUniqueInput;
+};
+/**
+ * Workspace updateMany
+ */
+export type WorkspaceUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * The data used to update Workspaces.
+     */
+    data: Prisma.XOR<Prisma.WorkspaceUpdateManyMutationInput, Prisma.WorkspaceUncheckedUpdateManyInput>;
+    /**
+     * Filter which Workspaces to update
+     */
+    where?: Prisma.WorkspaceWhereInput;
+    /**
+     * Limit how many Workspaces to update.
+     */
+    limit?: number;
+};
+/**
+ * Workspace updateManyAndReturn
+ */
+export type WorkspaceUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelectUpdateManyAndReturn<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * The data used to update Workspaces.
+     */
+    data: Prisma.XOR<Prisma.WorkspaceUpdateManyMutationInput, Prisma.WorkspaceUncheckedUpdateManyInput>;
+    /**
+     * Filter which Workspaces to update
+     */
+    where?: Prisma.WorkspaceWhereInput;
+    /**
+     * Limit how many Workspaces to update.
+     */
+    limit?: number;
+};
+/**
+ * Workspace upsert
+ */
+export type WorkspaceUpsertArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.WorkspaceInclude<ExtArgs> | null;
+    /**
+     * The filter to search for the Workspace to update in case it exists.
+     */
+    where: Prisma.WorkspaceWhereUniqueInput;
+    /**
+     * In case the Workspace found by the `where` argument doesn't exist, create a new Workspace with this data.
+     */
+    create: Prisma.XOR<Prisma.WorkspaceCreateInput, Prisma.WorkspaceUncheckedCreateInput>;
+    /**
+     * In case the Workspace was found with the provided `where` argument, update it with this data.
+     */
+    update: Prisma.XOR<Prisma.WorkspaceUpdateInput, Prisma.WorkspaceUncheckedUpdateInput>;
+};
+/**
+ * Workspace delete
+ */
+export type WorkspaceDeleteArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.WorkspaceInclude<ExtArgs> | null;
+    /**
+     * Filter which Workspace to delete.
+     */
+    where: Prisma.WorkspaceWhereUniqueInput;
+};
+/**
+ * Workspace deleteMany
+ */
+export type WorkspaceDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Filter which Workspaces to delete
+     */
+    where?: Prisma.WorkspaceWhereInput;
+    /**
+     * Limit how many Workspaces to delete.
+     */
+    limit?: number;
+};
+/**
+ * Workspace.clients
+ */
+export type Workspace$clientsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Client
+     */
+    select?: Prisma.ClientSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Client
+     */
+    omit?: Prisma.ClientOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.ClientInclude<ExtArgs> | null;
+    where?: Prisma.ClientWhereInput;
+    orderBy?: Prisma.ClientOrderByWithRelationInput | Prisma.ClientOrderByWithRelationInput[];
+    cursor?: Prisma.ClientWhereUniqueInput;
+    take?: number;
+    skip?: number;
+    distinct?: Prisma.ClientScalarFieldEnum | Prisma.ClientScalarFieldEnum[];
+};
+/**
+ * Workspace.invoices
+ */
+export type Workspace$invoicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Invoice
+     */
+    select?: Prisma.InvoiceSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Invoice
+     */
+    omit?: Prisma.InvoiceOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.InvoiceInclude<ExtArgs> | null;
+    where?: Prisma.InvoiceWhereInput;
+    orderBy?: Prisma.InvoiceOrderByWithRelationInput | Prisma.InvoiceOrderByWithRelationInput[];
+    cursor?: Prisma.InvoiceWhereUniqueInput;
+    take?: number;
+    skip?: number;
+    distinct?: Prisma.InvoiceScalarFieldEnum | Prisma.InvoiceScalarFieldEnum[];
+};
+/**
+ * Workspace.estimates
+ */
+export type Workspace$estimatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Estimate
+     */
+    select?: Prisma.EstimateSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Estimate
+     */
+    omit?: Prisma.EstimateOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.EstimateInclude<ExtArgs> | null;
+    where?: Prisma.EstimateWhereInput;
+    orderBy?: Prisma.EstimateOrderByWithRelationInput | Prisma.EstimateOrderByWithRelationInput[];
+    cursor?: Prisma.EstimateWhereUniqueInput;
+    take?: number;
+    skip?: number;
+    distinct?: Prisma.EstimateScalarFieldEnum | Prisma.EstimateScalarFieldEnum[];
+};
+/**
+ * Workspace.payments
+ */
+export type Workspace$paymentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Payment
+     */
+    select?: Prisma.PaymentSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Payment
+     */
+    omit?: Prisma.PaymentOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.PaymentInclude<ExtArgs> | null;
+    where?: Prisma.PaymentWhereInput;
+    orderBy?: Prisma.PaymentOrderByWithRelationInput | Prisma.PaymentOrderByWithRelationInput[];
+    cursor?: Prisma.PaymentWhereUniqueInput;
+    take?: number;
+    skip?: number;
+    distinct?: Prisma.PaymentScalarFieldEnum | Prisma.PaymentScalarFieldEnum[];
+};
+/**
+ * Workspace.catalogs
+ */
+export type Workspace$catalogsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Catalog
+     */
+    select?: Prisma.CatalogSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Catalog
+     */
+    omit?: Prisma.CatalogOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.CatalogInclude<ExtArgs> | null;
+    where?: Prisma.CatalogWhereInput;
+    orderBy?: Prisma.CatalogOrderByWithRelationInput | Prisma.CatalogOrderByWithRelationInput[];
+    cursor?: Prisma.CatalogWhereUniqueInput;
+    take?: number;
+    skip?: number;
+    distinct?: Prisma.CatalogScalarFieldEnum | Prisma.CatalogScalarFieldEnum[];
+};
+/**
+ * Workspace.businesses
+ */
+export type Workspace$businessesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Business
+     */
+    select?: Prisma.BusinessSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Business
+     */
+    omit?: Prisma.BusinessOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.BusinessInclude<ExtArgs> | null;
+    where?: Prisma.BusinessWhereInput;
+    orderBy?: Prisma.BusinessOrderByWithRelationInput | Prisma.BusinessOrderByWithRelationInput[];
+    cursor?: Prisma.BusinessWhereUniqueInput;
+    take?: number;
+    skip?: number;
+    distinct?: Prisma.BusinessScalarFieldEnum | Prisma.BusinessScalarFieldEnum[];
+};
+/**
+ * Workspace.paymentMethods
+ */
+export type Workspace$paymentMethodsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the WorkspacePaymentMethod
+     */
+    select?: Prisma.WorkspacePaymentMethodSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the WorkspacePaymentMethod
+     */
+    omit?: Prisma.WorkspacePaymentMethodOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.WorkspacePaymentMethodInclude<ExtArgs> | null;
+    where?: Prisma.WorkspacePaymentMethodWhereInput;
+    orderBy?: Prisma.WorkspacePaymentMethodOrderByWithRelationInput | Prisma.WorkspacePaymentMethodOrderByWithRelationInput[];
+    cursor?: Prisma.WorkspacePaymentMethodWhereUniqueInput;
+    take?: number;
+    skip?: number;
+    distinct?: Prisma.WorkspacePaymentMethodScalarFieldEnum | Prisma.WorkspacePaymentMethodScalarFieldEnum[];
+};
+/**
+ * Workspace without action
+ */
+export type WorkspaceDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Workspace
+     */
+    select?: Prisma.WorkspaceSelect<ExtArgs> | null;
+    /**
+     * Omit specific fields from the Workspace
+     */
+    omit?: Prisma.WorkspaceOmit<ExtArgs> | null;
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: Prisma.WorkspaceInclude<ExtArgs> | null;
+};
+export {};
+//# sourceMappingURL=Workspace.d.ts.map
