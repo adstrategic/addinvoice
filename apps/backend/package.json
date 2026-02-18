@@ -9,6 +9,7 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "pnpm run clean && tsc",
+    "prestart": "pnpm --filter @addinvoice/db run migrate:deploy",
     "start": "node dist/server.js",
     "migrate": "pnpm --filter @addinvoice/db run migrate",
     "migrate:deploy": "pnpm --filter @addinvoice/db run migrate:deploy",

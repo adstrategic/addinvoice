@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "postbuild": "cp -r .next/static .next/standalone/apps/frontend/.next/static && cp -r public .next/standalone/apps/frontend/public",
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start"
