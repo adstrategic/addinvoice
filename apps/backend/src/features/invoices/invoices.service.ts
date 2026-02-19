@@ -108,30 +108,36 @@ function calculateInvoiceTotals(
   // Subtotal: sum of all item totals (after item discounts)
   const subtotal = itemTotals.reduce((sum, total) => sum + total, 0);
 
-  // Calculate tax for each item
-  const itemTaxes = items.map((item, index) => {
-    const itemTotalAfterDiscount = itemTotals[index];
-    if (invoice.taxMode === "BY_PRODUCT") {
-      return (itemTotalAfterDiscount * item.tax) / 100;
-    } else if (
-      invoice.taxMode === "BY_TOTAL" &&
-      item.vatEnabled &&
-      invoice.taxPercentage
-    ) {
-      return (itemTotalAfterDiscount * invoice.taxPercentage) / 100;
-    }
-    return 0;
-  });
-
-  // Total tax: sum of all item taxes
-  const totalTax = itemTaxes.reduce((sum, tax) => sum + tax, 0);
-
-  // Apply invoice-level discount to subtotal
+  // Apply invoice-level discount to subtotal (tax must be calculated after all discounts)
   let subtotalAfterDiscount = subtotal;
   if (invoice.discountType === "PERCENTAGE") {
     subtotalAfterDiscount = subtotal - (subtotal * invoice.discount) / 100;
   } else if (invoice.discountType === "FIXED") {
     subtotalAfterDiscount = subtotal - invoice.discount;
+  }
+
+  // Tax base = amount after all discounts; apply proportional discount ratio to taxable amounts
+  let totalTax: number;
+  if (subtotal === 0) {
+    totalTax = 0;
+  } else {
+    const ratio = subtotalAfterDiscount / subtotal;
+    if (invoice.taxMode === "BY_PRODUCT") {
+      totalTax = items.reduce((sum, item, index) => {
+        const itemTaxableAfterDiscount = itemTotals[index] * ratio;
+        return sum + (itemTaxableAfterDiscount * item.tax) / 100;
+      }, 0);
+    } else if (invoice.taxMode === "BY_TOTAL" && invoice.taxPercentage) {
+      const taxableSubtotal = items.reduce(
+        (sum, item, index) =>
+          item.vatEnabled ? sum + itemTotals[index] : sum,
+        0,
+      );
+      const taxableAfterDiscount = taxableSubtotal * ratio;
+      totalTax = (taxableAfterDiscount * invoice.taxPercentage) / 100;
+    } else {
+      totalTax = 0;
+    }
   }
 
   // Total: subtotal after discount + total tax

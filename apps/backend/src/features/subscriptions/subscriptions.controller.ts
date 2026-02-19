@@ -9,7 +9,7 @@ import { Request } from "express";
  */
 export async function getSubscriptionStatus(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> {
   const workspaceId = req.workspaceId!;
 
@@ -23,11 +23,11 @@ export async function getSubscriptionStatus(
  */
 export async function createCheckout(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> {
   const workspaceId = req.workspaceId!;
   const { userId } = getAuth(req);
-  const { planType } = req.body;
+  const { planType, billingInterval } = req.body;
 
   if (!planType || !["CORE", "AI_PRO", "LIFETIME"].includes(planType)) {
     res.status(400).json({
@@ -37,15 +37,26 @@ export async function createCheckout(
     return;
   }
 
-  // Get user email from Clerk (you might need to fetch this from Clerk API)
-  // For now, we'll use a placeholder - you can enhance this later
+  const isLifetime = planType === "LIFETIME";
+  const validIntervals = ["month", "year"] as const;
+  const interval =
+    isLifetime ? "month" : validIntervals.includes(billingInterval) ? billingInterval : null;
+  if (!interval) {
+    res.status(400).json({
+      error: "INVALID_BILLING_INTERVAL",
+      message: "billingInterval must be 'month' or 'year' for recurring plans",
+    });
+    return;
+  }
+
   const userEmail = (req as any).auth?.sessionClaims?.email || "";
 
   const checkoutUrl = await subscriptionService.createCheckoutSession(
     workspaceId,
     planType as "CORE" | "AI_PRO" | "LIFETIME",
+    interval,
     userId!,
-    userEmail
+    userEmail,
   );
 
   res.json({ data: { url: checkoutUrl } });
@@ -56,13 +67,12 @@ export async function createCheckout(
  */
 export async function createPortalSession(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> {
   const workspaceId = req.workspaceId!;
 
-  const portalUrl = await subscriptionService.createCustomerPortalSession(
-    workspaceId
-  );
+  const portalUrl =
+    await subscriptionService.createCustomerPortalSession(workspaceId);
 
   res.json({ data: { url: portalUrl } });
 }

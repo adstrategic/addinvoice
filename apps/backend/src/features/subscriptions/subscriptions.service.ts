@@ -1,4 +1,10 @@
-import { stripe, PLAN_PRODUCT_IDS, getProductPriceId } from "../../core/stripe";
+import {
+  stripe,
+  PLAN_PRODUCT_IDS,
+  getProductPriceId,
+  getProductPriceByInterval,
+  type BillingInterval,
+} from "../../core/stripe";
 import prisma from "../../core/db";
 import type Stripe from "stripe";
 
@@ -69,6 +75,7 @@ export async function getSubscriptionStatus(
 export async function createCheckoutSession(
   workspaceId: number,
   planType: SubscriptionPlan,
+  billingInterval: BillingInterval,
   clerkUserId: string,
   userEmail: string,
 ): Promise<string> {
@@ -103,9 +110,11 @@ export async function createCheckoutSession(
     });
   }
 
-  // Get the price ID from the product (products can have multiple prices)
   const productId = PLAN_PRODUCT_IDS[planType];
-  const priceId = await getProductPriceId(productId);
+  const priceId =
+    planType === "LIFETIME"
+      ? await getProductPriceId(productId)
+      : await getProductPriceByInterval(productId, billingInterval);
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
   // Create checkout session
@@ -361,88 +370,104 @@ function mapStripeStatusToDbStatus(
   return statusMap[stripeStatus] || "INCOMPLETE";
 }
 
+export type PlanPriceInfo = {
+  priceId: string;
+  amount: number;
+  currency: string;
+};
+
+export type PlanPricesRecurring = {
+  monthly: PlanPriceInfo;
+  yearly: PlanPriceInfo;
+};
+
+export type PlanPricesLifetime = {
+  oneTime: PlanPriceInfo;
+};
+
 /**
  * Get available subscription plans with pricing
- * Fetches products from Stripe and uses their default prices
+ * Fetches all active prices per product and groups by recurring interval (month/year)
  */
 export async function getAvailablePlans() {
-  // Fetch products from Stripe to get product info and default prices
   const [coreProduct, aiProProduct, lifetimeProduct] = await Promise.all([
-    stripe.products.retrieve(PLAN_PRODUCT_IDS.CORE, {
-      expand: ["default_price"],
-    }),
-    stripe.products.retrieve(PLAN_PRODUCT_IDS.AI_PRO, {
-      expand: ["default_price"],
-    }),
-    stripe.products.retrieve(PLAN_PRODUCT_IDS.LIFETIME, {
-      expand: ["default_price"],
-    }),
+    stripe.products.retrieve(PLAN_PRODUCT_IDS.CORE),
+    stripe.products.retrieve(PLAN_PRODUCT_IDS.AI_PRO),
+    stripe.products.retrieve(PLAN_PRODUCT_IDS.LIFETIME),
   ]);
 
-  // Helper to extract price info from product
-  const getPriceInfo = async (product: Stripe.Product) => {
-    let defaultPrice: Stripe.Price | null = null;
+  const buildPricesForProduct = async (
+    productId: string,
+  ): Promise<PlanPricesRecurring | PlanPricesLifetime> => {
+    const { data: prices } = await stripe.prices.list({
+      product: productId,
+      active: true,
+    });
 
-    if (product.default_price) {
-      // If expanded, use it directly
-      if (typeof product.default_price !== "string") {
-        defaultPrice = product.default_price as Stripe.Price;
-      } else {
-        // If it's just an ID, fetch it
-        defaultPrice = await stripe.prices.retrieve(product.default_price);
-      }
+    const monthly = prices.find((p) => p.recurring?.interval === "month");
+    const yearly = prices.find((p) => p.recurring?.interval === "year");
+    const oneTime = prices.find((p) => !p.recurring);
+
+    if (oneTime && !monthly && !yearly) {
+      return {
+        oneTime: {
+          priceId: oneTime.id,
+          amount: (oneTime.unit_amount ?? 0) / 100,
+          currency: oneTime.currency.toUpperCase(),
+        },
+      };
     }
 
-    if (!defaultPrice) {
-      throw new Error(`Product ${product.id} has no default price`);
+    if (!monthly || !yearly) {
+      throw new Error(
+        `Product ${productId} must have both monthly and yearly active prices`,
+      );
     }
 
     return {
-      price: defaultPrice.unit_amount! / 100, // Convert from cents
-      currency: defaultPrice.currency.toUpperCase(),
-      interval: defaultPrice.recurring?.interval || null,
+      monthly: {
+        priceId: monthly.id,
+        amount: (monthly.unit_amount ?? 0) / 100,
+        currency: monthly.currency.toUpperCase(),
+      },
+      yearly: {
+        priceId: yearly.id,
+        amount: (yearly.unit_amount ?? 0) / 100,
+        currency: yearly.currency.toUpperCase(),
+      },
     };
   };
 
-  const [corePriceInfo, aiProPriceInfo, lifetimePriceInfo] = await Promise.all([
-    getPriceInfo(coreProduct),
-    getPriceInfo(aiProProduct),
-    getPriceInfo(lifetimeProduct),
+  const [corePrices, aiProPrices, lifetimePrices] = await Promise.all([
+    buildPricesForProduct(PLAN_PRODUCT_IDS.CORE),
+    buildPricesForProduct(PLAN_PRODUCT_IDS.AI_PRO),
+    buildPricesForProduct(PLAN_PRODUCT_IDS.LIFETIME),
   ]);
 
   return [
     {
       id: "CORE" as const,
       name: coreProduct.name,
-      price: corePriceInfo.price,
-      currency: corePriceInfo.currency,
-      interval: corePriceInfo.interval,
       description:
         coreProduct.description ||
         "$12/month, $3 for AI credits" /* fallback */,
-      // TODO: AI CREDITS - $3 worth of credits included
+      prices: corePrices as PlanPricesRecurring,
     },
     {
       id: "AI_PRO" as const,
       name: aiProProduct.name,
-      price: aiProPriceInfo.price,
-      currency: aiProPriceInfo.currency,
-      interval: aiProPriceInfo.interval,
       description:
         aiProProduct.description ||
         "$20/month, $8 for AI credits" /* fallback */,
-      // TODO: AI CREDITS - $8 worth of credits included
+      prices: aiProPrices as PlanPricesRecurring,
     },
     {
       id: "LIFETIME" as const,
       name: lifetimeProduct.name,
-      price: lifetimePriceInfo.price,
-      currency: lifetimePriceInfo.currency,
-      interval: lifetimePriceInfo.interval, // null for one-time payments
       description:
         lifetimeProduct.description ||
         "$100 one-time payment, free tier AI credits" /* fallback */,
-      // TODO: AI CREDITS - Free tier AI credits (monthly allocation)
+      prices: lifetimePrices as PlanPricesLifetime,
     },
   ];
 }

@@ -11,6 +11,10 @@ import { handleClerkWebhook } from "./features/subscriptions/clerk-webhook.handl
 import asyncHandler from "./core/async-handler";
 
 const app = express();
+
+// Trust the first proxy (Railway) so X-Forwarded-For is used for IP / rate limiting
+app.set("trust proxy", 1);
+
 const PORT = process.env.PORT || 4000;
 
 // Global middlewares
