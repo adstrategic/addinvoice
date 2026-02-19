@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const statusConfig = {
   paid: { label: "Paid", className: "bg-primary/20 text-primary" },
@@ -69,7 +70,7 @@ export default function InvoiceDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-6 py-8 max-w-5xl">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-5xl">
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Loading invoice...</p>
         </div>
@@ -79,7 +80,7 @@ export default function InvoiceDetailPage() {
 
   if (error || !invoice) {
     return (
-      <div className="container mx-auto px-6 py-8 max-w-5xl">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-5xl">
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Invoice not found</p>
         </div>
@@ -111,18 +112,18 @@ export default function InvoiceDetailPage() {
 
   return (
     <>
-      <div className="container mx-auto px-6 py-8 max-w-5xl">
+      <div className="mt-16 sm:mt-0 container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-5xl">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/invoices">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+            <Link href="/invoices" className="shrink-0">
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold text-foreground">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">
                   {invoice.invoiceNumber}
                 </h1>
                 <Badge
@@ -135,12 +136,12 @@ export default function InvoiceDetailPage() {
                     uiStatus}
                 </Badge>
               </div>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Invoice details and information
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -199,11 +200,12 @@ export default function InvoiceDetailPage() {
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
-                    className="gap-2 bg-transparent"
+                    size="sm"
+                    className="gap-1.5 sm:gap-2 bg-transparent shrink-0"
                     onClick={() => setShowPaymentDialog(true)}
                   >
-                    <Plus className="h-4 w-4" />
-                    Add Payment
+                    <Plus className="h-4 w-4 shrink-0" />
+                    <span className="hidden sm:inline">Add Payment</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -215,10 +217,11 @@ export default function InvoiceDetailPage() {
               <TooltipTrigger asChild>
                 <Button
                   onClick={() => setSendDialogOpen(true)}
-                  className="gap-2"
+                  className="gap-2 shrink-0"
+                  size="sm"
                 >
-                  <Send className="h-4 w-4" />
-                  Send
+                  <Send className="h-4 w-4 shrink-0" />
+                  <span className="hidden sm:inline">Send</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -229,20 +232,22 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Invoice Preview */}
-        <Card className="bg-card border-border">
-          <CardHeader className="border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+        <Card className="bg-card border-border overflow-hidden">
+          <CardHeader className="border-b border-border p-4 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex justify-center sm:justify-start">
                 {companyData.logo && (
                   <img
                     src={companyData.logo}
                     alt="Company Logo"
-                    className="h-48 w-48 object-contain"
+                    className="h-48 w-48 md:h-64 md:w-64 object-contain"
                   />
                 )}
               </div>
-              <div className="text-right">
-                <h3 className="text-3xl font-bold text-primary">INVOICE</h3>
+              <div className="text-left sm:text-right">
+                <h3 className="text-2xl sm:text-3xl font-bold text-primary">
+                  INVOICE
+                </h3>
                 <p className="text-sm text-muted-foreground mt-2">
                   <span className="font-semibold">Invoice #:</span>{" "}
                   {invoice.invoiceNumber}
@@ -259,11 +264,11 @@ export default function InvoiceDetailPage() {
             </div>
           </CardHeader>
 
-          <CardContent className="pt-6 space-y-6">
+          <CardContent className="pt-4 sm:pt-6 space-y-6 p-4 sm:p-6">
             {/* Bill To */}
             {client && (
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
                   <h4 className="text-sm font-semibold text-muted-foreground mb-2">
                     BILL TO:
                   </h4>
@@ -274,7 +279,7 @@ export default function InvoiceDetailPage() {
                     </p>
                   )}
                   {invoice.clientAddress && (
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground mt-1 wrap-break-word">
                       {invoice.clientAddress}
                     </p>
                   )}
@@ -284,7 +289,7 @@ export default function InvoiceDetailPage() {
                     </p>
                   )}
                   {invoice.clientEmail && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground break-all">
                       {invoice.clientEmail}
                     </p>
                   )}
@@ -294,12 +299,15 @@ export default function InvoiceDetailPage() {
                     </p>
                   )}
                 </div>
-                <div className="text-right">
-                  <h2 className="text-2xl font-bold text-foreground">
+                <div className="min-w-0 md:text-right">
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-2">
+                    FROM:
+                  </h4>
+                  <h2 className="text-xl sm:text-2xl font-bold text-foreground">
                     {companyData.name}
                   </h2>
                   {companyData.address && (
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground mt-1 wrap-break-word">
                       {companyData.address}
                     </p>
                   )}
@@ -309,7 +317,7 @@ export default function InvoiceDetailPage() {
                     </p>
                   )}
                   {companyData.email && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground break-all">
                       {companyData.email}
                     </p>
                   )}
@@ -322,71 +330,78 @@ export default function InvoiceDetailPage() {
               </div>
             )}
 
-            {/* Items Table */}
+            {/* Items Table: horizontal scroll on small screens */}
             <div className="border border-border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-secondary/50">
-                  <tr>
-                    <th className="text-left p-3 text-sm font-semibold text-foreground">
-                      Description
-                    </th>
-                    <th className="text-right p-3 text-sm font-semibold text-foreground">
-                      Qty
-                    </th>
-                    <th className="text-right p-3 text-sm font-semibold text-foreground">
-                      Unit Price
-                    </th>
-                    <th className="text-right p-3 text-sm font-semibold text-foreground">
-                      Tax
-                    </th>
-                    <th className="text-right p-3 text-sm font-semibold text-foreground">
-                      Discount
-                    </th>
-                    <th className="text-right p-3 text-sm font-semibold text-foreground">
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item) => {
-                    const itemDiscount = getItemFixedDiscount(item);
-                    return (
-                      <tr key={item.id} className="border-t border-border">
-                        <td className="p-3 text-sm text-foreground">
-                          <div>
-                            <div className="font-medium">{item.name}</div>
-                            {item.description && (
-                              <div className="text-muted-foreground text-xs mt-1">
-                                {item.description}
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[600px]">
+                  <thead className="bg-secondary/50">
+                    <tr>
+                      <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground">
+                        Description
+                      </th>
+                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
+                        Qty
+                      </th>
+                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
+                        Unit Price
+                      </th>
+                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
+                        Tax
+                      </th>
+                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
+                        Discount
+                      </th>
+                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
+                        Amount
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item) => {
+                      const itemDiscount = getItemFixedDiscount(item);
+                      return (
+                        <tr key={item.id} className="border-t border-border">
+                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-foreground max-w-[180px] sm:max-w-none">
+                            <div>
+                              <div
+                                className="font-medium truncate"
+                                title={item.name}
+                              >
+                                {item.name}
                               </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3 text-sm text-right text-foreground">
-                          {item.quantity} {item.quantityUnit}
-                        </td>
-                        <td className="p-3 text-sm text-right text-foreground">
-                          {invoice.currency} {item.unitPrice.toFixed(2)}
-                        </td>
-                        <td className="p-3 text-sm text-right text-foreground">
-                          {item.tax}%
-                        </td>
-                        <td className="p-3 text-sm text-right text-foreground">
-                          {formatCurrency(itemDiscount)}
-                        </td>
-                        <td className="p-3 text-sm text-right font-semibold text-foreground">
-                          {formatCurrency(item.total)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                              {item.description && (
+                                <div className="text-muted-foreground text-xs mt-1 line-clamp-2">
+                                  {item.description}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
+                            {item.quantity} {item.quantityUnit}
+                          </td>
+                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
+                            {invoice.currency} {item.unitPrice.toFixed(2)}
+                          </td>
+                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
+                            {item.tax}%
+                          </td>
+                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
+                            {formatCurrency(itemDiscount)}
+                          </td>
+                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-right font-semibold text-foreground whitespace-nowrap">
+                            {formatCurrency(item.total)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Totals */}
             <div className="flex justify-end">
-              <div className="w-64 space-y-2">
+              <div className="w-full sm:w-64 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal:</span>
                   <span className="font-semibold text-foreground">
