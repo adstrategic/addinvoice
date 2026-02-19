@@ -6,11 +6,11 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "generate": "prisma generate",
-    "build": "pnpm run generate && tsc",
+    "db:generate": "prisma generate",
+    "build": "pnpm run db:generate && tsc",
     "clean": "rm -rf dist",
-    "migrate": "prisma migrate dev",
-    "migrate:deploy": "prisma migrate deploy"
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.2.0",

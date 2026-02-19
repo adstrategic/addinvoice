@@ -10,15 +10,15 @@
     "clean": "rm -rf dist",
     "build": "pnpm run clean && tsc",
     "start": "node dist/server.js",
-    "migrate": "pnpm --filter @addinvoice/db run migrate",
-    "migrate:deploy": "pnpm --filter @addinvoice/db run migrate:deploy",
+    "db:migrate": "pnpm --filter @addinvoice/db run db:migrate",
+    "db:deploy": "pnpm --filter @addinvoice/db run db:deploy",
     "dev": "nodemon --watch 'src/**/*.ts' --exec 'tsx' src/server.ts",
     "start:worker": "node dist/worker.js",
     "dev:worker": "tsx src/worker.ts",
     "test": "vitest run",
     "test:unit": "vitest run unit",
     "test:integration": "NODE_ENV=TEST vitest run integration",
-    "test:integration:prepare": "dotenv -e .env.test -v NODE_ENV=TEST -- pnpm --filter @addinvoice/db run migrate:deploy"
+    "test:integration:prepare": "dotenv -e .env.test -v NODE_ENV=TEST -- pnpm --filter @addinvoice/db run db:deploy"
   },
   "keywords": [],
   "author": "",
