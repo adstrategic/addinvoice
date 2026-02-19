@@ -1,9 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   subscriptionsService,
+  type BillingInterval,
   type SubscriptionPlan,
   type SubscriptionStatusResponse,
 } from "@/features/subscriptions/service/subscriptions.service";
+
+export interface CreateCheckoutParams {
+  planType: SubscriptionPlan;
+  billingInterval: BillingInterval;
+}
 
 /**
  * Query key factory for subscription queries
@@ -44,10 +50,9 @@ export function useSubscriptionPlans() {
  */
 export function useCreateCheckout() {
   return useMutation({
-    mutationFn: (planType: SubscriptionPlan) =>
-      subscriptionsService.createCheckout(planType),
+    mutationFn: ({ planType, billingInterval }: CreateCheckoutParams) =>
+      subscriptionsService.createCheckout(planType, billingInterval),
     onSuccess: (url) => {
-      // Redirect to Stripe Checkout
       if (typeof window !== "undefined") {
         window.location.href = url;
       }

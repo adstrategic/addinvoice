@@ -213,7 +213,7 @@ export function ProductsSection({
     const formTaxPercentage = form.getValues("taxPercentage") || null;
     const formTaxName = form.getValues("taxName") || null;
 
-    // Apply invoice-level discount
+    // Apply invoice-level discount (tax must be calculated after all discounts)
     let subtotalAfterDiscount = itemsSubtotal;
     if (formDiscountType === "PERCENTAGE") {
       subtotalAfterDiscount =
@@ -222,30 +222,34 @@ export function ProductsSection({
       subtotalAfterDiscount = itemsSubtotal - formDiscount;
     }
 
-    // Calculate tax
+    // Tax base = amount after all discounts; apply proportional discount ratio
     let totalTax = 0;
-    if (taxData.taxMode === "BY_PRODUCT") {
-      totalTax = items.reduce((sum, item) => {
+    if (itemsSubtotal > 0) {
+      const ratio = subtotalAfterDiscount / itemsSubtotal;
+      const itemTotals = items.map((item) => {
         let itemSubtotal = item.quantity * item.unitPrice;
         if (item.discountType === "PERCENTAGE") {
           itemSubtotal = itemSubtotal * (1 - item.discount / 100);
         } else if (item.discountType === "FIXED") {
           itemSubtotal = itemSubtotal - item.discount;
         }
-        return sum + (itemSubtotal * (item.tax || 0)) / 100;
-      }, 0);
-    } else if (taxData.taxMode === "BY_TOTAL" && formTaxPercentage) {
-      // For BY_TOTAL, tax applies to items with vatEnabled
-      totalTax = items.reduce((sum, item) => {
-        if (!item.vatEnabled) return sum;
-        let itemSubtotal = item.quantity * item.unitPrice;
-        if (item.discountType === "PERCENTAGE") {
-          itemSubtotal = itemSubtotal * (1 - item.discount / 100);
-        } else if (item.discountType === "FIXED") {
-          itemSubtotal = itemSubtotal - item.discount;
-        }
-        return sum + (itemSubtotal * formTaxPercentage) / 100;
-      }, 0);
+        return itemSubtotal;
+      });
+      if (taxData.taxMode === "BY_PRODUCT") {
+        totalTax = items.reduce(
+          (sum, item, index) =>
+            sum + (itemTotals[index] * ratio * (item.tax || 0)) / 100,
+          0,
+        );
+      } else if (taxData.taxMode === "BY_TOTAL" && formTaxPercentage) {
+        const taxableSubtotal = items.reduce(
+          (sum, item, index) =>
+            item.vatEnabled ? sum + itemTotals[index] : sum,
+          0,
+        );
+        const taxableAfterDiscount = taxableSubtotal * ratio;
+        totalTax = (taxableAfterDiscount * formTaxPercentage) / 100;
+      }
     }
 
     const total = subtotalAfterDiscount + totalTax;

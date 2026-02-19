@@ -11,7 +11,6 @@ import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import { TourProvider } from "@/components/tour/TourContext";
 import { TourOverlay } from "@/components/tour/TourOverlay";
-import { AppLayout } from "@/components/app-layout";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -36,7 +35,7 @@ export default function RootLayout({
               <ClerkTokenProvider>
                 <TourProvider>
                   <TourOverlay />
-                  <AppLayout>{children}</AppLayout>
+                  {children}
                 </TourProvider>
               </ClerkTokenProvider>
             </QueryProvider>

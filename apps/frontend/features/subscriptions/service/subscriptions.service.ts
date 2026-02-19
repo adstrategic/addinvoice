@@ -25,13 +25,30 @@ export interface SubscriptionStatusResponse {
   cancelAtPeriodEnd: boolean;
 }
 
+export type BillingInterval = "month" | "year";
+
+export interface PlanPriceInfo {
+  priceId: string;
+  amount: number;
+  currency: string;
+}
+
+export interface PlanPricesRecurring {
+  monthly: PlanPriceInfo;
+  yearly: PlanPriceInfo;
+}
+
+export interface PlanPricesLifetime {
+  oneTime: PlanPriceInfo;
+}
+
+export type PlanPrices = PlanPricesRecurring | PlanPricesLifetime;
+
 export interface SubscriptionPlanResponse {
   id: SubscriptionPlan;
   name: string;
-  price: number;
-  currency: string;
-  interval: string | null;
   description: string;
+  prices: PlanPrices;
 }
 
 export interface CheckoutResponse {
@@ -65,11 +82,14 @@ async function getSubscriptionStatus(): Promise<SubscriptionStatusResponse> {
 /**
  * Create Stripe Checkout session
  */
-async function createCheckout(planType: SubscriptionPlan): Promise<string> {
+async function createCheckout(
+  planType: SubscriptionPlan,
+  billingInterval: BillingInterval,
+): Promise<string> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<CheckoutResponse>>(
       `${BASE_URL}/checkout`,
-      { planType }
+      { planType, billingInterval },
     );
 
     return data.data.url;
@@ -84,7 +104,7 @@ async function createCheckout(planType: SubscriptionPlan): Promise<string> {
 async function createPortalSession(): Promise<string> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<PortalResponse>>(
-      `${BASE_URL}/portal`
+      `${BASE_URL}/portal`,
     );
 
     return data.data.url;
@@ -101,11 +121,9 @@ async function getPlans(): Promise<SubscriptionPlanResponse[]> {
     const { data } = await apiClient.get<
       ApiSuccessResponse<SubscriptionPlanResponse[]>
     >(`${BASE_URL}/plans`);
-    console.log("data", data);
 
     return data.data;
   } catch (error) {
-    console.log("error", error);
     handleApiError(error);
   }
 }

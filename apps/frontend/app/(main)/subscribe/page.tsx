@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Check, Loader2 } from "lucide-react";
 import {
   Card,
@@ -17,26 +17,63 @@ import {
 } from "@/hooks/use-subscription";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import type { SubscriptionPlan } from "@/features/subscriptions/service/subscriptions.service";
+import type {
+  BillingInterval,
+  PlanPricesLifetime,
+  PlanPricesRecurring,
+  SubscriptionPlan,
+  SubscriptionPlanResponse,
+} from "@/features/subscriptions/service/subscriptions.service";
+
+function getDisplayPrice(
+  plan: SubscriptionPlanResponse,
+  billingInterval: BillingInterval,
+) {
+  if (plan.id === "LIFETIME") {
+    return (plan.prices as PlanPricesLifetime).oneTime;
+  }
+  const key = billingInterval === "month" ? "monthly" : "yearly";
+  return (plan.prices as PlanPricesRecurring)[key];
+}
 
 export default function SubscribePage() {
-  const { data: plans, isLoading, isError } = useSubscriptionPlans();
-
+  const { data: plans, isLoading } = useSubscriptionPlans();
   const createCheckout = useCreateCheckout();
   const { toast } = useToast();
+  const [billingInterval, setBillingInterval] =
+    useState<BillingInterval>("month");
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(
-    null
+    null,
   );
+
+  const yearlySavePercent = useMemo(() => {
+    const recurring = plans?.find(
+      (p) => p.id === "CORE" && "monthly" in p.prices && "yearly" in p.prices,
+    );
+    if (!recurring || !("monthly" in recurring.prices)) return null;
+    const { monthly, yearly } = recurring.prices as PlanPricesRecurring;
+    const fullYearMonthly = monthly.amount * 12;
+    if (fullYearMonthly <= 0) return null;
+    return Math.round(
+      ((fullYearMonthly - yearly.amount) / fullYearMonthly) * 100,
+    );
+  }, [plans]);
 
   const handleSelectPlan = async (planId: SubscriptionPlan) => {
     setSelectedPlan(planId);
     try {
-      await createCheckout.mutateAsync(planId);
-    } catch (error: any) {
+      await createCheckout.mutateAsync({
+        planType: planId,
+        billingInterval,
+      });
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to create checkout session",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to create checkout session",
       });
       setSelectedPlan(null);
     }
@@ -65,9 +102,40 @@ export default function SubscribePage() {
       <div className="w-full max-w-6xl">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-lg mb-6">
             Select the plan that best fits your needs
           </p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="inline-flex rounded-lg border bg-muted p-1">
+              <button
+                type="button"
+                onClick={() => setBillingInterval("month")}
+                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                  billingInterval === "month"
+                    ? "bg-background text-foreground shadow"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingInterval("year")}
+                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                  billingInterval === "year"
+                    ? "bg-background text-foreground shadow"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Yearly
+                {yearlySavePercent != null && (
+                  <Badge variant="secondary" className="text-xs">
+                    Save {yearlySavePercent}%
+                  </Badge>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
@@ -96,12 +164,25 @@ export default function SubscribePage() {
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
                   <div className="mt-4">
-                    <span className="text-4xl font-bold">${plan.price}</span>
-                    {plan.interval && (
-                      <span className="text-muted-foreground">
-                        /{plan.interval}
-                      </span>
-                    )}
+                    {(() => {
+                      const priceInfo = getDisplayPrice(plan, billingInterval);
+                      return (
+                        <>
+                          <span className="text-4xl font-bold">
+                            ${priceInfo.amount}
+                          </span>
+                          {plan.id === "LIFETIME" ? (
+                            <span className="text-muted-foreground">
+                              one-time
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              /{billingInterval === "month" ? "month" : "year"}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </CardHeader>
                 <CardContent>
