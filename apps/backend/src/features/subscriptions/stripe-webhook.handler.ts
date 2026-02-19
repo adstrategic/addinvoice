@@ -14,7 +14,7 @@ if (!WEBHOOK_SECRET) {
  */
 export async function handleStripeWebhook(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> {
   const sig = req.headers["stripe-signature"];
 
@@ -35,7 +35,7 @@ export async function handleStripeWebhook(
     event = stripe.webhooks.constructEvent(
       body,
       sig,
-      WEBHOOK_SECRET!
+      WEBHOOK_SECRET!,
     ) as Stripe.Event;
   } catch (err: any) {
     console.error("Webhook signature verification failed:", err.message);
@@ -51,37 +51,37 @@ export async function handleStripeWebhook(
     switch (event.type) {
       case "checkout.session.completed":
         await handleCheckoutSessionCompleted(
-          event.data.object as Stripe.Checkout.Session
-        );
-        break;
-
-      case "customer.subscription.created":
-        await handleSubscriptionCreated(
-          event.data.object as Stripe.Subscription
-        );
-        break;
-
-      case "customer.subscription.updated":
-        await handleSubscriptionUpdated(
-          event.data.object as Stripe.Subscription
+          event.data.object as Stripe.Checkout.Session,
         );
         break;
 
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(
-          event.data.object as Stripe.Subscription
+          event.data.object as Stripe.Subscription,
         );
         break;
 
-      case "invoice.payment_succeeded":
-        await handleInvoicePaymentSucceeded(
-          event.data.object as Stripe.Invoice
-        );
-        break;
+      // case "customer.subscription.created":
+      //   await handleSubscriptionCreated(
+      //     event.data.object as Stripe.Subscription,
+      //   );
+      //   break;
 
-      case "invoice.payment_failed":
-        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
-        break;
+      // case "customer.subscription.updated":
+      //   await handleSubscriptionUpdated(
+      //     event.data.object as Stripe.Subscription,
+      //   );
+      //   break;
+
+      // case "invoice.payment_succeeded":
+      //   await handleInvoicePaymentSucceeded(
+      //     event.data.object as Stripe.Invoice
+      //   );
+      //   break;
+
+      // case "invoice.payment_failed":
+      //   await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+      //   break;
 
       default:
         console.log(`Unhandled event type: ${event.type}`);
@@ -101,16 +101,25 @@ export async function handleStripeWebhook(
  * Handle checkout session completed
  */
 async function handleCheckoutSessionCompleted(
-  session: Stripe.Checkout.Session
+  session: Stripe.Checkout.Session,
 ): Promise<void> {
   await subscriptionService.handleCheckoutCompleted(session);
+}
+
+/**
+ * Handle subscription deleted
+ */
+async function handleSubscriptionDeleted(
+  subscription: Stripe.Subscription,
+): Promise<void> {
+  await subscriptionService.handleSubscriptionDeleted(subscription);
 }
 
 /**
  * Handle subscription created
  */
 async function handleSubscriptionCreated(
-  subscription: Stripe.Subscription
+  subscription: Stripe.Subscription,
 ): Promise<void> {
   await subscriptionService.handleSubscriptionUpdated(subscription);
 }
@@ -119,32 +128,23 @@ async function handleSubscriptionCreated(
  * Handle subscription updated
  */
 async function handleSubscriptionUpdated(
-  subscription: Stripe.Subscription
+  subscription: Stripe.Subscription,
 ): Promise<void> {
   await subscriptionService.handleSubscriptionUpdated(subscription);
-}
-
-/**
- * Handle subscription deleted
- */
-async function handleSubscriptionDeleted(
-  subscription: Stripe.Subscription
-): Promise<void> {
-  await subscriptionService.handleSubscriptionDeleted(subscription);
 }
 
 /**
  * Handle successful invoice payment
  */
 async function handleInvoicePaymentSucceeded(
-  invoice: Stripe.Invoice
+  invoice: Stripe.Invoice,
 ): Promise<void> {
   if (!invoice.subscription) {
     return; // Not a subscription invoice
   }
 
   const subscription = await stripe.subscriptions.retrieve(
-    invoice.subscription as string
+    invoice.subscription as string,
   );
   await subscriptionService.handleSubscriptionUpdated(subscription);
 
@@ -159,14 +159,14 @@ async function handleInvoicePaymentSucceeded(
  * Handle failed invoice payment
  */
 async function handleInvoicePaymentFailed(
-  invoice: Stripe.Invoice
+  invoice: Stripe.Invoice,
 ): Promise<void> {
   if (!invoice.subscription) {
     return; // Not a subscription invoice
   }
 
   const subscription = await stripe.subscriptions.retrieve(
-    invoice.subscription as string
+    invoice.subscription as string,
   );
 
   // Update subscription status to reflect payment failure

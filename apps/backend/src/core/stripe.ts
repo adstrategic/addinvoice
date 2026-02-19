@@ -58,27 +58,3 @@ export async function getProductPriceId(productId: string): Promise<string> {
 
   return prices.data[0].id;
 }
-
-export type BillingInterval = "month" | "year";
-
-/**
- * Get the price ID for a product with the given recurring interval
- */
-export async function getProductPriceByInterval(
-  productId: string,
-  interval: BillingInterval,
-): Promise<string> {
-  const prices = await stripe.prices.list({
-    product: productId,
-    active: true,
-    type: "recurring",
-  });
-
-  const match = prices.data.find((p) => p.recurring?.interval === interval);
-  if (!match) {
-    throw new Error(
-      `No active ${interval}ly price found for product ${productId}`,
-    );
-  }
-  return match.id;
-}

@@ -22,7 +22,6 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { DashboardBusinessFilter } from "@/components/dashboard-business-filter";
-import { SubscriptionGuard } from "@/components/guards/subscription-guard";
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -76,7 +75,7 @@ export default function Dashboard() {
       : 0;
 
   return (
-    <SubscriptionGuard>
+    <>
       <div className="container mx-auto mt-16 sm:mt-0 px-4 sm:px-6 py-6 sm:py-8">
         {/* Header with Business Filter */}
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -437,6 +436,6 @@ export default function Dashboard() {
           </Button>
         </motion.div>
       </Link>
-    </SubscriptionGuard>
+    </>
   );
 }

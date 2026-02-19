@@ -35,12 +35,12 @@ model Workspace {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    clients    Client[]
-    invoices   Invoice[]
-    estimates  Estimate[]
-    payments   Payment[]
-    catalogs   Catalog[]
-    businesses Business[]
+    clients        Client[]
+    invoices       Invoice[]
+    estimates      Estimate[]
+    payments       Payment[]
+    catalogs       Catalog[]
+    businesses     Business[]
     paymentMethods WorkspacePaymentMethod[]
 
     // Subscription fields (cached from Stripe - Stripe is source of truth)
@@ -48,8 +48,6 @@ model Workspace {
     stripeSubscriptionId String?             @unique
     subscriptionPlan     SubscriptionPlan?
     subscriptionStatus   SubscriptionStatus?
-    subscriptionEndsAt   DateTime? // For quick expiry checks
-    lastStripeSync       DateTime? // Track when we last verified with Stripe
     // TODO: AI CREDITS - Add fields for AI credit tracking
     // aiCreditBalance      Decimal?@db.Decimal(10,2)           @default(0)
     // aiCreditResetDate    DateTime?
@@ -147,8 +145,8 @@ model WorkspacePaymentMethod {
     type        PaymentMethodType
     handle      String? // e.g. paypal.me/you, @username, +15550000
     isEnabled   Boolean           @default(true)
-    createdAt   DateTime         @default(now())
-    updatedAt   DateTime         @updatedAt
+    createdAt   DateTime          @default(now())
+    updatedAt   DateTime          @updatedAt
 
     workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     invoices  Invoice[]
@@ -169,41 +167,41 @@ model Invoice {
     clientPhone   String?
     clientAddress String?
 
-    sequence           Int
-    invoiceNumber      String
-    status             InvoiceStatus @default(DRAFT)
-    issueDate          DateTime
-    dueDate            DateTime
-    purchaseOrder      String? // Optional purchase order number
-    customHeader       String? // Optional custom header with work details
-    currency           String        @default("USD")
-    subtotal           Decimal       @default(0) @db.Decimal(10, 2)
-    totalTax           Decimal       @default(0) @db.Decimal(10, 2)
-    discount           Decimal       @default(0) @db.Decimal(10, 2)
-    discountType       DiscountType  @default(NONE) // "PERCENTAGE", "FIXED", or "NONE"
-    taxMode            TaxMode       @default(NONE) // "BY_PRODUCT", "BY_TOTAL", or "NONE"
-    taxName            String? // Tax name when taxMode is "BY_TOTAL"
-    taxPercentage      Decimal?      @db.Decimal(10, 2) // Tax percentage when taxMode is "BY_TOTAL"
-    total              Decimal       @default(0) @db.Decimal(10, 2)
-    balance            Decimal       @default(0) @db.Decimal(10, 2)
-    notes              String?
-    terms              String?
-    paymentLink        String?
-    paymentProvider    String? // "stripe" or "paypal"
-    sentAt             DateTime?
-    viewedAt           DateTime?
-    paidAt             DateTime?
-    lastReminderSentAt DateTime? // When we last sent a reminder (for interval enforcement)
+    sequence                Int
+    invoiceNumber           String
+    status                  InvoiceStatus @default(DRAFT)
+    issueDate               DateTime
+    dueDate                 DateTime
+    purchaseOrder           String? // Optional purchase order number
+    customHeader            String? // Optional custom header with work details
+    currency                String        @default("USD")
+    subtotal                Decimal       @default(0) @db.Decimal(10, 2)
+    totalTax                Decimal       @default(0) @db.Decimal(10, 2)
+    discount                Decimal       @default(0) @db.Decimal(10, 2)
+    discountType            DiscountType  @default(NONE) // "PERCENTAGE", "FIXED", or "NONE"
+    taxMode                 TaxMode       @default(NONE) // "BY_PRODUCT", "BY_TOTAL", or "NONE"
+    taxName                 String? // Tax name when taxMode is "BY_TOTAL"
+    taxPercentage           Decimal?      @db.Decimal(10, 2) // Tax percentage when taxMode is "BY_TOTAL"
+    total                   Decimal       @default(0) @db.Decimal(10, 2)
+    balance                 Decimal       @default(0) @db.Decimal(10, 2)
+    notes                   String?
+    terms                   String?
+    paymentLink             String?
+    paymentProvider         String? // "stripe" or "paypal"
+    sentAt                  DateTime?
+    viewedAt                DateTime?
+    paidAt                  DateTime?
+    lastReminderSentAt      DateTime? // When we last sent a reminder (for interval enforcement)
     selectedPaymentMethodId Int?
-    createdAt          DateTime      @default(now())
-    updatedAt          DateTime      @updatedAt
+    createdAt               DateTime      @default(now())
+    updatedAt               DateTime      @updatedAt
 
-    workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-    client    Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
-    business  Business      @relation(fields: [businessId], references: [id], onDelete: Restrict)
-    selectedPaymentMethod   WorkspacePaymentMethod? @relation(fields: [selectedPaymentMethodId], references: [id], onDelete: SetNull)
-    items     InvoiceItem[]
-    payments  Payment[]
+    workspace             Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    client                Client                  @relation(fields: [clientId], references: [id], onDelete: Restrict)
+    business              Business                @relation(fields: [businessId], references: [id], onDelete: Restrict)
+    selectedPaymentMethod WorkspacePaymentMethod? @relation(fields: [selectedPaymentMethodId], references: [id], onDelete: SetNull)
+    items                 InvoiceItem[]
+    payments              Payment[]
 
     @@unique([workspaceId, businessId, invoiceNumber])
     @@unique([workspaceId, sequence])

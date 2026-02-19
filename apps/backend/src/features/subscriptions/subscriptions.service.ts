@@ -1,10 +1,4 @@
-import {
-  stripe,
-  PLAN_PRODUCT_IDS,
-  getProductPriceId,
-  getProductPriceByInterval,
-  type BillingInterval,
-} from "../../core/stripe";
+import { stripe, PLAN_PRODUCT_IDS } from "../../core/stripe";
 import prisma from "../../core/db";
 import type Stripe from "stripe";
 
@@ -22,8 +16,6 @@ export interface SubscriptionStatusResponse {
   isActive: boolean;
   plan: SubscriptionPlan | null;
   status: SubscriptionStatus | null;
-  currentPeriodEnd: Date | null;
-  cancelAtPeriodEnd: boolean;
 }
 
 /**
@@ -38,7 +30,6 @@ export async function getSubscriptionStatus(
     select: {
       subscriptionPlan: true,
       subscriptionStatus: true,
-      subscriptionEndsAt: true,
     },
   });
 
@@ -51,8 +42,6 @@ export async function getSubscriptionStatus(
       isActive: false,
       plan: null,
       status: null,
-      currentPeriodEnd: null,
-      cancelAtPeriodEnd: false,
     };
   }
 
@@ -62,10 +51,8 @@ export async function getSubscriptionStatus(
 
   return {
     isActive,
-    plan: workspace.subscriptionPlan as SubscriptionPlan,
-    status: workspace.subscriptionStatus as SubscriptionStatus,
-    currentPeriodEnd: workspace.subscriptionEndsAt,
-    cancelAtPeriodEnd: false, // Can be added to Workspace if needed
+    plan: workspace.subscriptionPlan,
+    status: workspace.subscriptionStatus,
   };
 }
 
@@ -75,7 +62,7 @@ export async function getSubscriptionStatus(
 export async function createCheckoutSession(
   workspaceId: number,
   planType: SubscriptionPlan,
-  billingInterval: BillingInterval,
+  priceId: string,
   clerkUserId: string,
   userEmail: string,
 ): Promise<string> {
@@ -110,11 +97,6 @@ export async function createCheckoutSession(
     });
   }
 
-  const productId = PLAN_PRODUCT_IDS[planType];
-  const priceId =
-    planType === "LIFETIME"
-      ? await getProductPriceId(productId)
-      : await getProductPriceByInterval(productId, billingInterval);
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
   // Create checkout session
@@ -180,7 +162,6 @@ export async function handleCheckoutCompleted(
   // Get subscription from Stripe if it's a subscription (not one-time payment)
   let subscriptionId: string | null = null;
   let status: SubscriptionStatus = "INCOMPLETE";
-  let subscriptionEndsAt: Date | null = null;
 
   if (session.mode === "subscription" && session.subscription) {
     const subscription = await stripe.subscriptions.retrieve(
@@ -188,12 +169,9 @@ export async function handleCheckoutCompleted(
     );
     subscriptionId = subscription.id;
     status = mapStripeStatusToDbStatus(subscription.status);
-    subscriptionEndsAt = new Date(subscription.current_period_end * 1000);
   } else if (session.mode === "payment") {
     // For one-time payments (LIFETIME), mark as active immediately
     status = "ACTIVE";
-    // LIFETIME doesn't have an end date
-    subscriptionEndsAt = null;
   }
 
   // Update workspace with subscription info (cache from Stripe)
@@ -204,8 +182,6 @@ export async function handleCheckoutCompleted(
       stripeSubscriptionId: subscriptionId,
       subscriptionPlan: planType,
       subscriptionStatus: status,
-      subscriptionEndsAt,
-      lastStripeSync: new Date(),
     },
   });
 
@@ -217,31 +193,6 @@ export async function handleCheckoutCompleted(
 }
 
 /**
- * Handle subscription updated event from Stripe
- */
-export async function handleSubscriptionUpdated(
-  subscription: Stripe.Subscription,
-): Promise<void> {
-  const workspaceId = parseInt(subscription.metadata?.workspaceId || "0", 10);
-
-  if (!workspaceId) {
-    // Try to find by customer ID
-    const existing = await prisma.workspace.findUnique({
-      where: { stripeCustomerId: subscription.customer as string },
-      select: { id: true },
-    });
-    if (!existing) {
-      throw new Error("Workspace not found for this subscription");
-    }
-    // Update using existing workspaceId
-    await updateSubscriptionFromStripe(existing.id, subscription);
-    return;
-  }
-
-  await updateSubscriptionFromStripe(workspaceId, subscription);
-}
-
-/**
  * Update subscription record from Stripe subscription object
  */
 async function updateSubscriptionFromStripe(
@@ -249,7 +200,6 @@ async function updateSubscriptionFromStripe(
   subscription: Stripe.Subscription,
 ): Promise<void> {
   const status = mapStripeStatusToDbStatus(subscription.status);
-  const subscriptionEndsAt = new Date(subscription.current_period_end * 1000);
 
   // Extract plan type from subscription metadata or price
   let planType: SubscriptionPlan | null = null;
@@ -275,8 +225,6 @@ async function updateSubscriptionFromStripe(
       stripeSubscriptionId: subscription.id,
       subscriptionPlan: planType,
       subscriptionStatus: status,
-      subscriptionEndsAt,
-      lastStripeSync: new Date(),
     },
   });
 
@@ -311,10 +259,33 @@ export async function handleSubscriptionDeleted(
     where: { id: workspaceId },
     data: {
       subscriptionStatus: "CANCELED",
-      subscriptionEndsAt: null,
-      lastStripeSync: new Date(),
     },
   });
+}
+
+/**
+ * Handle subscription updated event from Stripe
+ */
+export async function handleSubscriptionUpdated(
+  subscription: Stripe.Subscription,
+): Promise<void> {
+  const workspaceId = parseInt(subscription.metadata?.workspaceId || "0", 10);
+
+  if (!workspaceId) {
+    // Try to find by customer ID
+    const existing = await prisma.workspace.findUnique({
+      where: { stripeCustomerId: subscription.customer as string },
+      select: { id: true },
+    });
+    if (!existing) {
+      throw new Error("Workspace not found for this subscription");
+    }
+    // Update using existing workspaceId
+    await updateSubscriptionFromStripe(existing.id, subscription);
+    return;
+  }
+
+  await updateSubscriptionFromStripe(workspaceId, subscription);
 }
 
 /**
@@ -344,8 +315,6 @@ export async function revokeSubscription(workspaceId: number): Promise<void> {
     where: { id: workspaceId },
     data: {
       subscriptionStatus: "CANCELED",
-      subscriptionEndsAt: null,
-      lastStripeSync: new Date(),
     },
   });
 }

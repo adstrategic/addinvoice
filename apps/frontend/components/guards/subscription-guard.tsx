@@ -1,37 +1,43 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useSubscription } from "@/hooks/use-subscription";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface SubscriptionGuardProps {
   children: React.ReactNode;
-  allowReadOnly?: boolean;
+  /** When true, redirects to / if subscription is active (used on /subscribe page) */
+  redirectIfSubscribed?: boolean;
 }
 
 /**
  * Subscription Guard Component
- * Redirects users without active subscription to /subscribe
- * Allows read-only access if allowReadOnly is true
+ * Redirects users without active subscription to /subscribe.
+ * With redirectIfSubscribed, redirects users with active subscription to /.
  */
 export function SubscriptionGuard({
   children,
-  allowReadOnly = false,
+  redirectIfSubscribed = false,
 }: SubscriptionGuardProps) {
-  const router = useRouter();
-  const { data: subscription, isLoading, error } = useSubscription();
+  const { data: subscription, isLoading, error, refetch, isError } = useSubscription();
 
   useEffect(() => {
-    // Only redirect when we have data (not loading) and subscription is not active
-    if (!isLoading && subscription && !subscription.isActive) {
-      // Use window.location.href for more reliable redirect
-      // router.push might fail if the router isn't ready yet (e.g., during Clerk auth flow)
-      if (typeof window !== "undefined") {
-        window.location.href = "/subscribe";
+    if (isLoading || !subscription) return;
+
+    if (redirectIfSubscribed) {
+      if (subscription.isActive && typeof window !== "undefined") {
+        window.location.href = "/";
       }
+      return;
     }
-  }, [subscription, isLoading, error, router]);
+
+    if (!subscription.isActive && typeof window !== "undefined") {
+      window.location.href = "/subscribe";
+    }
+  }, [subscription, isLoading, redirectIfSubscribed]);
 
   // Show loading skeleton while checking subscription
   if (isLoading) {
@@ -46,15 +52,40 @@ export function SubscriptionGuard({
     );
   }
 
-  // If there was an error fetching subscription, redirect to subscribe page
-  if (error) {
-    console.error("SubscriptionGuard: Error fetching subscription", error);
+  // Error state: show retry instead of silently staying
+  if (isError && error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Could not verify subscription</AlertTitle>
+            <AlertDescription>
+              {error instanceof Error ? error.message : "Something went wrong. Please try again."}
+            </AlertDescription>
+          </Alert>
+          <Button onClick={() => refetch()} className="w-full">
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-    // Use window.location.href for more reliable redirect
-    if (typeof window !== "undefined") {
-      window.location.href = "/subscribe";
-    }
+  // redirectIfSubscribed: show redirecting when subscription is active
+  if (redirectIfSubscribed && subscription?.isActive) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
+  // Default guard: no subscription, show redirecting to /subscribe
+  if (!redirectIfSubscribed && subscription && !subscription.isActive) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -67,21 +98,5 @@ export function SubscriptionGuard({
     );
   }
 
-  // If we have data and subscription is not active, show redirecting message
-  // The useEffect above will handle the actual redirect
-  if (subscription && !subscription.isActive) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">
-            Redirecting to subscription page...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Has active subscription, render children
   return <>{children}</>;
 }

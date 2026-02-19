@@ -15,6 +15,7 @@ import {
   useSubscriptionPlans,
   useCreateCheckout,
 } from "@/hooks/use-subscription";
+import { SubscriptionGuard } from "@/components/guards/subscription-guard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type {
@@ -60,11 +61,14 @@ export default function SubscribePage() {
   }, [plans]);
 
   const handleSelectPlan = async (planId: SubscriptionPlan) => {
+    const plan = plans?.find((p) => p.id === planId);
+    if (!plan) return;
     setSelectedPlan(planId);
+    const priceInfo = getDisplayPrice(plan, billingInterval);
     try {
       await createCheckout.mutateAsync({
         planType: planId,
-        billingInterval,
+        priceId: priceInfo.priceId,
       });
     } catch (error: unknown) {
       toast({
@@ -81,6 +85,7 @@ export default function SubscribePage() {
 
   if (isLoading) {
     return (
+      <SubscriptionGuard redirectIfSubscribed>
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-6xl px-4 py-12">
           <div className="text-center mb-12">
@@ -94,10 +99,12 @@ export default function SubscribePage() {
           </div>
         </div>
       </div>
+      </SubscriptionGuard>
     );
   }
 
   return (
+    <SubscriptionGuard redirectIfSubscribed>
     <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
       <div className="w-full max-w-6xl">
         <div className="text-center mb-12">
@@ -242,5 +249,6 @@ export default function SubscribePage() {
         </div>
       </div>
     </div>
+    </SubscriptionGuard>
   );
 }

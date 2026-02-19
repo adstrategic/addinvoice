@@ -1,14 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   subscriptionsService,
-  type BillingInterval,
   type SubscriptionPlan,
   type SubscriptionStatusResponse,
 } from "@/features/subscriptions/service/subscriptions.service";
 
 export interface CreateCheckoutParams {
   planType: SubscriptionPlan;
-  billingInterval: BillingInterval;
+  priceId: string;
 }
 
 /**
@@ -50,8 +49,8 @@ export function useSubscriptionPlans() {
  */
 export function useCreateCheckout() {
   return useMutation({
-    mutationFn: ({ planType, billingInterval }: CreateCheckoutParams) =>
-      subscriptionsService.createCheckout(planType, billingInterval),
+    mutationFn: ({ planType, priceId }: CreateCheckoutParams) =>
+      subscriptionsService.createCheckout(planType, priceId),
     onSuccess: (url) => {
       if (typeof window !== "undefined") {
         window.location.href = url;

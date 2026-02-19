@@ -21,8 +21,6 @@ export interface SubscriptionStatusResponse {
   isActive: boolean;
   plan: SubscriptionPlan | null;
   status: SubscriptionStatus | null;
-  currentPeriodEnd: Date | null;
-  cancelAtPeriodEnd: boolean;
 }
 
 export type BillingInterval = "month" | "year";
@@ -68,12 +66,7 @@ async function getSubscriptionStatus(): Promise<SubscriptionStatusResponse> {
       ApiSuccessResponse<SubscriptionStatusResponse>
     >(`${BASE_URL}/status`);
 
-    return {
-      ...data.data,
-      currentPeriodEnd: data.data.currentPeriodEnd
-        ? new Date(data.data.currentPeriodEnd)
-        : null,
-    };
+    return data.data;
   } catch (error) {
     handleApiError(error);
   }
@@ -84,12 +77,12 @@ async function getSubscriptionStatus(): Promise<SubscriptionStatusResponse> {
  */
 async function createCheckout(
   planType: SubscriptionPlan,
-  billingInterval: BillingInterval,
+  priceId: string,
 ): Promise<string> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<CheckoutResponse>>(
       `${BASE_URL}/checkout`,
-      { planType, billingInterval },
+      { planType, priceId },
     );
 
     return data.data.url;

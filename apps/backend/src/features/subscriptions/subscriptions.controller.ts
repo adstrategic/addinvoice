@@ -1,7 +1,6 @@
 import { Response } from "express";
 import { getAuth } from "@clerk/express";
 import * as subscriptionService from "./subscriptions.service";
-import asyncHandler from "../../core/async-handler";
 import { Request } from "express";
 
 /**
@@ -27,7 +26,7 @@ export async function createCheckout(
 ): Promise<void> {
   const workspaceId = req.workspaceId!;
   const { userId } = getAuth(req);
-  const { planType, billingInterval } = req.body;
+  const { planType, priceId } = req.body;
 
   if (!planType || !["CORE", "AI_PRO", "LIFETIME"].includes(planType)) {
     res.status(400).json({
@@ -37,14 +36,14 @@ export async function createCheckout(
     return;
   }
 
-  const isLifetime = planType === "LIFETIME";
-  const validIntervals = ["month", "year"] as const;
-  const interval =
-    isLifetime ? "month" : validIntervals.includes(billingInterval) ? billingInterval : null;
-  if (!interval) {
+  if (
+    !priceId ||
+    typeof priceId !== "string" ||
+    !priceId.startsWith("price_")
+  ) {
     res.status(400).json({
-      error: "INVALID_BILLING_INTERVAL",
-      message: "billingInterval must be 'month' or 'year' for recurring plans",
+      error: "INVALID_PRICE_ID",
+      message: "priceId must be a valid Stripe price ID (starts with price_)",
     });
     return;
   }
@@ -54,7 +53,7 @@ export async function createCheckout(
   const checkoutUrl = await subscriptionService.createCheckoutSession(
     workspaceId,
     planType as "CORE" | "AI_PRO" | "LIFETIME",
-    interval,
+    priceId,
     userId!,
     userEmail,
   );
