@@ -10,5 +10,22 @@ package-lock.json
 .turbo/
 .pnpm-store
 
+# Build output (all packages and apps)
+dist/
+build/
+.next/
+out/
+
+# Environment and secrets (allow .env.example for templates)
+.env
+.env.*
+!.env.example
+
+# TypeScript
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
 # Prisma generated files
 packages/db/src/generated/prisma/

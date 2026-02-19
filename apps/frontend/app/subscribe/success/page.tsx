@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/use-subscription";
 import Link from "next/link";
 
-export default function SubscribeSuccessPage() {
+function SubscribeSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
@@ -77,5 +77,36 @@ export default function SubscribeSuccessPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function SubscribeSuccessFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+            <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
+          </div>
+          <CardTitle className="text-2xl">Processing Payment</CardTitle>
+          <CardDescription>
+            Please wait while we confirm your payment...
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center">
+          <p className="text-sm text-muted-foreground">
+            Loading...
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function SubscribeSuccessPage() {
+  return (
+    <Suspense fallback={<SubscribeSuccessFallback />}>
+      <SubscribeSuccessContent />
+    </Suspense>
   );
 }
