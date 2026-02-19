@@ -49,8 +49,8 @@ import {
   useUpsertPaymentMethod,
   type PaymentMethodType,
 } from "@/features/workspace";
-import { CreateCompanyDialog } from "../../../features/businesses/components/CreateCompanyDialog";
-import { CompanyCards } from "../../../features/businesses/components/CompanyCards";
+import { CreateCompanyDialog } from "@/features/businesses/components/CreateCompanyDialog";
+import { CompanyCards } from "@/features/businesses/components/CompanyCards";
 import { useBusinessDelete } from "@/features/businesses/hooks/useBusinessDelete";
 import { SignOutButton, UserProfile } from "@clerk/nextjs";
 import { Separator } from "@/components/ui/separator";
