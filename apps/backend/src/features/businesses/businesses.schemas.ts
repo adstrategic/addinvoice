@@ -27,10 +27,10 @@ const createBusinessSchemaBase = z.object({
     .min(1, "Business name is required")
     .max(255, "Business name is too long"),
   nit: z
-    .string({ required_error: "NIT/Tax ID is required" })
+    .string()
     .trim()
-    .min(1, "NIT/Tax ID cannot be empty")
-    .max(50, "NIT/Tax ID cannot exceed 50 characters"),
+    .max(50, "NIT/Tax ID cannot exceed 50 characters")
+    .nullish(),
   address: z
     .string({ required_error: "Address is required" })
     .trim()

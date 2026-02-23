@@ -174,10 +174,11 @@ export function CreateCompanyForm({
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor={`${idPrefix}-nit`}>
-                  NIT / Tax ID <span className="text-destructive">*</span>
+                  NIT / Tax ID (optional)
                 </FieldLabel>
                 <Input
                   {...field}
+                  value={field.value ?? ""}
                   id={`${idPrefix}-nit`}
                   placeholder="123456789-0"
                   className="mt-1"

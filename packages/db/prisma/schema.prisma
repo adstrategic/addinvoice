@@ -321,7 +321,7 @@ model Business {
     id          Int     @id @default(autoincrement())
     workspaceId Int
     name        String // Company name
-    nit         String // Tax ID (NIT/Cedula)
+    nit         String? // Tax ID (NIT/Cedula), optional
     address     String // Company address
     email       String // Business email
     phone       String // Business phone

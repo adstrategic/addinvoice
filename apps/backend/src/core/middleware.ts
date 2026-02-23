@@ -24,9 +24,8 @@ export function errorHandler(
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
-  console.log(err);
   // Handle our custom AppError instances (includes all feature-specific errors)
   if (err instanceof CustomError) {
     res.status(err.statusCode).json({

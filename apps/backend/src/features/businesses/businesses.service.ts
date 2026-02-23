@@ -104,7 +104,7 @@ export async function createBusiness(
         workspaceId,
         sequence,
         name: data.name,
-        nit: data.nit,
+        nit: data.nit?.trim() ?? null,
         address: data.address,
         email: data.email,
         phone: data.phone,
