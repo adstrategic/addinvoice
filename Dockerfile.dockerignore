@@ -1,5 +1,11 @@
-# Apps not needed for the agent build (backend/pdf-service are needed for Railway services; only frontend excluded)
+# Used only when building the root Dockerfile (LiveKit agent). BuildKit picks this
+# over .dockerignore so the agent deploy context stays small. Railway services use
+# apps/backend/Dockerfile and apps/pdf-service/Dockerfile and still use root .dockerignore.
+
+# Apps not needed for the agent build (exclude all other apps to keep context small)
 apps/frontend
+apps/backend
+apps/pdf-service
 
 # Node.js dependencies (explicit patterns at every level)
 node_modules
@@ -37,13 +43,13 @@ packages/schemas/node_modules
 **/.tmp
 **/.cache
 
-# Docker artifacts (keep root Dockerfile for LiveKit; ignore agent template Dockerfile)
+# Docker artifacts (keep root Dockerfile for LiveKit; ignore agent template and other ignore files)
 apps/agent/Dockerfile
 .dockerignore
+Dockerfile.dockerignore
 
 # Git & Editor files
 .git
 .gitignore
 .idea
 .vscode
-
