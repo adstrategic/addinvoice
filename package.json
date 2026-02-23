@@ -1,7 +1,7 @@
 {
   "name": "addinvoice",
   "private": true,
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@10.30.1",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -13,6 +13,7 @@
     "dev:agent": "turbo run dev --filter=@addinvoice/agent"
   },
   "devDependencies": {
-    "turbo": "^2.3.0"
+    "turbo": "^2.3.0",
+    "@livekit/agents": "~1.0.36"
   }
 }

@@ -1,32 +1,48 @@
 {
   "name": "@addinvoice/agent",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
-  "description": "LiveKit Voice Agent for Invoice Creation",
-  "main": "dist/agent.js",
+  "files": ["dist"],
   "scripts": {
-    "dev": "tsx src/agent.ts dev",
-    "start": "node dist/agent.js start",
-    "build": "tsc",
-    "download-files": "tsc && node dist/agent.js download-files"
+    "build": "vite build",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.{ts,js}\"",
+    "lint:fix": "eslint --fix \"**/*.{ts,js}\"",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "dev": "pnpm run build && node dist/main.js dev",
+    "download-files": "pnpm run build && node dist/main.js download-files",
+    "start": "node dist/main.js start"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
   "devDependencies": {
-    "@types/node": "^25.0.9",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "@eslint/js": "^9.39.3",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@types/node": "^22.19.11",
+    "eslint": "^9.39.3",
+    "globals": "^16.5.0",
+    "jiti": "^2.6.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.0",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@addinvoice/db": "workspace:*",
     "@addinvoice/schemas": "workspace:*",
-    "@livekit/agents": "~1.0.36",
-    "@livekit/agents-plugin-livekit": "~1.0.36",
-    "@livekit/agents-plugin-silero": "~1.0.36",
-    "@livekit/noise-cancellation-node": "~0.1.9",
-    "dotenv": "^17.2.3",
-    "zod": "^3.25.67",
-    "@prisma/adapter-pg": "^7.2.0"
+    "@livekit/agents": "^1.0.46",
+    "@livekit/agents-plugin-livekit": "^1.0.46",
+    "@livekit/agents-plugin-silero": "^1.0.46",
+    "@livekit/noise-cancellation-node": "^0.1.9",
+    "@prisma/adapter-pg": "^7.4.0",
+    "dotenv": "^17.3.1",
+    "zod": "^3.25.76"
   }
 }

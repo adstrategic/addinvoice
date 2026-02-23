@@ -1,18 +1,18 @@
-import { llm } from "@livekit/agents";
-import { z } from "zod";
-import { prisma } from "../db/prisma.js";
-import type { InvoiceSessionData } from "../types/session-data.js";
-import { createClientSchema } from "@addinvoice/schemas";
+// import { createClientSchema } from '@addinvoice/schemas';
+import { llm } from '@livekit/agents';
+import { z } from 'zod';
+import { prisma } from '../db/prisma';
+import type { InvoiceSessionData } from '../types/session-data';
 
 /**
  * Formats an email address for clear TTS pronunciation
  * Example: "user@gmail.com" -> "user at gmail dot com"
  */
 function formatEmailForSpeech(email: string | null | undefined): string {
-  if (!email) return "";
-  const [localPart, domain] = email.split("@");
+  if (!email) return '';
+  const [localPart, domain] = email.split('@');
   if (!domain) return email; // Fallback if no @ found
-  const normalizedDomain = domain.replace(/\./g, " dot ");
+  const normalizedDomain = domain.replace(/\./g, ' dot ');
   return `${localPart} at ${normalizedDomain}`;
 }
 
@@ -22,52 +22,58 @@ function formatEmailForSpeech(email: string | null | undefined): string {
 export function createLookupCustomerTool() {
   return llm.tool({
     description:
-      "Search for an existing customer by name or email in the database",
+      'Search for an existing customer by name or email in the database. If one customer is returned, call selectCustomer with that ID immediately. If multiple are returned, list them to the user and ask which one',
     parameters: z.object({
-      query: z.string().describe("Customer name or email to search"),
+      query: z.string().describe('Customer name or email to search'),
     }),
     execute: async ({ query }, { ctx }) => {
-      const sessionData = ctx.session.userData as InvoiceSessionData;
+      try {
+        const sessionData = ctx.session.userData as InvoiceSessionData;
 
-      const customers = await prisma.client.findMany({
-        where: {
-          workspaceId: sessionData.workspaceId,
-          OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { email: { contains: query, mode: "insensitive" } },
-          ],
-        },
-        take: 5,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          businessName: true,
-        },
-      });
+        const customers = await prisma.client.findMany({
+          where: {
+            workspaceId: sessionData.workspaceId,
+            OR: [
+              { name: { contains: query, mode: 'insensitive' } },
+              { email: { contains: query, mode: 'insensitive' } },
+            ],
+          },
+          take: 5,
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            businessName: true,
+          },
+        });
 
-      if (customers.length === 0) {
-        return {
-          found: false,
-          message:
-            "No customers found. Please create the customer in the main application first, then try again.",
+        if (customers.length === 0) {
+          const result = {
+            found: false,
+            message:
+              'No customers found. Please create the customer in the main application first, then try again.',
+          };
+          return result;
+        }
+
+        // Format customer list with emails for speech
+        const customerList = customers
+          .map(
+            (c: { name: string; email: string | null }) =>
+              `- ${c.name}${c.email ? ` (${formatEmailForSpeech(c.email)})` : ''}`,
+          )
+          .join('\n');
+
+        const result = {
+          found: true,
+          customers: customers,
+          message: `Found ${customers.length} customer(s):\n${customerList}\nPlease confirm which one.`,
         };
+        return result;
+      } catch {
+        throw new llm.ToolError('Unable to retrieve customers');
       }
-
-      // Format customer list with emails for speech
-      const customerList = customers
-        .map(
-          (c: { name: string; email: string | null }) =>
-            `- ${c.name}${c.email ? ` (${formatEmailForSpeech(c.email)})` : ""}`,
-        )
-        .join("\n");
-
-      return {
-        found: true,
-        customers: customers,
-        message: `Found ${customers.length} customer(s):\n${customerList}\nPlease confirm which one.`,
-      };
     },
   });
 }
@@ -78,58 +84,57 @@ export function createLookupCustomerTool() {
 export function createSelectCustomerTool() {
   return llm.tool({
     description:
-      "Select an existing customer by ID to associate with the current invoice. Use this after lookupCustomer confirms which customer the user wants. This must be called before adding invoice items or creating the invoice.",
+      'Select an existing customer by ID to associate with the current invoice. Use this after lookupCustomer (immediately when only one customer matches, or after the user chooses when multiple match). This must be called before adding invoice items or creating the invoice. After calling this tool, always tell the user aloud which customer was selected so they get confirmation.',
     parameters: z.object({
       customerId: z
         .number()
         .int()
-        .positive()
-        .describe(
-          "The ID of the customer to select (from lookupCustomer results)",
-        ),
-      customerName: z
-        .string()
-        .describe("The name of the customer (for confirmation message)"),
+        .describe('The ID of the customer to select (from lookupCustomer results)'),
     }),
-    execute: async ({ customerId, customerName }, { ctx }) => {
-      const sessionData = ctx.session.userData as InvoiceSessionData;
+    execute: async ({ customerId }, { ctx }) => {
+      try {
+        const sessionData = ctx.session.userData as InvoiceSessionData;
 
-      // Verify customer exists and belongs to workspace
-      const customer = await prisma.client.findFirst({
-        where: {
-          id: customerId,
-          workspaceId: sessionData.workspaceId,
-        },
-        select: { id: true, name: true, email: true },
-      });
+        // Verify customer exists and belongs to workspace
+        const customer = await prisma.client.findFirst({
+          where: {
+            id: customerId,
+            workspaceId: sessionData.workspaceId,
+          },
+          select: { id: true, name: true, email: true },
+        });
 
-      if (!customer) {
-        throw new llm.ToolError(
-          "Customer not found or does not belong to this workspace. Please search again using lookupCustomer.",
-        );
-      }
+        if (!customer) {
+          throw new llm.ToolError(
+            'Customer not found or does not belong to this workspace. Please search again using lookupCustomer.',
+          );
+        }
 
-      // Initialize invoice session if needed
-      if (!sessionData.currentInvoice) {
-        sessionData.currentInvoice = {
-          items: [],
-          subtotal: 0,
-          totalTax: 0,
-          discount: 0,
-          total: 0,
+        // Initialize invoice session if needed
+        if (!sessionData.currentInvoice) {
+          sessionData.currentInvoice = {
+            items: [],
+            subtotal: 0,
+            totalTax: 0,
+            discount: 0,
+            total: 0,
+          };
+        }
+
+        // Set the customer for this invoice
+        sessionData.currentInvoice.customerId = customer.id;
+
+        return {
+          success: true,
+          customerId: customer.id,
+          customerName: customer.name,
+          customerEmail: customer.email,
+          message: `Customer "${customer.name}" selected for this invoice.${customer.email ? ` Email: ${formatEmailForSpeech(customer.email)}` : ''}`,
         };
+      } catch (error) {
+        if (error instanceof llm.ToolError) throw error;
+        throw new llm.ToolError('Unable to select customer. Please try again.');
       }
-
-      // Set the customer for this invoice
-      sessionData.currentInvoice.customerId = customer.id;
-
-      return {
-        success: true,
-        customerId: customer.id,
-        customerName: customer.name,
-        customerEmail: customer.email,
-        message: `Customer "${customer.name}" selected for this invoice.${customer.email ? ` Email: ${formatEmailForSpeech(customer.email)}` : ""}`,
-      };
     },
   });
 }

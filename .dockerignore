@@ -1,0 +1,51 @@
+# Apps not needed for the agent build
+apps/frontend
+apps/backend
+apps/pdf-service
+
+# Node.js dependencies (explicit patterns at every level)
+node_modules
+apps/agent/node_modules
+packages/db/node_modules
+packages/schemas/node_modules
+**/node_modules
+
+# Build outputs
+**/dist
+**/build
+**/coverage
+**/.next
+**/.turbo
+
+# Model files (downloaded during Docker build, not needed in context)
+**/*.onnx
+**/*.bin
+**/*.pt
+**/*.pth
+
+# Local environment & config files
+**/.env
+**/.env.local
+**/.env.*
+.DS_Store
+
+# Logs & temp files
+**/*.log
+**/npm-debug.log
+**/yarn-error.log
+**/pnpm-debug.log
+**/*.gz
+**/*.tgz
+**/.tmp
+**/.cache
+
+# Docker artifacts (keep root Dockerfile for LiveKit; ignore agent template Dockerfile)
+apps/agent/Dockerfile
+.dockerignore
+
+# Git & Editor files
+.git
+.gitignore
+.idea
+.vscode
+
