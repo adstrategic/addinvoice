@@ -1,5 +1,4 @@
 # Apps not needed for the agent build (backend/pdf-service are needed for Railway services; only frontend excluded)
-apps/frontend
 
 # Node.js dependencies (explicit patterns at every level)
 node_modules

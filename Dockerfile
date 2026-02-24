@@ -1,4 +1,7 @@
 # syntax=docker/dockerfile:1
+# LiveKit agent only. Used by: lk agent deploy
+# For Railway (backend, pdf-service), CI builds from Dockerfile.production and pushes to GHCR.
+
 ARG NODE_VERSION=22
 FROM node:${NODE_VERSION}-slim AS base
 

@@ -1,0 +1,93 @@
+# syntax=docker/dockerfile:1.4
+# Development Dockerfile for the monorepo.
+# One file, multiple targets; use with docker compose and volume mounts for live reload.
+# Refs: https://oneuptime.com/blog/post/2026-01-30-docker-multi-stage-monorepos/view
+
+ARG NODE_VERSION=22
+FROM node:${NODE_VERSION}-slim AS base
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+RUN apt-get update -qq && apt-get install --no-install-recommends -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN corepack enable && corepack prepare pnpm@10.30.1 --activate
+
+WORKDIR /app
+
+# ---- Dependencies stage: install all workspace deps (good cache when lockfile unchanged) ----
+FROM base AS dependencies
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc turbo.json ./
+COPY packages/db/package.json ./packages/db/
+COPY packages/schemas/package.json ./packages/schemas/
+COPY apps/backend/package.json ./apps/backend/
+COPY apps/frontend/package.json ./apps/frontend/
+COPY apps/pdf-service/package.json ./apps/pdf-service/
+
+RUN --mount=type=cache,id=pnpm-dev,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ---- Shared builder: build packages required by backend/pdf-service ----
+FROM dependencies AS shared-builder
+
+COPY packages/db/ ./packages/db/
+COPY packages/schemas/ ./packages/schemas/
+
+RUN pnpm --filter @addinvoice/db build \
+    && pnpm --filter @addinvoice/schemas build
+
+# ---- Backend dev (API): same as shared-builder for env; source mounted at runtime ----
+FROM shared-builder AS backend-dev
+
+COPY apps/backend/ ./apps/backend/
+
+# Default command; override in compose to run install + dev
+CMD ["pnpm", "dev:backend"]
+
+# ---- Frontend dev: deps + frontend app (source mounted at runtime) ----
+FROM dependencies AS frontend-dev
+
+COPY apps/frontend/ ./apps/frontend/
+
+CMD ["pnpm", "dev:frontend"]
+
+# ---- PDF service dev: deps + Chromium for Puppeteer ----
+FROM dependencies AS pdf-service-dev
+
+RUN apt-get update -qq && apt-get install --no-install-recommends -y \
+    chromium \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libdrm2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxkbcommon0 \
+    libxrandr2 \
+    xdg-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+COPY apps/pdf-service/ ./apps/pdf-service/
+
+CMD ["pnpm", "dev:pdf-service"]
+
+# ---- Worker dev: same codebase as backend ----
+FROM shared-builder AS worker-dev
+
+COPY apps/backend/ ./apps/backend/
+
+CMD ["pnpm", "--filter", "@addinvoice/backend", "run", "dev:worker"]

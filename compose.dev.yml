@@ -1,0 +1,186 @@
+# Development stack: one Dockerfile.dev, multiple targets, source mounted for live reload.
+# Uses the Compose Specification (Compose v2/v5). No top-level "version" needed.
+# Refs: https://docs.docker.com/compose/intro/history/
+#       https://docs.docker.com/compose/gettingstarted/
+#       https://docs.docker.com/compose/how-tos/project-name/
+#
+# Usage (CLI is "docker compose", not docker-compose):
+#   docker compose -f compose.dev.yml up -d
+#   docker compose -f compose.dev.yml up -d --build
+#   docker compose -f compose.dev.yml up -d --force-recreate --build
+#
+# Ensure apps/backend/.env, apps/frontend/.env.local, apps/pdf-service/.env exist.
+# Overrides below use service names for container-to-container networking; browser uses localhost.
+#
+# Live reload: we use (1) bind mount (.:/app) so the container sees host files, and (2) in-container
+# dev servers (nodemon, next dev, tsx watch) that react to changes. Optionally use Compose Watch so
+# "docker compose watch" or "docker compose up --watch" is supported (see develop.watch below).
+# https://docs.docker.com/compose/gettingstarted/#step-4-edit-the-compose-file-to-use-compose-watch
+# https://docs.docker.com/compose/how-tos/file-watch/
+
+name: addinvoice-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: nicoiscoding
+      POSTGRES_PASSWORD: Nicopro0205
+      POSTGRES_DB: addinvoices
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nicoiscoding -d addinvoices"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: backend-dev
+    ports:
+      - "4000:4000"
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - node_modules/
+            - .git/
+            - "**/dist/"
+            - "**/.next/"
+            - .turbo/
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: pnpm-lock.yaml
+    env_file:
+      - apps/backend/.env
+    environment:
+      PORT: "4000"
+      DATABASE_URL: postgresql://nicoiscoding:Nicopro0205@postgres:5432/addinvoices
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      PDF_SERVICE_URL: http://pdf-service:4001
+      FRONTEND_URL: http://localhost:3000
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      pdf-service: { condition: service_started }
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: frontend-dev
+    ports:
+      - "3000:3000"
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - node_modules/
+            - .git/
+            - "**/dist/"
+            - "**/.next/"
+            - .turbo/
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: pnpm-lock.yaml
+    env_file:
+      - apps/frontend/.env.local
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+    depends_on:
+      - backend
+
+  pdf-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: pdf-service-dev
+    ports:
+      - "4001:4001"
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - node_modules/
+            - .git/
+            - "**/dist/"
+            - "**/.next/"
+            - .turbo/
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: pnpm-lock.yaml
+    env_file:
+      - apps/pdf-service/.env
+    environment:
+      PORT: "4001"
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "1"
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: worker-dev
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - node_modules/
+            - .git/
+            - "**/dist/"
+            - "**/.next/"
+            - .turbo/
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: pnpm-lock.yaml
+    env_file:
+      - apps/backend/.env
+    environment:
+      DATABASE_URL: postgresql://nicoiscoding:Nicopro0205@postgres:5432/addinvoices
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      PDF_SERVICE_URL: http://pdf-service:4001
+    # No command override: use Dockerfile CMD (pnpm --filter @addinvoice/backend run dev:worker)
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      pdf-service: { condition: service_started }
+
+volumes:
+  postgres_data_dev:

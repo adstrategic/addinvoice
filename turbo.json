@@ -10,7 +10,20 @@
     "dev": {
       "dependsOn": ["^db:generate"],
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "PORT",
+        "FRONTEND_URL",
+        "DATABASE_URL_TEST",
+        "RESEND_API_KEY",
+        "STRIPE_*",
+        "CLERK_*",
+        "CLOUDINARY_*",
+        "LIVEKIT_*",
+        "PDF_SERVICE_*",
+        "REDIS_*",
+        "PUPPETEER_*"
+      ]
     },
     "test": {
       "outputs": [],
