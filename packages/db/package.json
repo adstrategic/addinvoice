@@ -7,10 +7,15 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "db:generate": "prisma generate",
-    "build": "pnpm run db:generate && tsc",
+    "build": "tsc",
     "clean": "rm -rf dist",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy"
+  },
+  "turbo": {
+    "build": {
+      "dependsOn": ["db:generate"]
+    }
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.2.0",
