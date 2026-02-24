@@ -11,8 +11,6 @@
     "clean": "rm -rf dist",
     "build": "pnpm run clean && tsc",
     "start": "node dist/server.js",
-    "db:migrate": "pnpm --filter @addinvoice/db run db:migrate",
-    "db:deploy": "pnpm --filter @addinvoice/db run db:deploy",
     "dev": "nodemon --watch 'src/**/*.ts' --exec 'tsx' src/server.ts",
     "start:worker": "node dist/worker.js",
     "dev:worker": "tsx src/worker.ts",
