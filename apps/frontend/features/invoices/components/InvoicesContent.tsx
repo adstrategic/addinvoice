@@ -24,7 +24,7 @@ import { statusFilterToApiParam } from "../types/api";
 import { useInvoiceManager } from "../hooks/useInvoiceFormManager";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const VALID_STATUSES = ["all", "paid", "overdue", "issued", "draft"] as const;
 
@@ -63,7 +63,6 @@ export default function InvoicesContent() {
     InvoiceResponse | undefined
   >(undefined);
   const paymentDialog = usePaymentDialog();
-  const { toast } = useToast();
   // Fetch invoices with pagination, search, and status (server-side)
   const {
     data: invoicesData,
@@ -93,16 +92,13 @@ export default function InvoicesContent() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast({
-        title: "PDF downloaded",
+      toast.success("PDF downloaded", {
         description: "The invoice PDF has been downloaded successfully.",
       });
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Failed to download PDF", {
         description:
           error instanceof Error ? error.message : "Failed to download PDF",
-        variant: "destructive",
       });
     }
   };

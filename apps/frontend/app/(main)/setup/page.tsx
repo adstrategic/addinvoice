@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import {
   useCreateBusiness,
   useSetDefaultBusiness,
@@ -20,10 +19,10 @@ import {
   type CreateBusinessDto,
 } from "@/features/businesses";
 import { CreateCompanyForm } from "@/features/businesses/components/CreateCompanyForm";
+import { toast } from "sonner";
 
 export default function SetupPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const createBusinessMutation = useCreateBusiness();
   const setDefaultBusinessMutation = useSetDefaultBusiness();
   const uploadLogoMutation = useUploadLogo();
@@ -58,9 +57,8 @@ export default function SetupPage() {
         }
       }
 
-      toast({
-        title: "Setup complete!",
-        description: "Your business has been created successfully.",
+      toast.success("Setup complete!", {
+        description: "The business has been created successfully.",
       });
 
       router.push("/");

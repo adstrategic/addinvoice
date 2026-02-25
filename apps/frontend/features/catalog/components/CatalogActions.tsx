@@ -9,6 +9,15 @@ interface CatalogActionsProps {
 export function CatalogActions({ onOpenCreateModal }: CatalogActionsProps) {
   return (
     <div className="flex gap-3 w-full md:w-auto">
+      <Link href="/voice">
+        <Button
+          variant="outline"
+          className="gap-2 flex-1 md:flex-none cursor-pointer"
+        >
+          <Mic className="h-4 w-4" />
+          Add by voice
+        </Button>
+      </Link>
       <div data-tour-id="catalog-create-btn">
         <Button
           className="gap-2 flex-1 md:flex-none"

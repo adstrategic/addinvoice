@@ -4,7 +4,8 @@ import {
   useSessionContext,
   useSessionMessages,
 } from "@livekit/components-react";
-import { AlertCircle, History, Loader2, XIcon } from "lucide-react";
+import { AlertCircle, ArrowLeft, History, Loader2, XIcon } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
@@ -96,7 +97,17 @@ export function VoiceContent({
   // Show error state
   if (connectionError) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-4">
+      <div className="relative flex items-center justify-center min-h-screen p-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="absolute top-4 left-4 text-white hover:bg-white/10"
+        >
+          <Link href="/" aria-label="Back to dashboard">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Connection Error</CardTitle>
@@ -136,7 +147,18 @@ export function VoiceAssistantContent(_props: VoiceAssistantUIProps) {
 
   if (!agent.isConnected) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#162135]">
+      <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#162135]">
+        <Button
+          variant="ghost"
+          size="lg"
+          asChild
+          className="absolute top-4 left-4 text-white hover:bg-white/10 z-10 hover:text-white"
+        >
+          <Link href="/" aria-label="Back to dashboard">
+            <ArrowLeft className="h-5 w-5" />
+            Return to dashboard
+          </Link>
+        </Button>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="mt-4 text-sm text-white">
           Connecting to voice assistant...
@@ -146,7 +168,18 @@ export function VoiceAssistantContent(_props: VoiceAssistantUIProps) {
   }
 
   return (
-    <div className="py-12 flex flex-col items-center justify-center bg-[#162135] min-h-screen px-2">
+    <div className="relative py-12 flex flex-col items-center justify-center bg-[#162135] min-h-screen px-2">
+      <Button
+        variant="ghost"
+        size="lg"
+        asChild
+        className="absolute top-4 left-4 text-white hover:bg-white/10 z-10 hover:text-white"
+      >
+        <Link href="/" aria-label="Back to dashboard">
+          <ArrowLeft className="h-5 w-5" />
+          Return to dashboard
+        </Link>
+      </Button>
       <Image
         src="/images/adstrategic-icon.png"
         alt="AddStrategic"

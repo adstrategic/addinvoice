@@ -1,10 +1,13 @@
-import { useToast } from "@/hooks/use-toast";
 import {
   useCreateClient,
   useUpdateClient,
   useDeleteClient,
 } from "./useClients";
-import { CreateClientDto, UpdateClientDto } from "../schema/clients.schema";
+import type {
+  CreateClientDto,
+  UpdateClientDto,
+} from "../schema/clients.schema";
+import { toast } from "sonner";
 
 /**
  * Custom hook that encapsulates all client business logic and side effects:
@@ -30,8 +33,6 @@ import { CreateClientDto, UpdateClientDto } from "../schema/clients.schema";
  * ```
  */
 export function useClientActions() {
-  const { toast } = useToast();
-
   // React Query mutations
   const createMutation = useCreateClient();
   const updateMutation = useUpdateClient();
@@ -43,8 +44,7 @@ export function useClientActions() {
   const handleCreate = async (data: CreateClientDto) => {
     await createMutation.mutateAsync(data);
 
-    toast({
-      title: "Client created successfully",
+    toast.success("Client created successfully", {
       description: "The client has been added to the system",
     });
   };
@@ -55,8 +55,7 @@ export function useClientActions() {
   const handleUpdate = async (id: number, data: UpdateClientDto) => {
     await updateMutation.mutateAsync({ id, data });
 
-    toast({
-      title: "Client updated successfully",
+    toast.success("Client updated successfully", {
       description: "The client has been updated successfully",
     });
   };
@@ -68,14 +67,11 @@ export function useClientActions() {
     try {
       await deleteMutation.mutateAsync({ id, sequence });
 
-      toast({
-        title: "Client deleted successfully",
+      toast.success("Client deleted successfully", {
         description: "The client has been deleted from the system",
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error deleting client",
+      toast.error("Error deleting client", {
         description:
           error.message || "An error occurred while deleting the client",
       });

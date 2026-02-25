@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
-import { useToast } from "@/hooks/use-toast";
 import { downloadInvoicePdf } from "@/features/invoices/lib/utils";
 import { useInvoiceBySequence } from "@/features/invoices/hooks/useInvoices";
 import { PaymentFormDialog } from "@/features/invoices/components/PaymentFormDialog";
@@ -23,6 +22,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 
 const statusConfig = {
   paid: { label: "Paid", className: "bg-primary/20 text-primary" },
@@ -48,7 +48,6 @@ function getItemFixedDiscount(item: {
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { toast } = useToast();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -97,14 +96,11 @@ export default function InvoiceDetailPage() {
     if (!sequence) return;
     setDownloading(true);
     try {
-      await downloadInvoicePdf(sequence, invoice.invoiceNumber, toast);
+      await downloadInvoicePdf(sequence, invoice.invoiceNumber);
     } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to download PDF",
-        variant: "destructive",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to download PDF",
+      );
     } finally {
       setDownloading(false);
     }

@@ -7,10 +7,10 @@ import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ClerkTokenProvider } from "@/components/providers/clerk-token-provider";
-import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import { TourProvider } from "@/components/tour/TourContext";
 import { TourOverlay } from "@/components/tour/TourOverlay";
+import { Toaster } from "sonner";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -81,7 +81,7 @@ export default function RootLayout({
                 </TourProvider>
               </ClerkTokenProvider>
             </QueryProvider>
-            <Toaster />
+            <Toaster richColors />
           </ThemeProvider>
           <Analytics />
         </body>

@@ -17,7 +17,6 @@ import { useWorkspacePaymentMethods } from "@/features/workspace";
 import Image from "next/image";
 import { BusinessResponse } from "@/features/businesses";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
-import { useToast } from "@/hooks/use-toast";
 import { downloadInvoicePdf } from "../lib/utils";
 import {
   CreateInvoiceDTO,
@@ -38,6 +37,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import LoadingComponent from "@/components/loading-component";
+import { toast } from "sonner";
 
 interface InvoiceFormProps {
   selectedBusiness: BusinessResponse;
@@ -67,7 +67,6 @@ export function InvoiceForm({
   isLoading,
 }: InvoiceFormProps) {
   const router = useRouter();
-  const { toast } = useToast();
   const isDirty = form.formState.isDirty;
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -169,16 +168,13 @@ export function InvoiceForm({
                     await downloadInvoicePdf(
                       existingInvoice.sequence,
                       existingInvoice.invoiceNumber,
-                      toast,
                     );
                   } catch (error) {
-                    toast({
-                      title: "Error",
+                    toast.error("Failed to download PDF", {
                       description:
                         error instanceof Error
                           ? error.message
                           : "Failed to download PDF",
-                      variant: "destructive",
                     });
                   } finally {
                     setIsExporting(false);

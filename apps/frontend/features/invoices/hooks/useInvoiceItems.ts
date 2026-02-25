@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { invoicesService } from "../service/invoices.service";
 import { invoiceKeys } from "./useInvoices";
 import type {
   InvoiceItemCreateInput,
   InvoiceItemUpdateInput,
 } from "../schemas/invoice.schema";
+import { toast } from "sonner";
 
 /**
  * Hook to create an invoice item
@@ -13,7 +13,6 @@ import type {
  */
 export function useCreateInvoiceItem() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({
@@ -27,8 +26,7 @@ export function useCreateInvoiceItem() {
       // Invalidate all invoice details since we key by sequence, not id
       queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      toast({
-        title: "Product added",
+      toast.success("Product added", {
         description: "The product has been added to the invoice successfully.",
       });
     },
@@ -42,7 +40,6 @@ export function useCreateInvoiceItem() {
  */
 export function useUpdateInvoiceItem() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({
@@ -58,8 +55,7 @@ export function useUpdateInvoiceItem() {
       // Invalidate all invoice details since we key by sequence, not id
       queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      toast({
-        title: "Product updated",
+      toast.success("Product updated", {
         description: "The product has been updated successfully.",
       });
     },
@@ -72,7 +68,6 @@ export function useUpdateInvoiceItem() {
  */
 export function useDeleteInvoiceItem() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({
@@ -86,17 +81,13 @@ export function useDeleteInvoiceItem() {
       // Invalidate all invoice details since we key by sequence, not id
       queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      toast({
-        title: "Product deleted",
+      toast.success("Product deleted", {
         description: "The product has been removed from the invoice.",
-        variant: "destructive",
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
+      toast.error("Failed to delete product", {
         description: error.message || "Failed to delete product",
-        variant: "destructive",
       });
     },
   });

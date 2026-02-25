@@ -24,7 +24,7 @@ import type {
 import type { CatalogResponse } from "@/features/catalog";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface CatalogSelectionModalProps {
   open: boolean;
@@ -54,7 +54,6 @@ export function CatalogSelectionModal({
   onSuccess,
 }: CatalogSelectionModalProps) {
   const router = useRouter();
-  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebouncedValue(searchTerm, 300);
   const createItem = useCreateInvoiceItem();
@@ -106,10 +105,8 @@ export function CatalogSelectionModal({
   // Handle catalog item selection
   const handleSelectCatalogItem = async (catalog: CatalogResponse) => {
     if (!businessId) {
-      toast({
-        title: "Business required",
+      toast.error("Business required", {
         description: "Please select a business first",
-        variant: "destructive",
       });
       return;
     }
@@ -140,10 +137,8 @@ export function CatalogSelectionModal({
 
     // Validate that we have an invoice ID
     if (!currentInvoiceId) {
-      toast({
-        title: "Error",
+      toast.error("Invoice ID required", {
         description: "Invoice ID is required to add a product",
-        variant: "destructive",
       });
       return;
     }
@@ -154,19 +149,17 @@ export function CatalogSelectionModal({
         data: itemData,
       });
 
-      toast({
-        title: "Item added",
+      toast.success("Item added", {
         description: `${catalog.name} has been added to the invoice.`,
       });
 
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        title: "Error",
+      toast.error("Failed to add item to invoice", {
         description: error.message || "Failed to add item to invoice",
-        variant: "destructive",
       });
+      throw error;
     }
   };
 

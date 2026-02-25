@@ -9,12 +9,7 @@ import {
   type UpdateBusinessDto,
 } from "@/features/businesses";
 import type { z } from "zod";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,7 +35,7 @@ import {
   useDeleteLogo,
   useSetDefaultBusiness,
 } from "@/features/businesses";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 type EditCompanyForm = z.infer<typeof updateBusinessSchema>;
 
@@ -73,7 +68,6 @@ export function CompanyCard({
   onDeleteRequested,
   onSaveSuccess,
 }: CompanyCardProps) {
-  const { toast } = useToast();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const form = useForm<EditCompanyForm>({
     resolver: zodResolver(updateBusinessSchema),
@@ -89,7 +83,10 @@ export function CompanyCard({
   const onSubmit = async (data: EditCompanyForm) => {
     try {
       const payload: UpdateBusinessDto = { ...data };
-      await updateBusinessMutation.mutateAsync({ id: company.id, data: payload });
+      await updateBusinessMutation.mutateAsync({
+        id: company.id,
+        data: payload,
+      });
       form.reset(data);
       onSaveSuccess?.();
     } catch {
@@ -101,18 +98,14 @@ export function CompanyCard({
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid file type",
+      toast.error("Invalid file type", {
         description: "Please upload an image file",
-        variant: "destructive",
       });
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
+      toast.error("File too large", {
         description: "Please upload a file smaller than 5MB",
-        variant: "destructive",
       });
       return;
     }

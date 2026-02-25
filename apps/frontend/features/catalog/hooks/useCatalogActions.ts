@@ -1,10 +1,13 @@
-import { useToast } from "@/hooks/use-toast";
 import {
   useCreateCatalog,
   useUpdateCatalog,
   useDeleteCatalog,
 } from "./useCatalogs";
-import { CreateCatalogDto, UpdateCatalogDto } from "../schema/catalog.schema";
+import type {
+  CreateCatalogDto,
+  UpdateCatalogDto,
+} from "../schema/catalog.schema";
+import { toast } from "sonner";
 
 /**
  * Custom hook that encapsulates all catalog business logic and side effects:
@@ -30,8 +33,6 @@ import { CreateCatalogDto, UpdateCatalogDto } from "../schema/catalog.schema";
  * ```
  */
 export function useCatalogActions() {
-  const { toast } = useToast();
-
   // React Query mutations
   const createMutation = useCreateCatalog();
   const updateMutation = useUpdateCatalog();
@@ -43,8 +44,7 @@ export function useCatalogActions() {
   const handleCreate = async (data: CreateCatalogDto) => {
     await createMutation.mutateAsync(data);
 
-    toast({
-      title: "Catalog item created successfully",
+    toast.success("Catalog item created successfully", {
       description: "The catalog item has been added to the system",
     });
   };
@@ -55,8 +55,7 @@ export function useCatalogActions() {
   const handleUpdate = async (id: number, data: UpdateCatalogDto) => {
     await updateMutation.mutateAsync({ id, data });
 
-    toast({
-      title: "Catalog item updated successfully",
+    toast.success("Catalog item updated successfully", {
       description: "The catalog item has been updated successfully",
     });
   };
@@ -68,14 +67,11 @@ export function useCatalogActions() {
     try {
       await deleteMutation.mutateAsync({ id, sequence });
 
-      toast({
-        title: "Catalog item deleted successfully",
+      toast.success("Catalog item deleted successfully", {
         description: "The catalog item has been deleted from the system",
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error deleting catalog item",
+      toast.error("Error deleting catalog item", {
         description:
           error.message || "An error occurred while deleting the catalog item",
       });
@@ -100,4 +96,3 @@ export function useCatalogActions() {
     isMutating: createMutation.isPending || updateMutation.isPending,
   };
 }
-

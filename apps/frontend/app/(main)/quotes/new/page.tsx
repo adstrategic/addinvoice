@@ -36,7 +36,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { TemplateSelectionDialog } from "@/components/template-selection-dialog";
@@ -108,8 +107,6 @@ export default function NewQuotePage() {
   const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const quotePreviewRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
 
   const [quoteNumber, setQuoteNumber] = useState("QUO-001");
   const [status, setStatus] = useState("draft");

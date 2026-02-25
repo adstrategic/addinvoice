@@ -1,10 +1,13 @@
-import { useToast } from "@/hooks/use-toast";
 import {
   useCreateInvoice,
   useUpdateInvoice,
   useDeleteInvoice,
 } from "./useInvoices";
-import { CreateInvoiceDTO, UpdateInvoiceDTO } from "../schemas/invoice.schema";
+import type {
+  CreateInvoiceDTO,
+  UpdateInvoiceDTO,
+} from "../schemas/invoice.schema";
+import { toast } from "sonner";
 
 /**
  * Custom hook that encapsulates all client business logic and side effects:
@@ -30,8 +33,6 @@ import { CreateInvoiceDTO, UpdateInvoiceDTO } from "../schemas/invoice.schema";
  * ```
  */
 export function useInvoiceActions() {
-  const { toast } = useToast();
-
   // React Query mutations
   const createMutation = useCreateInvoice();
   const updateMutation = useUpdateInvoice();
@@ -43,8 +44,7 @@ export function useInvoiceActions() {
   const handleCreate = async (data: CreateInvoiceDTO) => {
     const result = await createMutation.mutateAsync(data);
 
-    toast({
-      title: "Invoice created successfully",
+    toast.success("Invoice created successfully", {
       description: "The invoice has been added to the system",
     });
 
@@ -57,8 +57,7 @@ export function useInvoiceActions() {
   const handleUpdate = async (id: number, data: UpdateInvoiceDTO) => {
     await updateMutation.mutateAsync({ id, data });
 
-    toast({
-      title: "Invoice updated successfully",
+    toast.success("Invoice updated successfully", {
       description: "The invoice has been updated successfully",
     });
   };
@@ -70,14 +69,11 @@ export function useInvoiceActions() {
     try {
       await deleteMutation.mutateAsync({ id, sequence });
 
-      toast({
-        title: "Invoice deleted successfully",
+      toast.success("Invoice deleted successfully", {
         description: "The invoice has been deleted from the system",
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error deleting invoice",
+      toast.error("Error deleting invoice", {
         description:
           error.message || "An error occurred while deleting the invoice",
       });

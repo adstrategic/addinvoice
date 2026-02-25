@@ -17,7 +17,6 @@ import {
 } from "@/hooks/use-subscription";
 import { SubscriptionGuard } from "@/components/guards/subscription-guard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
 import type {
   BillingInterval,
   PlanPricesLifetime,
@@ -25,6 +24,7 @@ import type {
   SubscriptionPlan,
   SubscriptionPlanResponse,
 } from "@/features/subscriptions/service/subscriptions.service";
+import { toast } from "sonner";
 
 function getDisplayPrice(
   plan: SubscriptionPlanResponse,
@@ -40,7 +40,6 @@ function getDisplayPrice(
 export default function SubscribePage() {
   const { data: plans, isLoading } = useSubscriptionPlans();
   const createCheckout = useCreateCheckout();
-  const { toast } = useToast();
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("month");
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(
@@ -71,13 +70,11 @@ export default function SubscribePage() {
         priceId: priceInfo.priceId,
       });
     } catch (error: unknown) {
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Failed to create checkout session", {
         description:
           error instanceof Error
             ? error.message
-            : "Failed to create checkout session",
+            : "An error occurred while creating the checkout session",
       });
       setSelectedPlan(null);
     }
@@ -86,169 +83,173 @@ export default function SubscribePage() {
   if (isLoading) {
     return (
       <SubscriptionGuard redirectIfSubscribed>
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-full max-w-6xl px-4 py-12">
-          <div className="text-center mb-12">
-            <Skeleton className="h-10 w-64 mx-auto mb-4" />
-            <Skeleton className="h-6 w-96 mx-auto" />
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-96" />
-            ))}
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="w-full max-w-6xl px-4 py-12">
+            <div className="text-center mb-12">
+              <Skeleton className="h-10 w-64 mx-auto mb-4" />
+              <Skeleton className="h-6 w-96 mx-auto" />
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-96" />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
       </SubscriptionGuard>
     );
   }
 
   return (
     <SubscriptionGuard redirectIfSubscribed>
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
-      <div className="w-full max-w-6xl">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
-          <p className="text-muted-foreground text-lg mb-6">
-            Select the plan that best fits your needs
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <div className="inline-flex rounded-lg border bg-muted p-1">
-              <button
-                type="button"
-                onClick={() => setBillingInterval("month")}
-                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                  billingInterval === "month"
-                    ? "bg-background text-foreground shadow"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                type="button"
-                onClick={() => setBillingInterval("year")}
-                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-                  billingInterval === "year"
-                    ? "bg-background text-foreground shadow"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Yearly
-                {yearlySavePercent != null && (
-                  <Badge variant="secondary" className="text-xs">
-                    Save {yearlySavePercent}%
-                  </Badge>
-                )}
-              </button>
+      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+        <div className="w-full max-w-6xl">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
+            <p className="text-muted-foreground text-lg mb-6">
+              Select the plan that best fits your needs
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <div className="inline-flex rounded-lg border bg-muted p-1">
+                <button
+                  type="button"
+                  onClick={() => setBillingInterval("month")}
+                  className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                    billingInterval === "month"
+                      ? "bg-background text-foreground shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingInterval("year")}
+                  className={`rounded-md px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                    billingInterval === "year"
+                      ? "bg-background text-foreground shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Yearly
+                  {yearlySavePercent != null && (
+                    <Badge variant="secondary" className="text-xs">
+                      Save {yearlySavePercent}%
+                    </Badge>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {plans?.map((plan) => {
-            const isSelected = selectedPlan === plan.id;
-            const isProcessing = createCheckout.isPending && isSelected;
+          <div className="grid md:grid-cols-3 gap-6">
+            {plans?.map((plan) => {
+              const isSelected = selectedPlan === plan.id;
+              const isProcessing = createCheckout.isPending && isSelected;
 
-            return (
-              <Card
-                key={plan.id}
-                className={`relative ${
-                  plan.id === "AI_PRO"
-                    ? "border-primary shadow-lg scale-105"
-                    : ""
-                }`}
-              >
-                {plan.id === "AI_PRO" && (
-                  <Badge
-                    className="absolute -top-3 left-1/2 -translate-x-1/2"
-                    variant="default"
-                  >
-                    Most Popular
-                  </Badge>
-                )}
-                <CardHeader>
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    {(() => {
-                      const priceInfo = getDisplayPrice(plan, billingInterval);
-                      return (
+              return (
+                <Card
+                  key={plan.id}
+                  className={`relative ${
+                    plan.id === "AI_PRO"
+                      ? "border-primary shadow-lg scale-105"
+                      : ""
+                  }`}
+                >
+                  {plan.id === "AI_PRO" && (
+                    <Badge
+                      className="absolute -top-3 left-1/2 -translate-x-1/2"
+                      variant="default"
+                    >
+                      Most Popular
+                    </Badge>
+                  )}
+                  <CardHeader>
+                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                    <CardDescription>{plan.description}</CardDescription>
+                    <div className="mt-4">
+                      {(() => {
+                        const priceInfo = getDisplayPrice(
+                          plan,
+                          billingInterval,
+                        );
+                        return (
+                          <>
+                            <span className="text-4xl font-bold">
+                              ${priceInfo.amount}
+                            </span>
+                            {plan.id === "LIFETIME" ? (
+                              <span className="text-muted-foreground">
+                                one-time
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                /
+                                {billingInterval === "month" ? "month" : "year"}
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3 mb-6">
+                      <li className="flex items-center gap-2">
+                        <Check className="h-5 w-5 text-primary" />
+                        <span>Full access to all features</span>
+                      </li>
+                      {plan.id === "CORE" && (
                         <>
-                          <span className="text-4xl font-bold">
-                            ${priceInfo.amount}
-                          </span>
-                          {plan.id === "LIFETIME" ? (
-                            <span className="text-muted-foreground">
-                              one-time
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              /{billingInterval === "month" ? "month" : "year"}
-                            </span>
-                          )}
+                          <li className="flex items-center gap-2">
+                            <Check className="h-5 w-5 text-primary" />
+                            <span>$3 worth of AI credits included</span>
+                          </li>
                         </>
-                      );
-                    })()}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3 mb-6">
-                    <li className="flex items-center gap-2">
-                      <Check className="h-5 w-5 text-primary" />
-                      <span>Full access to all features</span>
-                    </li>
-                    {plan.id === "CORE" && (
-                      <>
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span>$3 worth of AI credits included</span>
-                        </li>
-                      </>
-                    )}
-                    {plan.id === "AI_PRO" && (
-                      <>
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span>$8 worth of AI credits included</span>
-                        </li>
-                      </>
-                    )}
-                    {plan.id === "LIFETIME" && (
-                      <>
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span>One-time payment</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span>Free tier AI credits</span>
-                        </li>
-                      </>
-                    )}
-                  </ul>
-                  <Button
-                    className="w-full"
-                    variant={plan.id === "AI_PRO" ? "default" : "outline"}
-                    onClick={() => handleSelectPlan(plan.id)}
-                    disabled={isProcessing || createCheckout.isPending}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      "Subscribe"
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
+                      )}
+                      {plan.id === "AI_PRO" && (
+                        <>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-5 w-5 text-primary" />
+                            <span>$8 worth of AI credits included</span>
+                          </li>
+                        </>
+                      )}
+                      {plan.id === "LIFETIME" && (
+                        <>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-5 w-5 text-primary" />
+                            <span>One-time payment</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-5 w-5 text-primary" />
+                            <span>Free tier AI credits</span>
+                          </li>
+                        </>
+                      )}
+                    </ul>
+                    <Button
+                      className="w-full"
+                      variant={plan.id === "AI_PRO" ? "default" : "outline"}
+                      onClick={() => handleSelectPlan(plan.id)}
+                      disabled={isProcessing || createCheckout.isPending}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        "Subscribe"
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
     </SubscriptionGuard>
   );
 }

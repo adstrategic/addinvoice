@@ -3,9 +3,10 @@ import { useToast } from "@/hooks/use-toast";
 import { invoicesService } from "../service/invoices.service";
 import { invoiceKeys } from "./useInvoices";
 import type {
-  PaymentCreateInput,
-  PaymentUpdateInput,
-} from "../schemas/invoice.schema";
+  CreatePaymentDto,
+  UpdatePaymentDto,
+} from "@/features/payments/schemas/payments.schema";
+import { toast } from "sonner";
 
 /**
  * Hook to create a payment
@@ -13,7 +14,6 @@ import type {
  */
 export function useCreatePayment() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({
@@ -23,7 +23,7 @@ export function useCreatePayment() {
     }: {
       invoiceId: number;
       invoiceSequence: number;
-      data: PaymentCreateInput;
+      data: CreatePaymentDto;
     }) => invoicesService.createPayment(invoiceId, data),
     onSuccess: (_, { invoiceSequence }) => {
       // Invalidate all invoice details since we key by sequence, not id
@@ -31,8 +31,7 @@ export function useCreatePayment() {
         queryKey: invoiceKeys.detail(invoiceSequence),
       });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      toast({
-        title: "Payment added",
+      toast.success("Payment added", {
         description: "The payment has been added successfully.",
       });
     },
@@ -46,7 +45,6 @@ export function useCreatePayment() {
  */
 export function useUpdatePayment() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({
@@ -56,13 +54,12 @@ export function useUpdatePayment() {
     }: {
       invoiceId: number;
       paymentId: number;
-      data: PaymentUpdateInput;
+      data: UpdatePaymentDto;
     }) => invoicesService.updatePayment(invoiceId, paymentId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      toast({
-        title: "Payment updated",
+      toast.success("Payment updated", {
         description: "The payment has been updated successfully.",
       });
     },
@@ -75,7 +72,6 @@ export function useUpdatePayment() {
  */
 export function useDeletePayment() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({
@@ -88,17 +84,13 @@ export function useDeletePayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      toast({
-        title: "Payment deleted",
+      toast.success("Payment deleted", {
         description: "The payment has been removed.",
-        variant: "destructive",
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
+      toast.error("Failed to delete payment", {
         description: error.message || "Failed to delete payment",
-        variant: "destructive",
       });
     },
   });

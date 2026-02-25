@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { motion, Variants } from "framer-motion";
+
+import { motion, type Variants } from "framer-motion";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 type PaymentMethod = {
   id: string;
@@ -87,7 +88,6 @@ export default function PaymentMethodsPage() {
     expiryMonth: "",
     expiryYear: "",
   });
-  const { toast } = useToast();
 
   useEffect(() => {
     loadPaymentMethods();
@@ -126,10 +126,8 @@ export default function PaymentMethodsPage() {
     const updated = paymentMethods.filter((m) => m.id !== id);
     localStorage.setItem("paymentMethods", JSON.stringify(updated));
     loadPaymentMethods();
-    toast({
-      title: "Payment method deleted",
+    toast.success("Payment method deleted", {
       description: "The payment method has been removed",
-      variant: "destructive",
     });
   };
 
@@ -140,27 +138,22 @@ export default function PaymentMethodsPage() {
     }));
     localStorage.setItem("paymentMethods", JSON.stringify(updated));
     loadPaymentMethods();
-    toast({
-      title: "Default payment method updated",
+    toast.success("Default payment method updated", {
       description: "The default payment method has been changed",
     });
   };
 
   const handleSubmit = () => {
     if (!formData.name.trim()) {
-      toast({
-        title: "Name required",
+      toast.error("Name required", {
         description: "Please enter a name for this payment method",
-        variant: "destructive",
       });
       return;
     }
 
     if (formData.type === "credit_card" && !formData.last4) {
-      toast({
-        title: "Card number required",
+      toast.error("Card number required", {
         description: "Please enter the last 4 digits of the card",
-        variant: "destructive",
       });
       return;
     }
@@ -182,8 +175,7 @@ export default function PaymentMethodsPage() {
             : undefined,
         };
       }
-      toast({
-        title: "Payment method updated",
+      toast.success("Payment method updated", {
         description: "The payment method has been updated successfully",
       });
     } else {
@@ -203,8 +195,7 @@ export default function PaymentMethodsPage() {
         createdAt: new Date().toISOString(),
       };
       methods.push(newMethod);
-      toast({
-        title: "Payment method added",
+      toast.success("Payment method added", {
         description: "The payment method has been added successfully",
       });
     }

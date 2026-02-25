@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
-import { UseFormReturn, FieldValues } from "react-hook-form";
-import { useToast } from "@/hooks/use-toast";
+import type { UseFormReturn, FieldValues } from "react-hook-form";
 import { useFormScroll } from "./useFormScroll";
+import { toast } from "sonner";
 
 interface UseFormErrorHandlerProps<T extends FieldValues> {
   form: UseFormReturn<T>;
@@ -25,12 +25,11 @@ export function useFormErrorHandler<T extends FieldValues>({
   mode = "create",
   entityName = "item",
 }: UseFormErrorHandlerProps<T>) {
-  const { toast } = useToast();
   const { scrollToField, scrollToRootError } = useFormScroll();
 
   // Track which field caused the backend error for smart clearing
   const [backendErrorField, setBackendErrorField] = useState<string | null>(
-    null
+    null,
   );
 
   // Smart backend error clearing - only clear when user types in the field that caused the error
@@ -111,7 +110,7 @@ export function useFormErrorHandler<T extends FieldValues>({
       // Scroll to the root error alert
       scrollToRootError();
     },
-    [form, entityName, backendErrorField, scrollToField, scrollToRootError]
+    [form, entityName, backendErrorField, scrollToField, scrollToRootError],
   );
 
   /**
@@ -145,16 +144,14 @@ export function useFormErrorHandler<T extends FieldValues>({
         mode === "edit"
           ? `Error updating ${entityName}`
           : mode === "emit"
-          ? `Error emitting ${entityName}`
-          : `Error creating ${entityName}`;
+            ? `Error emitting ${entityName}`
+            : `Error creating ${entityName}`;
 
-      toast({
-        variant: "destructive",
-        title: errorTitle,
+      toast.error(errorTitle, {
         description: errorMessage,
       });
     },
-    [mode, entityName, handleFormError, toast]
+    [mode, entityName, handleFormError],
   );
 
   return {

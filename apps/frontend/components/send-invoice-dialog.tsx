@@ -17,9 +17,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Mail, CheckCircle2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api/client";
 import { invoiceKeys } from "@/features/invoices";
+import { toast } from "sonner";
 
 interface SendInvoiceDialogProps {
   open: boolean;
@@ -38,7 +38,6 @@ export function SendInvoiceDialog({
   clientName,
   clientEmail,
 }: SendInvoiceDialogProps) {
-  const { toast } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [sending, setSending] = useState(false);
@@ -70,10 +69,8 @@ export function SendInvoiceDialog({
 
   const handleSendEmail = async () => {
     if (!email.trim()) {
-      toast({
-        title: "Error",
+      toast.error("Please enter a recipient email address", {
         description: "Please enter a recipient email address",
-        variant: "destructive",
       });
       return;
     }
@@ -98,8 +95,7 @@ export function SendInvoiceDialog({
         });
         queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       }
-      toast({
-        title: "Invoice is being sent",
+      toast.success("Invoice is being sent", {
         description: isAccepted
           ? "The invoice will be sent shortly."
           : `Invoice has been sent to ${email}`,
@@ -118,12 +114,10 @@ export function SendInvoiceDialog({
           ? (error as { response?: { data?: { message?: string } } }).response
               ?.data?.message
           : null;
-      toast({
-        title: "Error",
+      toast.error("Failed to send invoice", {
         description:
           message ||
           (error instanceof Error ? error.message : "Failed to send invoice"),
-        variant: "destructive",
       });
     }
   };

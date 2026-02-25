@@ -10,9 +10,9 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowLeft, Mic, Square, X } from "lucide-react";
 import Link from "next/link";
-import { useToast } from "@/hooks/use-toast";
 import { TemplateSelectionDialog } from "@/components/template-selection-dialog";
 import Image from "next/image";
+import { toast } from "sonner";
 
 // Speech Recognition types
 interface SpeechRecognition extends EventTarget {
@@ -105,13 +105,13 @@ export default function InvoiceByVoicePage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isAutoListening, setIsAutoListening] = useState(false);
   const [currentSubtitle, setCurrentSubtitle] = useState(
-    "Click the microphone to start speaking..."
+    "Click the microphone to start speaking...",
   );
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
   const [clientEmail, setClientEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [pendingAction, setPendingAction] = useState<"send" | "draft" | null>(
-    null
+    null,
   );
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -134,7 +134,6 @@ export default function InvoiceByVoicePage() {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const synthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -203,7 +202,7 @@ export default function InvoiceByVoicePage() {
                 voice.name.includes("Google UK English Female") ||
                 voice.name.includes("Microsoft Zira") ||
                 voice.name.includes("Microsoft Hazel") ||
-                (voice.name.includes("Female") && voice.lang.startsWith("en")))
+                (voice.name.includes("Female") && voice.lang.startsWith("en"))),
           );
 
           if (preferredVoice) {
@@ -213,14 +212,14 @@ export default function InvoiceByVoicePage() {
             const englishFemaleVoice = voices.find(
               (voice) =>
                 voice.lang.startsWith("en") &&
-                voice.name.toLowerCase().includes("female")
+                voice.name.toLowerCase().includes("female"),
             );
             if (englishFemaleVoice) {
               utterance.voice = englishFemaleVoice;
             } else {
               // Final fallback: any English voice
               const englishVoice = voices.find((voice) =>
-                voice.lang.startsWith("en")
+                voice.lang.startsWith("en"),
               );
               if (englishVoice) {
                 utterance.voice = englishVoice;
@@ -265,10 +264,8 @@ export default function InvoiceByVoicePage() {
       setShowTemplateDialog(false);
       setShowInstructions(true);
     } else {
-      toast({
-        title: "Template required",
+      toast.error("Template required", {
         description: "Please select a company template to continue",
-        variant: "destructive",
       });
     }
   };
@@ -456,7 +453,7 @@ export default function InvoiceByVoicePage() {
                   ...item,
                   quantity,
                 }
-              : item
+              : item,
           ),
         }));
         setConversationStep(5);
@@ -473,13 +470,13 @@ export default function InvoiceByVoicePage() {
           Number.parseFloat(lowerTranscript.replace(/[^\d.]/g, "")) || 0;
         const priceAcks = [
           `Perfect! ${price.toFixed(
-            2
+            2,
           )} per unit sounds good. Now, what tax percentage should we apply to this?`,
           `Great! ${price.toFixed(
-            2
+            2,
           )} per unit is set. Is there any tax we need to apply to this invoice?`,
           `Excellent! ${price.toFixed(
-            2
+            2,
           )} per unit — I've got that. What tax percentage should we use?`,
         ];
         aiResponse = priceAcks[Math.floor(Math.random() * priceAcks.length)];
@@ -497,7 +494,7 @@ export default function InvoiceByVoicePage() {
                   ...item,
                   unitPrice: price,
                 }
-              : item
+              : item,
           ),
         }));
         setConversationStep(6);
@@ -529,7 +526,7 @@ export default function InvoiceByVoicePage() {
                   ...item,
                   tax,
                 }
-              : item
+              : item,
           ),
         }));
         setConversationStep(7);
@@ -665,7 +662,7 @@ export default function InvoiceByVoicePage() {
       logo: selectedTemplate.logo,
       subtotal: invoiceData.items.reduce(
         (sum, item) => sum + item.quantity * item.unitPrice,
-        0
+        0,
       ),
       totalTax: invoiceData.items.reduce((sum, item) => {
         const subtotal = item.quantity * item.unitPrice;
@@ -680,11 +677,11 @@ export default function InvoiceByVoicePage() {
     };
 
     const existingDrafts = JSON.parse(
-      localStorage.getItem("invoiceDrafts") || "[]"
+      localStorage.getItem("invoiceDrafts") || "[]",
     );
     localStorage.setItem(
       "invoiceDrafts",
-      JSON.stringify([...existingDrafts, invoiceDraft])
+      JSON.stringify([...existingDrafts, invoiceDraft]),
     );
 
     setSuccessMessage(`Invoice draft saved successfully for ${clientEmail}!`);
@@ -713,7 +710,7 @@ export default function InvoiceByVoicePage() {
       logo: selectedTemplate.logo,
       subtotal: invoiceData.items.reduce(
         (sum, item) => sum + item.quantity * item.unitPrice,
-        0
+        0,
       ),
       totalTax: invoiceData.items.reduce((sum, item) => {
         const subtotal = item.quantity * item.unitPrice;
@@ -728,11 +725,11 @@ export default function InvoiceByVoicePage() {
     };
 
     const existingEmitted = JSON.parse(
-      localStorage.getItem("emittedInvoices") || "[]"
+      localStorage.getItem("emittedInvoices") || "[]",
     );
     localStorage.setItem(
       "emittedInvoices",
-      JSON.stringify([...existingEmitted, emittedInvoice])
+      JSON.stringify([...existingEmitted, emittedInvoice]),
     );
 
     setSuccessMessage(`Invoice sent successfully to ${clientEmail}!`);

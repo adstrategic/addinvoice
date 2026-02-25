@@ -18,9 +18,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useToast } from "@/hooks/use-toast";
 import { SendReceiptDialog } from "@/components/send-receipt-dialog";
 import type { PaymentListResponse } from "../schemas/payments.schema";
+import { toast } from "sonner";
 
 interface PaymentCardProps {
   payment: PaymentListResponse;
@@ -31,11 +31,6 @@ interface PaymentCardProps {
 async function downloadReceiptPdf(
   paymentId: number,
   invoiceNumber: string,
-  toast: (params: {
-    title: string;
-    description?: string;
-    variant?: "default" | "destructive";
-  }) => void,
 ): Promise<void> {
   const response = await fetch(`/api/payments/${paymentId}/receipt`);
   if (!response.ok) {
@@ -50,14 +45,12 @@ async function downloadReceiptPdf(
   a.click();
   window.URL.revokeObjectURL(url);
   document.body.removeChild(a);
-  toast({
-    title: "Receipt downloaded",
+  toast.success("Receipt downloaded", {
     description: "The receipt PDF has been downloaded successfully.",
   });
 }
 
 export function PaymentCard({ payment, index, onView }: PaymentCardProps) {
-  const { toast } = useToast();
   const [sendReceiptOpen, setSendReceiptOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -77,16 +70,10 @@ export function PaymentCard({ payment, index, onView }: PaymentCardProps) {
   const handleDownloadReceipt = async () => {
     setDownloading(true);
     try {
-      await downloadReceiptPdf(
-        payment.id,
-        payment.invoice.invoiceNumber,
-        toast,
-      );
+      await downloadReceiptPdf(payment.id, payment.invoice.invoiceNumber);
     } catch {
-      toast({
-        title: "Error",
+      toast.error("Failed to download receipt", {
         description: "Failed to download receipt",
-        variant: "destructive",
       });
     } finally {
       setDownloading(false);

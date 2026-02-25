@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import {
   type CreateCatalogDto,
   type UpdateCatalogDto,
   catalogService,
 } from "@/features/catalog";
 import type { ListCatalogsParams as ListCatalogsParamsSchema } from "../schema/catalog.schema";
-import { CatalogResponseList } from "../schema/catalog.schema";
+import type { CatalogResponseList } from "../schema/catalog.schema";
+import { toast } from "sonner";
 
 type ListCatalogsParams = ListCatalogsParamsSchema & {
   enabled?: boolean;
@@ -48,7 +48,7 @@ export function useCatalogs(params?: ListCatalogsParams) {
  */
 export function useCatalogBySequence(
   sequence: number | null,
-  enabled: boolean
+  enabled: boolean,
 ) {
   return useQuery({
     queryKey: catalogKeys.bySequence(sequence!),
@@ -64,14 +64,12 @@ export function useCatalogBySequence(
  */
 export function useCreateCatalog() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: (data: CreateCatalogDto) => catalogService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: catalogKeys.lists() });
-      toast({
-        title: "Catalog item created",
+      toast.success("Catalog item created", {
         description: "The catalog item has been added successfully.",
       });
     },
@@ -86,7 +84,6 @@ export function useCreateCatalog() {
  */
 export function useUpdateCatalog() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateCatalogDto }) =>
@@ -99,8 +96,7 @@ export function useUpdateCatalog() {
       queryClient.invalidateQueries({
         queryKey: catalogKeys.bySequence(variables.id),
       });
-      toast({
-        title: "Catalog item updated",
+      toast.success("Catalog item updated", {
         description: "The catalog item has been updated successfully.",
       });
     },
@@ -113,24 +109,19 @@ export function useUpdateCatalog() {
  */
 export function useDeleteCatalog() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, sequence }: { id: number; sequence: number }) =>
       catalogService.delete(id),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: catalogKeys.lists() });
-      toast({
-        title: "Catalog item deleted",
+      toast.success("Catalog item deleted", {
         description: "The catalog item has been deleted successfully.",
-        variant: "destructive",
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
+      toast.error("Failed to delete catalog item", {
         description: error.message || "Failed to delete catalog item",
-        variant: "destructive",
       });
     },
   });

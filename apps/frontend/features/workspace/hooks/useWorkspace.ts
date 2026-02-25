@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { workspaceService } from "../service/workspace.service";
 import type {
   UpsertPaymentMethodDto,
   PaymentMethodType,
 } from "../schema/workspace.schema";
+import { toast } from "sonner";
 
 export const workspaceKeys = {
   all: ["workspace"] as const,
@@ -27,26 +27,26 @@ export function useWorkspacePaymentMethods() {
  */
 export function useUpsertPaymentMethod() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({
       type,
       dto,
-    }: { type: PaymentMethodType; dto: UpsertPaymentMethodDto }) =>
-      workspaceService.upsertPaymentMethod(type, dto),
+    }: {
+      type: PaymentMethodType;
+      dto: UpsertPaymentMethodDto;
+    }) => workspaceService.upsertPaymentMethod(type, dto),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: workspaceKeys.paymentMethods() });
-      toast({
-        title: "Payment settings saved",
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.paymentMethods(),
+      });
+      toast.success("Payment settings saved", {
         description: "Your payment preferences have been updated.",
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
+      toast.error("Failed to save payment settings", {
         description: error.message || "Failed to save payment settings",
-        variant: "destructive",
       });
     },
   });

@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export type CreateCompanyFormValues = z.infer<typeof createBusinessSchema>;
 
@@ -79,7 +79,6 @@ export function CreateCompanyForm({
   idPrefix = "create-company",
   children,
 }: CreateCompanyFormProps) {
-  const { toast } = useToast();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
@@ -96,18 +95,14 @@ export function CreateCompanyForm({
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid file type",
+      toast.error("Invalid file type", {
         description: "Please upload an image file",
-        variant: "destructive",
       });
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
+      toast.error("File too large", {
         description: "Please upload a file smaller than 5MB",
-        variant: "destructive",
       });
       return;
     }

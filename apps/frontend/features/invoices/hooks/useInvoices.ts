@@ -1,8 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { type ListInvoicesParams, invoicesService } from "@/features/invoices";
-import { CreateInvoiceDTO, UpdateInvoiceDTO } from "../schemas/invoice.schema";
+import type {
+  CreateInvoiceDTO,
+  UpdateInvoiceDTO,
+} from "../schemas/invoice.schema";
 import { clientKeys } from "@/features/clients";
+import { toast } from "sonner";
 
 /**
  * Query key factory for invoice queries
@@ -37,7 +40,7 @@ export function useInvoices(params?: ListInvoicesParams) {
  */
 export function useInvoiceBySequence(
   sequence: number | null,
-  enabled: boolean
+  enabled: boolean,
 ) {
   return useQuery({
     queryKey: invoiceKeys.detail(sequence!),
@@ -57,8 +60,7 @@ export function useNextInvoiceNumber(
 ) {
   return useQuery({
     queryKey: invoiceKeys.nextNumber(businessId),
-    queryFn: () =>
-      invoicesService.getNextInvoiceNumber(businessId!),
+    queryFn: () => invoicesService.getNextInvoiceNumber(businessId!),
     enabled: enabled && businessId != null,
     staleTime: 0, // Always fetch fresh data when enabled
     retry: 1, // Only retry once on failure
@@ -71,7 +73,6 @@ export function useNextInvoiceNumber(
  */
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: (data: CreateInvoiceDTO) => invoicesService.create(data),
@@ -84,8 +85,7 @@ export function useCreateInvoice() {
       if (variables.createClient) {
         queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
       }
-      toast({
-        title: "Invoice created",
+      toast.success("Invoice created", {
         description: "The invoice has been created successfully.",
       });
     },
@@ -100,7 +100,6 @@ export function useCreateInvoice() {
  */
 export function useUpdateInvoice() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateInvoiceDTO }) =>
@@ -116,8 +115,7 @@ export function useUpdateInvoice() {
       if (variables.data.createClient) {
         queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
       }
-      toast({
-        title: "Invoice updated",
+      toast.success("Invoice updated", {
         description: "The invoice has been updated successfully.",
       });
     },
@@ -130,7 +128,6 @@ export function useUpdateInvoice() {
  */
 export function useDeleteInvoice() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, sequence }: { id: number; sequence: number }) =>
@@ -144,19 +141,14 @@ export function useDeleteInvoice() {
       queryClient.invalidateQueries({
         queryKey: [...invoiceKeys.all, "next-number"],
       });
-      toast({
-        title: "Invoice deleted",
+      toast.success("Invoice deleted", {
         description: "The invoice has been deleted successfully.",
-        variant: "destructive",
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
+      toast.error("Failed to delete invoice", {
         description: error.message || "Failed to delete invoice",
-        variant: "destructive",
       });
     },
   });
 }
-

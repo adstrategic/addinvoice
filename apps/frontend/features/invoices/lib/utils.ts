@@ -4,12 +4,7 @@ import type {
   InvoiceResponse,
   InvoiceItemResponse,
 } from "../schemas/invoice.schema";
-
-type ToastFn = (params: {
-  title: string;
-  description?: string;
-  variant?: "default" | "destructive";
-}) => void;
+import { toast } from "sonner";
 
 /**
  * Download invoice PDF from API and trigger file save. Shows toast on success/error.
@@ -17,7 +12,6 @@ type ToastFn = (params: {
 export async function downloadInvoicePdf(
   sequence: number,
   invoiceNumber: string,
-  toast: ToastFn,
 ): Promise<void> {
   const response = await fetch(`/api/invoices/${sequence}/pdf`);
   if (!response.ok) {
@@ -32,8 +26,7 @@ export async function downloadInvoicePdf(
   a.click();
   window.URL.revokeObjectURL(url);
   document.body.removeChild(a);
-  toast({
-    title: "PDF downloaded",
+  toast.success("PDF downloaded", {
     description: "The invoice PDF has been downloaded successfully.",
   });
 }

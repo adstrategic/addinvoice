@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import {
   type CreateBusinessDto,
   type UpdateBusinessDto,
@@ -8,6 +7,7 @@ import {
   type BusinessResponseList,
 } from "@/features/businesses";
 import type { ListBusinessesParams as ListBusinessesParamsSchema } from "../schema/businesses.schema";
+import { toast } from "sonner";
 
 type ListBusinessesParams = ListBusinessesParamsSchema & {
   enabled?: boolean;
@@ -60,14 +60,12 @@ export function useBusiness(id: number | null, enabled = true) {
  */
 export function useCreateBusiness() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: (data: CreateBusinessDto) => businessesService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: businessKeys.lists() });
-      toast({
-        title: "Business created",
+      toast.success("Business created", {
         description: "The business has been added successfully.",
       });
     },
@@ -80,7 +78,6 @@ export function useCreateBusiness() {
  */
 export function useUpdateBusiness() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateBusinessDto }) =>
@@ -90,8 +87,7 @@ export function useUpdateBusiness() {
       queryClient.invalidateQueries({
         queryKey: businessKeys.detail(variables.id),
       });
-      toast({
-        title: "Business updated",
+      toast.success("Business updated", {
         description: "The business has been updated successfully.",
       });
     },
@@ -103,23 +99,18 @@ export function useUpdateBusiness() {
  */
 export function useDeleteBusiness() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: (id: number) => businessesService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: businessKeys.lists() });
-      toast({
-        title: "Business deleted",
+      toast.success("Business deleted", {
         description: "The business has been deleted successfully.",
-        variant: "destructive",
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
+      toast.error("Failed to delete business", {
         description: error.message || "Failed to delete business",
-        variant: "destructive",
       });
     },
   });
@@ -130,22 +121,18 @@ export function useDeleteBusiness() {
  */
 export function useSetDefaultBusiness() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: (id: number) => businessesService.setDefault(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: businessKeys.lists() });
-      toast({
-        title: "Default business updated",
+      toast.success("Default business updated", {
         description: "The default business has been updated successfully.",
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
+      toast.error("Failed to set default business", {
         description: error.message || "Failed to set default business",
-        variant: "destructive",
       });
     },
   });
@@ -156,7 +143,6 @@ export function useSetDefaultBusiness() {
  */
 export function useUploadLogo() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, file }: { id: number; file: File }) =>
@@ -166,16 +152,13 @@ export function useUploadLogo() {
       queryClient.invalidateQueries({
         queryKey: businessKeys.detail(variables.id),
       });
-      toast({
-        title: "Logo uploaded",
+      toast.success("Logo uploaded", {
         description: "The business logo has been uploaded successfully.",
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Upload failed",
+      toast.error("Upload failed", {
         description: error.message || "Failed to upload logo",
-        variant: "destructive",
       });
     },
   });
@@ -186,7 +169,6 @@ export function useUploadLogo() {
  */
 export function useDeleteLogo() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: (id: number) => businessesService.deleteLogo(id),
@@ -195,16 +177,13 @@ export function useDeleteLogo() {
       queryClient.invalidateQueries({
         queryKey: businessKeys.detail(variables),
       });
-      toast({
-        title: "Logo deleted",
+      toast.success("Logo deleted", {
         description: "The business logo has been deleted successfully.",
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
+      toast.error("Failed to delete logo", {
         description: error.message || "Failed to delete logo",
-        variant: "destructive",
       });
     },
   });

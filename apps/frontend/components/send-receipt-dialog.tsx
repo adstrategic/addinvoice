@@ -14,10 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, CheckCircle2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { paymentKeys } from "@/features/payments";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
+import { toast } from "sonner";
 
 interface SendReceiptDialogProps {
   open: boolean;
@@ -37,7 +37,6 @@ export function SendReceiptDialog({
   clientName,
   clientEmail,
 }: SendReceiptDialogProps) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -65,10 +64,8 @@ export function SendReceiptDialog({
 
   const handleSendEmail = async () => {
     if (!email.trim()) {
-      toast({
-        title: "Error",
+      toast.error("Please enter a recipient email address", {
         description: "Please enter a recipient email address",
-        variant: "destructive",
       });
       return;
     }
@@ -88,8 +85,7 @@ export function SendReceiptDialog({
       setSending(false);
       setSent(true);
       queryClient.invalidateQueries({ queryKey: paymentKeys.lists() });
-      toast({
-        title: "Receipt is being sent",
+      toast.success("Receipt is being sent", {
         description: isAccepted
           ? "The receipt will be sent shortly."
           : `Receipt has been sent to ${email}`,
@@ -100,11 +96,9 @@ export function SendReceiptDialog({
       }, 2000);
     } catch (error: unknown) {
       setSending(false);
-      toast({
-        title: "Error",
+      toast.error("Failed to send receipt", {
         description:
           error instanceof Error ? error.message : "Failed to send receipt",
-        variant: "destructive",
       });
     }
   };

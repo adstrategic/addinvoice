@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import {
   type CreateClientDto,
   type UpdateClientDto,
   clientsService,
 } from "@/features/clients";
-import { ClientResponseList } from "../schema/clients.schema";
+import type { ClientResponseList } from "../schema/clients.schema";
+import { toast } from "sonner";
 
 type ListClientsParams = {
   page?: number;
@@ -64,14 +64,12 @@ export function useClientBySequence(sequence: number | null, enabled: boolean) {
  */
 export function useCreateClient() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: (data: CreateClientDto) => clientsService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
-      toast({
-        title: "Client created",
+      toast.success("Client created", {
         description: "The client has been added successfully.",
       });
     },
@@ -86,7 +84,6 @@ export function useCreateClient() {
  */
 export function useUpdateClient() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateClientDto }) =>
@@ -99,8 +96,7 @@ export function useUpdateClient() {
       queryClient.invalidateQueries({
         queryKey: clientKeys.bySequence(variables.id),
       });
-      toast({
-        title: "Client updated",
+      toast.success("Client updated", {
         description: "The client has been updated successfully.",
       });
     },
@@ -113,24 +109,19 @@ export function useUpdateClient() {
  */
 export function useDeleteClient() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, sequence }: { id: number; sequence: number }) =>
       clientsService.delete(id),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
-      toast({
-        title: "Client deleted",
+      toast.success("Client deleted", {
         description: "The client has been deleted successfully.",
-        variant: "destructive",
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
+      toast.error("Failed to delete client", {
         description: error.message || "Failed to delete client",
-        variant: "destructive",
       });
     },
   });
