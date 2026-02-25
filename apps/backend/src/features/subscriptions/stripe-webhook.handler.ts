@@ -1,13 +1,10 @@
-import { Request, Response } from "express";
-import { stripe } from "../../core/stripe";
-import * as subscriptionService from "./subscriptions.service";
+import type { Request, Response } from "express";
 import type Stripe from "stripe";
 
-const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
+import { stripe } from "../../core/stripe.js";
+import * as subscriptionService from "./subscriptions.service.js";
 
-if (!WEBHOOK_SECRET) {
-  throw new Error("STRIPE_WEBHOOK_SECRET is not set in environment variables");
-}
+const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 
 /**
  * Verify Stripe webhook signature and handle events
@@ -25,6 +22,12 @@ export async function handleStripeWebhook(
 
   let event: Stripe.Event;
 
+  if (!WEBHOOK_SECRET) {
+    throw new Error(
+      "STRIPE_WEBHOOK_SECRET is not set in environment variables",
+    );
+  }
+
   try {
     // Verify webhook signature
     // req.body is a Buffer when using express.raw()
@@ -32,14 +35,15 @@ export async function handleStripeWebhook(
       req.body instanceof Buffer
         ? req.body
         : Buffer.from(JSON.stringify(req.body));
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      WEBHOOK_SECRET!,
-    ) as Stripe.Event;
-  } catch (err: any) {
-    console.error("Webhook signature verification failed:", err.message);
-    res.status(400).json({ error: `Webhook Error: ${err.message}` });
+    event = stripe.webhooks.constructEvent(body, sig, WEBHOOK_SECRET);
+  } catch (err: unknown) {
+    console.error(
+      "Webhook signature verification failed:",
+      err instanceof Error ? err.message : err,
+    );
+    res.status(400).json({
+      error: `Webhook Error: ${String(err instanceof Error ? err.message : err)}`,
+    });
     return;
   }
 
@@ -50,15 +54,11 @@ export async function handleStripeWebhook(
     // Handle different event types
     switch (event.type) {
       case "checkout.session.completed":
-        await handleCheckoutSessionCompleted(
-          event.data.object as Stripe.Checkout.Session,
-        );
+        await handleCheckoutSessionCompleted(event.data.object);
         break;
 
       case "customer.subscription.deleted":
-        await handleSubscriptionDeleted(
-          event.data.object as Stripe.Subscription,
-        );
+        await handleSubscriptionDeleted(event.data.object);
         break;
 
       // case "customer.subscription.created":
@@ -91,7 +91,7 @@ export async function handleStripeWebhook(
     // No need to log transactions locally - Stripe is the source of truth
 
     res.json({ received: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error processing webhook:", error);
     res.status(500).json({ error: "Webhook processing failed" });
   }
@@ -107,6 +107,55 @@ async function handleCheckoutSessionCompleted(
 }
 
 /**
+ * Handle failed invoice payment
+ */
+// async function handleInvoicePaymentFailed(
+//   invoice: Stripe.Invoice,
+// ): Promise<void> {
+//   if (!invoice.subscription) {
+//     return; // Not a subscription invoice
+//   }
+
+//   const subscription = await stripe.subscriptions.retrieve(
+//     invoice.subscription as string,
+//   );
+
+//   // Update subscription status to reflect payment failure
+//   await subscriptionService.handleSubscriptionUpdated(subscription);
+// }
+
+/**
+ * Handle successful invoice payment
+ */
+// async function handleInvoicePaymentSucceeded(
+//   invoice: Stripe.Invoice,
+// ): Promise<void> {
+//   if (!invoice.subscription) {
+//     return; // Not a subscription invoice
+//   }
+
+//   const subscription = await stripe.subscriptions.retrieve(
+//     invoice.subscription as string,
+//   );
+//   await subscriptionService.handleSubscriptionUpdated(subscription);
+
+//   // TODO: AI CREDITS - Handle subscription renewal
+//   // When invoice payment succeeds, allocate new AI credits for the period
+//   // CORE: $3 worth of credits
+//   // AI_PRO: $8 worth of credits
+//   // LIFETIME: Monthly credit allocation (if applicable)
+// }
+
+/**
+ * Handle subscription created
+ */
+// async function handleSubscriptionCreated(
+//   subscription: Stripe.Subscription,
+// ): Promise<void> {
+//   await subscriptionService.handleSubscriptionUpdated(subscription);
+// }
+
+/**
  * Handle subscription deleted
  */
 async function handleSubscriptionDeleted(
@@ -116,59 +165,10 @@ async function handleSubscriptionDeleted(
 }
 
 /**
- * Handle subscription created
- */
-async function handleSubscriptionCreated(
-  subscription: Stripe.Subscription,
-): Promise<void> {
-  await subscriptionService.handleSubscriptionUpdated(subscription);
-}
-
-/**
  * Handle subscription updated
  */
-async function handleSubscriptionUpdated(
-  subscription: Stripe.Subscription,
-): Promise<void> {
-  await subscriptionService.handleSubscriptionUpdated(subscription);
-}
-
-/**
- * Handle successful invoice payment
- */
-async function handleInvoicePaymentSucceeded(
-  invoice: Stripe.Invoice,
-): Promise<void> {
-  if (!invoice.subscription) {
-    return; // Not a subscription invoice
-  }
-
-  const subscription = await stripe.subscriptions.retrieve(
-    invoice.subscription as string,
-  );
-  await subscriptionService.handleSubscriptionUpdated(subscription);
-
-  // TODO: AI CREDITS - Handle subscription renewal
-  // When invoice payment succeeds, allocate new AI credits for the period
-  // CORE: $3 worth of credits
-  // AI_PRO: $8 worth of credits
-  // LIFETIME: Monthly credit allocation (if applicable)
-}
-
-/**
- * Handle failed invoice payment
- */
-async function handleInvoicePaymentFailed(
-  invoice: Stripe.Invoice,
-): Promise<void> {
-  if (!invoice.subscription) {
-    return; // Not a subscription invoice
-  }
-
-  const subscription = await stripe.subscriptions.retrieve(
-    invoice.subscription as string,
-  );
-
-  // Update subscription status to reflect payment failure
-  await subscriptionService.handleSubscriptionUpdated(subscription);
-}
+// async function handleSubscriptionUpdated(
+//   subscription: Stripe.Subscription,
+// ): Promise<void> {
+//   await subscriptionService.handleSubscriptionUpdated(subscription);
+// }

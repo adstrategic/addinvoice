@@ -1,15 +1,15 @@
 import "dotenv/config";
-import express, { Request, Response } from "express";
-import { requirePdfServiceSecret } from "./validate-secret";
+import express, { type Request, type Response } from "express";
+
+import { generateInvoicePdf, generateInvoicePdfBatch } from "./invoice-pdf.js";
+import { generateReceiptPdf } from "./receipt-pdf.js";
 import {
-  invoicePdfPayloadSchema,
   invoicePdfBatchSchema,
-  receiptPdfPayloadSchema,
   type InvoicePdfPayload,
-  type ReceiptPdfPayload,
-} from "./schema";
-import { generateInvoicePdf, generateInvoicePdfBatch } from "./invoice-pdf";
-import { generateReceiptPdf } from "./receipt-pdf";
+  invoicePdfPayloadSchema,
+  receiptPdfPayloadSchema,
+} from "./schema.js";
+import { requirePdfServiceSecret } from "./validate-secret.js";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -25,13 +25,13 @@ app.post(
     const parsed = invoicePdfPayloadSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
-        error: "Invalid payload",
         details: parsed.error.flatten(),
+        error: "Invalid payload",
       });
       return;
     }
 
-    const payload: InvoicePdfPayload = parsed.data;
+    const payload = parsed.data;
 
     try {
       const pdfBuffer = await generateInvoicePdf(payload);
@@ -58,15 +58,15 @@ app.post(
     const parsed = invoicePdfBatchSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
-        error: "Invalid payload",
         details: parsed.error.flatten(),
+        error: "Invalid payload",
       });
       return;
     }
-    const { payloads } = parsed.data;
+    const { payloads } = parsed.data as { payloads: InvoicePdfPayload[] };
     try {
       const pdfBuffers = await generateInvoicePdfBatch(payloads);
-      const pdfsBase64 = pdfBuffers.map((b) => b.toString("base64"));
+      const pdfsBase64 = pdfBuffers.map((b: Buffer) => b.toString("base64"));
       res.json({ pdfs: pdfsBase64 });
     } catch (err) {
       console.error("Batch PDF generation failed:", err);
@@ -85,13 +85,13 @@ app.post(
     const parsed = receiptPdfPayloadSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
-        error: "Invalid payload",
         details: parsed.error.flatten(),
+        error: "Invalid payload",
       });
       return;
     }
 
-    const payload: ReceiptPdfPayload = parsed.data;
+    const payload = parsed.data;
 
     try {
       const pdfBuffer = await generateReceiptPdf(payload);
@@ -111,8 +111,9 @@ app.post(
   },
 );
 
-const PORT = Number(process.env.PORT) || 4001;
+const portNum = Number(process.env.PORT);
+const PORT = Number.isFinite(portNum) ? portNum : 4001;
 
 app.listen(PORT, () => {
-  console.log(`PDF service listening on port ${PORT}`);
+  console.log(`PDF service listening on port ${String(PORT)}`);
 });

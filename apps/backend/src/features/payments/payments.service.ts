@@ -1,8 +1,74 @@
-import prisma from "../../core/db";
 import type { Prisma } from "@addinvoice/db";
-import type { ListPaymentsQuery, PaymentList } from "./payments.schemas";
-import { EntityNotFoundError } from "../../errors/EntityErrors";
-import type { PaymentDetail } from "../invoices/invoices.schemas";
+
+import { prisma } from "@addinvoice/db";
+
+import type { PaymentDetail } from "../invoices/invoices.schemas.js";
+import type { ListPaymentsQuery, PaymentList } from "./payments.schemas.js";
+
+import { EntityNotFoundError } from "../../errors/EntityErrors.js";
+/**
+ * Get a single payment by ID with full invoice, client, and business context
+ */
+export async function getPaymentById(
+  workspaceId: number,
+  paymentId: number,
+): Promise<PaymentDetail> {
+  const payment = await prisma.payment.findFirst({
+    include: {
+      invoice: {
+        include: {
+          business: true,
+          client: true,
+        },
+      },
+    },
+    where: {
+      id: paymentId,
+      workspaceId,
+    },
+  });
+
+  if (!payment) {
+    throw new EntityNotFoundError({
+      code: "ERR_NF",
+      message: "Payment not found",
+      statusCode: 404,
+    });
+  }
+
+  const inv = payment.invoice;
+  return {
+    amount: Number(payment.amount),
+    createdAt: payment.createdAt,
+    details: payment.details,
+    id: payment.id,
+    invoice: {
+      ...inv,
+      balance: Number(inv.balance),
+      business: {
+        ...inv.business,
+        defaultTaxPercentage:
+          inv.business.defaultTaxPercentage != null
+            ? Number(inv.business.defaultTaxPercentage)
+            : null,
+      },
+      client: inv.client,
+      discount: Number(inv.discount),
+      subtotal: Number(inv.subtotal),
+      taxPercentage:
+        inv.taxPercentage != null ? Number(inv.taxPercentage) : null,
+      total: Number(inv.total),
+      totalTax: Number(inv.totalTax),
+    },
+    invoiceId: payment.invoiceId,
+    paidAt: payment.paidAt,
+    paymentMethod: payment.paymentMethod,
+    transactionId: payment.transactionId,
+    updatedAt: payment.updatedAt,
+    workspaceId: payment.workspaceId,
+  };
+}
+
 /**
  * List payments for a workspace with optional filters
  */
@@ -10,18 +76,16 @@ export async function listPayments(
   workspaceId: number,
   query: ListPaymentsQuery,
 ): Promise<{
+  limit: number;
+  page: number;
   payments: PaymentList[];
   total: number;
   totalAmount: number;
-  page: number;
-  limit: number;
 }> {
-  const { page, limit, businessId, dateFrom, dateTo, search } = query;
+  const { businessId, dateFrom, dateTo, limit, page, search } = query;
   const skip = (page - 1) * limit;
 
   const where: Prisma.PaymentWhereInput = {
-    workspaceId,
-
     invoice: {
       ...(businessId && { businessId }),
       ...(search && {
@@ -34,6 +98,8 @@ export async function listPayments(
         ],
       }),
     },
+
+    workspaceId,
     ...(dateFrom &&
       dateTo && {
         paidAt: {
@@ -47,126 +113,63 @@ export async function listPayments(
 
   const [payments, total, sumResult] = await Promise.all([
     prisma.payment.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { paidAt: "desc" },
       include: {
         invoice: {
           select: {
-            sequence: true,
-            invoiceNumber: true,
-            currency: true,
-            total: true,
             balance: true,
-            status: true,
-            clientEmail: true,
-            client: {
-              select: { id: true, name: true, businessName: true },
-            },
             business: {
               select: { id: true, name: true },
             },
+            client: {
+              select: { businessName: true, id: true, name: true },
+            },
+            clientEmail: true,
+            currency: true,
+            invoiceNumber: true,
+            sequence: true,
+            status: true,
+            total: true,
           },
         },
       },
+      orderBy: { paidAt: "desc" },
+      skip,
+      take: limit,
+      where,
     }),
     prisma.payment.count({ where }),
-    prisma.payment.aggregate({ where, _sum: { amount: true } }),
+    prisma.payment.aggregate({ _sum: { amount: true }, where }),
   ]);
 
   const items: PaymentList[] = payments.map((p) => ({
-    id: p.id,
-    workspaceId: p.workspaceId,
-    invoiceId: p.invoiceId,
     amount: Number(p.amount),
+    createdAt: p.createdAt,
+    details: p.details,
+    id: p.id,
+    invoice: {
+      balance: Number(p.invoice.balance),
+      business: p.invoice.business,
+      client: p.invoice.client,
+      clientEmail: p.invoice.clientEmail,
+      currency: p.invoice.currency,
+      invoiceNumber: p.invoice.invoiceNumber,
+      sequence: p.invoice.sequence,
+      status: p.invoice.status,
+      total: Number(p.invoice.total),
+    },
+    invoiceId: p.invoiceId,
+    paidAt: p.paidAt,
     paymentMethod: p.paymentMethod,
     transactionId: p.transactionId,
-    details: p.details,
-    paidAt: p.paidAt,
-    createdAt: p.createdAt,
     updatedAt: p.updatedAt,
-    invoice: {
-      sequence: p.invoice.sequence,
-      invoiceNumber: p.invoice.invoiceNumber,
-      currency: p.invoice.currency,
-      total: Number(p.invoice.total),
-      balance: Number(p.invoice.balance),
-      status: p.invoice.status,
-      clientEmail: p.invoice.clientEmail,
-      client: p.invoice.client,
-      business: p.invoice.business,
-    },
+    workspaceId: p.workspaceId,
   }));
 
   return {
+    limit,
+    page,
     payments: items,
     total,
-    totalAmount: Number(sumResult._sum?.amount ?? 0),
-    page,
-    limit,
-  };
-}
-
-/**
- * Get a single payment by ID with full invoice, client, and business context
- */
-export async function getPaymentById(
-  workspaceId: number,
-  paymentId: number,
-): Promise<PaymentDetail> {
-  const payment = await prisma.payment.findFirst({
-    where: {
-      id: paymentId,
-      workspaceId,
-    },
-    include: {
-      invoice: {
-        include: {
-          client: true,
-          business: true,
-        },
-      },
-    },
-  });
-
-  if (!payment) {
-    throw new EntityNotFoundError({
-      message: "Payment not found",
-      statusCode: 404,
-      code: "ERR_NF",
-    });
-  }
-
-  const inv = payment.invoice;
-  return {
-    id: payment.id,
-    workspaceId: payment.workspaceId,
-    invoiceId: payment.invoiceId,
-    amount: Number(payment.amount),
-    paymentMethod: payment.paymentMethod,
-    transactionId: payment.transactionId,
-    details: payment.details,
-    paidAt: payment.paidAt,
-    createdAt: payment.createdAt,
-    updatedAt: payment.updatedAt,
-    invoice: {
-      ...inv,
-      subtotal: Number(inv.subtotal),
-      totalTax: Number(inv.totalTax),
-      discount: Number(inv.discount),
-      taxPercentage:
-        inv.taxPercentage != null ? Number(inv.taxPercentage) : null,
-      total: Number(inv.total),
-      balance: Number(inv.balance),
-      client: inv.client,
-      business: {
-        ...inv.business,
-        defaultTaxPercentage:
-          inv.business.defaultTaxPercentage != null
-            ? Number(inv.business.defaultTaxPercentage)
-            : null,
-      },
-    },
+    totalAmount: Number(sumResult._sum.amount ?? 0),
   };
 }

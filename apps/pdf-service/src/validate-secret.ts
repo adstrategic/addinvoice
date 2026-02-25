@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from "express";
 import { timingSafeEqual } from "crypto";
+import { type NextFunction, type Request, type Response } from "express";
 
 const HEADER_NAME = "x-pdf-service-key";
 

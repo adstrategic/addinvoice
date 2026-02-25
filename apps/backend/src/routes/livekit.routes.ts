@@ -7,7 +7,7 @@ import {
 import { z } from "zod";
 import { validateRequest } from "zod-express-middleware";
 
-export const livekitRouter = Router();
+export const livekitRouter: Router = Router();
 
 const room_config_agent_schema = z.object({
   agent_name: z.string().optional(),
@@ -20,10 +20,10 @@ const room_config_schema = z.object({
 
 const token_request_schema = {
   body: z.object({
-    participant_name: z.string().optional(),
-    participant_identity: z.string().optional(),
-    room_config: room_config_schema.optional(),
     agent_name: z.string().optional(),
+    participant_identity: z.string().optional(),
+    participant_name: z.string().optional(),
+    room_config: room_config_schema.optional(),
   }),
 };
 
@@ -72,27 +72,27 @@ livekitRouter.post(
       }
 
       const body = req.body as z.infer<typeof token_request_schema.body>;
-      const room_name = `invoice-${workspace_id}-${Date.now()}`;
+      const room_name = `invoice-${String(workspace_id)}-${String(Date.now())}`;
       const participant_name = body.participant_name ?? "User";
       const identity = body.participant_identity ?? user_id;
 
       const room_config = buildRoomConfigFromBody(body);
 
       const token = new AccessToken(
-        process.env.LIVEKIT_API_KEY!,
-        process.env.LIVEKIT_API_SECRET!,
+        process.env.LIVEKIT_API_KEY,
+        process.env.LIVEKIT_API_SECRET,
         {
           identity,
-          name: participant_name,
           metadata: JSON.stringify({ workspaceId: workspace_id }),
+          name: participant_name,
         },
       );
 
       token.addGrant({
-        roomJoin: true,
-        room: room_name,
         canPublish: true,
         canSubscribe: true,
+        room: room_name,
+        roomJoin: true,
       });
 
       if (room_config) {
@@ -102,8 +102,8 @@ livekitRouter.post(
       const jwt = await token.toJwt();
 
       res.status(201).json({
-        server_url: process.env.LIVEKIT_URL!,
         participant_token: jwt,
+        server_url: process.env.LIVEKIT_URL,
       });
     } catch (error) {
       console.error("Error generating LiveKit token:", error);

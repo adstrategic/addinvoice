@@ -1,11 +1,13 @@
-import prisma from "../../core/db";
 import type { Prisma } from "@addinvoice/db";
+
+import { prisma } from "@addinvoice/db";
+
+import type { InvoiceEntityWithRelations } from "../invoices/invoices.schemas.js";
 import type {
   DashboardStatsQuery,
   DashboardStatsResponse,
   MonthlyRevenue,
-} from "./dashboard.schemas";
-import type { InvoiceEntityWithRelations } from "../invoices/invoices.schemas";
+} from "./dashboard.schemas.js";
 
 /**
  * Get dashboard statistics for a workspace
@@ -24,12 +26,12 @@ export async function getDashboardStats(
 
   // Get all invoices for calculations
   const invoices = await prisma.invoice.findMany({
-    where,
     include: {
-      client: true,
       business: true,
+      client: true,
     },
     orderBy: { createdAt: "desc" },
+    where,
   });
 
   // Calculate stats
@@ -60,16 +62,16 @@ export async function getDashboardStats(
 
   // Payment filter: non-deleted payments for non-deleted invoices (optional businessId)
   const paymentWhere: Prisma.PaymentWhereInput = {
-    workspaceId,
     invoice: {
       ...(businessId && { businessId }),
     },
+    workspaceId,
   };
 
   // Total revenue = sum of actual payment amounts (handles partial/overpayments)
   const totalRevenueResult = await prisma.payment.aggregate({
-    where: paymentWhere,
     _sum: { amount: true },
+    where: paymentWhere,
   });
   const totalRevenue = Number(totalRevenueResult._sum.amount ?? 0);
 
@@ -83,9 +85,6 @@ export async function getDashboardStats(
   // Fetch items and payments for recent invoices
   const recentInvoicesIds = invoices.slice(0, 5).map((inv) => inv.id);
   const recentInvoicesWithDetails = await prisma.invoice.findMany({
-    where: {
-      id: { in: recentInvoicesIds },
-    },
     include: {
       business: true,
       client: true,
@@ -97,50 +96,53 @@ export async function getDashboardStats(
       },
     },
     orderBy: { createdAt: "desc" },
+    where: {
+      id: { in: recentInvoicesIds },
+    },
   });
 
   const recentInvoicesData: InvoiceEntityWithRelations[] =
     recentInvoicesWithDetails.map((inv) => ({
       ...inv,
-      subtotal: Number(inv.subtotal),
-      totalTax: Number(inv.totalTax),
-      discount: Number(inv.discount),
-      taxPercentage: inv.taxPercentage ? Number(inv.taxPercentage) : null,
-      total: Number(inv.total),
       balance: Number(inv.balance),
-      items: inv.items.map((item) => ({
-        ...item,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-        discount: Number(item.discount),
-        tax: Number(item.tax),
-        total: Number(item.total),
-      })),
-      payments: inv.payments.map((payment) => ({
-        ...payment,
-        amount: Number(payment.amount),
-      })),
-      client: {
-        ...inv.client,
-      },
       business: {
         ...inv.business,
         defaultTaxPercentage: inv.business.defaultTaxPercentage
           ? Number(inv.business.defaultTaxPercentage)
           : null,
       },
+      client: {
+        ...inv.client,
+      },
+      discount: Number(inv.discount),
+      items: inv.items.map((item) => ({
+        ...item,
+        discount: Number(item.discount),
+        quantity: Number(item.quantity),
+        tax: Number(item.tax),
+        total: Number(item.total),
+        unitPrice: Number(item.unitPrice),
+      })),
+      payments: inv.payments.map((payment) => ({
+        ...payment,
+        amount: Number(payment.amount),
+      })),
+      subtotal: Number(inv.subtotal),
+      taxPercentage: inv.taxPercentage ? Number(inv.taxPercentage) : null,
+      total: Number(inv.total),
+      totalTax: Number(inv.totalTax),
     }));
 
   return {
-    totalInvoices,
+    monthlyRevenue,
+    overdueInvoices,
     paidInvoices,
     pendingInvoices,
-    overdueInvoices,
-    thisWeekInvoices,
-    thisMonthInvoices,
-    totalRevenue,
-    monthlyRevenue,
     recentInvoices: recentInvoicesData,
+    thisMonthInvoices,
+    thisWeekInvoices,
+    totalInvoices,
+    totalRevenue,
   };
 }
 
@@ -183,11 +185,11 @@ async function calculateMonthlyRevenueFromPayments(
   );
 
   const payments = await prismaClient.payment.findMany({
+    select: { amount: true, paidAt: true },
     where: {
       ...paymentWhere,
       paidAt: { gte: startOfOldestMonth, lte: endOfCurrentMonth },
     },
-    select: { amount: true, paidAt: true },
   });
 
   // Build 12 months with same labels as before
@@ -213,7 +215,7 @@ async function calculateMonthlyRevenueFromPayments(
       .reduce((sum, p) => sum + Number(p.amount), 0);
 
     months.push({
-      month: MONTH_NAMES[date.getMonth()],
+      month: MONTH_NAMES[date.getMonth()] ?? "Unknown",
       revenue: monthRevenue,
     });
   }

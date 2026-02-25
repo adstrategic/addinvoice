@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import type { NextFunction, Response } from "express";
 
 /**
  * Wrapper for async route handlers
@@ -18,12 +18,12 @@ import { Request, Response, NextFunction } from "express";
  *   });
  */
 function asyncHandler<
-  T extends (req: any, res: Response, next: NextFunction) => Promise<any>
+  T extends (req: never, res: Response, next: NextFunction) => Promise<void>,
 >(fn: T): T {
   return function asyncUtilWrap(
     req: Parameters<T>[0],
     res: Parameters<T>[1],
-    next: Parameters<T>[2]
+    next: Parameters<T>[2],
   ) {
     const fnReturn = fn(req, res, next);
     return Promise.resolve(fnReturn).catch(next);

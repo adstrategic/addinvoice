@@ -6,96 +6,28 @@ const resend = process.env.RESEND_API_KEY
 
 const DEFAULT_FROM = "no-reply@news.addinvoicesai.com";
 
-export interface SendEmailWithPdfParams {
-  to: string;
-  subject: string;
-  html: string;
-  pdfBuffer: Buffer;
-  filename: string;
-  fromEmail?: string;
-}
-
-/**
- * Send an email with a PDF attachment using Resend.
- * Used by queue workers for invoice and receipt emails.
- * Throws EmailValidationError for invalid recipient/validation (do not retry).
- * Throws Error for 5xx/network (retry with backoff).
- */
-export async function sendEmailWithPdf({
-  to,
-  subject,
-  html,
-  pdfBuffer,
-  filename,
-  fromEmail = DEFAULT_FROM,
-}: SendEmailWithPdfParams): Promise<void> {
-  if (!resend) {
-    throw new Error(
-      "RESEND_API_KEY environment variable is not set. Please configure Resend API key.",
-    );
-  }
-
-  type ResendErrorShape = {
-    name?: string;
-    message?: string;
-    statusCode?: number | null;
-  };
-
-  let data: { id: string } | null = null;
-
-  await resend.emails.send({
-    from: fromEmail,
-    to: [to],
-    subject,
-    html,
-    attachments: [
-      {
-        filename,
-        content: pdfBuffer,
-      },
-    ],
-  });
-}
-
-export interface SendFailureNotificationParams {
-  to: string;
-  subject: string;
-  html: string;
-  fromEmail?: string;
-}
-
-/**
- * Send a plain text/html email (no PDF). Used for failure notifications to workspace owner.
- */
-export async function sendFailureNotificationEmail({
-  to,
-  subject,
-  html,
-  fromEmail = DEFAULT_FROM,
-}: SendFailureNotificationParams): Promise<void> {
-  if (!resend) {
-    console.warn(
-      "[email] RESEND_API_KEY not set; skipping failure notification",
-    );
-    return;
-  }
-  const { error } = await resend.emails.send({
-    from: fromEmail,
-    to: [to],
-    subject,
-    html,
-  });
-  if (error) {
-    throw new Error(error.message || "Failed to send notification email");
-  }
-}
-
 export interface NotifySendFailureParams {
-  type: "invoice" | "receipt";
-  recipientEmail: string;
   invoiceNumber?: string;
   /** When set, send notification to this email instead of resolving workspace owner. */
   notifyToEmail?: string;
+  recipientEmail: string;
+  type: "invoice" | "receipt";
+}
+
+export interface SendEmailWithPdfParams {
+  filename: string;
+  fromEmail?: string;
+  html: string;
+  pdfBuffer: Buffer;
+  subject: string;
+  to: string;
+}
+
+export interface SendFailureNotificationParams {
+  fromEmail?: string;
+  html: string;
+  subject: string;
+  to: string;
 }
 
 /**
@@ -107,12 +39,12 @@ export async function notifySendFailure(
   workspaceId: number,
   params: NotifySendFailureParams,
 ): Promise<void> {
-  const { type, recipientEmail, invoiceNumber, notifyToEmail } = params;
+  const { invoiceNumber, notifyToEmail, recipientEmail, type } = params;
   try {
     const toEmail = notifyToEmail;
     if (!toEmail) {
       console.warn(
-        `[email] No notification email for workspace ${workspaceId}; skipping send-failure notification`,
+        `[email] No notification email for workspace ${String(workspaceId)}; skipping send-failure notification`,
       );
       return;
     }
@@ -136,14 +68,74 @@ export async function notifySendFailure(
       </div>
     `;
     await sendFailureNotificationEmail({
-      to: toEmail,
-      subject,
       html,
+      subject,
+      to: toEmail,
     });
   } catch (err) {
     console.error(
       "[email] Failed to send failure notification to workspace owner:",
       err instanceof Error ? err.message : err,
     );
+  }
+}
+
+/**
+ * Send an email with a PDF attachment using Resend.
+ * Used by queue workers for invoice and receipt emails.
+ * Throws EmailValidationError for invalid recipient/validation (do not retry).
+ * Throws Error for 5xx/network (retry with backoff).
+ */
+export async function sendEmailWithPdf({
+  filename,
+  fromEmail = DEFAULT_FROM,
+  html,
+  pdfBuffer,
+  subject,
+  to,
+}: SendEmailWithPdfParams): Promise<void> {
+  if (!resend) {
+    throw new Error(
+      "RESEND_API_KEY environment variable is not set. Please configure Resend API key.",
+    );
+  }
+
+  await resend.emails.send({
+    attachments: [
+      {
+        content: pdfBuffer,
+        filename,
+      },
+    ],
+    from: fromEmail,
+    html,
+    subject,
+    to: [to],
+  });
+}
+
+/**
+ * Send a plain text/html email (no PDF). Used for failure notifications to workspace owner.
+ */
+export async function sendFailureNotificationEmail({
+  fromEmail = DEFAULT_FROM,
+  html,
+  subject,
+  to,
+}: SendFailureNotificationParams): Promise<void> {
+  if (!resend) {
+    console.warn(
+      "[email] RESEND_API_KEY not set; skipping failure notification",
+    );
+    return;
+  }
+  const { error } = await resend.emails.send({
+    from: fromEmail,
+    html,
+    subject,
+    to: [to],
+  });
+  if (error) {
+    throw new Error(error.message || "Failed to send notification email");
   }
 }

@@ -1,21 +1,223 @@
-import { stripe, PLAN_PRODUCT_IDS } from "../../core/stripe";
-import prisma from "../../core/db";
 import type Stripe from "stripe";
 
-export type SubscriptionPlan = "CORE" | "AI_PRO" | "LIFETIME";
+import { prisma } from "@addinvoice/db";
+
+import { PLAN_PRODUCT_IDS, stripe } from "../../core/stripe.js";
+
+export interface PlanPriceInfo {
+  amount: number;
+  currency: string;
+  priceId: string;
+}
+export interface PlanPricesLifetime {
+  oneTime: PlanPriceInfo;
+}
+
+export interface PlanPricesRecurring {
+  monthly: PlanPriceInfo;
+  yearly: PlanPriceInfo;
+}
+
+export type SubscriptionPlan = "AI_PRO" | "CORE" | "LIFETIME";
+
 export type SubscriptionStatus =
   | "ACTIVE"
   | "CANCELED"
-  | "PAST_DUE"
-  | "UNPAID"
   | "INCOMPLETE"
   | "INCOMPLETE_EXPIRED"
-  | "TRIALING";
+  | "PAST_DUE"
+  | "TRIALING"
+  | "UNPAID";
 
 export interface SubscriptionStatusResponse {
   isActive: boolean;
-  plan: SubscriptionPlan | null;
-  status: SubscriptionStatus | null;
+  plan: null | SubscriptionPlan;
+  status: null | SubscriptionStatus;
+}
+
+/**
+ * Create a Stripe Checkout session for subscription
+ */
+export async function createCheckoutSession(
+  workspaceId: number,
+  planType: SubscriptionPlan,
+  priceId: string,
+  clerkUserId: string,
+  userEmail: string,
+): Promise<string> {
+  // Get or create Stripe customer
+  let customerId: string;
+  const workspace = await prisma.workspace.findUnique({
+    select: { stripeCustomerId: true },
+    where: { id: workspaceId },
+  });
+
+  if (workspace?.stripeCustomerId) {
+    customerId = workspace.stripeCustomerId;
+  } else {
+    // Create new Stripe customer
+    const customer = await stripe.customers.create({
+      email: userEmail,
+      metadata: {
+        clerkUserId,
+        workspaceId: workspaceId.toString(),
+      },
+    });
+    customerId = customer.id;
+
+    // Update workspace with customer ID
+    await prisma.workspace.update({
+      data: {
+        stripeCustomerId: customerId,
+        subscriptionPlan: planType,
+        subscriptionStatus: "INCOMPLETE",
+      },
+      where: { id: workspaceId },
+    });
+  }
+
+  const frontendUrl = process.env.FRONTEND_URL;
+
+  if (!frontendUrl) {
+    throw new Error("FRONTEND_URL is not set in environment variables");
+  }
+
+  // Create checkout session
+  const session = await stripe.checkout.sessions.create({
+    cancel_url: `${frontendUrl}/subscribe/cancelled`,
+    customer: customerId,
+    line_items: [
+      {
+        price: priceId,
+        quantity: 1,
+      },
+    ],
+    metadata: {
+      clerkUserId,
+      planType,
+      workspaceId: workspaceId.toString(),
+    },
+    mode: planType === "LIFETIME" ? "payment" : "subscription",
+    success_url: `${frontendUrl}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
+  });
+
+  return session.url ?? "";
+}
+
+/**
+ * Create Stripe Customer Portal session
+ */
+export async function createCustomerPortalSession(
+  workspaceId: number,
+): Promise<string> {
+  const workspace = await prisma.workspace.findUnique({
+    select: { stripeCustomerId: true },
+    where: { id: workspaceId },
+  });
+
+  if (!workspace?.stripeCustomerId) {
+    throw new Error("No subscription found for this workspace");
+  }
+
+  const frontendUrl = process.env.FRONTEND_URL;
+
+  if (!frontendUrl) {
+    throw new Error("FRONTEND_URL is not set in environment variables");
+  }
+
+  const session = await stripe.billingPortal.sessions.create({
+    customer: workspace.stripeCustomerId,
+    return_url: `${frontendUrl}/configuration`,
+  });
+
+  return session.url;
+}
+
+/**
+ * Get available subscription plans with pricing
+ * Fetches all active prices per product and groups by recurring interval (month/year)
+ */
+export async function getAvailablePlans() {
+  const [coreProduct, aiProProduct, lifetimeProduct] = await Promise.all([
+    stripe.products.retrieve(PLAN_PRODUCT_IDS.CORE),
+    stripe.products.retrieve(PLAN_PRODUCT_IDS.AI_PRO),
+    stripe.products.retrieve(PLAN_PRODUCT_IDS.LIFETIME),
+  ]);
+
+  const buildPricesForProduct = async (
+    productId: string,
+  ): Promise<PlanPricesLifetime | PlanPricesRecurring> => {
+    const { data: prices } = await stripe.prices.list({
+      active: true,
+      product: productId,
+    });
+
+    const monthly = prices.find((p) => p.recurring?.interval === "month");
+    const yearly = prices.find((p) => p.recurring?.interval === "year");
+    const oneTime = prices.find((p) => !p.recurring);
+
+    if (oneTime && !monthly && !yearly) {
+      return {
+        oneTime: {
+          amount: (oneTime.unit_amount ?? 0) / 100,
+          currency: oneTime.currency.toUpperCase(),
+          priceId: oneTime.id,
+        },
+      };
+    }
+
+    if (!monthly || !yearly) {
+      throw new Error(
+        `Product ${productId} must have both monthly and yearly active prices`,
+      );
+    }
+
+    return {
+      monthly: {
+        amount: (monthly.unit_amount ?? 0) / 100,
+        currency: monthly.currency.toUpperCase(),
+        priceId: monthly.id,
+      },
+      yearly: {
+        amount: (yearly.unit_amount ?? 0) / 100,
+        currency: yearly.currency.toUpperCase(),
+        priceId: yearly.id,
+      },
+    };
+  };
+
+  const [corePrices, aiProPrices, lifetimePrices] = await Promise.all([
+    buildPricesForProduct(PLAN_PRODUCT_IDS.CORE),
+    buildPricesForProduct(PLAN_PRODUCT_IDS.AI_PRO),
+    buildPricesForProduct(PLAN_PRODUCT_IDS.LIFETIME),
+  ]);
+
+  return [
+    {
+      description:
+        coreProduct.description ??
+        "$12/month, $3 for AI credits" /* fallback */,
+      id: "CORE" as const,
+      name: coreProduct.name,
+      prices: corePrices as PlanPricesRecurring,
+    },
+    {
+      description:
+        aiProProduct.description ??
+        "$20/month, $8 for AI credits" /* fallback */,
+      id: "AI_PRO" as const,
+      name: aiProProduct.name,
+      prices: aiProPrices as PlanPricesRecurring,
+    },
+    {
+      description:
+        lifetimeProduct.description ??
+        "$100 one-time payment, free tier AI credits" /* fallback */,
+      id: "LIFETIME" as const,
+      name: lifetimeProduct.name,
+      prices: lifetimePrices as PlanPricesLifetime,
+    },
+  ];
 }
 
 /**
@@ -26,18 +228,14 @@ export async function getSubscriptionStatus(
   workspaceId: number,
 ): Promise<SubscriptionStatusResponse> {
   const workspace = await prisma.workspace.findUnique({
-    where: { id: workspaceId },
     select: {
       subscriptionPlan: true,
       subscriptionStatus: true,
     },
+    where: { id: workspaceId },
   });
 
-  if (
-    !workspace ||
-    !workspace.subscriptionPlan ||
-    !workspace.subscriptionStatus
-  ) {
+  if (!workspace?.subscriptionPlan || !workspace.subscriptionStatus) {
     return {
       isActive: false,
       plan: null,
@@ -57,110 +255,20 @@ export async function getSubscriptionStatus(
 }
 
 /**
- * Create a Stripe Checkout session for subscription
- */
-export async function createCheckoutSession(
-  workspaceId: number,
-  planType: SubscriptionPlan,
-  priceId: string,
-  clerkUserId: string,
-  userEmail: string,
-): Promise<string> {
-  // Get or create Stripe customer
-  let customerId: string;
-  const workspace = await prisma.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { stripeCustomerId: true },
-  });
-
-  if (workspace?.stripeCustomerId) {
-    customerId = workspace.stripeCustomerId;
-  } else {
-    // Create new Stripe customer
-    const customer = await stripe.customers.create({
-      email: userEmail,
-      metadata: {
-        workspaceId: workspaceId.toString(),
-        clerkUserId,
-      },
-    });
-    customerId = customer.id;
-
-    // Update workspace with customer ID
-    await prisma.workspace.update({
-      where: { id: workspaceId },
-      data: {
-        stripeCustomerId: customerId,
-        subscriptionPlan: planType,
-        subscriptionStatus: "INCOMPLETE",
-      },
-    });
-  }
-
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-
-  // Create checkout session
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: planType === "LIFETIME" ? "payment" : "subscription",
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1,
-      },
-    ],
-    success_url: `${frontendUrl}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${frontendUrl}/subscribe/cancelled`,
-    metadata: {
-      workspaceId: workspaceId.toString(),
-      planType,
-      clerkUserId,
-    },
-  });
-
-  return session.url || "";
-}
-
-/**
- * Create Stripe Customer Portal session
- */
-export async function createCustomerPortalSession(
-  workspaceId: number,
-): Promise<string> {
-  const workspace = await prisma.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { stripeCustomerId: true },
-  });
-
-  if (!workspace?.stripeCustomerId) {
-    throw new Error("No subscription found for this workspace");
-  }
-
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-
-  const session = await stripe.billingPortal.sessions.create({
-    customer: workspace.stripeCustomerId,
-    return_url: `${frontendUrl}/configuration`,
-  });
-
-  return session.url;
-}
-
-/**
  * Handle successful checkout completion
  */
 export async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
 ): Promise<void> {
-  const workspaceId = parseInt(session.metadata?.workspaceId || "0", 10);
-  const planType = session.metadata?.planType as SubscriptionPlan;
+  const workspaceId = parseInt(session.metadata?.workspaceId ?? "0", 10);
+  const planType = session.metadata?.planType as SubscriptionPlan | undefined;
 
   if (!workspaceId || !planType) {
     throw new Error("Missing metadata in checkout session");
   }
 
   // Get subscription from Stripe if it's a subscription (not one-time payment)
-  let subscriptionId: string | null = null;
+  let subscriptionId: null | string = null;
   let status: SubscriptionStatus = "INCOMPLETE";
 
   if (session.mode === "subscription" && session.subscription) {
@@ -176,13 +284,13 @@ export async function handleCheckoutCompleted(
 
   // Update workspace with subscription info (cache from Stripe)
   await prisma.workspace.update({
-    where: { id: workspaceId },
     data: {
       stripeCustomerId: session.customer as string,
       stripeSubscriptionId: subscriptionId,
       subscriptionPlan: planType,
       subscriptionStatus: status,
     },
+    where: { id: workspaceId },
   });
 
   // TODO: AI CREDITS - Purchase AI credits here based on plan
@@ -193,61 +301,18 @@ export async function handleCheckoutCompleted(
 }
 
 /**
- * Update subscription record from Stripe subscription object
- */
-async function updateSubscriptionFromStripe(
-  workspaceId: number,
-  subscription: Stripe.Subscription,
-): Promise<void> {
-  const status = mapStripeStatusToDbStatus(subscription.status);
-
-  // Extract plan type from subscription metadata or price
-  let planType: SubscriptionPlan | null = null;
-  if (subscription.metadata?.planType) {
-    planType = subscription.metadata.planType as SubscriptionPlan;
-  } else {
-    // Fallback: try to determine from price's product ID
-    const price = subscription.items.data[0]?.price;
-    if (price?.product) {
-      const productId =
-        typeof price.product === "string" ? price.product : price.product.id;
-      if (productId === process.env.STRIPE_PRODUCT_ID_CORE) planType = "CORE";
-      else if (productId === process.env.STRIPE_PRODUCT_ID_AI_PRO)
-        planType = "AI_PRO";
-      else if (productId === process.env.STRIPE_PRODUCT_ID_LIFETIME)
-        planType = "LIFETIME";
-    }
-  }
-
-  await prisma.workspace.update({
-    where: { id: workspaceId },
-    data: {
-      stripeSubscriptionId: subscription.id,
-      subscriptionPlan: planType,
-      subscriptionStatus: status,
-    },
-  });
-
-  // TODO: AI CREDITS - Handle subscription renewal
-  // When subscription renews (status becomes ACTIVE again), allocate new AI credits
-  // CORE: $3 worth of credits
-  // AI_PRO: $8 worth of credits
-  // LIFETIME: Monthly credit allocation (if applicable)
-}
-
-/**
  * Handle subscription deleted event from Stripe
  */
 export async function handleSubscriptionDeleted(
   subscription: Stripe.Subscription,
 ): Promise<void> {
-  let workspaceId = parseInt(subscription.metadata?.workspaceId || "0", 10);
+  let workspaceId = parseInt(subscription.metadata.workspaceId ?? "0", 10);
 
   if (!workspaceId) {
     // Try to find by customer ID
     const existing = await prisma.workspace.findUnique({
-      where: { stripeCustomerId: subscription.customer as string },
       select: { id: true },
+      where: { stripeCustomerId: subscription.customer as string },
     });
     if (!existing) {
       return; // Already deleted or doesn't exist
@@ -256,10 +321,10 @@ export async function handleSubscriptionDeleted(
   }
 
   await prisma.workspace.update({
-    where: { id: workspaceId },
     data: {
       subscriptionStatus: "CANCELED",
     },
+    where: { id: workspaceId },
   });
 }
 
@@ -269,13 +334,13 @@ export async function handleSubscriptionDeleted(
 export async function handleSubscriptionUpdated(
   subscription: Stripe.Subscription,
 ): Promise<void> {
-  const workspaceId = parseInt(subscription.metadata?.workspaceId || "0", 10);
+  const workspaceId = parseInt(subscription.metadata.workspaceId ?? "0", 10);
 
   if (!workspaceId) {
     // Try to find by customer ID
     const existing = await prisma.workspace.findUnique({
-      where: { stripeCustomerId: subscription.customer as string },
       select: { id: true },
+      where: { stripeCustomerId: subscription.customer as string },
     });
     if (!existing) {
       throw new Error("Workspace not found for this subscription");
@@ -293,8 +358,8 @@ export async function handleSubscriptionUpdated(
  */
 export async function revokeSubscription(workspaceId: number): Promise<void> {
   const workspace = await prisma.workspace.findUnique({
-    where: { id: workspaceId },
     select: { stripeSubscriptionId: true },
+    where: { id: workspaceId },
   });
 
   if (!workspace?.stripeSubscriptionId) {
@@ -312,10 +377,10 @@ export async function revokeSubscription(workspaceId: number): Promise<void> {
 
   // Update local cache
   await prisma.workspace.update({
-    where: { id: workspaceId },
     data: {
       subscriptionStatus: "CANCELED",
     },
+    where: { id: workspaceId },
   });
 }
 
@@ -328,115 +393,56 @@ function mapStripeStatusToDbStatus(
   const statusMap: Record<Stripe.Subscription.Status, SubscriptionStatus> = {
     active: "ACTIVE",
     canceled: "CANCELED",
-    past_due: "PAST_DUE",
-    unpaid: "UNPAID",
     incomplete: "INCOMPLETE",
     incomplete_expired: "INCOMPLETE_EXPIRED",
-    trialing: "TRIALING",
+    past_due: "PAST_DUE",
     paused: "CANCELED", // Map paused to canceled for now
+    trialing: "TRIALING",
+    unpaid: "UNPAID",
   };
 
-  return statusMap[stripeStatus] || "INCOMPLETE";
+  return statusMap[stripeStatus];
 }
 
-export type PlanPriceInfo = {
-  priceId: string;
-  amount: number;
-  currency: string;
-};
-
-export type PlanPricesRecurring = {
-  monthly: PlanPriceInfo;
-  yearly: PlanPriceInfo;
-};
-
-export type PlanPricesLifetime = {
-  oneTime: PlanPriceInfo;
-};
-
 /**
- * Get available subscription plans with pricing
- * Fetches all active prices per product and groups by recurring interval (month/year)
+ * Update subscription record from Stripe subscription object
  */
-export async function getAvailablePlans() {
-  const [coreProduct, aiProProduct, lifetimeProduct] = await Promise.all([
-    stripe.products.retrieve(PLAN_PRODUCT_IDS.CORE),
-    stripe.products.retrieve(PLAN_PRODUCT_IDS.AI_PRO),
-    stripe.products.retrieve(PLAN_PRODUCT_IDS.LIFETIME),
-  ]);
+async function updateSubscriptionFromStripe(
+  workspaceId: number,
+  subscription: Stripe.Subscription,
+): Promise<void> {
+  const status = mapStripeStatusToDbStatus(subscription.status);
 
-  const buildPricesForProduct = async (
-    productId: string,
-  ): Promise<PlanPricesRecurring | PlanPricesLifetime> => {
-    const { data: prices } = await stripe.prices.list({
-      product: productId,
-      active: true,
-    });
-
-    const monthly = prices.find((p) => p.recurring?.interval === "month");
-    const yearly = prices.find((p) => p.recurring?.interval === "year");
-    const oneTime = prices.find((p) => !p.recurring);
-
-    if (oneTime && !monthly && !yearly) {
-      return {
-        oneTime: {
-          priceId: oneTime.id,
-          amount: (oneTime.unit_amount ?? 0) / 100,
-          currency: oneTime.currency.toUpperCase(),
-        },
-      };
+  // Extract plan type from subscription metadata or price
+  let planType: null | SubscriptionPlan = null;
+  if (subscription.metadata.planType) {
+    planType = subscription.metadata.planType as SubscriptionPlan;
+  } else {
+    // Fallback: try to determine from price's product ID
+    const price = subscription.items.data[0]?.price;
+    if (price?.product) {
+      const productId =
+        typeof price.product === "string" ? price.product : price.product.id;
+      if (productId === process.env.STRIPE_PRODUCT_ID_CORE) planType = "CORE";
+      else if (productId === process.env.STRIPE_PRODUCT_ID_AI_PRO)
+        planType = "AI_PRO";
+      else if (productId === process.env.STRIPE_PRODUCT_ID_LIFETIME)
+        planType = "LIFETIME";
     }
+  }
 
-    if (!monthly || !yearly) {
-      throw new Error(
-        `Product ${productId} must have both monthly and yearly active prices`,
-      );
-    }
-
-    return {
-      monthly: {
-        priceId: monthly.id,
-        amount: (monthly.unit_amount ?? 0) / 100,
-        currency: monthly.currency.toUpperCase(),
-      },
-      yearly: {
-        priceId: yearly.id,
-        amount: (yearly.unit_amount ?? 0) / 100,
-        currency: yearly.currency.toUpperCase(),
-      },
-    };
-  };
-
-  const [corePrices, aiProPrices, lifetimePrices] = await Promise.all([
-    buildPricesForProduct(PLAN_PRODUCT_IDS.CORE),
-    buildPricesForProduct(PLAN_PRODUCT_IDS.AI_PRO),
-    buildPricesForProduct(PLAN_PRODUCT_IDS.LIFETIME),
-  ]);
-
-  return [
-    {
-      id: "CORE" as const,
-      name: coreProduct.name,
-      description:
-        coreProduct.description ||
-        "$12/month, $3 for AI credits" /* fallback */,
-      prices: corePrices as PlanPricesRecurring,
+  await prisma.workspace.update({
+    data: {
+      stripeSubscriptionId: subscription.id,
+      subscriptionPlan: planType,
+      subscriptionStatus: status,
     },
-    {
-      id: "AI_PRO" as const,
-      name: aiProProduct.name,
-      description:
-        aiProProduct.description ||
-        "$20/month, $8 for AI credits" /* fallback */,
-      prices: aiProPrices as PlanPricesRecurring,
-    },
-    {
-      id: "LIFETIME" as const,
-      name: lifetimeProduct.name,
-      description:
-        lifetimeProduct.description ||
-        "$100 one-time payment, free tier AI credits" /* fallback */,
-      prices: lifetimePrices as PlanPricesLifetime,
-    },
-  ];
+    where: { id: workspaceId },
+  });
+
+  // TODO: AI CREDITS - Handle subscription renewal
+  // When subscription renews (status becomes ACTIVE again), allocate new AI credits
+  // CORE: $3 worth of credits
+  // AI_PRO: $8 worth of credits
+  // LIFETIME: Monthly credit allocation (if applicable)
 }

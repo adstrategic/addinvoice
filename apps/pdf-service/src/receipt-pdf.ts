@@ -2,9 +2,10 @@
  * Generates a PDF buffer from receipt HTML using Puppeteer.
  */
 
-import { getBrowser } from "./invoice-pdf";
-import { buildReceiptHtml } from "./receipt-html";
-import type { ReceiptPdfPayload } from "./schema";
+import type { ReceiptPdfPayload } from "./schema.js";
+
+import { getBrowser } from "./invoice-pdf.js";
+import { buildReceiptHtml } from "./receipt-html.js";
 
 const PDF_TIMEOUT_MS = 30000;
 
@@ -20,19 +21,21 @@ export async function generateReceiptPdf(
 
   try {
     await page.setContent(html, {
-      waitUntil: "networkidle0",
       timeout: PDF_TIMEOUT_MS,
+      waitUntil: "networkidle0",
     });
 
     const pdfBuffer = await page.pdf({
       format: "A4",
+      margin: { bottom: "0", left: "0", right: "0", top: "0" },
       printBackground: true,
-      margin: { top: "0", right: "0", bottom: "0", left: "0" },
       timeout: PDF_TIMEOUT_MS,
     });
 
     return Buffer.from(pdfBuffer);
   } finally {
-    await page.close().catch(() => {});
+    await page.close().catch(() => {
+      /* noop */
+    });
   }
 }

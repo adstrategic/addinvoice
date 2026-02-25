@@ -1,24 +1,25 @@
 import { Router } from "express";
 import { processRequest } from "zod-express-middleware";
+
+import asyncHandler from "../../core/async-handler.js";
 import {
-  listPayments,
+  enqueueSendReceipt,
   getPaymentById,
   getReceiptPdf,
-  enqueueSendReceipt,
-} from "./payments.controller";
+  listPayments,
+} from "./payments.controller.js";
 import {
-  listPaymentsSchema,
   getPaymentByIdSchema,
+  listPaymentsSchema,
   sendReceiptBodySchema,
-} from "./payments.schemas";
-import asyncHandler from "../../core/async-handler";
+} from "./payments.schemas.js";
 
 /**
  * Payments routes (read-only)
  * All routes are protected by requireAuth() and verifyWorkspaceAccess middleware
  * (applied in routes/index.ts)
  */
-export const paymentsRoutes = Router();
+export const paymentsRoutes: Router = Router();
 
 // GET /api/v1/payments - List payments for workspace
 paymentsRoutes.get(
@@ -45,8 +46,8 @@ paymentsRoutes.get(
 paymentsRoutes.post(
   "/:id/send-receipt",
   processRequest({
-    params: getPaymentByIdSchema,
     body: sendReceiptBodySchema,
+    params: getPaymentByIdSchema,
   }),
   asyncHandler(enqueueSendReceipt),
 );

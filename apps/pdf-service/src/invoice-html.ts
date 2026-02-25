@@ -2,82 +2,64 @@
  * Builds the full HTML document for the invoice PDF.
  */
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString();
-}
-
-function capitalize(s: string): string {
-  if (!s) return s;
-  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+export interface InvoicePdfBusiness {
+  address?: null | string;
+  email?: null | string;
+  logo?: null | string;
+  name: string;
+  nit?: null | string;
+  phone?: null | string;
 }
 
 export interface InvoicePdfClient {
+  address?: null | string;
+  businessName?: null | string;
+  email?: null | string;
   name: string;
-  businessName?: string | null;
-  address?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  nit?: string | null;
-}
-
-export interface InvoicePdfBusiness {
-  name: string;
-  address?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  nit?: string | null;
-  logo?: string | null;
+  nit?: null | string;
+  phone?: null | string;
 }
 
 export interface InvoicePdfItem {
+  description?: null | string;
+  discountAmount?: number;
   name: string;
-  description?: string | null;
   quantity: number;
   quantityUnit: string;
-  unitPrice: number;
   tax: number;
-  discountAmount?: number;
   total: number;
+  unitPrice: number;
 }
 
 export interface InvoicePdfPayload {
-  invoice: {
-    invoiceNumber: string;
-    issueDate: Date | string;
-    dueDate: Date | string;
-    purchaseOrder?: string | null;
-    currency: string;
-    subtotal: number;
-    discount: number;
-    totalTax: number;
-    total: number;
-    totalPaid?: number;
-    balance?: number;
-    notes?: string | null;
-    terms?: string | null;
-  };
   client: InvoicePdfClient;
   company: InvoicePdfBusiness;
+  invoice: {
+    balance?: number;
+    currency: string;
+    discount: number;
+    dueDate: Date | string;
+    invoiceNumber: string;
+    issueDate: Date | string;
+    notes?: null | string;
+    purchaseOrder?: null | string;
+    subtotal: number;
+    terms?: null | string;
+    total: number;
+    totalPaid?: number;
+    totalTax: number;
+  };
   items: InvoicePdfItem[];
-  paymentMethod?: { type: string; handle: string | null } | null;
+  paymentMethod?: null | { handle: null | string; type: string; };
 }
 
 export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
-  const { invoice, client, company, items } = payload;
+  const { client, company, invoice, items } = payload;
   const issueDateStr = formatDate(invoice.issueDate);
   const dueDateStr = formatDate(invoice.dueDate);
   const usdFormatter = new Intl.NumberFormat("en-US", {
-    style: "currency",
     currency: "USD",
+    style: "currency",
   });
 
   const rowsHtml = items
@@ -229,7 +211,7 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
           <span class="total-value total-final-value">${usdFormatter.format(invoice.total)}</span>
         </div>
         ${
-          invoice.totalPaid !== undefined && invoice.totalPaid !== null
+          invoice.totalPaid != null
             ? `
         <div class="total-row">
           <span class="total-label">Total paid:</span>
@@ -237,7 +219,7 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
         </div>
         <div class="total-row">
           <span class="total-label">Balance to pay:</span>
-          <span class="total-value">${usdFormatter.format(invoice.balance!)}</span>
+          <span class="total-value">${usdFormatter.format(invoice.balance ?? 0)}</span>
         </div>`
             : ""
         }
@@ -270,4 +252,22 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
   </div>
 </body>
 </html>`;
+}
+
+function capitalize(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatDate(date: Date | string): string {
+  return new Date(date).toLocaleDateString();
 }

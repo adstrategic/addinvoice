@@ -1,13 +1,14 @@
 import { Router } from "express";
+
+import asyncHandler from "../../core/async-handler.js";
 import {
-  getSubscriptionStatus,
   createCheckout,
   createPortalSession,
   getPlans,
-} from "./subscriptions.controller";
-import asyncHandler from "../../core/async-handler";
+  getSubscriptionStatus,
+} from "./subscriptions.controller.js";
 
-export const subscriptionsRoutes = Router();
+export const subscriptionsRoutes: Router = Router();
 
 // Note: Webhook routes are now registered in server.ts
 // They bypass the API router to avoid authentication middleware

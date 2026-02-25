@@ -4,14 +4,15 @@
  * Command: node dist/run-cron.js
  */
 import "dotenv/config";
+
 import {
-  markOverdueInvoices,
   executeReminders,
-} from "./features/outbox/outbox.service";
+  markOverdueInvoices,
+} from "./features/outbox/outbox.service.js";
 
 async function main(): Promise<void> {
   const overdue = await markOverdueInvoices();
-  const { sent, failed: remindersFailed } = await executeReminders();
+  const { failed: remindersFailed, sent } = await executeReminders();
   console.log(
     "[cron] daily: marked",
     overdue,
@@ -24,7 +25,7 @@ async function main(): Promise<void> {
 
 main()
   .then(() => process.exit(0))
-  .catch((err) => {
+  .catch((err: unknown) => {
     console.error("[cron] daily job failed:", err);
     process.exit(1);
   });

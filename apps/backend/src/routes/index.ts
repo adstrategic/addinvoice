@@ -1,19 +1,20 @@
-import { Router } from "express";
 import { requireAuth } from "@clerk/express";
-import { verifyWorkspaceAccess } from "../core/auth";
-import { requireBusiness } from "../core/business-required";
-import { requireSubscription } from "../core/subscription-guard";
-import { clientsRoutes } from "../features/clients/clients.routes";
-import { invoicesRoutes } from "../features/invoices/invoices.routes";
-import { businessesRoutes } from "../features/businesses/businesses.routes";
-import { catalogRoutes } from "../features/catalog/catalog.routes";
-import { dashboardRoutes } from "../features/dashboard/dashboard.routes";
-import { paymentsRoutes } from "../features/payments/payments.routes";
-import { subscriptionsRoutes } from "../features/subscriptions/subscriptions.routes";
-import { workspaceRoutes } from "../features/workspace/workspace.routes";
-import { livekitRouter } from "./livekit.routes";
+import { Router } from "express";
 
-export const apiRouter = Router();
+import { verifyWorkspaceAccess } from "../core/auth.js";
+import { requireBusiness } from "../core/business-required.js";
+import { requireSubscription } from "../core/subscription-guard.js";
+import { businessesRoutes } from "../features/businesses/businesses.routes.js";
+import { catalogRoutes } from "../features/catalog/catalog.routes.js";
+import { clientsRoutes } from "../features/clients/clients.routes.js";
+import { dashboardRoutes } from "../features/dashboard/dashboard.routes.js";
+import { invoicesRoutes } from "../features/invoices/invoices.routes.js";
+import { paymentsRoutes } from "../features/payments/payments.routes.js";
+import { subscriptionsRoutes } from "../features/subscriptions/subscriptions.routes.js";
+import { workspaceRoutes } from "../features/workspace/workspace.routes.js";
+import { livekitRouter } from "./livekit.routes.js";
+
+export const apiRouter: Router = Router();
 
 // Apply authentication to all routes using Clerk's requireAuth
 // This ensures all routes are protected and have userId available
@@ -28,7 +29,8 @@ apiRouter.use("/subscription", subscriptionsRoutes);
 // This allows read-only access without subscription
 apiRouter.use((req, res, next) => {
   if (req.path.startsWith("/subscription")) {
-    return next();
+    next();
+    return;
   }
   return requireSubscription(req, res, next);
 });
@@ -42,7 +44,8 @@ apiRouter.use((req, res, next) => {
     req.path.startsWith("/workspace") ||
     req.path.startsWith("/subscription")
   ) {
-    return next();
+    next();
+    return;
   }
 
   // For all other routes, require at least one business to exist

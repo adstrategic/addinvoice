@@ -1,5 +1,6 @@
-import CustomError from "./CustomError";
-import { ErrorCode } from "./types";
+import type { ErrorCode } from "./types.js";
+
+import CustomError from "./CustomError.js";
 
 /**
  * Entity not found error (404)

@@ -4,18 +4,18 @@
  * Features should create their own error classes extending AppError
  */
 class CustomError<C extends string> extends Error {
+  code?: C;
   message: string;
   statusCode: number;
-  code?: C;
 
   constructor({
+    code,
     message,
     statusCode,
-    code,
   }: {
+    code?: C;
     message: string;
     statusCode: number;
-    code?: C;
   }) {
     super();
     this.message = message;

@@ -1,19 +1,22 @@
-import { Response } from "express";
-import * as workspaceService from "./workspace.service";
+import type { Response } from "express";
+import type { TypedRequest } from "zod-express-middleware";
+
 import type {
   upsertPaymentMethodParamsSchema,
   upsertPaymentMethodSchema,
-} from "./workspace.schemas";
-import { TypedRequest } from "zod-express-middleware";
+} from "./workspace.schemas.js";
+
+import { getWorkspaceId } from "../../core/auth.js";
+import * as workspaceService from "./workspace.service.js";
 
 /**
  * GET /workspace/payment-methods - List all workspace payment methods
  */
 export async function listPaymentMethods(
-  req: TypedRequest<any, any, any>,
+  req: TypedRequest<never, never, never>,
   res: Response,
 ): Promise<void> {
-  const workspaceId = req.workspaceId!;
+  const workspaceId = getWorkspaceId(req);
   const methods = await workspaceService.listPaymentMethods(workspaceId);
   res.json({ data: methods });
 }
@@ -24,12 +27,12 @@ export async function listPaymentMethods(
 export async function upsertPaymentMethod(
   req: TypedRequest<
     typeof upsertPaymentMethodParamsSchema,
-    any,
+    never,
     typeof upsertPaymentMethodSchema
   >,
   res: Response,
 ): Promise<void> {
-  const workspaceId = req.workspaceId!;
+  const workspaceId = getWorkspaceId(req);
   const { type } = req.params;
   const body = req.body;
   const method = await workspaceService.upsertPaymentMethod(

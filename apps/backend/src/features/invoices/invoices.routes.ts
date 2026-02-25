@@ -1,47 +1,48 @@
 import { Router } from "express";
 import { processRequest } from "zod-express-middleware";
-import {
-  listInvoices,
-  getNextInvoiceNumber,
-  getInvoiceBySequence,
-  getInvoicePdf,
-  createInvoice,
-  updateInvoice,
-  deleteInvoice,
-  enqueueSendInvoice,
-  sendInvoice,
-  addInvoiceItem,
-  updateInvoiceItem,
-  deleteInvoiceItem,
-  addPayment,
-  updatePayment,
-  deletePayment,
-} from "./invoices.controller";
-import {
-  listInvoicesSchema,
-  getNextInvoiceNumberQuerySchema,
-  getInvoiceBySequenceSchema,
-  getInvoiceByIdSchema,
-  sendInvoiceBodySchema,
-  createInvoiceSchema,
-  updateInvoiceSchema,
-  createInvoiceItemSchema,
-  updateInvoiceItemSchema,
-  getInvoiceItemByIdSchema,
-  getPaymentByIdSchema,
-} from "./invoices.schemas";
-import asyncHandler from "../../core/async-handler";
+
+import asyncHandler from "../../core/async-handler.js";
 import {
   createPaymentSchema,
   updatePaymentSchema,
-} from "../payments/payments.schemas";
+} from "../payments/payments.schemas.js";
+import {
+  addInvoiceItem,
+  addPayment,
+  createInvoice,
+  deleteInvoice,
+  deleteInvoiceItem,
+  deletePayment,
+  enqueueSendInvoice,
+  getInvoiceBySequence,
+  getInvoicePdf,
+  getNextInvoiceNumber,
+  listInvoices,
+  sendInvoice,
+  updateInvoice,
+  updateInvoiceItem,
+  updatePayment,
+} from "./invoices.controller.js";
+import {
+  createInvoiceItemSchema,
+  createInvoiceSchema,
+  getInvoiceByIdSchema,
+  getInvoiceBySequenceSchema,
+  getInvoiceItemByIdSchema,
+  getNextInvoiceNumberQuerySchema,
+  getPaymentByIdSchema,
+  listInvoicesSchema,
+  sendInvoiceBodySchema,
+  updateInvoiceItemSchema,
+  updateInvoiceSchema,
+} from "./invoices.schemas.js";
 
 /**
  * Invoices routes
  * All routes are protected by requireAuth() and verifyWorkspaceAccess middleware
  * (applied in routes/index.ts)
  */
-export const invoicesRoutes = Router();
+export const invoicesRoutes: Router = Router();
 
 // GET /api/v1/invoices/next-number - Get next suggested invoice number
 invoicesRoutes.get(
@@ -68,8 +69,8 @@ invoicesRoutes.get(
 invoicesRoutes.post(
   "/:sequence/send",
   processRequest({
-    params: getInvoiceBySequenceSchema,
     body: sendInvoiceBodySchema,
+    params: getInvoiceBySequenceSchema,
   }),
   asyncHandler(enqueueSendInvoice),
 );
@@ -100,8 +101,8 @@ invoicesRoutes.patch(
 invoicesRoutes.patch(
   "/:invoiceId",
   processRequest({
-    params: getInvoiceByIdSchema,
     body: updateInvoiceSchema,
+    params: getInvoiceByIdSchema,
   }),
   asyncHandler(updateInvoice),
 );
@@ -117,8 +118,8 @@ invoicesRoutes.delete(
 invoicesRoutes.post(
   "/:invoiceId/items",
   processRequest({
-    params: getInvoiceByIdSchema,
     body: createInvoiceItemSchema,
+    params: getInvoiceByIdSchema,
   }),
   asyncHandler(addInvoiceItem),
 );
@@ -127,8 +128,8 @@ invoicesRoutes.post(
 invoicesRoutes.patch(
   "/:invoiceId/items/:itemId",
   processRequest({
-    params: getInvoiceItemByIdSchema,
     body: updateInvoiceItemSchema,
+    params: getInvoiceItemByIdSchema,
   }),
   asyncHandler(updateInvoiceItem),
 );
@@ -144,8 +145,8 @@ invoicesRoutes.delete(
 invoicesRoutes.post(
   "/:invoiceId/payments",
   processRequest({
-    params: getInvoiceByIdSchema,
     body: createPaymentSchema,
+    params: getInvoiceByIdSchema,
   }),
   asyncHandler(addPayment),
 );
@@ -154,8 +155,8 @@ invoicesRoutes.post(
 invoicesRoutes.patch(
   "/:invoiceId/payments/:paymentId",
   processRequest({
-    params: getPaymentByIdSchema,
     body: updatePaymentSchema,
+    params: getPaymentByIdSchema,
   }),
   asyncHandler(updatePayment),
 );

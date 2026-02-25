@@ -1,15 +1,28 @@
-import { Request, Response, NextFunction } from "express";
-import { getAuth } from "@clerk/express";
-import prisma from "./db";
+import type { NextFunction, Request, Response } from "express";
 
-// Extender Request para incluir usuario
+import { prisma } from "@addinvoice/db";
+import { getAuth } from "@clerk/express";
+
+// Extend Express Request with auth fields (namespace required for declaration merging)
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- Express Request augmentation
   namespace Express {
     interface Request {
       userId?: string;
       workspaceId?: number;
     }
   }
+}
+
+/**
+ * Get workspaceId from request. Use in route handlers that run after verifyWorkspaceAccess.
+ * Throws if workspace was not resolved (e.g. middleware not applied).
+ */
+export function getWorkspaceId(req: { workspaceId?: number }): number {
+  if (req.workspaceId == null) {
+    throw new Error("Workspace not found");
+  }
+  return req.workspaceId;
 }
 
 /**
@@ -39,14 +52,12 @@ export async function verifyWorkspaceAccess(
     });
 
     // If workspace doesn't exist (first time user), create it automatically
-    if (!workspace) {
-      workspace = await prisma.workspace.create({
-        data: {
-          clerkId: userId,
-          name: "My Workspace",
-        },
-      });
-    }
+    workspace ??= await prisma.workspace.create({
+      data: {
+        clerkId: userId,
+        name: "My Workspace",
+      },
+    });
 
     // Attach userId and workspaceId to request
     req.userId = userId;

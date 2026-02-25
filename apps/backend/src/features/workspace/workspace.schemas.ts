@@ -14,10 +14,10 @@ export const upsertPaymentMethodSchema = z.object({
  * Response schema for a single payment method
  */
 export const paymentMethodResponseSchema = z.object({
-  id: z.number(),
-  type: paymentMethodTypeEnum,
   handle: z.string().nullable(),
+  id: z.number(),
   isEnabled: z.boolean(),
+  type: paymentMethodTypeEnum,
 });
 
 /**
@@ -27,8 +27,8 @@ export const upsertPaymentMethodParamsSchema = z.object({
   type: paymentMethodTypeEnum,
 });
 
-export type UpsertPaymentMethodDto = z.infer<typeof upsertPaymentMethodSchema>;
 export type PaymentMethodResponse = z.infer<typeof paymentMethodResponseSchema>;
+export type UpsertPaymentMethodDto = z.infer<typeof upsertPaymentMethodSchema>;
 export type UpsertPaymentMethodParams = z.infer<
   typeof upsertPaymentMethodParamsSchema
 >;

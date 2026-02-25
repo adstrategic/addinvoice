@@ -1,5 +1,6 @@
-import { Request, Response, NextFunction } from "express";
-import prisma from "./db";
+import type { NextFunction, Request, Response } from "express";
+
+import { prisma } from "@addinvoice/db";
 
 /**
  * Middleware to check if workspace has active subscription
@@ -25,10 +26,10 @@ export async function requireSubscription(
 
     // Check subscription status (from local cache - Stripe is source of truth)
     const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
       select: {
         subscriptionStatus: true,
       },
+      where: { id: workspaceId },
     });
 
     const isActive =
@@ -48,7 +49,7 @@ export async function requireSubscription(
     }
 
     // Block write operations without active subscription
-    if (!isActive && ["POST", "PUT", "DELETE", "PATCH"].includes(req.method)) {
+    if (!isActive && ["DELETE", "PATCH", "POST", "PUT"].includes(req.method)) {
       res.status(402).json({
         error: "SUBSCRIPTION_REQUIRED",
         message: "Active subscription required to perform this action",

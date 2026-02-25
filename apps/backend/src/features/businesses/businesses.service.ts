@@ -1,93 +1,15 @@
-import prisma from "../../core/db";
 import type { Prisma } from "@addinvoice/db";
+
+import { prisma } from "@addinvoice/db";
+
 import type {
-  ListBusinessesQuery,
-  CreateBusinessDto,
-  UpdateBusinessDto,
   BusinessEntity,
-} from "./businesses.schemas";
-import { EntityNotFoundError } from "../../errors/EntityErrors";
+  CreateBusinessDto,
+  ListBusinessesQuery,
+  UpdateBusinessDto,
+} from "./businesses.schemas.js";
 
-/**
- * List all businesses for a workspace
- */
-export async function listBusinesses(
-  workspaceId: number,
-  query: ListBusinessesQuery,
-): Promise<{
-  businesses: BusinessEntity[];
-  total: number;
-  page: number;
-  limit: number;
-}> {
-  const { page, limit, search } = query;
-  const skip = (page - 1) * limit;
-
-  const where: Prisma.BusinessWhereInput = {
-    workspaceId,
-
-    ...(search && {
-      OR: [
-        { name: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
-        { phone: { contains: search, mode: "insensitive" } },
-        { nit: { contains: search, mode: "insensitive" } },
-      ],
-    }),
-  };
-
-  const [businesses, total] = await Promise.all([
-    prisma.business.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { sequence: "asc" },
-    }),
-    prisma.business.count({ where }),
-  ]);
-
-  return {
-    businesses: businesses.map((business) => ({
-      ...business,
-      defaultTaxPercentage: business.defaultTaxPercentage
-        ? Number(business.defaultTaxPercentage)
-        : null,
-    })),
-    total,
-    page,
-    limit,
-  };
-}
-
-/**
- * Get a business by ID within a workspace
- */
-export async function getBusinessById(
-  workspaceId: number,
-  id: number,
-): Promise<BusinessEntity> {
-  const business = await prisma.business.findFirst({
-    where: {
-      id,
-      workspaceId,
-    },
-  });
-
-  if (!business) {
-    throw new EntityNotFoundError({
-      message: "Business not found",
-      statusCode: 404,
-      code: "ERR_NF",
-    });
-  }
-
-  return {
-    ...business,
-    defaultTaxPercentage: business.defaultTaxPercentage
-      ? Number(business.defaultTaxPercentage)
-      : null,
-  };
-}
+import { EntityNotFoundError } from "../../errors/EntityErrors.js";
 
 /**
  * Create a new business
@@ -101,57 +23,21 @@ export async function createBusiness(
 
     const business = await tx.business.create({
       data: {
-        workspaceId,
-        sequence,
-        name: data.name,
-        nit: data.nit?.trim() ?? null,
         address: data.address,
-        email: data.email,
-        phone: data.phone,
-        logo: data.logo ?? null,
-        isDefault: false, // New businesses are not default by default
+        defaultNotes: data.defaultNotes ?? null,
         defaultTaxMode: data.defaultTaxMode ?? null,
         defaultTaxName: data.defaultTaxName ?? null,
         defaultTaxPercentage: data.defaultTaxPercentage ?? null,
-        defaultNotes: data.defaultNotes ?? null,
         defaultTerms: data.defaultTerms ?? null,
-      },
-    });
-
-    return {
-      ...business,
-      defaultTaxPercentage: business.defaultTaxPercentage
-        ? Number(business.defaultTaxPercentage)
-        : null,
-    };
-  });
-}
-
-/**
- * Update an existing business
- */
-export async function updateBusiness(
-  workspaceId: number,
-  id: number,
-  data: UpdateBusinessDto,
-): Promise<BusinessEntity> {
-  return await prisma.$transaction(async (tx) => {
-    // Verify business exists and belongs to workspace
-    const existingBusiness = await findById(tx, id);
-    if (!existingBusiness || existingBusiness.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        message: "Business not found",
-        statusCode: 404,
-        code: "ERR_NF",
-      });
-    }
-
-    const business = await tx.business.update({
-      where: {
-        id,
+        email: data.email,
+        isDefault: false, // New businesses are not default by default
+        logo: data.logo ?? null,
+        name: data.name,
+        nit: data.nit?.trim() ?? null,
+        phone: data.phone,
+        sequence,
         workspaceId,
       },
-      data,
     });
 
     return {
@@ -173,11 +59,11 @@ export async function deleteBusiness(
   await prisma.$transaction(async (tx) => {
     // Verify business exists and belongs to workspace
     const existingBusiness = await findById(tx, id);
-    if (!existingBusiness || existingBusiness.workspaceId !== workspaceId) {
+    if (existingBusiness?.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
+        code: "ERR_NF",
         message: "Business not found",
         statusCode: 404,
-        code: "ERR_NF",
       });
     }
 
@@ -186,55 +72,6 @@ export async function deleteBusiness(
         id,
       },
     });
-  });
-}
-
-/**
- * Set a business as default (unset others)
- */
-export async function setDefaultBusiness(
-  workspaceId: number,
-  id: number,
-): Promise<BusinessEntity> {
-  return await prisma.$transaction(async (tx) => {
-    // Verify business exists and belongs to workspace
-    const existingBusiness = await findById(tx, id);
-    if (!existingBusiness || existingBusiness.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        message: "Business not found",
-        statusCode: 404,
-        code: "ERR_NF",
-      });
-    }
-
-    // Unset all other default businesses in this workspace
-    await tx.business.updateMany({
-      where: {
-        workspaceId,
-        isDefault: true,
-      },
-      data: {
-        isDefault: false,
-      },
-    });
-
-    // Set this business as default
-    const business = await tx.business.update({
-      where: {
-        id,
-        workspaceId,
-      },
-      data: {
-        isDefault: true,
-      },
-    });
-
-    return {
-      ...business,
-      defaultTaxPercentage: business.defaultTaxPercentage
-        ? Number(business.defaultTaxPercentage)
-        : null,
-    };
   });
 }
 
@@ -264,6 +101,172 @@ export async function findById(
 }
 
 /**
+ * Get a business by ID within a workspace
+ */
+export async function getBusinessById(
+  workspaceId: number,
+  id: number,
+): Promise<BusinessEntity> {
+  const business = await prisma.business.findFirst({
+    where: {
+      id,
+      workspaceId,
+    },
+  });
+
+  if (!business) {
+    throw new EntityNotFoundError({
+      code: "ERR_NF",
+      message: "Business not found",
+      statusCode: 404,
+    });
+  }
+
+  return {
+    ...business,
+    defaultTaxPercentage: business.defaultTaxPercentage
+      ? Number(business.defaultTaxPercentage)
+      : null,
+  };
+}
+
+/**
+ * List all businesses for a workspace
+ */
+export async function listBusinesses(
+  workspaceId: number,
+  query: ListBusinessesQuery,
+): Promise<{
+  businesses: BusinessEntity[];
+  limit: number;
+  page: number;
+  total: number;
+}> {
+  const { limit, page, search } = query;
+  const skip = (page - 1) * limit;
+
+  const where: Prisma.BusinessWhereInput = {
+    workspaceId,
+
+    ...(search && {
+      OR: [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search, mode: "insensitive" } },
+        { nit: { contains: search, mode: "insensitive" } },
+      ],
+    }),
+  };
+
+  const [businesses, total] = await Promise.all([
+    prisma.business.findMany({
+      orderBy: { sequence: "asc" },
+      skip,
+      take: limit,
+      where,
+    }),
+    prisma.business.count({ where }),
+  ]);
+
+  return {
+    businesses: businesses.map((business) => ({
+      ...business,
+      defaultTaxPercentage: business.defaultTaxPercentage
+        ? Number(business.defaultTaxPercentage)
+        : null,
+    })),
+    limit,
+    page,
+    total,
+  };
+}
+
+/**
+ * Set a business as default (unset others)
+ */
+export async function setDefaultBusiness(
+  workspaceId: number,
+  id: number,
+): Promise<BusinessEntity> {
+  return await prisma.$transaction(async (tx) => {
+    // Verify business exists and belongs to workspace
+    const existingBusiness = await findById(tx, id);
+    if (existingBusiness?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError({
+        code: "ERR_NF",
+        message: "Business not found",
+        statusCode: 404,
+      });
+    }
+
+    // Unset all other default businesses in this workspace
+    await tx.business.updateMany({
+      data: {
+        isDefault: false,
+      },
+      where: {
+        isDefault: true,
+        workspaceId,
+      },
+    });
+
+    // Set this business as default
+    const business = await tx.business.update({
+      data: {
+        isDefault: true,
+      },
+      where: {
+        id,
+        workspaceId,
+      },
+    });
+
+    return {
+      ...business,
+      defaultTaxPercentage: business.defaultTaxPercentage
+        ? Number(business.defaultTaxPercentage)
+        : null,
+    };
+  });
+}
+
+/**
+ * Update an existing business
+ */
+export async function updateBusiness(
+  workspaceId: number,
+  id: number,
+  data: UpdateBusinessDto,
+): Promise<BusinessEntity> {
+  return await prisma.$transaction(async (tx) => {
+    // Verify business exists and belongs to workspace
+    const existingBusiness = await findById(tx, id);
+    if (existingBusiness?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError({
+        code: "ERR_NF",
+        message: "Business not found",
+        statusCode: 404,
+      });
+    }
+
+    const business = await tx.business.update({
+      data,
+      where: {
+        id,
+        workspaceId,
+      },
+    });
+
+    return {
+      ...business,
+      defaultTaxPercentage: business.defaultTaxPercentage
+        ? Number(business.defaultTaxPercentage)
+        : null,
+    };
+  });
+}
+
+/**
  * Get the next sequence number for a workspace
  */
 async function getNextSequence(
@@ -271,14 +274,14 @@ async function getNextSequence(
   workspaceId: number,
 ): Promise<number> {
   const lastBusiness = await tx.business.findFirst({
-    where: {
-      workspaceId,
-    },
     orderBy: {
       sequence: "desc",
     },
     select: {
       sequence: true,
+    },
+    where: {
+      workspaceId,
     },
   });
 

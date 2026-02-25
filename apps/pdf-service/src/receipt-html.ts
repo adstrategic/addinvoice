@@ -2,45 +2,37 @@
  * Builds the full HTML document for the receipt PDF.
  */
 
-import type { ReceiptPdfPayload } from "./schema";
+import type { ReceiptPdfPayload } from "./schema.js";
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+type ReceiptPayment = ReceiptPdfPayload["payments"][number];
 
-function formatCurrency(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency || "USD",
-    }).format(amount);
-  } catch {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
-  }
+interface ReceiptViewModel {
+  clientEmail: null | string;
+  clientName: string;
+  companyAddress: null | string;
+  companyName: string;
+  invoiceNumber: string;
+  logo: null | string;
+  payments: ReceiptPayment[];
+  status: string;
+  total: number;
+  totalPaid: number;
 }
 
 export function buildReceiptHtml(payload: ReceiptPdfPayload): string {
-  const { company, client, invoice, payment, payments } = payload;
+  const { client, company, invoice, payment, payments } = payload;
 
-  const currentInvoice = {
-    logo: company.logo ?? null,
-    companyName: company.name,
-    companyAddress: company.address ?? null,
-    clientName: client.name,
+  const currentInvoice: ReceiptViewModel = {
     clientEmail: client.email ?? null,
+    clientName: client.name,
+    companyAddress: company.address ?? null,
+    companyName: company.name,
     invoiceNumber: invoice.invoiceNumber,
-    total: invoice.total,
-    status: invoice.status,
-    totalPaid: invoice.totalPaid,
+    logo: company.logo ?? null,
     payments,
+    status: invoice.status,
+    total: invoice.total,
+    totalPaid: invoice.totalPaid,
   };
 
   return `<!DOCTYPE html>
@@ -88,7 +80,7 @@ export function buildReceiptHtml(payload: ReceiptPdfPayload): string {
     <div style="text-align: right;">
       <div class="section-title">PAYMENT DETAILS</div>
       <div>Date: ${escapeHtml(payment.date)}</div>
-      <div>Receipt #: ${escapeHtml(String(payment.id).slice(-6))}</div>
+      <div>Receipt #: ${escapeHtml(payment.id.slice(-6))}</div>
     </div>
   </div>
 
@@ -118,7 +110,9 @@ export function buildReceiptHtml(payload: ReceiptPdfPayload): string {
     </div>
   </div>
 
-  ${currentInvoice.payments && currentInvoice.payments.length > 0 ? `
+  ${
+    currentInvoice.payments.length > 0
+      ? `
   <div style="margin-bottom: 30px;">
     <div class="section-title">PAYMENT HISTORY</div>
     <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
@@ -132,26 +126,32 @@ export function buildReceiptHtml(payload: ReceiptPdfPayload): string {
       <tbody>
         ${currentInvoice.payments
           .map(
-            (p) => `
+            (p: ReceiptPayment) => `
         <tr style="border-bottom: 1px solid #f9fafb;">
           <td style="padding: 10px 0;">${escapeHtml(p.date)}</td>
           <td style="padding: 10px 0; text-transform: capitalize;">${escapeHtml(p.method)}</td>
           <td style="padding: 10px 0; text-align: right;">${formatCurrency(p.amount, invoice.currency)}</td>
         </tr>
-        `
+        `,
           )
           .join("")}
       </tbody>
     </table>
   </div>
-  ` : ""}
+  `
+      : ""
+  }
 
-  ${payment.notes ? `
+  ${
+    payment.notes
+      ? `
   <div style="margin-top: 20px; padding: 15px; background: #f9fafb; border-radius: 5px;">
     <div class="section-title">NOTES</div>
     <div>${escapeHtml(payment.notes)}</div>
   </div>
-  ` : ""}
+  `
+      : ""
+  }
 
   <div class="footer">
     Thank you for your business!
@@ -159,4 +159,27 @@ export function buildReceiptHtml(payload: ReceiptPdfPayload): string {
 </body>
 </html>
 `;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatCurrency(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      currency: currency || "USD",
+      style: "currency",
+    }).format(amount);
+  } catch {
+    return new Intl.NumberFormat("en-US", {
+      currency: "USD",
+      style: "currency",
+    }).format(amount);
+  }
 }

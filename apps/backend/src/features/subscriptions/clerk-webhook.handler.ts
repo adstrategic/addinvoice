@@ -1,12 +1,16 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
+
+import { prisma } from "@addinvoice/db";
 import { Webhook } from "svix";
-import prisma from "../../core/db";
-import * as subscriptionService from "./subscriptions.service";
+
+import * as subscriptionService from "./subscriptions.service.js";
 
 const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
-if (!WEBHOOK_SECRET) {
-  throw new Error("CLERK_WEBHOOK_SECRET is not set in environment variables");
+/** Clerk webhook payload shape (user.* events) */
+interface ClerkWebhookPayload {
+  data: { id: string };
+  type: string;
 }
 
 /**
@@ -26,19 +30,28 @@ export async function handleClerkWebhook(
     return;
   }
 
+  if (!WEBHOOK_SECRET) {
+    throw new Error("CLERK_WEBHOOK_SECRET is not set in environment variables");
+  }
+
   // Verify webhook signature using Svix
-  const wh = new Webhook(WEBHOOK_SECRET!);
-  let payload: any;
+  const wh = new Webhook(WEBHOOK_SECRET);
+  let payload: ClerkWebhookPayload;
 
   try {
     payload = wh.verify(JSON.stringify(req.body), {
       "svix-id": svixId,
-      "svix-timestamp": svixTimestamp,
       "svix-signature": svixSignature,
+      "svix-timestamp": svixTimestamp,
+    }) as ClerkWebhookPayload;
+  } catch (err) {
+    console.error(
+      "Webhook signature verification failed:",
+      err instanceof Error ? err.message : err,
+    );
+    res.status(400).json({
+      error: `Webhook Error: ${err instanceof Error ? err.message : String(err)}`,
     });
-  } catch (err: any) {
-    console.error("Webhook signature verification failed:", err.message);
-    res.status(400).json({ error: `Webhook Error: ${err.message}` });
     return;
   }
 
@@ -47,13 +60,13 @@ export async function handleClerkWebhook(
 
   try {
     switch (eventType) {
-      case "user.deleted":
-        await handleUserDeleted(payload.data);
-        break;
-
       case "user.created":
         // Optional: Log user creation for debugging
         console.log(`User created: ${payload.data.id}`);
+        break;
+
+      case "user.deleted":
+        await handleUserDeleted(payload.data);
         break;
 
       case "user.updated":
@@ -66,7 +79,7 @@ export async function handleClerkWebhook(
     }
 
     res.json({ received: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error processing Clerk webhook:", error);
     res.status(500).json({ error: "Webhook processing failed" });
   }
@@ -90,5 +103,5 @@ async function handleUserDeleted(data: { id: string }): Promise<void> {
 
   // Revoke subscription in Stripe and update database
   await subscriptionService.revokeSubscription(workspace.id);
-  console.log(`✅ Subscription revoked for workspace: ${workspace.id}`);
+  console.log(`✅ Subscription revoked for workspace: ${String(workspace.id)}`);
 }

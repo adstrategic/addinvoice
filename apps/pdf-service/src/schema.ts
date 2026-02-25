@@ -1,53 +1,53 @@
 import { z } from "zod";
 
 export const invoicePdfPayloadSchema = z.object({
-  invoice: z.object({
-    invoiceNumber: z.string(),
-    issueDate: z.union([z.string(), z.date()]),
-    dueDate: z.union([z.string(), z.date()]),
-    purchaseOrder: z.string().nullish(),
-    currency: z.string(),
-    subtotal: z.number(),
-    discount: z.number(),
-    totalTax: z.number(),
-    total: z.number(),
-    totalPaid: z.number().optional(),
-    balance: z.number().optional(),
-    notes: z.string().nullish(),
-    terms: z.string().nullish(),
-  }),
   client: z.object({
-    name: z.string(),
-    businessName: z.string().nullish(),
     address: z.string().nullish(),
-    phone: z.string().nullish(),
+    businessName: z.string().nullish(),
     email: z.string().nullish(),
+    name: z.string(),
     nit: z.string().nullish(),
+    phone: z.string().nullish(),
   }),
   company: z.object({
-    name: z.string(),
     address: z.string().nullish(),
     email: z.string().nullish(),
-    phone: z.string().nullish(),
-    nit: z.string().nullish(),
     logo: z.string().nullish(),
+    name: z.string(),
+    nit: z.string().nullish(),
+    phone: z.string().nullish(),
+  }),
+  invoice: z.object({
+    balance: z.number().optional(),
+    currency: z.string(),
+    discount: z.number(),
+    dueDate: z.union([z.string(), z.date()]),
+    invoiceNumber: z.string(),
+    issueDate: z.union([z.string(), z.date()]),
+    notes: z.string().nullish(),
+    purchaseOrder: z.string().nullish(),
+    subtotal: z.number(),
+    terms: z.string().nullish(),
+    total: z.number(),
+    totalPaid: z.number().optional(),
+    totalTax: z.number(),
   }),
   items: z.array(
     z.object({
-      name: z.string(),
       description: z.string().nullish(),
+      discountAmount: z.number().optional(),
+      name: z.string(),
       quantity: z.number(),
       quantityUnit: z.string(),
-      unitPrice: z.number(),
       tax: z.number(),
-      discountAmount: z.number().optional(),
       total: z.number(),
+      unitPrice: z.number(),
     }),
   ),
   paymentMethod: z
     .object({
-      type: z.string(),
       handle: z.string(),
+      type: z.string(),
     })
     .nullish(),
 });
@@ -55,35 +55,35 @@ export const invoicePdfPayloadSchema = z.object({
 export type InvoicePdfPayload = z.infer<typeof invoicePdfPayloadSchema>;
 
 export const receiptPdfPayloadSchema = z.object({
-  company: z.object({
-    name: z.string(),
-    logo: z.string().nullish(),
-    address: z.string().nullish(),
-  }),
   client: z.object({
-    name: z.string(),
     email: z.string().nullish(),
+    name: z.string(),
+  }),
+  company: z.object({
+    address: z.string().nullish(),
+    logo: z.string().nullish(),
+    name: z.string(),
   }),
   invoice: z.object({
-    invoiceNumber: z.string(),
-    total: z.number(),
-    currency: z.string(),
-    status: z.string(),
-    totalPaid: z.number(),
     balance: z.number(),
+    currency: z.string(),
+    invoiceNumber: z.string(),
+    status: z.string(),
+    total: z.number(),
+    totalPaid: z.number(),
   }),
   payment: z.object({
-    id: z.string(),
     amount: z.number(),
-    method: z.string(),
     date: z.string(),
+    id: z.string(),
+    method: z.string(),
     notes: z.string().nullish(),
   }),
   payments: z.array(
     z.object({
+      amount: z.number(),
       date: z.string(),
       method: z.string(),
-      amount: z.number(),
     }),
   ),
 });

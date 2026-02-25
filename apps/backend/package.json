@@ -1,9 +1,11 @@
 {
   "name": "@addinvoice/backend",
   "version": "1.0.0",
-  "type": "commonjs",
+  "type": "module",
   "main": "dist/server.js",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": "./dist/server.js"
   },
@@ -17,7 +19,8 @@
     "test": "vitest run",
     "test:unit": "vitest run unit",
     "test:integration": "NODE_ENV=TEST vitest run integration",
-    "test:integration:prepare": "dotenv -e .env.test -v NODE_ENV=TEST -- pnpm --filter @addinvoice/db run db:deploy"
+    "test:integration:prepare": "dotenv -e .env.test -v NODE_ENV=TEST -- pnpm --filter @addinvoice/db run db:deploy",
+    "lint": "eslint ."
   },
   "keywords": [],
   "author": "",
@@ -50,6 +53,8 @@
     "zod-express-middleware": "^1.4.0"
   },
   "devDependencies": {
+    "@addinvoice/eslint-config": "workspace:*",
+    "@addinvoice/typescript-config": "workspace:*",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/express-rate-limit": "^6.0.2",
@@ -57,11 +62,13 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^24.0.0",
     "@types/supertest": "^6.0.3",
+    "eslint": "^10.0.2",
     "nodemon": "^3.1.11",
     "prisma": "^7.0.0",
     "supertest": "^7.2.2",
     "tsx": "^4.19.2",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.50.0",
     "vitest": "^4.0.18",
     "vitest-mock-extended": "^1.3.1"
   }

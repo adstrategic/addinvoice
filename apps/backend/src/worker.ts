@@ -1,13 +1,17 @@
 import "dotenv/config";
 
-import { startWorkers } from "./queue/workers";
+import { startWorkers } from "./queue/workers.js";
 
 const hasRedis =
-  typeof process.env.REDIS_URL === "string" && process.env.REDIS_URL.trim() !== "" ||
-  typeof process.env.REDIS_HOST === "string" && process.env.REDIS_HOST.trim() !== "";
+  (typeof process.env.REDIS_URL === "string" &&
+    process.env.REDIS_URL.trim() !== "") ||
+  (typeof process.env.REDIS_HOST === "string" &&
+    process.env.REDIS_HOST.trim() !== "");
 
 if (!hasRedis) {
-  console.error("[worker] Redis is not configured (REDIS_URL or REDIS_HOST). Exiting.");
+  console.error(
+    "[worker] Redis is not configured (REDIS_URL or REDIS_HOST). Exiting.",
+  );
   process.exit(1);
 }
 

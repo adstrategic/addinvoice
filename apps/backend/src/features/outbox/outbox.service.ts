@@ -1,16 +1,8 @@
-import prisma from "../../core/db";
-import { sendEmailWithPdf } from "../../lib/email";
-import * as invoicesService from "../invoices/invoices.service";
+import { prisma } from "@addinvoice/db";
 import { InvoiceStatus } from "@addinvoice/db";
 
-const BATCH_SIZE = 50;
-
-function getPdfConfig(): { url: string; secret: string } | null {
-  const url = process.env.PDF_SERVICE_URL?.trim();
-  const secret = process.env.PDF_SERVICE_SECRET?.trim();
-  if (!url || !secret) return null;
-  return { url: url.replace(/\/$/, ""), secret };
-}
+import { sendEmailWithPdf } from "../../lib/email.js";
+import * as invoicesService from "../invoices/invoices.service.js";
 
 async function fetchInvoicePdfBatch(
   payloads: ReturnType<typeof invoicesService.buildInvoicePdfPayload>[],
@@ -19,16 +11,23 @@ async function fetchInvoicePdfBatch(
   if (!c)
     throw new Error("PDF_SERVICE_URL or PDF_SERVICE_SECRET not configured");
   const res = await fetch(`${c.url}/generate-batch`, {
-    method: "POST",
+    body: JSON.stringify({ payloads }),
     headers: {
       "Content-Type": "application/json",
       "X-PDF-Service-Key": c.secret,
     },
-    body: JSON.stringify({ payloads }),
+    method: "POST",
   });
   if (!res.ok) throw new Error("PDF batch error: " + (await res.text()));
   const data = (await res.json()) as { pdfs: string[] };
-  return (data.pdfs ?? []).map((b) => Buffer.from(b, "base64"));
+  return data.pdfs.map((b) => Buffer.from(b, "base64"));
+}
+
+function getPdfConfig(): null | { secret: string; url: string; } {
+  const url = process.env.PDF_SERVICE_URL?.trim();
+  const secret = process.env.PDF_SERVICE_SECRET?.trim();
+  if (!url || !secret) return null;
+  return { secret, url: url.replace(/\/$/, "") };
 }
 
 function messageToHtml(message: string): string {
@@ -50,52 +49,33 @@ const ACTIVE_INVOICE_STATUSES = [
 ];
 
 /**
- * Mark invoices that are SENT or VIEWED and past due as OVERDUE.
- * Run daily at 00:00 UTC.
- */
-export async function markOverdueInvoices(): Promise<number> {
-  const startOfToday = new Date();
-  startOfToday.setUTCHours(0, 0, 0, 0);
-  const result = await prisma.invoice.updateMany({
-    where: {
-      status: { in: [InvoiceStatus.SENT, InvoiceStatus.VIEWED] },
-      dueDate: { lt: startOfToday },
-    },
-    data: { status: InvoiceStatus.OVERDUE },
-  });
-  return result.count;
-}
-
-/**
  * Execute reminder emails for eligible invoices at start of day (no outbox).
  * Run daily after markOverdueInvoices. Finds who needs a reminder, batch-generates PDFs, sends emails, updates lastReminderSentAt.
  */
 export async function executeReminders(): Promise<{
-  sent: number;
   failed: number;
+  sent: number;
 }> {
   const c = getPdfConfig();
-  if (!c) return { sent: 0, failed: 0 };
+  if (!c) return { failed: 0, sent: 0 };
   const startOfToday = new Date();
   startOfToday.setUTCHours(0, 0, 0, 0);
   const todayTime = startOfToday.getTime();
   const invoices = await prisma.invoice.findMany({
+    include: { client: true },
     where: {
       status: { in: ACTIVE_INVOICE_STATUSES },
     },
-    include: { client: true },
   });
   const eligible: typeof invoices = [];
   for (const inv of invoices) {
-    const client = inv.client;
-    if (!client) continue;
     const due = new Date(inv.dueDate);
     due.setUTCHours(0, 0, 0, 0);
     const dueTime = due.getTime();
     const isPastDue = dueTime < todayTime;
     const intervalDays = isPastDue
-      ? client.reminderAfterDueIntervalDays
-      : client.reminderBeforeDueIntervalDays;
+      ? inv.client.reminderAfterDueIntervalDays
+      : inv.client.reminderBeforeDueIntervalDays;
     if (intervalDays == null || intervalDays < 1) continue;
     const lastSent = inv.lastReminderSentAt;
     const lastSentTime = lastSent ? new Date(lastSent).getTime() : 0;
@@ -105,7 +85,7 @@ export async function executeReminders(): Promise<{
     if (daysSinceLast < intervalDays) continue;
     eligible.push(inv);
   }
-  if (eligible.length === 0) return { sent: 0, failed: 0 };
+  if (eligible.length === 0) return { failed: 0, sent: 0 };
   let sent = 0;
   let failed = 0;
   const payloads: ReturnType<typeof invoicesService.buildInvoicePdfPayload>[] =
@@ -119,10 +99,9 @@ export async function executeReminders(): Promise<{
     pdfs = await fetchInvoicePdfBatch(payloads);
   } catch (err) {
     console.error("[executeReminders] PDF batch failed:", err);
-    return { sent: 0, failed: eligible.length };
+    return { failed: eligible.length, sent: 0 };
   }
-  for (let i = 0; i < eligible.length; i++) {
-    const inv = eligible[i];
+  for (const [i, inv] of eligible.entries()) {
     const pdf = pdfs[i];
     if (!pdf) {
       failed++;
@@ -132,15 +111,15 @@ export async function executeReminders(): Promise<{
     const message = `This is a friendly reminder that invoice ${inv.invoiceNumber} is ${isPastDue ? "overdue" : "due soon"}. Please arrange payment at your earliest convenience.`;
     try {
       await sendEmailWithPdf({
-        to: inv.clientEmail,
-        subject: `Reminder: Invoice ${inv.invoiceNumber}`,
+        filename: `invoice-${inv.invoiceNumber}.pdf`,
         html: messageToHtml(message),
         pdfBuffer: pdf,
-        filename: `invoice-${inv.invoiceNumber}.pdf`,
+        subject: `Reminder: Invoice ${inv.invoiceNumber}`,
+        to: inv.clientEmail,
       });
       await prisma.invoice.update({
-        where: { id: inv.id },
         data: { lastReminderSentAt: new Date() },
+        where: { id: inv.id },
       });
       sent++;
     } catch (err) {
@@ -151,5 +130,22 @@ export async function executeReminders(): Promise<{
       failed++;
     }
   }
-  return { sent, failed };
+  return { failed, sent };
+}
+
+/**
+ * Mark invoices that are SENT or VIEWED and past due as OVERDUE.
+ * Run daily at 00:00 UTC.
+ */
+export async function markOverdueInvoices(): Promise<number> {
+  const startOfToday = new Date();
+  startOfToday.setUTCHours(0, 0, 0, 0);
+  const result = await prisma.invoice.updateMany({
+    data: { status: InvoiceStatus.OVERDUE },
+    where: {
+      dueDate: { lt: startOfToday },
+      status: { in: [InvoiceStatus.SENT, InvoiceStatus.VIEWED] },
+    },
+  });
+  return result.count;
 }

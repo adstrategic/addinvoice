@@ -1,45 +1,537 @@
-import {
-  BusinessEntity,
-  businessEntitySchema,
-} from "../businesses/businesses.schemas";
-import prisma from "../../core/db";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Prisma } from "@addinvoice/db";
+
+import { prisma } from "@addinvoice/db";
+
 import type {
-  ListInvoicesQuery,
-  CreateInvoiceDto,
-  UpdateInvoiceDto,
-  InvoiceEntityWithRelations,
-  CreateInvoiceItemDto,
-  UpdateInvoiceItemDto,
-  InvoiceItemEntity,
-} from "./invoices.schemas";
-import {
-  PaymentEntity,
   CreatePaymentDto,
+  PaymentEntity,
   UpdatePaymentDto,
-} from "../payments/payments.schemas";
+} from "../payments/payments.schemas.js";
+import type {
+  CreateInvoiceDto,
+  CreateInvoiceItemDto,
+  InvoiceEntity,
+  InvoiceEntityWithRelations,
+  InvoiceItemEntity,
+  ListInvoicesQuery,
+  UpdateInvoiceDto,
+  UpdateInvoiceItemDto,
+} from "./invoices.schemas.js";
+
 import {
   EntityNotFoundError,
   EntityValidationError,
-} from "../../errors/EntityErrors";
-import { ClientEntity } from "../clients/clients.schemas";
+} from "../../errors/EntityErrors.js";
+import { type BusinessEntity } from "../businesses/businesses.schemas.js";
+import { type ClientEntity } from "../clients/clients.schemas.js";
 
 // ===== HELPER FUNCTIONS =====
+
+/**
+ * Payload for the pdf-service POST /generate-receipt endpoint.
+ * Shape must match pdf-service receiptPdfPayloadSchema.
+ */
+export interface ReceiptPdfPayload {
+  client: { email: null | string; name: string };
+  company: { address: null | string; logo: null | string; name: string };
+  invoice: {
+    balance: number;
+    currency: string;
+    invoiceNumber: string;
+    status: string;
+    total: number;
+    totalPaid: number;
+  };
+  payment: {
+    amount: number;
+    date: string;
+    id: string;
+    method: string;
+    notes: null | string;
+  };
+  payments: { amount: number; date: string; method: string }[];
+}
+
+/**
+ * Add an invoice item
+ */
+export async function addInvoiceItem(
+  workspaceId: number,
+  invoiceId: number,
+  data: Omit<CreateInvoiceItemDto, "invoiceId">,
+): Promise<InvoiceItemEntity> {
+  return await prisma.$transaction(async (tx) => {
+    // Verify invoice exists and belongs to workspace
+    const invoice = await tx.invoice.findUnique({
+      where: { id: invoiceId },
+    });
+
+    if (invoice?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError({
+        code: "ERR_NF",
+        message: "Invoice not found",
+        statusCode: 404,
+      });
+    }
+
+    if (invoice.status !== "DRAFT") {
+      throw new EntityValidationError({
+        code: "ERR_VALID",
+        message: "Cannot add item to a non-draft invoice",
+        statusCode: 400,
+      });
+    }
+
+    // Handle catalog integration if needed
+    let catalogId: null | number = null;
+
+    // If catalogId is provided directly, use it (when adding from existing catalog)
+    if (data.catalogId) {
+      // Verify catalog exists and belongs to the invoice's business
+      const catalog = await tx.catalog.findUnique({
+        where: { id: data.catalogId },
+      });
+
+      if (!catalog) {
+        throw new EntityNotFoundError({
+          code: "ERR_NF",
+          message: "Catalog item not found",
+          statusCode: 404,
+        });
+      }
+
+      if (catalog.businessId !== invoice.businessId) {
+        throw new EntityValidationError({
+          code: "ERR_VALID",
+          message: "Catalog item does not belong to the invoice's business",
+          statusCode: 400,
+        });
+      }
+
+      catalogId = data.catalogId;
+    } else if (data.saveToCatalog) {
+      // Create new catalog entry or link to existing one by name
+      catalogId = await handleCatalogIntegration(
+        tx,
+        workspaceId,
+        invoice.businessId,
+        {
+          description: data.description,
+          name: data.name,
+          price: data.unitPrice,
+          quantityUnit: data.quantityUnit,
+        },
+      );
+    }
+
+    // Determine effective taxMode - use passed taxMode or fallback to invoice's
+    const effectiveTaxMode = data.taxMode ?? invoice.taxMode;
+
+    // Prepare invoice update data for tax-related fields
+    const invoiceUpdateData: {
+      taxMode?: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
+      taxName?: null | string;
+      taxPercentage?: null | number;
+    } = {};
+
+    // If taxMode was passed and differs from invoice, update the invoice
+    if (data.taxMode && data.taxMode !== invoice.taxMode) {
+      invoiceUpdateData.taxMode = data.taxMode;
+    }
+
+    // If taxMode is BY_TOTAL and taxName/taxPercentage are provided, update them
+    if (
+      effectiveTaxMode === "BY_TOTAL" &&
+      (data.taxName !== undefined || data.taxPercentage !== undefined)
+    ) {
+      if (data.taxName !== undefined) {
+        invoiceUpdateData.taxName = data.taxName;
+      }
+      if (data.taxPercentage !== undefined) {
+        invoiceUpdateData.taxPercentage = data.taxPercentage;
+      }
+    }
+
+    // Update invoice if there are tax-related changes
+    if (Object.keys(invoiceUpdateData).length > 0) {
+      await tx.invoice.update({
+        data: invoiceUpdateData,
+        where: { id: invoiceId },
+      });
+    }
+
+    // Respect effective taxMode when setting tax fields
+    let itemTax = 0;
+    let itemVatEnabled = false;
+    if (effectiveTaxMode === "BY_PRODUCT") {
+      // Use tax field, ignore vatEnabled
+      itemTax = data.tax ?? 0;
+      itemVatEnabled = false;
+    } else if (effectiveTaxMode === "BY_TOTAL") {
+      // Use vatEnabled field, set tax to invoice taxPercentage for display if vatEnabled
+      itemVatEnabled = data.vatEnabled ?? false;
+      itemTax =
+        itemVatEnabled && invoice.taxPercentage
+          ? Number(invoice.taxPercentage)
+          : 0;
+    } else {
+      // taxMode is NONE - both should be defaults
+      itemTax = 0;
+      itemVatEnabled = false;
+    }
+
+    // Calculate item total
+    const itemTotal = calculateItemTotal({
+      discount: data.discount,
+      discountType: data.discountType,
+      quantity: data.quantity,
+      tax: itemTax,
+      unitPrice: data.unitPrice,
+      vatEnabled: itemVatEnabled,
+    });
+
+    // Create item
+    const item = await tx.invoiceItem.create({
+      data: {
+        catalogId,
+        description: data.description,
+        discount: data.discount,
+        discountType: data.discountType,
+        invoiceId,
+        name: data.name,
+        quantity: data.quantity,
+        quantityUnit: data.quantityUnit,
+        tax: itemTax,
+        total: itemTotal,
+        unitPrice: data.unitPrice,
+        vatEnabled: itemVatEnabled,
+      },
+    });
+
+    // Recalculate invoice totals
+    const allItems = await tx.invoiceItem.findMany({
+      where: { invoiceId },
+    });
+
+    // Use updated taxPercentage if provided, otherwise use invoice's current value
+    const effectiveTaxPercentage =
+      data.taxPercentage !== undefined
+        ? data.taxPercentage
+        : invoice.taxPercentage
+          ? Number(invoice.taxPercentage)
+          : null;
+
+    const totals = calculateInvoiceTotals(
+      {
+        discount: Number(invoice.discount),
+        discountType: invoice.discountType,
+        taxMode: effectiveTaxMode,
+        taxPercentage: effectiveTaxPercentage,
+      },
+      allItems.map((i) => ({
+        discount: Number(i.discount),
+        discountType: i.discountType,
+        quantity: Number(i.quantity),
+        tax: Number(i.tax),
+        unitPrice: Number(i.unitPrice),
+        vatEnabled: i.vatEnabled,
+      })),
+    );
+
+    // Prepare final invoice update data
+    const finalInvoiceUpdateData: {
+      subtotal: number;
+      taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
+      taxName?: null | string;
+      taxPercentage?: null | number;
+      total: number;
+      totalTax: number;
+    } = {
+      subtotal: totals.subtotal,
+      taxMode: effectiveTaxMode, // Ensure taxMode is updated along with totals
+      total: totals.total,
+      totalTax: totals.totalTax,
+    };
+
+    // Include taxName and taxPercentage if they were provided and taxMode is BY_TOTAL
+    if (
+      effectiveTaxMode === "BY_TOTAL" &&
+      (data.taxName !== undefined || data.taxPercentage !== undefined)
+    ) {
+      if (data.taxName !== undefined) {
+        finalInvoiceUpdateData.taxName = data.taxName;
+      }
+      if (data.taxPercentage !== undefined) {
+        finalInvoiceUpdateData.taxPercentage = data.taxPercentage;
+      }
+    }
+
+    await tx.invoice.update({
+      data: finalInvoiceUpdateData,
+      where: { id: invoiceId },
+    });
+
+    await updateInvoiceBalanceAndStatus(tx, invoiceId, totals.total);
+
+    return {
+      ...item,
+      discount: Number(item.discount),
+      quantity: Number(item.quantity),
+      tax: Number(item.tax),
+      total: Number(item.total),
+      unitPrice: Number(item.unitPrice),
+    };
+  });
+}
+
+/**
+ * Add a payment to an invoice.
+ * If data.sendReceipt is true, enqueues a job to send a receipt email (not persisted).
+ */
+export async function addPayment(
+  workspaceId: number,
+  invoiceId: number,
+  data: CreatePaymentDto,
+): Promise<PaymentEntity> {
+  const { sendReceipt, ...paymentData } = data;
+
+  const payment = await prisma.$transaction(async (tx) => {
+    // Verify invoice exists and belongs to workspace
+    const invoice = await tx.invoice.findUnique({
+      include: { _count: { select: { items: true } } },
+      where: { id: invoiceId },
+    });
+
+    if (!invoice || invoice.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError({
+        code: "ERR_NF",
+        message: "Invoice not found",
+        statusCode: 404,
+      });
+    }
+
+    if (invoice._count.items === 0) {
+      throw new EntityValidationError({
+        code: "ERR_VALID",
+        message: "Cannot add payment to an invoice with no items",
+        statusCode: 400,
+      });
+    }
+
+    if (Number(invoice.balance) <= 0) {
+      throw new EntityValidationError({
+        code: "ERR_VALID",
+        message: "Cannot add payment: invoice balance is zero or already paid",
+        statusCode: 400,
+      });
+    }
+
+    // Check if transactionId already exists only when provided
+    const transactionId = paymentData.transactionId ?? null;
+
+    // Create payment
+    const created = await tx.payment.create({
+      data: {
+        amount: paymentData.amount,
+        details: paymentData.details,
+        invoiceId,
+        paidAt: paymentData.paidAt ?? new Date(),
+        paymentMethod: paymentData.paymentMethod,
+        transactionId,
+        workspaceId,
+      },
+    });
+
+    // Update invoice balance and status
+    await updateInvoiceBalanceAndStatus(tx, invoiceId, Number(invoice.total));
+
+    return {
+      ...created,
+      amount: Number(created.amount),
+    } as PaymentEntity;
+  });
+
+  if (sendReceipt) {
+    const { sendReceiptQueue } = await import("../../queue/queues.js");
+    await sendReceiptQueue.add("send-receipt", {
+      invoiceId,
+      paymentId: payment.id,
+      workspaceId,
+    });
+  }
+
+  return payment;
+}
+
+/**
+ * Build the payload expected by the PDF service for invoice generation.
+ * Used by the controller (getInvoicePdf) and by the send-invoice queue worker.
+ */
+export function buildInvoicePdfPayload(invoice: InvoiceEntityWithRelations): {
+  client: ClientEntity;
+  company: BusinessEntity;
+  invoice: Omit<InvoiceEntity, "dueDate" | "issueDate"> & {
+    dueDate: string;
+    issueDate: string;
+    totalPaid?: number;
+  };
+  items: InvoiceItemEntity[];
+  paymentMethod: null | { handle: null | string; type: string };
+} {
+  const invoiceDiscountFixed =
+    invoice.discountType === "PERCENTAGE"
+      ? (invoice.subtotal * invoice.discount) / 100
+      : invoice.discountType === "FIXED"
+        ? invoice.discount
+        : 0;
+
+  const {
+    business: _business,
+    client: _client,
+    items: _invoiceItems,
+    payments: _payments,
+    selectedPaymentMethod: _selectedPm,
+    ...invoiceFields
+  } = invoice;
+
+  return {
+    client: {
+      ...invoice.client,
+      address: invoice.client.address ?? null,
+      businessName: invoice.client.businessName ?? null,
+      email: invoice.client.email,
+      name: invoice.client.name,
+      nit: invoice.client.nit ?? null,
+      phone: invoice.client.phone ?? null,
+    },
+    company: {
+      ...invoice.business,
+      address: invoice.business.address,
+      defaultTaxPercentage: invoice.business.defaultTaxPercentage ?? null,
+      email: invoice.business.email,
+      logo: invoice.business.logo ?? null,
+      name: invoice.business.name,
+      nit: invoice.business.nit ?? null,
+      phone: invoice.business.phone,
+    },
+    invoice: {
+      ...invoiceFields,
+      balance: invoice.balance,
+      currency: invoice.currency,
+      discount: invoiceDiscountFixed,
+      dueDate: invoice.dueDate.toISOString(),
+      invoiceNumber: invoice.invoiceNumber,
+      issueDate: invoice.issueDate.toISOString(),
+      notes: invoice.notes,
+      purchaseOrder: invoice.purchaseOrder,
+      subtotal: invoice.subtotal,
+      taxPercentage: invoice.taxPercentage ?? null,
+      terms: invoice.terms,
+      total: invoice.total,
+      totalPaid: (invoice.payments ?? []).reduce((sum, p) => sum + p.amount, 0),
+      totalTax: invoice.totalTax,
+    },
+    items: (invoice.items ?? []).map((item) => {
+      const base = item.quantity * item.unitPrice;
+      const discountAmount =
+        item.discountType === "PERCENTAGE"
+          ? (base * item.discount) / 100
+          : item.discountType === "FIXED"
+            ? item.discount
+            : 0;
+      return {
+        ...item,
+        discount: discountAmount,
+        quantity: item.quantity,
+        tax: item.tax ?? 0,
+        total: item.total,
+        unitPrice: item.unitPrice,
+      };
+    }),
+    paymentMethod:
+      invoice.selectedPaymentMethod &&
+      invoice.selectedPaymentMethod.isEnabled &&
+      invoice.selectedPaymentMethod.handle?.trim()
+        ? {
+            handle: invoice.selectedPaymentMethod.handle.trim(),
+            type: invoice.selectedPaymentMethod.type,
+          }
+        : null,
+  };
+}
+
+/**
+ * Build the payload for pdf-service receipt PDF generation.
+ * Used by the send-receipt queue worker.
+ */
+export function buildReceiptPdfPayload(
+  invoice: InvoiceEntityWithRelations,
+  payment: PaymentEntity,
+): ReceiptPdfPayload {
+  const totalPaid = (invoice.payments ?? []).reduce(
+    (sum, p) => sum + p.amount,
+    0,
+  );
+  const formatDate = (d: Date | string | undefined) =>
+    d ? new Date(d).toLocaleDateString() : "";
+
+  return {
+    client: {
+      email: invoice.clientEmail ?? null,
+      name: invoice.client.name,
+    },
+    company: {
+      address: invoice.business.address,
+      logo: invoice.business.logo ?? null,
+      name: invoice.business.name,
+    },
+    invoice: {
+      balance: invoice.balance,
+      currency: invoice.currency,
+      invoiceNumber: invoice.invoiceNumber,
+      status: invoice.status,
+      total: invoice.total,
+      totalPaid,
+    },
+    payment: {
+      amount: payment.amount,
+      date: formatDate(payment.paidAt),
+      id: String(payment.id),
+      method: payment.paymentMethod,
+      notes: payment.details ?? null,
+    },
+    payments: (invoice.payments ?? [])
+      .slice()
+      .sort((a, b) => {
+        const pa = a.paidAt;
+        const pb = b.paidAt;
+        return (
+          (pb ? new Date(pb).getTime() : 0) - (pa ? new Date(pa).getTime() : 0)
+        );
+      })
+      .map((p) => ({
+        amount: p.amount,
+        date: formatDate(p.paidAt),
+        method: p.paymentMethod,
+      })),
+  };
+}
 
 /**
  * Calculate item total with discount and tax
  */
 export function calculateItemTotal(
   item: {
-    quantity: number;
-    unitPrice: number;
     discount: number;
-    discountType: "PERCENTAGE" | "FIXED" | "NONE";
+    discountType: "FIXED" | "NONE" | "PERCENTAGE";
+    quantity: number;
     tax: number;
+    unitPrice: number;
     vatEnabled: boolean;
   },
-  invoiceTaxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE",
-  invoiceTaxPercentage: number | null,
+  // invoiceTaxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE",
+  // invoiceTaxPercentage: null | number,
 ): number {
   // 1. Base amount: quantity × unitPrice
   const baseAmount = item.quantity * item.unitPrice;
@@ -52,128 +544,662 @@ export function calculateItemTotal(
     itemTotalAfterDiscount = baseAmount - item.discount;
   }
 
+  // TODO: Do not apply tax here
   // 3. Apply tax
-  let taxAmount = 0;
-  if (invoiceTaxMode === "BY_PRODUCT") {
-    // Use item's tax percentage on item total after discount
-    taxAmount = (itemTotalAfterDiscount * item.tax) / 100;
-  } else if (
-    invoiceTaxMode === "BY_TOTAL" &&
-    item.vatEnabled &&
-    invoiceTaxPercentage
-  ) {
-    // Use invoice tax percentage on items with vatEnabled = true
-    taxAmount = (itemTotalAfterDiscount * invoiceTaxPercentage) / 100;
-  }
+  // let taxAmount = 0;
+  // if (invoiceTaxMode === "BY_PRODUCT") {
+  //   // Use item's tax percentage on item total after discount
+  //   taxAmount = (itemTotalAfterDiscount * item.tax) / 100;
+  // } else if (
+  //   invoiceTaxMode === "BY_TOTAL" &&
+  //   item.vatEnabled &&
+  //   invoiceTaxPercentage
+  // ) {
+  //   // Use invoice tax percentage on items with vatEnabled = true
+  //   taxAmount = (itemTotalAfterDiscount * invoiceTaxPercentage) / 100;
+  // }
 
   // 4. Final item total without tax so the tax is not added in the item but on the invoice level
   return itemTotalAfterDiscount;
 }
 
 /**
- * Calculate invoice totals from items
+ * Create a new invoice with items
  */
-function calculateInvoiceTotals(
-  invoice: {
-    discount: number;
-    discountType: "PERCENTAGE" | "FIXED" | "NONE";
-    taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
-    taxPercentage: number | null;
-  },
-  items: Array<{
-    quantity: number;
-    unitPrice: number;
-    discount: number;
-    discountType: "PERCENTAGE" | "FIXED" | "NONE";
-    tax: number;
-    vatEnabled: boolean;
-  }>,
-): {
-  subtotal: number;
-  totalTax: number;
-  total: number;
-} {
-  // Calculate each item's total (after item discount, before tax)
-  const itemTotals = items.map((item) => {
-    const baseAmount = item.quantity * item.unitPrice;
-    let itemTotalAfterDiscount = baseAmount;
-    if (item.discountType === "PERCENTAGE") {
-      itemTotalAfterDiscount = baseAmount - (baseAmount * item.discount) / 100;
-    } else if (item.discountType === "FIXED") {
-      itemTotalAfterDiscount = baseAmount - item.discount;
+export async function createInvoice(
+  workspaceId: number,
+  data: CreateInvoiceDto,
+): Promise<InvoiceEntityWithRelations> {
+  return await prisma.$transaction(async (tx) => {
+    // Check if workspace has at least one business
+    const businessCount = await tx.business.count({
+      where: {
+        workspaceId,
+      },
+    });
+
+    if (businessCount === 0) {
+      throw new EntityValidationError({
+        code: "ERR_VALID",
+        message:
+          "You must create a business before creating invoices. Please complete the setup first.",
+        statusCode: 400,
+      });
     }
-    return itemTotalAfterDiscount;
+
+    const business = await tx.business.findFirst({
+      where: {
+        id: data.businessId,
+        workspaceId,
+      },
+    });
+
+    if (!business) {
+      throw new EntityValidationError({
+        code: "ERR_VALID",
+        message: "Business not found or does not belong to your workspace",
+        statusCode: 400,
+      });
+    }
+
+    // Generate invoice number if not provided
+    let invoiceNumber = data.invoiceNumber;
+    if (!invoiceNumber) {
+      invoiceNumber = await getNextInvoiceNumber(tx, business.id, workspaceId);
+    } else {
+      // Check if invoice number already exists
+      const existing = await tx.invoice.findUnique({
+        where: {
+          workspaceId_businessId_invoiceNumber: {
+            businessId: data.businessId,
+            invoiceNumber,
+            workspaceId,
+          },
+        },
+      });
+      if (existing) {
+        throw new EntityValidationError({
+          code: "ERR_VALID",
+          message: "Invoice number already exists",
+          statusCode: 400,
+        });
+      }
+    }
+
+    // Create invoice items with calculations
+    const itemsToCreate = data.items
+      ? await Promise.all(
+          data.items.map(async (item) => {
+            // Handle catalog integration if needed
+            let catalogId: null | number = null;
+
+            // If catalogId is provided directly, use it (when adding from existing catalog)
+            if (item.catalogId) {
+              // Verify catalog exists and belongs to the business
+              const catalog = await tx.catalog.findUnique({
+                where: { id: item.catalogId },
+              });
+
+              if (!catalog) {
+                throw new EntityNotFoundError({
+                  code: "ERR_NF",
+                  message: "Catalog item not found",
+                  statusCode: 404,
+                });
+              }
+
+              if (catalog.businessId !== data.businessId) {
+                throw new EntityValidationError({
+                  code: "ERR_VALID",
+                  message:
+                    "Catalog item does not belong to the selected business",
+                  statusCode: 400,
+                });
+              }
+
+              catalogId = item.catalogId;
+            } else if (item.saveToCatalog) {
+              // Create new catalog entry or link to existing one by name
+              catalogId = await handleCatalogIntegration(
+                tx,
+                workspaceId,
+                data.businessId,
+                {
+                  description: item.description,
+                  name: item.name,
+                  price: item.unitPrice,
+                  quantityUnit: item.quantityUnit,
+                },
+              );
+            }
+
+            // Determine item tax value based on taxMode
+            let itemTax = 0;
+            const itemVatEnabled = item.vatEnabled ?? false;
+            if (data.taxMode === "BY_PRODUCT") {
+              itemTax = item.tax ?? 0;
+            } else if (data.taxMode === "BY_TOTAL") {
+              // For BY_TOTAL mode, set tax to invoice taxPercentage for display if vatEnabled
+              itemTax =
+                itemVatEnabled && data.taxPercentage ? data.taxPercentage : 0;
+            }
+
+            // Calculate item total
+            const itemTotal = calculateItemTotal({
+              discount: item.discount,
+              discountType: item.discountType,
+              quantity: item.quantity,
+              tax: itemTax,
+              unitPrice: item.unitPrice,
+              vatEnabled: itemVatEnabled,
+            });
+
+            return {
+              catalogId,
+              description: item.description,
+              discount: item.discount,
+              discountType: item.discountType,
+              name: item.name,
+              quantity: item.quantity,
+              quantityUnit: item.quantityUnit,
+              tax: itemTax,
+              total: itemTotal,
+              unitPrice: item.unitPrice,
+              vatEnabled: itemVatEnabled,
+            };
+          }),
+        )
+      : [];
+
+    // Calculate invoice totals
+    const totals = calculateInvoiceTotals(
+      {
+        discount: data.discount,
+        discountType: data.discountType,
+        taxMode: data.taxMode,
+        taxPercentage: data.taxPercentage ?? null,
+      },
+      itemsToCreate,
+    );
+
+    // Get next sequence
+    const lastInvoice = await tx.invoice.findFirst({
+      orderBy: {
+        sequence: "desc",
+      },
+      where: {
+        workspaceId,
+      },
+    });
+    const sequence = lastInvoice ? lastInvoice.sequence + 1 : 1;
+
+    // Handle client creation or selection
+    let clientId: number;
+    let client: {
+      address: null | string;
+      email: string;
+      id: number;
+      phone: null | string;
+    };
+
+    if (data.createClient && data.clientData) {
+      // Create new client within the transaction
+      // Get next client sequence
+      const lastClient = await tx.client.findFirst({
+        orderBy: {
+          sequence: "desc",
+        },
+        select: {
+          sequence: true,
+        },
+        where: {
+          workspaceId,
+        },
+      });
+      const clientSequence = lastClient ? lastClient.sequence + 1 : 1;
+
+      // Create the client
+      const newClient = await tx.client.create({
+        data: {
+          address: data.clientData.address,
+          businessName: data.clientData.businessName,
+          email: data.clientData.email,
+          name: data.clientData.name,
+          nit: data.clientData.nit,
+          phone: data.clientData.phone,
+          reminderAfterDueIntervalDays:
+            data.clientData.reminderAfterDueIntervalDays,
+          reminderBeforeDueIntervalDays:
+            data.clientData.reminderBeforeDueIntervalDays,
+          sequence: clientSequence,
+          workspaceId,
+        },
+      });
+
+      clientId = newClient.id;
+      client = {
+        address: newClient.address,
+        email: newClient.email,
+        id: newClient.id,
+        phone: newClient.phone,
+      };
+    } else {
+      // Use existing client
+      if (!data.clientId) {
+        throw new EntityValidationError({
+          code: "ERR_VALID",
+          message: "Client ID is required when not creating a new client",
+          statusCode: 400,
+        });
+      }
+
+      const existingClient = await tx.client.findUnique({
+        where: { id: data.clientId },
+      });
+
+      if (!existingClient) {
+        throw new EntityValidationError({
+          code: "ERR_VALID",
+          message: "Client not found",
+          statusCode: 400,
+        });
+      }
+
+      clientId = existingClient.id;
+      client = {
+        address: existingClient.address,
+        email: existingClient.email,
+        id: existingClient.id,
+        phone: existingClient.phone,
+      };
+    }
+
+    // Use provided invoice-specific fields or fallback to client defaults
+    const clientEmail = client.email;
+    const clientPhone = client.phone;
+    const clientAddress = client.address;
+
+    // Create invoice
+    const invoice = await tx.invoice.create({
+      data: {
+        balance: totals.total,
+        businessId: data.businessId,
+        clientAddress,
+        clientEmail,
+        clientId: clientId,
+        clientPhone,
+        currency: data.currency,
+        customHeader: data.customHeader,
+        discount: data.discount,
+        discountType: data.discountType,
+        dueDate: data.dueDate,
+        invoiceNumber,
+        issueDate: data.issueDate,
+        items: {
+          create: itemsToCreate,
+        },
+        notes: data.notes,
+        purchaseOrder: data.purchaseOrder,
+        selectedPaymentMethodId: data.selectedPaymentMethodId ?? null,
+        sequence,
+        status: "DRAFT",
+        subtotal: totals.subtotal,
+        taxMode: data.taxMode,
+        taxName: data.taxName ?? null,
+        taxPercentage: data.taxPercentage ?? null,
+        terms: data.terms,
+        total: totals.total,
+        totalTax: totals.totalTax,
+        workspaceId,
+      },
+      include: {
+        business: true,
+        client: true,
+        items: true,
+      },
+    });
+
+    return {
+      ...invoice,
+      balance: Number(invoice.balance),
+      business: {
+        ...invoice.business,
+        defaultTaxMode: invoice.business.defaultTaxMode,
+        defaultTaxPercentage: invoice.business.defaultTaxPercentage
+          ? Number(invoice.business.defaultTaxPercentage)
+          : null,
+      },
+      discount: Number(invoice.discount),
+      items: invoice.items.map((item) => ({
+        ...item,
+        discount: Number(item.discount),
+        quantity: Number(item.quantity),
+        tax: Number(item.tax),
+        total: Number(item.total),
+        unitPrice: Number(item.unitPrice),
+      })),
+      sequence: invoice.sequence,
+      subtotal: Number(invoice.subtotal),
+      taxPercentage: invoice.taxPercentage
+        ? Number(invoice.taxPercentage)
+        : null,
+      total: Number(invoice.total),
+      totalTax: Number(invoice.totalTax),
+    };
+  });
+}
+
+// ===== CORE INVOICE OPERATIONS =====
+
+/**
+ * Delete an invoice
+ */
+export async function deleteInvoice(
+  workspaceId: number,
+  id: number,
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const existingInvoice = await tx.invoice.findUnique({
+      include: { payments: true },
+      where: { id },
+    });
+
+    if (!existingInvoice || existingInvoice.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError({
+        code: "ERR_NF",
+        message: "Invoice not found",
+        statusCode: 404,
+      });
+    }
+
+    if (existingInvoice.status !== "DRAFT") {
+      throw new EntityValidationError({
+        code: "ERR_VALID",
+        message: "Cannot delete a non-draft invoice",
+        statusCode: 400,
+      });
+    }
+
+    if (existingInvoice.payments.length > 0) {
+      throw new EntityValidationError({
+        code: "ERR_VALID",
+        message: "Cannot delete an invoice with payments",
+        statusCode: 400,
+      });
+    }
+
+    await tx.invoice.delete({
+      where: { id },
+    });
+  });
+}
+
+/**
+ * Delete an invoice item
+ */
+export async function deleteInvoiceItem(
+  workspaceId: number,
+  invoiceId: number,
+  itemId: number,
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    // Verify invoice exists and belongs to workspace
+    const invoice = await tx.invoice.findUnique({
+      where: { id: invoiceId },
+    });
+
+    if (invoice?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError({
+        code: "ERR_NF",
+        message: "Invoice not found",
+        statusCode: 404,
+      });
+    }
+
+    if (invoice.status !== "DRAFT") {
+      throw new EntityValidationError({
+        code: "ERR_VALID",
+        message: "Cannot delete item from a non-draft invoice",
+        statusCode: 400,
+      });
+    }
+
+    // Verify item exists
+    const existingItem = await tx.invoiceItem.findUnique({
+      where: { id: itemId },
+    });
+
+    if (existingItem?.invoiceId !== invoiceId) {
+      throw new EntityNotFoundError({
+        code: "ERR_NF",
+        message: "Invoice item not found",
+        statusCode: 404,
+      });
+    }
+
+    // Delete item
+    await tx.invoiceItem.delete({
+      where: { id: itemId },
+    });
+
+    // Recalculate invoice totals
+    const allItems = await tx.invoiceItem.findMany({
+      where: { invoiceId },
+    });
+
+    const totals = calculateInvoiceTotals(
+      {
+        discount: Number(invoice.discount),
+        discountType: invoice.discountType,
+        taxMode: invoice.taxMode,
+        taxPercentage: invoice.taxPercentage
+          ? Number(invoice.taxPercentage)
+          : null,
+      },
+      allItems.map((i) => ({
+        discount: Number(i.discount),
+        discountType: i.discountType,
+        quantity: Number(i.quantity),
+        tax: Number(i.tax),
+        unitPrice: Number(i.unitPrice),
+        vatEnabled: i.vatEnabled,
+      })),
+    );
+
+    await tx.invoice.update({
+      data: {
+        subtotal: totals.subtotal,
+        total: totals.total,
+        totalTax: totals.totalTax,
+      },
+      where: { id: invoiceId },
+    });
+
+    await updateInvoiceBalanceAndStatus(tx, invoiceId, totals.total);
+  });
+}
+
+/**
+ * Delete a payment (soft delete)
+ */
+export async function deletePayment(
+  workspaceId: number,
+  invoiceId: number,
+  paymentId: number,
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    // Verify invoice exists and belongs to workspace
+    const invoice = await tx.invoice.findUnique({
+      where: { id: invoiceId },
+    });
+
+    if (invoice?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError({
+        code: "ERR_NF",
+        message: "Invoice not found",
+        statusCode: 404,
+      });
+    }
+
+    // Verify payment exists
+    const existingPayment = await tx.payment.findUnique({
+      where: { id: paymentId },
+    });
+
+    if (existingPayment?.invoiceId !== invoiceId) {
+      throw new EntityNotFoundError({
+        code: "ERR_NF",
+        message: "Payment not found",
+        statusCode: 404,
+      });
+    }
+
+    await tx.payment.delete({
+      where: { id: paymentId },
+    });
+
+    // Update invoice balance and status
+    await updateInvoiceBalanceAndStatus(tx, invoiceId, Number(invoice.total));
+  });
+}
+
+/**
+ * Get invoice by ID with items and relations (same shape as getInvoiceBySequence).
+ * Used by the send-receipt queue worker to build the invoice PDF.
+ */
+export async function getInvoiceById(
+  workspaceId: number,
+  invoiceId: number,
+): Promise<InvoiceEntityWithRelations> {
+  const invoice = await prisma.invoice.findFirst({
+    include: {
+      business: true,
+      client: true,
+      items: { orderBy: { name: "asc" } },
+      payments: {
+        orderBy: { paidAt: "desc" },
+      },
+      selectedPaymentMethod: true,
+    },
+    where: {
+      id: invoiceId,
+      workspaceId,
+    },
   });
 
-  // Subtotal: sum of all item totals (after item discounts)
-  const subtotal = itemTotals.reduce((sum, total) => sum + total, 0);
-
-  // Apply invoice-level discount to subtotal (tax must be calculated after all discounts)
-  let subtotalAfterDiscount = subtotal;
-  if (invoice.discountType === "PERCENTAGE") {
-    subtotalAfterDiscount = subtotal - (subtotal * invoice.discount) / 100;
-  } else if (invoice.discountType === "FIXED") {
-    subtotalAfterDiscount = subtotal - invoice.discount;
+  if (!invoice) {
+    throw new EntityNotFoundError({
+      code: "ERR_NF",
+      message: "Invoice not found",
+      statusCode: 404,
+    });
   }
-
-  // Tax base = amount after all discounts; apply proportional discount ratio to taxable amounts
-  let totalTax: number;
-  if (subtotal === 0) {
-    totalTax = 0;
-  } else {
-    const ratio = subtotalAfterDiscount / subtotal;
-    if (invoice.taxMode === "BY_PRODUCT") {
-      totalTax = items.reduce((sum, item, index) => {
-        const itemTaxableAfterDiscount = itemTotals[index] * ratio;
-        return sum + (itemTaxableAfterDiscount * item.tax) / 100;
-      }, 0);
-    } else if (invoice.taxMode === "BY_TOTAL" && invoice.taxPercentage) {
-      const taxableSubtotal = items.reduce(
-        (sum, item, index) =>
-          item.vatEnabled ? sum + itemTotals[index] : sum,
-        0,
-      );
-      const taxableAfterDiscount = taxableSubtotal * ratio;
-      totalTax = (taxableAfterDiscount * invoice.taxPercentage) / 100;
-    } else {
-      totalTax = 0;
-    }
-  }
-
-  // Total: subtotal after discount + total tax
-  const total = subtotalAfterDiscount + totalTax;
 
   return {
-    subtotal,
-    totalTax,
-    total,
+    ...invoice,
+    balance: Number(invoice.balance),
+    business: {
+      ...invoice.business,
+      defaultTaxMode: invoice.business.defaultTaxMode as
+        | "BY_PRODUCT"
+        | "BY_TOTAL"
+        | "NONE"
+        | null
+        | undefined,
+      defaultTaxPercentage: invoice.business.defaultTaxPercentage
+        ? Number(invoice.business.defaultTaxPercentage)
+        : null,
+    },
+    discount: Number(invoice.discount),
+    items: invoice.items.map((item) => ({
+      ...item,
+      discount: Number(item.discount),
+      quantity: Number(item.quantity),
+      tax: Number(item.tax),
+      total: Number(item.total),
+      unitPrice: Number(item.unitPrice),
+    })),
+    payments: invoice.payments.map((payment) => ({
+      ...payment,
+      amount: Number(payment.amount),
+    })),
+    selectedPaymentMethod: invoice.selectedPaymentMethod,
+    subtotal: Number(invoice.subtotal),
+    taxPercentage: invoice.taxPercentage ? Number(invoice.taxPercentage) : null,
+    total: Number(invoice.total),
+    totalTax: Number(invoice.totalTax),
   };
 }
 
 /**
- * Extract numeric part from invoice number using regex
- * Returns the last sequence of digits found in the string
+ * Get invoice by ID with items and payments
  */
-function extractNumberFromInvoiceNumber(invoiceNumber: string): number | null {
-  // Find all sequences of digits in the invoice number
-  const matches = invoiceNumber.match(/\d+/g);
-  if (!matches || matches.length === 0) {
-    return null;
-  }
-  // Return the last sequence of digits (most likely the sequence number)
-  return parseInt(matches[matches.length - 1], 10);
-}
-
-/**
- * Get next invoice number for a workspace
- * This version works with a transaction client (for use within transactions)
- */
-async function getNextInvoiceNumber(
-  tx: Prisma.TransactionClient,
-  businessId: number,
+export async function getInvoiceBySequence(
   workspaceId: number,
-): Promise<string> {
-  return await getNextInvoiceNumberInternal(tx, businessId, workspaceId);
+  sequence: number,
+): Promise<InvoiceEntityWithRelations> {
+  const invoice = await prisma.invoice.findUnique({
+    include: {
+      business: true,
+      client: true,
+      items: {
+        orderBy: { name: "asc" },
+      },
+      payments: {
+        orderBy: { paidAt: "desc" },
+      },
+      selectedPaymentMethod: true,
+    },
+    where: {
+      workspaceId_sequence: {
+        sequence,
+        workspaceId,
+      },
+    },
+  });
+
+  if (!invoice || invoice.workspaceId !== workspaceId) {
+    throw new EntityNotFoundError({
+      code: "ERR_NF",
+      message: "Invoice not found",
+      statusCode: 404,
+    });
+  }
+
+  return {
+    ...invoice,
+    balance: Number(invoice.balance),
+    business: {
+      ...invoice.business,
+      defaultTaxMode: invoice.business.defaultTaxMode as
+        | "BY_PRODUCT"
+        | "BY_TOTAL"
+        | "NONE"
+        | null
+        | undefined,
+      defaultTaxPercentage: invoice.business.defaultTaxPercentage
+        ? Number(invoice.business.defaultTaxPercentage)
+        : null,
+    },
+    discount: Number(invoice.discount),
+    items: invoice.items.map((item) => ({
+      ...item,
+      discount: Number(item.discount),
+      quantity: Number(item.quantity),
+      tax: Number(item.tax),
+      total: Number(item.total),
+      unitPrice: Number(item.unitPrice),
+    })),
+    payments: invoice.payments.map((payment) => ({
+      ...payment,
+      amount: Number(payment.amount),
+    })),
+    selectedPaymentMethod: invoice.selectedPaymentMethod,
+    subtotal: Number(invoice.subtotal),
+    taxPercentage: invoice.taxPercentage ? Number(invoice.taxPercentage) : null,
+    total: Number(invoice.total),
+    totalTax: Number(invoice.totalTax),
+  };
 }
 
 /**
@@ -188,163 +1214,6 @@ export async function getNextInvoiceNumberForWorkspace(
 }
 
 /**
- * Internal implementation of getNextInvoiceNumber
- * Works with both Prisma client and transaction client
- */
-async function getNextInvoiceNumberInternal(
-  client: Prisma.TransactionClient | typeof prisma,
-  businessId: number,
-  workspaceId: number,
-): Promise<string> {
-  // Get workspace to get invoice prefix
-  const workspace = await client.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { invoiceNumberPrefix: true },
-  });
-
-  const prefix = workspace?.invoiceNumberPrefix || null;
-
-  // If there's a prefix configured, find the last invoice that starts with that prefix
-  if (prefix) {
-    const lastInvoiceWithPrefix = await client.invoice.findFirst({
-      where: {
-        workspaceId,
-        businessId,
-
-        invoiceNumber: {
-          startsWith: prefix,
-        },
-      },
-      orderBy: {
-        invoiceNumber: "desc",
-      },
-      select: {
-        invoiceNumber: true,
-      },
-    });
-
-    if (!lastInvoiceWithPrefix) {
-      // No invoices with this prefix yet, start from 1
-      return `${prefix}0001`;
-    }
-
-    // Extract number from last invoice number
-    const extractedNumber = extractNumberFromInvoiceNumber(
-      lastInvoiceWithPrefix.invoiceNumber,
-    );
-
-    if (extractedNumber !== null && !isNaN(extractedNumber)) {
-      const nextNumber = extractedNumber + 1;
-      const paddedNumber = nextNumber.toString().padStart(4, "0");
-      return `${prefix}${paddedNumber}`;
-    } else {
-      // Couldn't extract number, append 0001
-      return `${prefix}0001`;
-    }
-  } else {
-    // No prefix configured, find the last invoice and try to increment
-    const lastInvoice = await client.invoice.findFirst({
-      where: {
-        workspaceId,
-        businessId,
-      },
-      orderBy: {
-        invoiceNumber: "desc",
-      },
-      select: {
-        invoiceNumber: true,
-      },
-    });
-
-    if (!lastInvoice) {
-      // No invoices at all, use default
-      return "INV-0001";
-    }
-
-    // Try to extract and increment the number from the last invoice
-    const extractedNumber = extractNumberFromInvoiceNumber(
-      lastInvoice.invoiceNumber,
-    );
-
-    if (extractedNumber !== null && !isNaN(extractedNumber)) {
-      const nextNumber = extractedNumber + 1;
-      const paddedNumber = nextNumber.toString().padStart(4, "0");
-      // Try to preserve the format by keeping the prefix part if it exists
-      const prefixMatch = lastInvoice.invoiceNumber.match(/^[^0-9]*/);
-      const preservedPrefix = prefixMatch ? prefixMatch[0] : "INV-";
-      return `${preservedPrefix}${paddedNumber}`;
-    } else {
-      // Couldn't extract number, use default
-      return "INV-0001";
-    }
-  }
-}
-
-/**
- * Handle catalog integration for invoice item
- */
-async function handleCatalogIntegration(
-  tx: Prisma.TransactionClient,
-  workspaceId: number,
-  businessId: number,
-  itemData: {
-    name: string;
-    description: string;
-    price: number;
-    quantityUnit: "DAYS" | "HOURS" | "UNITS";
-  },
-): Promise<number | null> {
-  // Check if catalog item with same name exists for this business
-  const existingCatalog = await tx.catalog.findFirst({
-    where: {
-      workspaceId,
-      businessId,
-      name: itemData.name,
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  if (existingCatalog) {
-    // Link to existing catalog
-    return existingCatalog.id;
-  }
-
-  // Create new catalog entry
-  // First, get next sequence for this business
-  const lastCatalog = await tx.catalog.findFirst({
-    where: {
-      workspaceId,
-    },
-    orderBy: {
-      sequence: "desc",
-    },
-    select: {
-      sequence: true,
-    },
-  });
-
-  const sequence = lastCatalog ? lastCatalog.sequence + 1 : 1;
-
-  const newCatalog = await tx.catalog.create({
-    data: {
-      workspaceId,
-      businessId,
-      name: itemData.name,
-      description: itemData.description,
-      price: itemData.price,
-      quantityUnit: itemData.quantityUnit,
-      sequence,
-    },
-  });
-
-  return newCatalog.id;
-}
-
-// ===== CORE INVOICE OPERATIONS =====
-
-/**
  * List all invoices for a workspace
  */
 export async function listInvoices(
@@ -352,25 +1221,25 @@ export async function listInvoices(
   query: ListInvoicesQuery,
 ): Promise<{
   invoices: InvoiceEntityWithRelations[];
-  total: number;
+  limit: number;
+  page: number;
   stats: {
-    total: number;
+    outstanding: number;
     paidCount: number;
     pendingCount: number;
     revenue: number;
+    total: number;
     totalInvoiced: number;
-    outstanding: number;
   };
-  page: number;
-  limit: number;
+  total: number;
 }> {
   const {
-    page,
+    businessId,
+    clientId,
     limit,
+    page,
     search,
     status: statusParam,
-    clientId,
-    businessId,
   } = query;
   const skip = (page - 1) * limit;
 
@@ -406,709 +1275,183 @@ export async function listInvoices(
     outstandingAgg,
   ] = await Promise.all([
     prisma.invoice.findMany({
-      where,
+      include: {
+        business: true,
+        client: true,
+      },
+      orderBy: { createdAt: "desc" },
       skip,
       take: limit,
-      orderBy: { createdAt: "desc" },
-      include: {
-        client: true,
-        business: true,
-      },
+      where,
     }),
     prisma.invoice.count({ where }),
     prisma.invoice.count({ where: wherePaid }),
     prisma.invoice.count({ where: whereOverdue }),
     prisma.payment.aggregate({
-      where: { invoice: where },
       _sum: { amount: true },
+      where: { invoice: where },
     }),
-    prisma.invoice.aggregate({ where, _sum: { total: true } }),
-    prisma.invoice.aggregate({ where, _sum: { balance: true } }),
+    prisma.invoice.aggregate({ _sum: { total: true }, where }),
+    prisma.invoice.aggregate({ _sum: { balance: true }, where }),
   ]);
 
   return {
     invoices: invoices.map((inv) => {
       return {
         ...inv,
-        subtotal: Number(inv.subtotal),
-        totalTax: Number(inv.totalTax),
-        discount: Number(inv.discount),
-        taxPercentage: inv.taxPercentage ? Number(inv.taxPercentage) : null,
-        total: Number(inv.total),
         balance: Number(inv.balance),
         business: {
           ...inv.business,
+          defaultTaxMode: inv.business.defaultTaxMode,
           defaultTaxPercentage: inv.business.defaultTaxPercentage
             ? Number(inv.business.defaultTaxPercentage)
             : null,
-          defaultTaxMode: inv.business.defaultTaxMode,
         },
+        discount: Number(inv.discount),
+        subtotal: Number(inv.subtotal),
+        taxPercentage: inv.taxPercentage ? Number(inv.taxPercentage) : null,
+        total: Number(inv.total),
+        totalTax: Number(inv.totalTax),
       };
     }),
-    total,
+    limit,
+    page,
     stats: {
-      total,
+      outstanding: Number(outstandingAgg._sum.balance ?? 0),
       paidCount,
       pendingCount,
-      revenue: Number(revenueAgg._sum?.amount ?? 0),
-      totalInvoiced: Number(totalInvoicedAgg._sum?.total ?? 0),
-      outstanding: Number(outstandingAgg._sum?.balance ?? 0),
+      revenue: Number(revenueAgg._sum.amount ?? 0),
+      total,
+      totalInvoiced: Number(totalInvoicedAgg._sum.total ?? 0),
     },
-    page,
-    limit,
+    total,
   };
 }
 
 /**
- * Get invoice by ID with items and payments
+ * Mark an invoice as sent
+ * Updates status to SENT and sets sentAt timestamp
  */
-export async function getInvoiceBySequence(
+export async function markInvoiceAsSent(
   workspaceId: number,
-  sequence: number,
+  invoiceId: number,
 ): Promise<InvoiceEntityWithRelations> {
   const invoice = await prisma.invoice.findUnique({
+    include: { _count: { select: { items: true } } },
     where: {
-      workspaceId_sequence: {
-        workspaceId,
-        sequence,
-      },
-    },
-    include: {
-      business: true,
-      items: {
-        orderBy: { name: "asc" },
-      },
-      payments: {
-        orderBy: { paidAt: "desc" },
-      },
-      client: true,
-      selectedPaymentMethod: true,
+      id: invoiceId,
     },
   });
 
   if (!invoice || invoice.workspaceId !== workspaceId) {
     throw new EntityNotFoundError({
+      code: "ERR_NF",
       message: "Invoice not found",
       statusCode: 404,
-      code: "ERR_NF",
     });
   }
 
-  return {
-    ...invoice,
-    subtotal: Number(invoice.subtotal),
-    totalTax: Number(invoice.totalTax),
-    discount: Number(invoice.discount),
-    taxPercentage: invoice.taxPercentage ? Number(invoice.taxPercentage) : null,
-    total: Number(invoice.total),
-    balance: Number(invoice.balance),
-    items: invoice.items.map((item) => ({
-      ...item,
-      quantity: Number(item.quantity),
-      unitPrice: Number(item.unitPrice),
-      discount: Number(item.discount),
-      tax: Number(item.tax),
-      total: Number(item.total),
-    })),
-    payments: invoice.payments.map((payment) => ({
-      ...payment,
-      amount: Number(payment.amount),
-    })),
-    business: {
-      ...invoice.business,
-      defaultTaxPercentage: invoice.business.defaultTaxPercentage
-        ? Number(invoice.business.defaultTaxPercentage)
-        : null,
-      defaultTaxMode: invoice.business.defaultTaxMode as
-        | "NONE"
-        | "BY_PRODUCT"
-        | "BY_TOTAL"
-        | null
-        | undefined,
-    },
-    selectedPaymentMethod: invoice.selectedPaymentMethod,
-  };
-}
+  if (invoice._count.items === 0) {
+    throw new EntityValidationError({
+      code: "ERR_VALID",
+      message: "Cannot send an invoice with no items",
+      statusCode: 400,
+    });
+  }
 
-/**
- * Get invoice by ID with items and relations (same shape as getInvoiceBySequence).
- * Used by the send-receipt queue worker to build the invoice PDF.
- */
-export async function getInvoiceById(
-  workspaceId: number,
-  invoiceId: number,
-): Promise<InvoiceEntityWithRelations> {
-  const invoice = await prisma.invoice.findFirst({
-    where: {
-      id: invoiceId,
-      workspaceId,
+  // Idempotent: if already sent (SENT, VIEWED, or PAID), don't overwrite status—return current state
+  if (["PAID", "SENT", "VIEWED"].includes(invoice.status) && invoice.sentAt) {
+    const existing = await prisma.invoice.findUnique({
+      include: { business: true, client: true },
+      where: { id: invoiceId },
+    });
+    if (!existing)
+      throw new EntityNotFoundError({
+        code: "ERR_NF",
+        message: "Invoice not found",
+        statusCode: 404,
+      });
+    return {
+      ...existing,
+      balance: Number(existing.balance),
+      business: {
+        ...existing.business,
+        defaultTaxMode: existing.business.defaultTaxMode,
+        defaultTaxPercentage: existing.business.defaultTaxPercentage
+          ? Number(existing.business.defaultTaxPercentage)
+          : null,
+      },
+      discount: Number(existing.discount),
+      subtotal: Number(existing.subtotal),
+      taxPercentage: existing.taxPercentage
+        ? Number(existing.taxPercentage)
+        : null,
+      total: Number(existing.total),
+      totalTax: Number(existing.totalTax),
+    };
+  }
+
+  const updatedInvoice = await prisma.invoice.update({
+    data: {
+      sentAt: new Date(),
+      status: "SENT",
     },
     include: {
       business: true,
-      items: { orderBy: { name: "asc" } },
-      payments: {
-        orderBy: { paidAt: "desc" },
-      },
       client: true,
-      selectedPaymentMethod: true,
+    },
+
+    where: {
+      id: invoiceId,
     },
   });
 
-  if (!invoice) {
-    throw new EntityNotFoundError({
-      message: "Invoice not found",
-      statusCode: 404,
-      code: "ERR_NF",
-    });
+  return {
+    ...updatedInvoice,
+    balance: Number(updatedInvoice.balance),
+    business: {
+      ...updatedInvoice.business,
+      defaultTaxMode: updatedInvoice.business.defaultTaxMode,
+      defaultTaxPercentage: updatedInvoice.business.defaultTaxPercentage
+        ? Number(updatedInvoice.business.defaultTaxPercentage)
+        : null,
+    },
+    discount: Number(updatedInvoice.discount),
+    subtotal: Number(updatedInvoice.subtotal),
+    taxPercentage: updatedInvoice.taxPercentage
+      ? Number(updatedInvoice.taxPercentage)
+      : null,
+    total: Number(updatedInvoice.total),
+    totalTax: Number(updatedInvoice.totalTax),
+  };
+}
+
+/**
+ * Revert an invoice from SENT back to DRAFT (e.g. when send-invoice worker fails).
+ * No-op if invoice is not SENT.
+ */
+export async function revertInvoiceToDraft(
+  workspaceId: number,
+  invoiceId: number,
+): Promise<void> {
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+  });
+
+  if (invoice?.workspaceId !== workspaceId) {
+    return;
   }
 
-  return {
-    ...invoice,
-    subtotal: Number(invoice.subtotal),
-    totalTax: Number(invoice.totalTax),
-    discount: Number(invoice.discount),
-    taxPercentage: invoice.taxPercentage ? Number(invoice.taxPercentage) : null,
-    total: Number(invoice.total),
-    balance: Number(invoice.balance),
-    items: invoice.items.map((item) => ({
-      ...item,
-      quantity: Number(item.quantity),
-      unitPrice: Number(item.unitPrice),
-      discount: Number(item.discount),
-      tax: Number(item.tax),
-      total: Number(item.total),
-    })),
-    payments: invoice.payments.map((payment) => ({
-      ...payment,
-      amount: Number(payment.amount),
-    })),
-    business: {
-      ...invoice.business,
-      defaultTaxPercentage: invoice.business.defaultTaxPercentage
-        ? Number(invoice.business.defaultTaxPercentage)
-        : null,
-      defaultTaxMode: invoice.business.defaultTaxMode as
-        | "NONE"
-        | "BY_PRODUCT"
-        | "BY_TOTAL"
-        | null
-        | undefined,
+  if (invoice.status !== "SENT") {
+    return;
+  }
+
+  await prisma.invoice.update({
+    data: {
+      sentAt: null,
+      status: "DRAFT",
     },
-    selectedPaymentMethod: invoice.selectedPaymentMethod,
-  };
-}
-
-/**
- * Build the payload expected by the PDF service for invoice generation.
- * Used by the controller (getInvoicePdf) and by the send-invoice queue worker.
- */
-export function buildInvoicePdfPayload(invoice: InvoiceEntityWithRelations): {
-  invoice: Omit<InvoiceEntityWithRelations, "issueDate" | "dueDate"> & {
-    issueDate: string;
-    dueDate: string;
-    totalPaid?: number;
-  };
-  client: ClientEntity;
-  company: BusinessEntity;
-  items: InvoiceItemEntity[];
-  paymentMethod: { type: string; handle: string | null } | null;
-} {
-  const invoiceDiscountFixed =
-    invoice.discountType === "PERCENTAGE"
-      ? (Number(invoice.subtotal) * Number(invoice.discount)) / 100
-      : invoice.discountType === "FIXED"
-        ? Number(invoice.discount)
-        : 0;
-
-  return {
-    invoice: {
-      ...invoice,
-      invoiceNumber: invoice.invoiceNumber,
-      issueDate:
-        typeof invoice.issueDate === "string"
-          ? invoice.issueDate
-          : invoice.issueDate.toISOString(),
-      dueDate:
-        typeof invoice.dueDate === "string"
-          ? invoice.dueDate
-          : invoice.dueDate.toISOString(),
-      purchaseOrder: invoice.purchaseOrder,
-      currency: invoice.currency,
-      subtotal: invoice.subtotal,
-      discount: invoiceDiscountFixed,
-      totalTax: invoice.totalTax,
-      total: invoice.total,
-      totalPaid: (invoice.payments ?? []).reduce(
-        (sum, p) => sum + Number(p.amount),
-        0,
-      ),
-      balance: Number(invoice.balance ?? 0),
-      notes: invoice.notes,
-      terms: invoice.terms,
-    },
-    client: {
-      ...invoice.client,
-      name: invoice.client!.name,
-      businessName: invoice.client!.businessName ?? null,
-      address: invoice.client!.address ?? null,
-      phone: invoice.client!.phone ?? null,
-      email: invoice.client!.email ?? null,
-      nit: invoice.client!.nit ?? null,
-    },
-    company: {
-      ...invoice.business,
-      name: invoice.business.name,
-      address: invoice.business.address ?? null,
-      email: invoice.business.email ?? null,
-      phone: invoice.business.phone ?? null,
-      nit: invoice.business.nit ?? null,
-      logo: invoice.business.logo ?? null,
-    },
-    items: (invoice.items || []).map((item) => {
-      const qty = Number(item.quantity ?? 0);
-      const unitPrice = Number(item.unitPrice ?? 0);
-      const discount = Number(item.discount ?? 0);
-      const base = qty * unitPrice;
-      const discountAmount =
-        item.discountType === "PERCENTAGE"
-          ? (base * discount) / 100
-          : item.discountType === "FIXED"
-            ? discount
-            : 0;
-      return {
-        ...item,
-        name: item.name,
-        description: item.description ?? null,
-        quantity: qty,
-        quantityUnit: item.quantityUnit,
-        unitPrice,
-        tax: Number(item.tax ?? 0),
-        discountAmount,
-        total: Number(item.total ?? 0),
-      };
-    }),
-    paymentMethod:
-      invoice.selectedPaymentMethod &&
-      invoice.selectedPaymentMethod.isEnabled &&
-      invoice.selectedPaymentMethod.handle?.trim()
-        ? {
-            type: invoice.selectedPaymentMethod.type,
-            handle: invoice.selectedPaymentMethod.handle.trim(),
-          }
-        : null,
-  };
-}
-
-/**
- * Payload for the pdf-service POST /generate-receipt endpoint.
- * Shape must match pdf-service receiptPdfPayloadSchema.
- */
-export interface ReceiptPdfPayload {
-  company: { name: string; logo: string | null; address: string | null };
-  client: { name: string; email: string | null };
-  invoice: {
-    invoiceNumber: string;
-    total: number;
-    currency: string;
-    status: string;
-    totalPaid: number;
-    balance: number;
-  };
-  payment: {
-    id: string;
-    amount: number;
-    method: string;
-    date: string;
-    notes: string | null;
-  };
-  payments: Array<{ date: string; method: string; amount: number }>;
-}
-
-/**
- * Build the payload for pdf-service receipt PDF generation.
- * Used by the send-receipt queue worker.
- */
-export function buildReceiptPdfPayload(
-  invoice: InvoiceEntityWithRelations,
-  payment: PaymentEntity,
-): ReceiptPdfPayload {
-  const totalPaid = (invoice.payments ?? []).reduce(
-    (sum, p) => sum + Number(p.amount),
-    0,
-  );
-  const balance = Number(invoice.balance);
-  const formatDate = (d: Date | string | undefined) =>
-    d ? new Date(d).toLocaleDateString() : "";
-
-  return {
-    company: {
-      name: invoice.business.name,
-      logo: invoice.business.logo ?? null,
-      address: invoice.business.address ?? null,
-    },
-    client: {
-      name: invoice.client!.name,
-      email: invoice.clientEmail ?? invoice.client!.email ?? null,
-    },
-    invoice: {
-      invoiceNumber: invoice.invoiceNumber,
-      total: Number(invoice.total),
-      currency: invoice.currency,
-      status: invoice.status,
-      totalPaid,
-      balance,
-    },
-    payment: {
-      id: String(payment.id),
-      amount: Number(payment.amount),
-      method: payment.paymentMethod,
-      date: formatDate(payment.paidAt),
-      notes: payment.details ?? null,
-    },
-    payments: (invoice.payments ?? [])
-      .slice()
-      .sort((a, b) => {
-        const pa = (a as { paidAt?: Date }).paidAt;
-        const pb = (b as { paidAt?: Date }).paidAt;
-        return (
-          (pb ? new Date(pb).getTime() : 0) - (pa ? new Date(pa).getTime() : 0)
-        );
-      })
-      .map((p) => ({
-        date: formatDate((p as { paidAt?: Date }).paidAt),
-        method: (p as { paymentMethod: string }).paymentMethod,
-        amount: Number(p.amount),
-      })),
-  };
-}
-
-/**
- * Create a new invoice with items
- */
-export async function createInvoice(
-  workspaceId: number,
-  data: CreateInvoiceDto,
-): Promise<InvoiceEntityWithRelations> {
-  return await prisma.$transaction(async (tx) => {
-    // Check if workspace has at least one business
-    const businessCount = await tx.business.count({
-      where: {
-        workspaceId,
-      },
-    });
-
-    if (businessCount === 0) {
-      throw new EntityValidationError({
-        message:
-          "You must create a business before creating invoices. Please complete the setup first.",
-        statusCode: 400,
-        code: "ERR_VALID",
-      });
-    }
-
-    const business = await tx.business.findFirst({
-      where: {
-        id: data.businessId,
-        workspaceId,
-      },
-    });
-
-    if (!business) {
-      throw new EntityValidationError({
-        message: "Business not found or does not belong to your workspace",
-        statusCode: 400,
-        code: "ERR_VALID",
-      });
-    }
-
-    // Generate invoice number if not provided
-    let invoiceNumber = data.invoiceNumber;
-    if (!invoiceNumber) {
-      invoiceNumber = await getNextInvoiceNumber(tx, business.id, workspaceId);
-    } else {
-      // Check if invoice number already exists
-      const existing = await tx.invoice.findUnique({
-        where: {
-          workspaceId_businessId_invoiceNumber: {
-            workspaceId,
-            businessId: data.businessId,
-            invoiceNumber,
-          },
-        },
-      });
-      if (existing) {
-        throw new EntityValidationError({
-          message: "Invoice number already exists",
-          statusCode: 400,
-          code: "ERR_VALID",
-        });
-      }
-    }
-
-    // Create invoice items with calculations
-    const itemsToCreate = data.items
-      ? await Promise.all(
-          data.items.map(async (item) => {
-            // Handle catalog integration if needed
-            let catalogId: number | null = null;
-
-            // If catalogId is provided directly, use it (when adding from existing catalog)
-            if (item.catalogId) {
-              // Verify catalog exists and belongs to the business
-              const catalog = await tx.catalog.findUnique({
-                where: { id: item.catalogId },
-              });
-
-              if (!catalog) {
-                throw new EntityNotFoundError({
-                  message: "Catalog item not found",
-                  statusCode: 404,
-                  code: "ERR_NF",
-                });
-              }
-
-              if (catalog.businessId !== data.businessId) {
-                throw new EntityValidationError({
-                  message:
-                    "Catalog item does not belong to the selected business",
-                  statusCode: 400,
-                  code: "ERR_VALID",
-                });
-              }
-
-              catalogId = item.catalogId;
-            } else if (item.saveToCatalog) {
-              // Create new catalog entry or link to existing one by name
-              catalogId = await handleCatalogIntegration(
-                tx,
-                workspaceId,
-                data.businessId,
-                {
-                  name: item.name,
-                  description: item.description,
-                  price: item.unitPrice,
-                  quantityUnit: item.quantityUnit,
-                },
-              );
-            }
-
-            // Determine item tax value based on taxMode
-            let itemTax = 0;
-            const itemVatEnabled = item.vatEnabled || false;
-            if (data.taxMode === "BY_PRODUCT") {
-              itemTax = item.tax || 0;
-            } else if (data.taxMode === "BY_TOTAL") {
-              // For BY_TOTAL mode, set tax to invoice taxPercentage for display if vatEnabled
-              itemTax =
-                itemVatEnabled && data.taxPercentage ? data.taxPercentage : 0;
-            }
-
-            // Calculate item total
-            const itemTotal = calculateItemTotal(
-              {
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                discount: item.discount,
-                discountType: item.discountType,
-                tax: itemTax,
-                vatEnabled: itemVatEnabled,
-              },
-              data.taxMode,
-              data.taxPercentage || null,
-            );
-
-            return {
-              name: item.name,
-              description: item.description,
-              quantity: item.quantity,
-              quantityUnit: item.quantityUnit,
-              unitPrice: item.unitPrice,
-              discount: item.discount,
-              discountType: item.discountType,
-              tax: itemTax,
-              vatEnabled: itemVatEnabled,
-              total: itemTotal,
-              catalogId,
-            };
-          }),
-        )
-      : [];
-
-    // Calculate invoice totals
-    const totals = calculateInvoiceTotals(
-      {
-        discount: data.discount,
-        discountType: data.discountType,
-        taxMode: data.taxMode,
-        taxPercentage: data.taxPercentage || null,
-      },
-      itemsToCreate,
-    );
-
-    // Get next sequence
-    const lastInvoice = await tx.invoice.findFirst({
-      where: {
-        workspaceId,
-      },
-      orderBy: {
-        sequence: "desc",
-      },
-    });
-    const sequence = lastInvoice ? lastInvoice.sequence + 1 : 1;
-
-    // Handle client creation or selection
-    let clientId: number;
-    let client: {
-      id: number;
-      email: string;
-      phone: string | null;
-      address: string | null;
-    };
-
-    if (data.createClient === true && data.clientData) {
-      // Create new client within the transaction
-      // Get next client sequence
-      const lastClient = await tx.client.findFirst({
-        where: {
-          workspaceId,
-        },
-        orderBy: {
-          sequence: "desc",
-        },
-        select: {
-          sequence: true,
-        },
-      });
-      const clientSequence = lastClient ? lastClient.sequence + 1 : 1;
-
-      // Create the client
-      const newClient = await tx.client.create({
-        data: {
-          workspaceId,
-          sequence: clientSequence,
-          name: data.clientData.name,
-          email: data.clientData.email,
-          phone: data.clientData.phone,
-          address: data.clientData.address,
-          nit: data.clientData.nit,
-          businessName: data.clientData.businessName,
-          reminderBeforeDueIntervalDays:
-            data.clientData.reminderBeforeDueIntervalDays,
-          reminderAfterDueIntervalDays:
-            data.clientData.reminderAfterDueIntervalDays,
-        },
-      });
-
-      clientId = newClient.id;
-      client = {
-        id: newClient.id,
-        email: newClient.email,
-        phone: newClient.phone,
-        address: newClient.address,
-      };
-    } else {
-      // Use existing client
-      if (!data.clientId) {
-        throw new EntityValidationError({
-          message: "Client ID is required when not creating a new client",
-          statusCode: 400,
-          code: "ERR_VALID",
-        });
-      }
-
-      const existingClient = await tx.client.findUnique({
-        where: { id: data.clientId },
-      });
-
-      if (!existingClient) {
-        throw new EntityValidationError({
-          message: "Client not found",
-          statusCode: 400,
-          code: "ERR_VALID",
-        });
-      }
-
-      clientId = existingClient.id;
-      client = {
-        id: existingClient.id,
-        email: existingClient.email,
-        phone: existingClient.phone,
-        address: existingClient.address,
-      };
-    }
-
-    // Use provided invoice-specific fields or fallback to client defaults
-    const clientEmail = client.email;
-    const clientPhone = client.phone;
-    const clientAddress = client.address;
-
-    // Create invoice
-    const invoice = await tx.invoice.create({
-      data: {
-        workspaceId,
-        businessId: data.businessId,
-        sequence,
-        clientId: clientId,
-        invoiceNumber,
-        status: "DRAFT",
-        issueDate: data.issueDate,
-        dueDate: data.dueDate,
-        purchaseOrder: data.purchaseOrder,
-        customHeader: data.customHeader,
-        currency: data.currency,
-        clientEmail,
-        clientPhone,
-        clientAddress,
-        subtotal: totals.subtotal,
-        totalTax: totals.totalTax,
-        discount: data.discount,
-        discountType: data.discountType,
-        taxMode: data.taxMode,
-        taxName: data.taxName || null,
-        taxPercentage: data.taxPercentage || null,
-        total: totals.total,
-        balance: totals.total,
-        notes: data.notes,
-        terms: data.terms,
-        selectedPaymentMethodId: data.selectedPaymentMethodId ?? null,
-        items: {
-          create: itemsToCreate,
-        },
-      },
-      include: {
-        items: true,
-        client: true,
-        business: true,
-      },
-    });
-
-    return {
-      ...invoice,
-      business: {
-        ...invoice.business,
-        defaultTaxPercentage: invoice.business.defaultTaxPercentage
-          ? Number(invoice.business.defaultTaxPercentage)
-          : null,
-        defaultTaxMode: invoice.business.defaultTaxMode,
-      },
-      sequence: Number(invoice.sequence),
-      subtotal: Number(invoice.subtotal),
-      totalTax: Number(invoice.totalTax),
-      discount: Number(invoice.discount),
-      taxPercentage: invoice.taxPercentage
-        ? Number(invoice.taxPercentage)
-        : null,
-      total: Number(invoice.total),
-      balance: Number(invoice.balance),
-      items: invoice.items.map((item) => ({
-        ...item,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-        discount: Number(item.discount),
-        tax: Number(item.tax),
-        total: Number(item.total),
-      })),
-    };
+    where: { id: invoiceId },
   });
 }
 
@@ -1126,35 +1469,35 @@ export async function updateInvoice(
       where: { id },
     });
 
-    if (!existingInvoice || existingInvoice.workspaceId !== workspaceId) {
+    if (existingInvoice?.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
+        code: "ERR_NF",
         message: "Invoice not found",
         statusCode: 404,
-        code: "ERR_NF",
       });
     }
 
     if (existingInvoice.status !== "DRAFT") {
       throw new EntityValidationError({
+        code: "ERR_VALID",
         message: "Cannot update a sent invoice",
         statusCode: 400,
-        code: "ERR_VALID",
       });
     }
 
     // If items are being updated, recalculate totals
     const {
-      clientId,
-      items,
-      clientEmail,
-      clientPhone,
       clientAddress,
+      clientData: _clientData,
+      clientEmail,
+      clientId,
+      clientPhone,
       createClient,
-      clientData,
+      items: _items,
       selectedPaymentMethodId,
       ...invoiceData
     } = data;
-    let updateData: Prisma.InvoiceUpdateInput = { ...invoiceData };
+    const updateData: Prisma.InvoiceUpdateInput = { ...invoiceData };
 
     // Handle client creation or selection
     let newClientId: number | undefined;
@@ -1163,14 +1506,14 @@ export async function updateInvoice(
       // Create new client within the transaction
       // Get next client sequence
       const lastClient = await tx.client.findFirst({
-        where: {
-          workspaceId,
-        },
         orderBy: {
           sequence: "desc",
         },
         select: {
           sequence: true,
+        },
+        where: {
+          workspaceId,
         },
       });
       const clientSequence = lastClient ? lastClient.sequence + 1 : 1;
@@ -1178,18 +1521,18 @@ export async function updateInvoice(
       // Create the client
       const newClient = await tx.client.create({
         data: {
-          workspaceId,
-          sequence: clientSequence,
-          name: data.clientData.name,
-          email: data.clientData.email,
-          phone: data.clientData.phone,
           address: data.clientData.address,
-          nit: data.clientData.nit,
           businessName: data.clientData.businessName,
-          reminderBeforeDueIntervalDays:
-            data.clientData.reminderBeforeDueIntervalDays,
+          email: data.clientData.email,
+          name: data.clientData.name,
+          nit: data.clientData.nit,
+          phone: data.clientData.phone,
           reminderAfterDueIntervalDays:
             data.clientData.reminderAfterDueIntervalDays,
+          reminderBeforeDueIntervalDays:
+            data.clientData.reminderBeforeDueIntervalDays,
+          sequence: clientSequence,
+          workspaceId,
         },
       });
 
@@ -1209,9 +1552,9 @@ export async function updateInvoice(
 
       if (!newClient) {
         throw new EntityValidationError({
+          code: "ERR_VALID",
           message: "Client not found",
           statusCode: 400,
-          code: "ERR_VALID",
         });
       }
 
@@ -1258,8 +1601,8 @@ export async function updateInvoice(
     // If taxMode changed to NONE, clear tax data on all items
     if (taxModeChanged && data.taxMode === "NONE") {
       await tx.invoiceItem.updateMany({
-        where: { invoiceId: id },
         data: { tax: 0, vatEnabled: false },
+        where: { invoiceId: id },
       });
 
       const invoiceItems = await tx.invoiceItem.findMany({
@@ -1267,25 +1610,19 @@ export async function updateInvoice(
       });
 
       const itemsToUpdate = invoiceItems.map((item) => ({
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
         discount: Number(item.discount),
         discountType: item.discountType,
+        quantity: Number(item.quantity),
         tax: Number(item.tax),
+        unitPrice: Number(item.unitPrice),
         vatEnabled: item.vatEnabled,
       }));
 
       // Recalculate totals with cleared tax data
       const totalsAfterClear = calculateInvoiceTotals(
         {
-          discount:
-            data.discount !== undefined
-              ? data.discount
-              : Number(existingInvoice.discount),
-          discountType:
-            data.discountType !== undefined
-              ? data.discountType
-              : existingInvoice.discountType,
+          discount: data.discount ?? Number(existingInvoice.discount),
+          discountType: data.discountType ?? existingInvoice.discountType,
           taxMode: "NONE",
           taxPercentage: null,
         },
@@ -1303,7 +1640,7 @@ export async function updateInvoice(
     }
 
     // If taxMode changed to BY_TOTAL or taxPercentage changed in BY_TOTAL mode, update all items with vatEnabled
-    const effectiveTaxMode = data.taxMode || existingInvoice.taxMode;
+    const effectiveTaxMode = data.taxMode ?? existingInvoice.taxMode;
     const effectiveTaxPercentage =
       data.taxPercentage !== undefined
         ? data.taxPercentage
@@ -1316,12 +1653,12 @@ export async function updateInvoice(
       (taxModeChanged || taxPercentageChanged)
     ) {
       await tx.invoiceItem.updateMany({
-        where: {
-          invoiceId: id,
-        },
         data: {
           tax: effectiveTaxPercentage,
           vatEnabled: effectiveTaxPercentage !== 0,
+        },
+        where: {
+          invoiceId: id,
         },
       });
     }
@@ -1332,25 +1669,19 @@ export async function updateInvoice(
       });
 
       const itemsToUpdate = invoiceItems.map((item) => ({
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
         discount: Number(item.discount),
         discountType: item.discountType,
+        quantity: Number(item.quantity),
         tax: Number(item.tax),
+        unitPrice: Number(item.unitPrice),
         vatEnabled: item.vatEnabled,
       }));
 
       const totals = calculateInvoiceTotals(
         {
-          discount:
-            data.discount !== undefined
-              ? data.discount
-              : Number(existingInvoice.discount),
-          discountType:
-            data.discountType !== undefined
-              ? data.discountType
-              : existingInvoice.discountType,
-          taxMode: data.taxMode || existingInvoice.taxMode,
+          discount: data.discount ?? Number(existingInvoice.discount),
+          discountType: data.discountType ?? existingInvoice.discountType,
+          taxMode: data.taxMode ?? existingInvoice.taxMode,
           taxPercentage:
             data.taxPercentage !== undefined
               ? data.taxPercentage
@@ -1367,7 +1698,6 @@ export async function updateInvoice(
     }
 
     const updatedInvoice = await tx.invoice.update({
-      where: { id, workspaceId },
       data: {
         ...updateData,
         client: {
@@ -1386,454 +1716,47 @@ export async function updateInvoice(
         }),
       },
       include: {
-        items: true,
-        client: true,
         business: true,
+        client: true,
+        items: true,
         selectedPaymentMethod: true,
       },
+      where: { id, workspaceId },
     });
 
     await updateInvoiceBalanceAndStatus(tx, id, Number(updatedInvoice.total));
 
     const withBalance = await tx.invoice.findUnique({
-      where: { id, workspaceId },
       select: { balance: true },
+      where: { id, workspaceId },
     });
 
     return {
       ...updatedInvoice,
+      balance: Number(withBalance?.balance ?? updatedInvoice.balance),
       business: {
         ...updatedInvoice.business,
+        defaultTaxMode: updatedInvoice.business.defaultTaxMode,
         defaultTaxPercentage: updatedInvoice.business.defaultTaxPercentage
           ? Number(updatedInvoice.business.defaultTaxPercentage)
           : null,
-        defaultTaxMode: updatedInvoice.business.defaultTaxMode,
       },
-      subtotal: Number(updatedInvoice.subtotal),
-      totalTax: Number(updatedInvoice.totalTax),
       discount: Number(updatedInvoice.discount),
+      items: updatedInvoice.items.map((item) => ({
+        ...item,
+        discount: Number(item.discount),
+        quantity: Number(item.quantity),
+        tax: Number(item.tax),
+        total: Number(item.total),
+        unitPrice: Number(item.unitPrice),
+      })),
+      selectedPaymentMethod: updatedInvoice.selectedPaymentMethod ?? undefined,
+      subtotal: Number(updatedInvoice.subtotal),
       taxPercentage: updatedInvoice.taxPercentage
         ? Number(updatedInvoice.taxPercentage)
         : null,
       total: Number(updatedInvoice.total),
-      balance: Number(withBalance?.balance ?? updatedInvoice.balance),
-      items: updatedInvoice.items.map((item) => ({
-        ...item,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-        discount: Number(item.discount),
-        tax: Number(item.tax),
-        total: Number(item.total),
-      })),
-      selectedPaymentMethod: updatedInvoice.selectedPaymentMethod ?? undefined,
-    };
-  });
-}
-
-/**
- * Delete an invoice
- */
-export async function deleteInvoice(
-  workspaceId: number,
-  id: number,
-): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    const existingInvoice = await tx.invoice.findUnique({
-      where: { id },
-      include: { payments: true },
-    });
-
-    if (!existingInvoice || existingInvoice.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        message: "Invoice not found",
-        statusCode: 404,
-        code: "ERR_NF",
-      });
-    }
-
-    if (existingInvoice.status !== "DRAFT") {
-      throw new EntityValidationError({
-        message: "Cannot delete a non-draft invoice",
-        statusCode: 400,
-        code: "ERR_VALID",
-      });
-    }
-
-    if (existingInvoice.payments.length > 0) {
-      throw new EntityValidationError({
-        message: "Cannot delete an invoice with payments",
-        statusCode: 400,
-        code: "ERR_VALID",
-      });
-    }
-
-    await tx.invoice.delete({
-      where: { id },
-    });
-  });
-}
-
-/**
- * Mark an invoice as sent
- * Updates status to SENT and sets sentAt timestamp
- */
-export async function markInvoiceAsSent(
-  workspaceId: number,
-  invoiceId: number,
-): Promise<InvoiceEntityWithRelations> {
-  const invoice = await prisma.invoice.findUnique({
-    where: {
-      id: invoiceId,
-    },
-    include: { _count: { select: { items: true } } },
-  });
-
-  if (!invoice || invoice.workspaceId !== workspaceId) {
-    throw new EntityNotFoundError({
-      message: "Invoice not found",
-      statusCode: 404,
-      code: "ERR_NF",
-    });
-  }
-
-  if (invoice._count.items === 0) {
-    throw new EntityValidationError({
-      message: "Cannot send an invoice with no items",
-      statusCode: 400,
-      code: "ERR_VALID",
-    });
-  }
-
-  // Idempotent: if already sent (SENT, VIEWED, or PAID), don't overwrite status—return current state
-  if (["SENT", "VIEWED", "PAID"].includes(invoice.status) && invoice.sentAt) {
-    const existing = await prisma.invoice.findUnique({
-      where: { id: invoiceId },
-      include: { business: true, client: true },
-    });
-    if (!existing)
-      throw new EntityNotFoundError({
-        message: "Invoice not found",
-        statusCode: 404,
-        code: "ERR_NF",
-      });
-    return {
-      ...existing,
-      business: {
-        ...existing.business,
-        defaultTaxPercentage: existing.business.defaultTaxPercentage
-          ? Number(existing.business.defaultTaxPercentage)
-          : null,
-        defaultTaxMode: existing.business.defaultTaxMode,
-      },
-      subtotal: Number(existing.subtotal),
-      totalTax: Number(existing.totalTax),
-      discount: Number(existing.discount),
-      taxPercentage: existing.taxPercentage
-        ? Number(existing.taxPercentage)
-        : null,
-      total: Number(existing.total),
-      balance: Number(existing.balance),
-    };
-  }
-
-  const updatedInvoice = await prisma.invoice.update({
-    where: {
-      id: invoiceId,
-    },
-    data: {
-      status: "SENT",
-      sentAt: new Date(),
-    },
-
-    include: {
-      business: true,
-      client: true,
-    },
-  });
-
-  return {
-    ...updatedInvoice,
-    business: {
-      ...updatedInvoice.business,
-      defaultTaxPercentage: updatedInvoice.business.defaultTaxPercentage
-        ? Number(updatedInvoice.business.defaultTaxPercentage)
-        : null,
-      defaultTaxMode: updatedInvoice.business.defaultTaxMode,
-    },
-    subtotal: Number(updatedInvoice.subtotal),
-    totalTax: Number(updatedInvoice.totalTax),
-    discount: Number(updatedInvoice.discount),
-    taxPercentage: updatedInvoice.taxPercentage
-      ? Number(updatedInvoice.taxPercentage)
-      : null,
-    total: Number(updatedInvoice.total),
-    balance: Number(updatedInvoice.balance),
-  };
-}
-
-/**
- * Revert an invoice from SENT back to DRAFT (e.g. when send-invoice worker fails).
- * No-op if invoice is not SENT.
- */
-export async function revertInvoiceToDraft(
-  workspaceId: number,
-  invoiceId: number,
-): Promise<void> {
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-  });
-
-  if (!invoice || invoice.workspaceId !== workspaceId) {
-    return;
-  }
-
-  if (invoice.status !== "SENT") {
-    return;
-  }
-
-  await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: {
-      status: "DRAFT",
-      sentAt: null,
-    },
-  });
-}
-
-// ===== INVOICE ITEM OPERATIONS =====
-
-/**
- * Add an invoice item
- */
-export async function addInvoiceItem(
-  workspaceId: number,
-  invoiceId: number,
-  data: Omit<CreateInvoiceItemDto, "invoiceId">,
-): Promise<InvoiceItemEntity> {
-  return await prisma.$transaction(async (tx) => {
-    // Verify invoice exists and belongs to workspace
-    const invoice = await tx.invoice.findUnique({
-      where: { id: invoiceId },
-    });
-
-    if (!invoice || invoice.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        message: "Invoice not found",
-        statusCode: 404,
-        code: "ERR_NF",
-      });
-    }
-
-    if (invoice.status !== "DRAFT") {
-      throw new EntityValidationError({
-        message: "Cannot add item to a non-draft invoice",
-        statusCode: 400,
-        code: "ERR_VALID",
-      });
-    }
-
-    // Handle catalog integration if needed
-    let catalogId: number | null = null;
-
-    // If catalogId is provided directly, use it (when adding from existing catalog)
-    if (data.catalogId) {
-      // Verify catalog exists and belongs to the invoice's business
-      const catalog = await tx.catalog.findUnique({
-        where: { id: data.catalogId },
-      });
-
-      if (!catalog) {
-        throw new EntityNotFoundError({
-          message: "Catalog item not found",
-          statusCode: 404,
-          code: "ERR_NF",
-        });
-      }
-
-      if (catalog.businessId !== invoice.businessId) {
-        throw new EntityValidationError({
-          message: "Catalog item does not belong to the invoice's business",
-          statusCode: 400,
-          code: "ERR_VALID",
-        });
-      }
-
-      catalogId = data.catalogId;
-    } else if (data.saveToCatalog) {
-      // Create new catalog entry or link to existing one by name
-      catalogId = await handleCatalogIntegration(
-        tx,
-        workspaceId,
-        invoice.businessId,
-        {
-          name: data.name,
-          description: data.description,
-          price: data.unitPrice,
-          quantityUnit: data.quantityUnit,
-        },
-      );
-    }
-
-    // Determine effective taxMode - use passed taxMode or fallback to invoice's
-    const effectiveTaxMode = data.taxMode || invoice.taxMode;
-
-    // Prepare invoice update data for tax-related fields
-    const invoiceUpdateData: {
-      taxMode?: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
-      taxName?: string | null;
-      taxPercentage?: number | null;
-    } = {};
-
-    // If taxMode was passed and differs from invoice, update the invoice
-    if (data.taxMode && data.taxMode !== invoice.taxMode) {
-      invoiceUpdateData.taxMode = data.taxMode;
-    }
-
-    // If taxMode is BY_TOTAL and taxName/taxPercentage are provided, update them
-    if (
-      effectiveTaxMode === "BY_TOTAL" &&
-      (data.taxName !== undefined || data.taxPercentage !== undefined)
-    ) {
-      if (data.taxName !== undefined) {
-        invoiceUpdateData.taxName = data.taxName;
-      }
-      if (data.taxPercentage !== undefined) {
-        invoiceUpdateData.taxPercentage = data.taxPercentage;
-      }
-    }
-
-    // Update invoice if there are tax-related changes
-    if (Object.keys(invoiceUpdateData).length > 0) {
-      await tx.invoice.update({
-        where: { id: invoiceId },
-        data: invoiceUpdateData,
-      });
-    }
-
-    // Respect effective taxMode when setting tax fields
-    let itemTax = 0;
-    let itemVatEnabled = false;
-    if (effectiveTaxMode === "BY_PRODUCT") {
-      // Use tax field, ignore vatEnabled
-      itemTax = data.tax || 0;
-      itemVatEnabled = false;
-    } else if (effectiveTaxMode === "BY_TOTAL") {
-      // Use vatEnabled field, set tax to invoice taxPercentage for display if vatEnabled
-      itemVatEnabled = data.vatEnabled || false;
-      itemTax =
-        itemVatEnabled && invoice.taxPercentage
-          ? Number(invoice.taxPercentage)
-          : 0;
-    } else {
-      // taxMode is NONE - both should be defaults
-      itemTax = 0;
-      itemVatEnabled = false;
-    }
-
-    // Calculate item total
-    const itemTotal = calculateItemTotal(
-      {
-        quantity: data.quantity,
-        unitPrice: data.unitPrice,
-        discount: data.discount,
-        discountType: data.discountType,
-        tax: itemTax,
-        vatEnabled: itemVatEnabled,
-      },
-      effectiveTaxMode,
-      invoice.taxPercentage ? Number(invoice.taxPercentage) : null,
-    );
-
-    // Create item
-    const item = await tx.invoiceItem.create({
-      data: {
-        invoiceId,
-        name: data.name,
-        description: data.description,
-        quantity: data.quantity,
-        quantityUnit: data.quantityUnit,
-        unitPrice: data.unitPrice,
-        discount: data.discount,
-        discountType: data.discountType,
-        tax: itemTax,
-        vatEnabled: itemVatEnabled,
-        total: itemTotal,
-        catalogId,
-      },
-    });
-
-    // Recalculate invoice totals
-    const allItems = await tx.invoiceItem.findMany({
-      where: { invoiceId },
-    });
-
-    // Use updated taxPercentage if provided, otherwise use invoice's current value
-    const effectiveTaxPercentage =
-      data.taxPercentage !== undefined
-        ? data.taxPercentage
-        : invoice.taxPercentage
-          ? Number(invoice.taxPercentage)
-          : null;
-
-    const totals = calculateInvoiceTotals(
-      {
-        discount: Number(invoice.discount),
-        discountType: invoice.discountType,
-        taxMode: effectiveTaxMode,
-        taxPercentage: effectiveTaxPercentage,
-      },
-      allItems.map((i) => ({
-        quantity: Number(i.quantity),
-        unitPrice: Number(i.unitPrice),
-        discount: Number(i.discount),
-        discountType: i.discountType,
-        tax: Number(i.tax),
-        vatEnabled: i.vatEnabled,
-      })),
-    );
-
-    // Prepare final invoice update data
-    const finalInvoiceUpdateData: {
-      taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
-      subtotal: number;
-      totalTax: number;
-      total: number;
-      taxName?: string | null;
-      taxPercentage?: number | null;
-    } = {
-      taxMode: effectiveTaxMode, // Ensure taxMode is updated along with totals
-      subtotal: totals.subtotal,
-      totalTax: totals.totalTax,
-      total: totals.total,
-    };
-
-    // Include taxName and taxPercentage if they were provided and taxMode is BY_TOTAL
-    if (
-      effectiveTaxMode === "BY_TOTAL" &&
-      (data.taxName !== undefined || data.taxPercentage !== undefined)
-    ) {
-      if (data.taxName !== undefined) {
-        finalInvoiceUpdateData.taxName = data.taxName;
-      }
-      if (data.taxPercentage !== undefined) {
-        finalInvoiceUpdateData.taxPercentage = data.taxPercentage;
-      }
-    }
-
-    await tx.invoice.update({
-      where: { id: invoiceId },
-      data: finalInvoiceUpdateData,
-    });
-
-    await updateInvoiceBalanceAndStatus(tx, invoiceId, totals.total);
-
-    return {
-      ...item,
-      quantity: Number(item.quantity),
-      unitPrice: Number(item.unitPrice),
-      discount: Number(item.discount),
-      tax: Number(item.tax),
-      total: Number(item.total),
+      totalTax: Number(updatedInvoice.totalTax),
     };
   });
 }
@@ -1853,19 +1776,19 @@ export async function updateInvoiceItem(
       where: { id: invoiceId },
     });
 
-    if (!invoice || invoice.workspaceId !== workspaceId) {
+    if (invoice?.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
+        code: "ERR_NF",
         message: "Invoice not found",
         statusCode: 404,
-        code: "ERR_NF",
       });
     }
 
     if (invoice.status !== "DRAFT") {
       throw new EntityValidationError({
+        code: "ERR_VALID",
         message: "Cannot update item of a non-draft invoice",
         statusCode: 400,
-        code: "ERR_VALID",
       });
     }
 
@@ -1874,11 +1797,11 @@ export async function updateInvoiceItem(
       where: { id: itemId },
     });
 
-    if (!existingItem || existingItem.invoiceId !== invoiceId) {
+    if (existingItem?.invoiceId !== invoiceId) {
       throw new EntityNotFoundError({
+        code: "ERR_NF",
         message: "Invoice item not found",
         statusCode: 404,
-        code: "ERR_NF",
       });
     }
 
@@ -1898,17 +1821,17 @@ export async function updateInvoiceItem(
 
         if (!catalog) {
           throw new EntityNotFoundError({
+            code: "ERR_NF",
             message: "Catalog item not found",
             statusCode: 404,
-            code: "ERR_NF",
           });
         }
 
         if (catalog.businessId !== invoice.businessId) {
           throw new EntityValidationError({
+            code: "ERR_VALID",
             message: "Catalog item does not belong to the invoice's business",
             statusCode: 400,
-            code: "ERR_VALID",
           });
         }
 
@@ -1921,36 +1844,33 @@ export async function updateInvoiceItem(
         workspaceId,
         invoice.businessId,
         {
-          name: data.name || existingItem.name,
-          description: data.description || existingItem.description,
-          price:
-            data.unitPrice !== undefined
-              ? data.unitPrice
-              : Number(existingItem.unitPrice),
-          quantityUnit: data.quantityUnit || existingItem.quantityUnit,
+          description: data.description ?? existingItem.description,
+          name: data.name ?? existingItem.name,
+          price: data.unitPrice ?? Number(existingItem.unitPrice),
+          quantityUnit: data.quantityUnit ?? existingItem.quantityUnit,
         },
       );
     }
 
     // Prepare update data - exclude saveToCatalog, taxMode, taxName, taxPercentage, and catalogId as they're not item database fields
     const {
-      saveToCatalog,
+      catalogId: _catalogId,
+      saveToCatalog: _saveToCatalog,
       taxMode: passedTaxMode,
       taxName: passedTaxName,
       taxPercentage: passedTaxPercentage,
-      catalogId: _catalogId, // Exclude catalogId from itemData, we handle it separately
       ...itemData
     } = data;
     const updateData: Prisma.InvoiceItemUpdateInput = {};
 
     // Determine effective taxMode - use passed taxMode or fallback to invoice's
-    const effectiveTaxMode = passedTaxMode || invoice.taxMode;
+    const effectiveTaxMode = passedTaxMode ?? invoice.taxMode;
 
     // Prepare invoice update data for tax-related fields
     const invoiceUpdateData: {
       taxMode?: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
-      taxName?: string | null;
-      taxPercentage?: number | null;
+      taxName?: null | string;
+      taxPercentage?: null | number;
     } = {};
 
     // If taxMode was passed and differs from invoice, update the invoice
@@ -1974,8 +1894,8 @@ export async function updateInvoiceItem(
     // Update invoice if there are tax-related changes (before calculating totals)
     if (Object.keys(invoiceUpdateData).length > 0) {
       await tx.invoice.update({
-        where: { id: invoiceId },
         data: invoiceUpdateData,
+        where: { id: invoiceId },
       });
     }
 
@@ -2002,9 +1922,8 @@ export async function updateInvoiceItem(
     } else if (effectiveTaxMode === "BY_TOTAL") {
       // Use vatEnabled field, set tax to invoice taxPercentage for display if vatEnabled
       const shouldHaveTax =
-        (itemData.vatEnabled !== undefined
-          ? itemData.vatEnabled
-          : existingItem.vatEnabled) && invoice.taxPercentage;
+        (itemData.vatEnabled ?? existingItem.vatEnabled) &&
+        invoice.taxPercentage;
       updateData.tax = shouldHaveTax ? Number(invoice.taxPercentage) : 0;
       if (itemData.vatEnabled !== undefined)
         updateData.vatEnabled = itemData.vatEnabled;
@@ -2028,13 +1947,10 @@ export async function updateInvoiceItem(
     let finalTax = 0;
     let finalVatEnabled = false;
     if (effectiveTaxMode === "BY_PRODUCT") {
-      finalTax = data.tax !== undefined ? data.tax : Number(existingItem.tax);
+      finalTax = data.tax ?? Number(existingItem.tax);
       finalVatEnabled = false;
     } else if (effectiveTaxMode === "BY_TOTAL") {
-      finalVatEnabled =
-        data.vatEnabled !== undefined
-          ? data.vatEnabled
-          : existingItem.vatEnabled;
+      finalVatEnabled = data.vatEnabled ?? existingItem.vatEnabled;
       // Set tax to invoice taxPercentage for display if vatEnabled
       finalTax =
         finalVatEnabled && invoice.taxPercentage
@@ -2047,23 +1963,11 @@ export async function updateInvoiceItem(
     }
 
     const finalItem = {
-      quantity:
-        data.quantity !== undefined
-          ? data.quantity
-          : Number(existingItem.quantity),
-      unitPrice:
-        data.unitPrice !== undefined
-          ? data.unitPrice
-          : Number(existingItem.unitPrice),
-      discount:
-        data.discount !== undefined
-          ? data.discount
-          : Number(existingItem.discount),
-      discountType:
-        data.discountType !== undefined
-          ? data.discountType
-          : existingItem.discountType,
+      discount: data.discount ?? Number(existingItem.discount),
+      discountType: data.discountType ?? existingItem.discountType,
+      quantity: data.quantity ?? Number(existingItem.quantity),
       tax: finalTax,
+      unitPrice: data.unitPrice ?? Number(existingItem.unitPrice),
       vatEnabled: finalVatEnabled,
     };
 
@@ -2075,18 +1979,14 @@ export async function updateInvoiceItem(
           ? Number(invoice.taxPercentage)
           : null;
 
-    const itemTotal = calculateItemTotal(
-      finalItem,
-      effectiveTaxMode,
-      effectiveTaxPercentage,
-    );
+    const itemTotal = calculateItemTotal(finalItem);
 
     updateData.total = itemTotal;
 
     // Update item
     const item = await tx.invoiceItem.update({
-      where: { id: itemId },
       data: updateData,
+      where: { id: itemId },
     });
 
     // Recalculate invoice totals
@@ -2102,28 +2002,28 @@ export async function updateInvoiceItem(
         taxPercentage: effectiveTaxPercentage,
       },
       allItems.map((i) => ({
-        quantity: Number(i.quantity),
-        unitPrice: Number(i.unitPrice),
         discount: Number(i.discount),
         discountType: i.discountType,
+        quantity: Number(i.quantity),
         tax: Number(i.tax),
+        unitPrice: Number(i.unitPrice),
         vatEnabled: i.vatEnabled,
       })),
     );
 
     // Prepare final invoice update data
     const finalInvoiceUpdateData: {
-      taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
       subtotal: number;
-      totalTax: number;
+      taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
+      taxName?: null | string;
+      taxPercentage?: null | number;
       total: number;
-      taxName?: string | null;
-      taxPercentage?: number | null;
+      totalTax: number;
     } = {
-      taxMode: effectiveTaxMode, // Update invoice taxMode if it changed
       subtotal: totals.subtotal,
-      totalTax: totals.totalTax,
+      taxMode: effectiveTaxMode, // Update invoice taxMode if it changed
       total: totals.total,
+      totalTax: totals.totalTax,
     };
 
     // Include taxName and taxPercentage if they were provided and taxMode is BY_TOTAL
@@ -2140,109 +2040,347 @@ export async function updateInvoiceItem(
     }
 
     await tx.invoice.update({
-      where: { id: invoiceId },
       data: finalInvoiceUpdateData,
+      where: { id: invoiceId },
     });
 
     await updateInvoiceBalanceAndStatus(tx, invoiceId, totals.total);
 
     return {
       ...item,
-      quantity: Number(item.quantity),
-      unitPrice: Number(item.unitPrice),
       discount: Number(item.discount),
+      quantity: Number(item.quantity),
       tax: Number(item.tax),
       total: Number(item.total),
+      unitPrice: Number(item.unitPrice),
     };
   });
 }
 
+// ===== INVOICE ITEM OPERATIONS =====
+
 /**
- * Delete an invoice item
+ * Update a payment
  */
-export async function deleteInvoiceItem(
+export async function updatePayment(
   workspaceId: number,
   invoiceId: number,
-  itemId: number,
-): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  paymentId: number,
+  data: UpdatePaymentDto,
+): Promise<PaymentEntity> {
+  return await prisma.$transaction(async (tx) => {
     // Verify invoice exists and belongs to workspace
     const invoice = await tx.invoice.findUnique({
       where: { id: invoiceId },
     });
 
-    if (!invoice || invoice.workspaceId !== workspaceId) {
+    if (invoice?.workspaceId !== workspaceId) {
       throw new EntityNotFoundError({
+        code: "ERR_NF",
         message: "Invoice not found",
         statusCode: 404,
-        code: "ERR_NF",
       });
     }
 
-    if (invoice.status !== "DRAFT") {
-      throw new EntityValidationError({
-        message: "Cannot delete item from a non-draft invoice",
-        statusCode: 400,
-        code: "ERR_VALID",
-      });
-    }
-
-    // Verify item exists
-    const existingItem = await tx.invoiceItem.findUnique({
-      where: { id: itemId },
+    // Verify payment exists
+    const existingPayment = await tx.payment.findUnique({
+      where: { id: paymentId },
     });
 
-    if (!existingItem || existingItem.invoiceId !== invoiceId) {
+    if (existingPayment?.invoiceId !== invoiceId) {
       throw new EntityNotFoundError({
-        message: "Invoice item not found",
-        statusCode: 404,
         code: "ERR_NF",
+        message: "Payment not found",
+        statusCode: 404,
       });
     }
 
-    // Delete item
-    await tx.invoiceItem.delete({
-      where: { id: itemId },
+    // Update payment
+    const updateData: Prisma.PaymentUpdateInput = {};
+    if (data.amount !== undefined) updateData.amount = data.amount;
+    if (data.paymentMethod !== undefined)
+      updateData.paymentMethod = data.paymentMethod;
+    if (data.transactionId !== undefined)
+      updateData.transactionId = data.transactionId;
+    if (data.details !== undefined) updateData.details = data.details;
+    if (data.paidAt !== undefined) updateData.paidAt = data.paidAt;
+
+    const payment = await tx.payment.update({
+      data: updateData,
+      where: { id: paymentId },
     });
 
-    // Recalculate invoice totals
-    const allItems = await tx.invoiceItem.findMany({
-      where: { invoiceId },
-    });
+    // Update invoice balance and status
+    await updateInvoiceBalanceAndStatus(tx, invoiceId, Number(invoice.total));
 
-    const totals = calculateInvoiceTotals(
-      {
-        discount: Number(invoice.discount),
-        discountType: invoice.discountType,
-        taxMode: invoice.taxMode,
-        taxPercentage: invoice.taxPercentage
-          ? Number(invoice.taxPercentage)
-          : null,
-      },
-      allItems.map((i) => ({
-        quantity: Number(i.quantity),
-        unitPrice: Number(i.unitPrice),
-        discount: Number(i.discount),
-        discountType: i.discountType,
-        tax: Number(i.tax),
-        vatEnabled: i.vatEnabled,
-      })),
-    );
-
-    await tx.invoice.update({
-      where: { id: invoiceId },
-      data: {
-        subtotal: totals.subtotal,
-        totalTax: totals.totalTax,
-        total: totals.total,
-      },
-    });
-
-    await updateInvoiceBalanceAndStatus(tx, invoiceId, totals.total);
+    return {
+      ...payment,
+      amount: Number(payment.amount),
+    } as PaymentEntity;
   });
 }
 
+/**
+ * Calculate invoice totals from items
+ */
+function calculateInvoiceTotals(
+  invoice: {
+    discount: number;
+    discountType: "FIXED" | "NONE" | "PERCENTAGE";
+    taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
+    taxPercentage: null | number;
+  },
+  items: {
+    discount: number;
+    discountType: "FIXED" | "NONE" | "PERCENTAGE";
+    quantity: number;
+    tax: number;
+    unitPrice: number;
+    vatEnabled: boolean;
+  }[],
+): {
+  subtotal: number;
+  total: number;
+  totalTax: number;
+} {
+  // Calculate each item's total (after item discount, before tax)
+  const itemTotals = items.map((item) => {
+    const baseAmount = item.quantity * item.unitPrice;
+    let itemTotalAfterDiscount = baseAmount;
+    if (item.discountType === "PERCENTAGE") {
+      itemTotalAfterDiscount = baseAmount - (baseAmount * item.discount) / 100;
+    } else if (item.discountType === "FIXED") {
+      itemTotalAfterDiscount = baseAmount - item.discount;
+    }
+    return itemTotalAfterDiscount;
+  });
+
+  // Subtotal: sum of all item totals (after item discounts)
+  const subtotal = itemTotals.reduce((sum, total) => sum + total, 0);
+
+  // Apply invoice-level discount to subtotal (tax must be calculated after all discounts)
+  let subtotalAfterDiscount = subtotal;
+  if (invoice.discountType === "PERCENTAGE") {
+    subtotalAfterDiscount = subtotal - (subtotal * invoice.discount) / 100;
+  } else if (invoice.discountType === "FIXED") {
+    subtotalAfterDiscount = subtotal - invoice.discount;
+  }
+
+  // Tax base = amount after all discounts; apply proportional discount ratio to taxable amounts
+  let totalTax: number;
+  if (subtotal === 0) {
+    totalTax = 0;
+  } else {
+    const ratio = subtotalAfterDiscount / subtotal;
+    if (invoice.taxMode === "BY_PRODUCT") {
+      totalTax = items.reduce((sum, item, index) => {
+        const itemTaxableAfterDiscount = (itemTotals[index] ?? 0) * ratio;
+        return sum + (itemTaxableAfterDiscount * item.tax) / 100;
+      }, 0);
+    } else if (invoice.taxMode === "BY_TOTAL" && invoice.taxPercentage) {
+      const taxableSubtotal = items.reduce(
+        (sum, item, index) =>
+          item.vatEnabled ? sum + (itemTotals[index] ?? 0) : sum,
+        0,
+      );
+      const taxableAfterDiscount = taxableSubtotal * ratio;
+      totalTax = (taxableAfterDiscount * invoice.taxPercentage) / 100;
+    } else {
+      totalTax = 0;
+    }
+  }
+
+  // Total: subtotal after discount + total tax
+  const total = subtotalAfterDiscount + totalTax;
+
+  return {
+    subtotal,
+    total,
+    totalTax,
+  };
+}
+
+/**
+ * Extract numeric part from invoice number using regex
+ * Returns the last sequence of digits found in the string
+ */
+function extractNumberFromInvoiceNumber(invoiceNumber: string): null | number {
+  const matches = invoiceNumber.match(/\d+/g);
+  if (!matches || matches.length === 0) {
+    return null;
+  }
+  const last = matches.at(-1);
+  return last ? parseInt(last, 10) : null;
+}
+
 // ===== PAYMENT OPERATIONS =====
+
+/**
+ * Get next invoice number for a workspace
+ * This version works with a transaction client (for use within transactions)
+ */
+async function getNextInvoiceNumber(
+  tx: Prisma.TransactionClient,
+  businessId: number,
+  workspaceId: number,
+): Promise<string> {
+  return await getNextInvoiceNumberInternal(tx, businessId, workspaceId);
+}
+
+/**
+ * Internal implementation of getNextInvoiceNumber
+ * Works with both Prisma client and transaction client
+ */
+async function getNextInvoiceNumberInternal(
+  client: Prisma.TransactionClient | typeof prisma,
+  businessId: number,
+  workspaceId: number,
+): Promise<string> {
+  // Get workspace to get invoice prefix
+  const workspace = await client.workspace.findUnique({
+    select: { invoiceNumberPrefix: true },
+    where: { id: workspaceId },
+  });
+
+  const prefix = workspace?.invoiceNumberPrefix ?? null;
+
+  // If there's a prefix configured, find the last invoice that starts with that prefix
+  if (prefix) {
+    const lastInvoiceWithPrefix = await client.invoice.findFirst({
+      orderBy: {
+        invoiceNumber: "desc",
+      },
+      select: {
+        invoiceNumber: true,
+      },
+      where: {
+        businessId,
+        invoiceNumber: {
+          startsWith: prefix,
+        },
+
+        workspaceId,
+      },
+    });
+
+    if (!lastInvoiceWithPrefix) {
+      // No invoices with this prefix yet, start from 1
+      return `${prefix}0001`;
+    }
+
+    // Extract number from last invoice number
+    const extractedNumber = extractNumberFromInvoiceNumber(
+      lastInvoiceWithPrefix.invoiceNumber,
+    );
+
+    if (extractedNumber !== null && !isNaN(extractedNumber)) {
+      const nextNumber = extractedNumber + 1;
+      const paddedNumber = nextNumber.toString().padStart(4, "0");
+      return `${prefix}${paddedNumber}`;
+    } else {
+      // Couldn't extract number, append 0001
+      return `${prefix}0001`;
+    }
+  } else {
+    // No prefix configured, find the last invoice and try to increment
+    const lastInvoice = await client.invoice.findFirst({
+      orderBy: {
+        invoiceNumber: "desc",
+      },
+      select: {
+        invoiceNumber: true,
+      },
+      where: {
+        businessId,
+        workspaceId,
+      },
+    });
+
+    if (!lastInvoice) {
+      // No invoices at all, use default
+      return "INV-0001";
+    }
+
+    // Try to extract and increment the number from the last invoice
+    const extractedNumber = extractNumberFromInvoiceNumber(
+      lastInvoice.invoiceNumber,
+    );
+
+    if (extractedNumber !== null && !isNaN(extractedNumber)) {
+      const nextNumber = extractedNumber + 1;
+      const paddedNumber = nextNumber.toString().padStart(4, "0");
+      // Try to preserve the format by keeping the prefix part if it exists
+      const prefixMatch = /^[^0-9]*/.exec(lastInvoice.invoiceNumber);
+      const preservedPrefix = prefixMatch ? prefixMatch[0] : "INV-";
+      return `${preservedPrefix}${paddedNumber}`;
+    } else {
+      // Couldn't extract number, use default
+      return "INV-0001";
+    }
+  }
+}
+
+/**
+ * Handle catalog integration for invoice item
+ */
+async function handleCatalogIntegration(
+  tx: Prisma.TransactionClient,
+  workspaceId: number,
+  businessId: number,
+  itemData: {
+    description: string;
+    name: string;
+    price: number;
+    quantityUnit: "DAYS" | "HOURS" | "UNITS";
+  },
+): Promise<null | number> {
+  // Check if catalog item with same name exists for this business
+  const existingCatalog = await tx.catalog.findFirst({
+    select: {
+      id: true,
+    },
+    where: {
+      businessId,
+      name: itemData.name,
+      workspaceId,
+    },
+  });
+
+  if (existingCatalog) {
+    // Link to existing catalog
+    return existingCatalog.id;
+  }
+
+  // Create new catalog entry
+  // First, get next sequence for this business
+  const lastCatalog = await tx.catalog.findFirst({
+    orderBy: {
+      sequence: "desc",
+    },
+    select: {
+      sequence: true,
+    },
+    where: {
+      workspaceId,
+    },
+  });
+
+  const sequence = lastCatalog ? lastCatalog.sequence + 1 : 1;
+
+  const newCatalog = await tx.catalog.create({
+    data: {
+      businessId,
+      description: itemData.description,
+      name: itemData.name,
+      price: itemData.price,
+      quantityUnit: itemData.quantityUnit,
+      sequence,
+      workspaceId,
+    },
+  });
+
+  return newCatalog.id;
+}
 
 /**
  * Helper function to update invoice balance and status based on payments
@@ -2256,11 +2394,11 @@ async function updateInvoiceBalanceAndStatus(
 ): Promise<void> {
   // Get all non-deleted payments for this invoice
   const payments = await tx.payment.findMany({
-    where: {
-      invoiceId,
-    },
     select: {
       amount: true,
+    },
+    where: {
+      invoiceId,
     },
   });
 
@@ -2275,12 +2413,12 @@ async function updateInvoiceBalanceAndStatus(
 
   // Get current invoice to check status
   const invoice = await tx.invoice.findUnique({
-    where: { id: invoiceId },
     select: {
+      paidAt: true,
       status: true,
       viewedAt: true,
-      paidAt: true,
     },
+    where: { id: invoiceId },
   });
 
   if (!invoice) {
@@ -2319,191 +2457,7 @@ async function updateInvoiceBalanceAndStatus(
 
   // Update invoice
   await tx.invoice.update({
-    where: { id: invoiceId },
     data: updateData,
-  });
-}
-
-/**
- * Add a payment to an invoice.
- * If data.sendReceipt is true, enqueues a job to send a receipt email (not persisted).
- */
-export async function addPayment(
-  workspaceId: number,
-  invoiceId: number,
-  data: CreatePaymentDto,
-): Promise<PaymentEntity> {
-  const { sendReceipt, ...paymentData } = data;
-
-  const payment = await prisma.$transaction(async (tx) => {
-    // Verify invoice exists and belongs to workspace
-    const invoice = await tx.invoice.findUnique({
-      where: { id: invoiceId },
-      include: { _count: { select: { items: true } } },
-    });
-
-    if (!invoice || invoice.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        message: "Invoice not found",
-        statusCode: 404,
-        code: "ERR_NF",
-      });
-    }
-
-    if (invoice._count.items === 0) {
-      throw new EntityValidationError({
-        message: "Cannot add payment to an invoice with no items",
-        statusCode: 400,
-        code: "ERR_VALID",
-      });
-    }
-
-    if (Number(invoice.balance) <= 0) {
-      throw new EntityValidationError({
-        message: "Cannot add payment: invoice balance is zero or already paid",
-        statusCode: 400,
-        code: "ERR_VALID",
-      });
-    }
-
-    // Check if transactionId already exists only when provided
-    const transactionId = paymentData.transactionId ?? null;
-
-    // Create payment
-    const created = await tx.payment.create({
-      data: {
-        workspaceId,
-        invoiceId,
-        amount: paymentData.amount,
-        paymentMethod: paymentData.paymentMethod,
-        transactionId,
-        details: paymentData.details,
-        paidAt: paymentData.paidAt || new Date(),
-      },
-    });
-
-    // Update invoice balance and status
-    await updateInvoiceBalanceAndStatus(tx, invoiceId, Number(invoice.total));
-
-    return {
-      ...created,
-      amount: Number(created.amount),
-    } as PaymentEntity;
-  });
-
-  if (sendReceipt) {
-    const { sendReceiptQueue } = await import("../../queue/queues");
-    await sendReceiptQueue.add("send-receipt", {
-      paymentId: payment.id,
-      invoiceId,
-      workspaceId,
-    });
-  }
-
-  return payment;
-}
-
-/**
- * Update a payment
- */
-export async function updatePayment(
-  workspaceId: number,
-  invoiceId: number,
-  paymentId: number,
-  data: UpdatePaymentDto,
-): Promise<PaymentEntity> {
-  return await prisma.$transaction(async (tx) => {
-    // Verify invoice exists and belongs to workspace
-    const invoice = await tx.invoice.findUnique({
-      where: { id: invoiceId },
-    });
-
-    if (!invoice || invoice.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        message: "Invoice not found",
-        statusCode: 404,
-        code: "ERR_NF",
-      });
-    }
-
-    // Verify payment exists
-    const existingPayment = await tx.payment.findUnique({
-      where: { id: paymentId },
-    });
-
-    if (!existingPayment || existingPayment.invoiceId !== invoiceId) {
-      throw new EntityNotFoundError({
-        message: "Payment not found",
-        statusCode: 404,
-        code: "ERR_NF",
-      });
-    }
-
-    // Update payment
-    const updateData: Prisma.PaymentUpdateInput = {};
-    if (data.amount !== undefined) updateData.amount = data.amount;
-    if (data.paymentMethod !== undefined)
-      updateData.paymentMethod = data.paymentMethod;
-    if (data.transactionId !== undefined)
-      updateData.transactionId = data.transactionId;
-    if (data.details !== undefined) updateData.details = data.details;
-    if (data.paidAt !== undefined) updateData.paidAt = data.paidAt;
-
-    const payment = await tx.payment.update({
-      where: { id: paymentId },
-      data: updateData,
-    });
-
-    // Update invoice balance and status
-    await updateInvoiceBalanceAndStatus(tx, invoiceId, Number(invoice.total));
-
-    return {
-      ...payment,
-      amount: Number(payment.amount),
-    } as PaymentEntity;
-  });
-}
-
-/**
- * Delete a payment (soft delete)
- */
-export async function deletePayment(
-  workspaceId: number,
-  invoiceId: number,
-  paymentId: number,
-): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    // Verify invoice exists and belongs to workspace
-    const invoice = await tx.invoice.findUnique({
-      where: { id: invoiceId },
-    });
-
-    if (!invoice || invoice.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        message: "Invoice not found",
-        statusCode: 404,
-        code: "ERR_NF",
-      });
-    }
-
-    // Verify payment exists
-    const existingPayment = await tx.payment.findUnique({
-      where: { id: paymentId },
-    });
-
-    if (!existingPayment || existingPayment.invoiceId !== invoiceId) {
-      throw new EntityNotFoundError({
-        message: "Payment not found",
-        statusCode: 404,
-        code: "ERR_NF",
-      });
-    }
-
-    await tx.payment.delete({
-      where: { id: paymentId },
-    });
-
-    // Update invoice balance and status
-    await updateInvoiceBalanceAndStatus(tx, invoiceId, Number(invoice.total));
+    where: { id: invoiceId },
   });
 }

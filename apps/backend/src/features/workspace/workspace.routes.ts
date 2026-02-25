@@ -1,21 +1,22 @@
 import { Router } from "express";
 import { processRequest } from "zod-express-middleware";
+
+import asyncHandler from "../../core/async-handler.js";
 import {
   listPaymentMethods,
   upsertPaymentMethod,
-} from "./workspace.controller";
+} from "./workspace.controller.js";
 import {
-  upsertPaymentMethodSchema,
   upsertPaymentMethodParamsSchema,
-} from "./workspace.schemas";
-import asyncHandler from "../../core/async-handler";
+  upsertPaymentMethodSchema,
+} from "./workspace.schemas.js";
 
 /**
  * Workspace routes
  * All routes are protected by requireAuth() and verifyWorkspaceAccess middleware
  * (applied in routes/index.ts)
  */
-export const workspaceRoutes = Router();
+export const workspaceRoutes: Router = Router();
 
 // GET /api/v1/workspace/payment-methods - List all payment methods
 workspaceRoutes.get("/payment-methods", asyncHandler(listPaymentMethods));
@@ -24,8 +25,8 @@ workspaceRoutes.get("/payment-methods", asyncHandler(listPaymentMethods));
 workspaceRoutes.put(
   "/payment-methods/:type",
   processRequest({
-    params: upsertPaymentMethodParamsSchema,
     body: upsertPaymentMethodSchema,
+    params: upsertPaymentMethodParamsSchema,
   }),
   asyncHandler(upsertPaymentMethod),
 );

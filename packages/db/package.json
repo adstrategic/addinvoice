@@ -1,25 +1,35 @@
 {
   "name": "@addinvoice/db",
   "version": "1.0.0",
-  "private": true,
-  "type": "commonjs",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:seed": "tsx src/seed.ts",
     "db:generate": "prisma generate",
-    "build": "tsc",
-    "clean": "rm -rf dist",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy"
+    "format": "prisma format",
+    "prebuild": "pnpm run generate",
+    "predev": "pnpm run generate",
+    "studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.2.0",
-    "@prisma/client": "^7.0.0"
+    "@prisma/client": "^7.0.0",
+    "dotenv": "^16.5.0",
+    "pg": "^8.18.0"
   },
   "devDependencies": {
-    "prisma": "^7.0.0",
-    "typescript": "^5.8.3",
-    "@types/node": "^24.0.0",
-    "dotenv": "^16.5.0"
+    "@addinvoice/eslint-config": "workspace:*",
+    "@addinvoice/typescript-config": "workspace:*",
+    "@types/pg": "^8.16.0",
+    "eslint": "^8.57.0",
+    "prisma": "latest",
+    "rimraf": "^5.0.5",
+    "tsx": "4.21.0",
+    "typescript": "5.5.4"
   }
 }

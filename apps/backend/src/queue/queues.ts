@@ -1,13 +1,14 @@
 import { Queue } from "bullmq";
-import { getProducerConnectionOptions } from "./connection";
+
+import { getProducerConnectionOptions } from "./connection.js";
 
 const connection = getProducerConnectionOptions();
 
 const defaultJobOptions = {
   attempts: 3,
   backoff: {
-    type: "exponential",
     delay: 5000,
+    type: "exponential",
   },
   removeOnComplete: { count: 100 },
 };
@@ -22,20 +23,20 @@ export const sendReceiptQueue = new Queue("email-receipt", {
   defaultJobOptions,
 });
 
-export type SendInvoiceJobData = {
+export interface SendInvoiceJobData {
+  email: string;
+  invoiceId: number;
+  message: string;
   sequence: number;
-  invoiceId: number;
-  workspaceId: number;
-  email: string;
   subject: string;
-  message: string;
-};
+  workspaceId: number;
+}
 
-export type SendReceiptJobData = {
-  paymentId: number;
-  invoiceId: number;
-  workspaceId: number;
+export interface SendReceiptJobData {
   email: string;
-  subject: string;
+  invoiceId: number;
   message: string;
-};
+  paymentId: number;
+  subject: string;
+  workspaceId: number;
+}

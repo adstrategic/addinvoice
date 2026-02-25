@@ -1,28 +1,28 @@
 import "dotenv/config";
-
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import { errorHandler, apiRateLimiter } from "./core/middleware";
-import { apiRouter } from "./routes";
 import { clerkMiddleware } from "@clerk/express";
-import { handleStripeWebhook } from "./features/subscriptions/stripe-webhook.handler";
-import { handleClerkWebhook } from "./features/subscriptions/clerk-webhook.handler";
-import asyncHandler from "./core/async-handler";
+import cors from "cors";
+import express from "express";
+import helmet from "helmet";
+
+import asyncHandler from "./core/async-handler.js";
+import { apiRateLimiter, errorHandler } from "./core/middleware.js";
+import { handleClerkWebhook } from "./features/subscriptions/clerk-webhook.handler.js";
+import { handleStripeWebhook } from "./features/subscriptions/stripe-webhook.handler.js";
+import { apiRouter } from "./routes/index.js";
 
 const app = express();
 
 // Trust the first proxy (Railway) so X-Forwarded-For is used for IP / rate limiting
 app.set("trust proxy", 1);
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT ?? 4000;
 
 // Global middlewares
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
+    origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
   }),
 );
 
@@ -64,5 +64,5 @@ app.get("/health", (req, res) => {
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${String(PORT)}`);
 });

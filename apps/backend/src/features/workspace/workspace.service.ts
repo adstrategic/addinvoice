@@ -1,9 +1,11 @@
-import prisma from "../../core/db";
 import type { PaymentMethodType } from "@addinvoice/db";
+
+import { prisma } from "@addinvoice/db";
+
 import type {
   PaymentMethodResponse,
   UpsertPaymentMethodDto,
-} from "./workspace.schemas";
+} from "./workspace.schemas.js";
 
 /**
  * List all workspace payment methods (one row per type, created on first upsert)
@@ -12,14 +14,14 @@ export async function listPaymentMethods(
   workspaceId: number,
 ): Promise<PaymentMethodResponse[]> {
   const rows = await prisma.workspacePaymentMethod.findMany({
-    where: { workspaceId },
     orderBy: { type: "asc" },
+    where: { workspaceId },
   });
   return rows.map((row) => ({
-    id: row.id,
-    type: row.type as PaymentMethodType,
     handle: row.handle,
+    id: row.id,
     isEnabled: row.isEnabled,
+    type: row.type,
   }));
 }
 
@@ -32,24 +34,24 @@ export async function upsertPaymentMethod(
   data: UpsertPaymentMethodDto,
 ): Promise<PaymentMethodResponse> {
   const row = await prisma.workspacePaymentMethod.upsert({
-    where: {
-      workspaceId_type: { workspaceId, type },
-    },
     create: {
-      workspaceId,
-      type,
       handle: data.handle ?? null,
       isEnabled: data.isEnabled,
+      type,
+      workspaceId,
     },
     update: {
       ...(data.handle !== undefined && { handle: data.handle }),
-      ...(data.isEnabled !== undefined && { isEnabled: data.isEnabled }),
+      ...(data.isEnabled && { isEnabled: data.isEnabled }),
+    },
+    where: {
+      workspaceId_type: { type, workspaceId },
     },
   });
   return {
-    id: row.id,
-    type: row.type as PaymentMethodType,
     handle: row.handle,
+    id: row.id,
     isEnabled: row.isEnabled,
+    type: row.type,
   };
 }

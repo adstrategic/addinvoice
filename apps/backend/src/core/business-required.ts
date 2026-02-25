@@ -1,5 +1,6 @@
-import { Request, Response, NextFunction } from "express";
-import prisma from "./db";
+import type { NextFunction, Request, Response } from "express";
+
+import { prisma } from "@addinvoice/db";
 
 /**
  * Middleware to check if workspace has at least one business
@@ -30,10 +31,10 @@ export async function requireBusiness(
     // Check if workspace has at least one business (efficient query)
     // Using count with take:1 stops after finding first business
     const businessCount = await prisma.business.count({
+      take: 1, // Stop after finding first one (performance optimization)
       where: {
         workspaceId,
       },
-      take: 1, // Stop after finding first one (performance optimization)
     });
 
     if (businessCount === 0) {
@@ -48,7 +49,7 @@ export async function requireBusiness(
 
     // Has business, continue to next middleware/controller
     next();
-  } catch (error) {
+  } catch {
     res.status(500).json({
       error: "INTERNAL_ERROR",
       message: "Internal server error",

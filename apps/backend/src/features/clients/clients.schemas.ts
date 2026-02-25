@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { createClientSchema } from "@addinvoice/schemas";
+import { z } from "zod";
 
 // Re-export for consumers that only need the shared schema
 export { createClientSchema };
@@ -10,8 +10,8 @@ export { createClientSchema };
  * Schema for listing clients
  */
 export const listClientsSchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(30).optional().default(10),
+  page: z.coerce.number().int().min(1).optional().default(1),
   search: z.string().optional(),
 });
 
@@ -36,11 +36,11 @@ export const getClientByIdSchema = z.object({
  * Schema for client entity
  */
 export const clientEntitySchema = createClientSchema.extend({
+  createdAt: z.date(),
   id: z.number().int().positive(),
   sequence: z.number().int().positive(),
-  workspaceId: z.number().int().positive(),
-  createdAt: z.date(),
   updatedAt: z.date(),
+  workspaceId: z.number().int().positive(),
 });
 
 /**
@@ -51,10 +51,10 @@ export const updateClientSchema = createClientSchema.partial();
 // ===== DTOs (for the service) =====
 
 export type ClientEntity = z.infer<typeof clientEntitySchema>;
-export type ListClientsQuery = z.infer<typeof listClientsSchema>;
+export type CreateClientDto = z.infer<typeof createClientSchema>;
+export type GetClientByIdParams = z.infer<typeof getClientByIdSchema>;
 export type GetClientBySequenceParams = z.infer<
   typeof getClientBySequenceSchema
 >;
-export type GetClientByIdParams = z.infer<typeof getClientByIdSchema>;
-export type CreateClientDto = z.infer<typeof createClientSchema>;
+export type ListClientsQuery = z.infer<typeof listClientsSchema>;
 export type UpdateClientDto = z.infer<typeof updateClientSchema>;

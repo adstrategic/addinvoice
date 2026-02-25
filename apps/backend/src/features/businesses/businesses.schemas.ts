@@ -6,8 +6,8 @@ import { z } from "zod";
  * Schema for listing businesses
  */
 export const listBusinessesSchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(30).optional().default(10),
+  page: z.coerce.number().int().min(1).optional().default(1),
   search: z.string().optional(),
 });
 
@@ -21,6 +21,18 @@ export const getBusinessByIdSchema = z.object({
 const defaultTaxModeEnum = z.enum(["NONE", "BY_PRODUCT", "BY_TOTAL"]);
 
 const createBusinessSchemaBase = z.object({
+  address: z
+    .string({ required_error: "Address is required" })
+    .trim()
+    .min(1, "Address cannot be empty")
+    .max(500, "Address cannot exceed 500 characters"),
+  defaultNotes: z.string().optional().nullable(),
+  defaultTaxMode: defaultTaxModeEnum.optional().nullable(),
+  defaultTaxName: z.string().trim().optional().nullable(),
+  defaultTaxPercentage: z.number().min(0).max(100).optional().nullable(),
+  defaultTerms: z.string().optional().nullable(),
+  email: z.string().trim().email("Invalid email address"),
+  logo: z.string().url("Invalid logo URL").optional().nullable(),
   name: z
     .string()
     .trim()
@@ -31,12 +43,6 @@ const createBusinessSchemaBase = z.object({
     .trim()
     .max(50, "NIT/Tax ID cannot exceed 50 characters")
     .nullish(),
-  address: z
-    .string({ required_error: "Address is required" })
-    .trim()
-    .min(1, "Address cannot be empty")
-    .max(500, "Address cannot exceed 500 characters"),
-  email: z.string().trim().email("Invalid email address"),
   phone: z
     .string()
     .trim()
@@ -45,19 +51,13 @@ const createBusinessSchemaBase = z.object({
       /^\+[1-9]\d{1,14}$/,
       "Phone must have a valid international format (e.g. +573011234567)",
     ),
-  logo: z.string().url("Invalid logo URL").optional().nullable(),
-  defaultTaxMode: defaultTaxModeEnum.optional().nullable(),
-  defaultTaxName: z.string().trim().optional().nullable(),
-  defaultTaxPercentage: z.number().min(0).max(100).optional().nullable(),
-  defaultNotes: z.string().optional().nullable(),
-  defaultTerms: z.string().optional().nullable(),
 });
 
 const byTotalTaxSuperRefine = (
   data: {
-    defaultTaxMode?: string | null;
-    defaultTaxName?: string | null;
-    defaultTaxPercentage?: number | null;
+    defaultTaxMode?: null | string;
+    defaultTaxName?: null | string;
+    defaultTaxPercentage?: null | number;
   },
   ctx: z.RefinementCtx,
 ) => {
@@ -108,19 +108,19 @@ export const setDefaultBusinessSchema = z.object({
  * Matches backend BusinessEntity structure
  */
 export const businessEntitySchema = createBusinessSchemaBase.extend({
+  createdAt: z.date(),
   id: z.number().int().positive(),
-  workspaceId: z.number().int().positive(),
   isDefault: z.boolean(),
   sequence: z.number().int().positive(),
-  createdAt: z.date(),
   updatedAt: z.date(),
+  workspaceId: z.number().int().positive(),
 });
 
 // ===== DTOs (for the service) =====
 
 export type BusinessEntity = z.infer<typeof businessEntitySchema>;
-export type ListBusinessesQuery = z.infer<typeof listBusinessesSchema>;
-export type GetBusinessByIdParams = z.infer<typeof getBusinessByIdSchema>;
 export type CreateBusinessDto = z.infer<typeof createBusinessSchema>;
-export type UpdateBusinessDto = z.infer<typeof updateBusinessSchema>;
+export type GetBusinessByIdParams = z.infer<typeof getBusinessByIdSchema>;
+export type ListBusinessesQuery = z.infer<typeof listBusinessesSchema>;
 export type SetDefaultBusinessParams = z.infer<typeof setDefaultBusinessSchema>;
+export type UpdateBusinessDto = z.infer<typeof updateBusinessSchema>;

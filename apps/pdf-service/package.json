@@ -1,14 +1,17 @@
 {
   "name": "@addinvoice/pdf-service",
   "version": "1.0.0",
-  "type": "commonjs",
+  "type": "module",
   "main": "dist/server.js",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "clean": "rm -rf dist",
     "build": "pnpm run clean && tsc",
     "start": "node dist/server.js",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "lint": "eslint ."
   },
   "dependencies": {
     "dotenv": "^16.5.0",
@@ -17,9 +20,13 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
+    "@addinvoice/eslint-config": "workspace:*",
+    "@addinvoice/typescript-config": "workspace:*",
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.0",
+    "eslint": "^10.0.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.50.0"
   }
 }

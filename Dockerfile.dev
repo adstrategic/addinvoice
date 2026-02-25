@@ -23,6 +23,8 @@ FROM base AS dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc turbo.json ./
 COPY packages/db/package.json ./packages/db/
 COPY packages/schemas/package.json ./packages/schemas/
+COPY packages/typescript-config/ ./packages/typescript-config/
+COPY packages/eslint-config/ ./packages/eslint-config/
 COPY apps/backend/package.json ./apps/backend/
 COPY apps/frontend/package.json ./apps/frontend/
 COPY apps/pdf-service/package.json ./apps/pdf-service/
@@ -36,13 +38,15 @@ FROM dependencies AS shared-builder
 COPY packages/db/ ./packages/db/
 COPY packages/schemas/ ./packages/schemas/
 
-RUN pnpm --filter @addinvoice/db build \
+RUN pnpm --filter @addinvoice/db db:generate \
     && pnpm --filter @addinvoice/schemas build
 
 # ---- Backend dev (API): same as shared-builder for env; source mounted at runtime ----
 FROM shared-builder AS backend-dev
 
 COPY apps/backend/ ./apps/backend/
+
+RUN pnpm install --frozen-lockfile
 
 # Default command; override in compose to run install + dev
 CMD ["pnpm", "dev:backend"]
@@ -90,4 +94,5 @@ FROM shared-builder AS worker-dev
 
 COPY apps/backend/ ./apps/backend/
 
+RUN pnpm install --frozen-lockfile
 CMD ["pnpm", "--filter", "@addinvoice/backend", "run", "dev:worker"]

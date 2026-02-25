@@ -1,18 +1,20 @@
-import { Request, Response, NextFunction } from "express";
-import rateLimit from "express-rate-limit";
-import CustomError from "../errors/CustomError";
+import type { NextFunction, Request, Response } from "express";
+
 import { Prisma } from "@addinvoice/db";
+import rateLimit from "express-rate-limit";
+
+import CustomError from "../errors/CustomError.js";
 
 /**
  * Rate limiting middleware
  * Limits requests to 100 per 15 minutes per IP
  */
 export const apiRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  legacyHeaders: false,
   max: 100, // Limit each IP to 100 requests per windowMs
   message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
-  legacyHeaders: false,
+  windowMs: 15 * 60 * 1000, // 15 minutes
 });
 
 /**
@@ -24,6 +26,7 @@ export function errorHandler(
   err: Error,
   req: Request,
   res: Response,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction,
 ): void {
   // Handle our custom AppError instances (includes all feature-specific errors)
