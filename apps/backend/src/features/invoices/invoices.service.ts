@@ -22,6 +22,7 @@ import type {
 import {
   EntityNotFoundError,
   EntityValidationError,
+  FieldValidationError,
 } from "../../errors/EntityErrors.js";
 import { type BusinessEntity } from "../businesses/businesses.schemas.js";
 import { type ClientEntity } from "../clients/clients.schemas.js";
@@ -591,7 +592,11 @@ export async function createInvoice(
         },
       });
       if (existing) {
-        throw new EntityValidationError("Invoice number already exists");
+        throw new FieldValidationError({
+          fields: { invoiceNumber: ["Invoice number already exists"] },
+          message: "Invoice number already exists",
+          statusCode: 400,
+        });
       }
     }
 

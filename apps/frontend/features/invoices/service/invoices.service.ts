@@ -114,7 +114,6 @@ async function createInvoice(
 
     return invoiceSchema.parse(data.data);
   } catch (error) {
-    console.error(error);
     handleApiError(error);
   }
 }

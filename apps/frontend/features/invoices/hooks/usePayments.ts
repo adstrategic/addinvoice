@@ -1,18 +1,19 @@
+import type { UseFormSetError } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { invoicesService } from "../service/invoices.service";
 import { invoiceKeys } from "./useInvoices";
 import type {
   CreatePaymentDto,
   UpdatePaymentDto,
 } from "@/features/payments/schemas/payments.schema";
+import { handleMutationError } from "@/lib/errors/handle-error";
 import { toast } from "sonner";
 
 /**
- * Hook to create a payment
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to create a payment.
+ * Pass setError when used with a form for field-level errors.
  */
-export function useCreatePayment() {
+export function useCreatePayment(setError?: UseFormSetError<CreatePaymentDto>) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -26,7 +27,6 @@ export function useCreatePayment() {
       data: CreatePaymentDto;
     }) => invoicesService.createPayment(invoiceId, data),
     onSuccess: (_, { invoiceSequence }) => {
-      // Invalidate all invoice details since we key by sequence, not id
       queryClient.invalidateQueries({
         queryKey: invoiceKeys.detail(invoiceSequence),
       });
@@ -35,15 +35,15 @@ export function useCreatePayment() {
         description: "The payment has been added successfully.",
       });
     },
-    // Don't handle errors here - let the form component handle them
+    onError: (err) => handleMutationError(err, setError),
   });
 }
 
 /**
- * Hook to update a payment
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to update a payment.
+ * Pass setError when used with a form for field-level errors.
  */
-export function useUpdatePayment() {
+export function useUpdatePayment(setError?: UseFormSetError<UpdatePaymentDto>) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -63,12 +63,12 @@ export function useUpdatePayment() {
         description: "The payment has been updated successfully.",
       });
     },
-    // Don't handle errors here - let the form component handle them
+    onError: (err) => handleMutationError(err, setError),
   });
 }
 
 /**
- * Hook to delete a payment
+ * Hook to delete a payment.
  */
 export function useDeletePayment() {
   const queryClient = useQueryClient();
@@ -88,10 +88,6 @@ export function useDeletePayment() {
         description: "The payment has been removed.",
       });
     },
-    onError: (error: Error) => {
-      toast.error("Failed to delete payment", {
-        description: error.message || "Failed to delete payment",
-      });
-    },
+    onError: (err) => handleMutationError(err),
   });
 }

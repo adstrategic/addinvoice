@@ -31,6 +31,7 @@ export default function EditInvoicePage() {
         isLoadingInvoice={invoiceManager.isLoadingInvoice}
         isLoadingNumber={invoiceManager.isLoadingNextNumber}
         invoiceError={invoiceManager.invoiceError}
+        saveBeforeSend={invoiceManager.saveBeforeSend}
       />
     );
   }

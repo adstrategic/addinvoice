@@ -1,16 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { DefaultValues, useForm } from "react-hook-form";
+import { type DefaultValues, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import {
   type CreateInvoiceDTO,
-  InvoiceItemCreateInput,
+  type InvoiceItemCreateInput,
   type UpdateInvoiceDTO,
   createInvoiceSchema,
 } from "../schemas/invoice.schema";
-import { useInvoiceActions } from "./useInvoiceActions";
+import {
+  useInvoiceActions,
+  type InvoiceMutationCallbacks,
+} from "./useInvoiceActions";
 import {
   useInvoiceBySequence,
   useCreateInvoice,
@@ -18,10 +21,10 @@ import {
   useNextInvoiceNumber,
   invoiceKeys,
 } from "./useInvoices";
-import { useFormErrorHandler } from "@/hooks/useFormErrorHandler";
+import { handleMutationError } from "@/lib/errors/handle-error";
 import { useDirtyFields } from "@/hooks/useDirtyValues";
 import { useFormScroll } from "@/hooks/useFormScroll";
-import { BusinessResponse, useBusinesses } from "@/features/businesses";
+import { type BusinessResponse, useBusinesses } from "@/features/businesses";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateInvoiceItem } from "./useInvoiceItems";
 
@@ -61,7 +64,7 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
   } = useInvoiceBySequence(invoiceSequence || 0, mode === "edit");
 
   useEffect(() => {
-    if (existingInvoice) {
+    if (existingInvoice?.business) {
       setSelectedBusiness(existingInvoice.business);
     }
   }, [existingInvoice]);
@@ -73,12 +76,7 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       selectedBusiness?.id ?? null,
     );
 
-  // === ACCIONES ===
-  const actions = useInvoiceActions();
-  const createMutation = useCreateInvoice();
-  const updateMutation = useUpdateInvoice();
   const queryClient = useQueryClient();
-
   const createItem = useCreateInvoiceItem();
 
   // === CONFIGURACIÓN DEL FORMULARIO ===
@@ -164,13 +162,13 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     }
   }, [selectedBusiness, isFormOpen, form]);
 
+  // === ACCIONES (after form so we can pass form.setError) ===
+  const actions = useInvoiceActions(form.setError);
+  const createMutation = useCreateInvoice(form.setError);
+  const updateMutation = useUpdateInvoice(form.setError);
+
   // Hooks de utilidad para el formulario
   const { getDirtyValues } = useDirtyFields(form);
-  const { handleErrorWithToast } = useFormErrorHandler({
-    form,
-    mode,
-    entityName: "invoice",
-  });
   const { scrollToField } = useFormScroll();
 
   // === HANDLERS ===
@@ -196,8 +194,7 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
   );
 
   const handleCreateInvoice = () => {
-    // Auto-select if only one business exists
-    if (businesses.length === 1) {
+    if (businesses.length === 1 && businesses[0]) {
       selectBusiness(businesses[0]);
       return;
     }
@@ -329,70 +326,70 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
 
   // Onsubmit
   const onSubmit = form.handleSubmit(
-    async (data) => {
-      try {
-        // Ensure businessId is included
-        if (!selectedBusiness) {
-          throw new Error("Business must be selected before creating invoice");
-        }
+    (data) => {
+      if (!selectedBusiness) {
+        handleMutationError(
+          new Error("Business must be selected before creating invoice"),
+          form.setError,
+        );
+        return;
+      }
 
-        const apiData = processFormData(data);
+      const apiData = processFormData(data);
 
-        // Check if we need to create a new client (from form data)
-        const isCreatingNewClient = data.createClient === true;
+      // Check if we need to create a new client (from form data)
+      const isCreatingNewClient = data.createClient === true;
 
-        if (isCreatingNewClient && mode === "create") {
-          // Get client form data from form values
-          const clientData = data.clientData;
-          if (!clientData) {
-            throw new Error(
-              "Client data is required when creating a new client",
-            );
-          }
-
-          // Set createClient flag and include clientData
-          apiData.createClient = true;
-          apiData.clientData = {
-            name: clientData.name,
-            email: clientData.email,
-            phone: clientData.phone ?? null,
-            address: clientData.address ?? null,
-            nit: clientData.nit ?? null,
-            businessName: clientData.businessName ?? null,
-            reminderBeforeDueIntervalDays:
-              clientData.reminderBeforeDueIntervalDays ?? null,
-            reminderAfterDueIntervalDays:
-              clientData.reminderAfterDueIntervalDays ?? null,
-          };
-        }
-
-        // Always include businessId for create, include it in update if it changed
-        if (mode === "create") {
-          (apiData as CreateInvoiceDTO).businessId = selectedBusiness.id;
-        }
-
-        if (mode === "edit") {
-          if (!existingInvoice) throw new Error("No invoice data loaded");
-
-          await actions.handleUpdate(
-            existingInvoice.id,
-            apiData as UpdateInvoiceDTO,
+      if (isCreatingNewClient && mode === "create") {
+        const clientData = data.clientData;
+        if (!clientData) {
+          handleMutationError(
+            new Error("Client data is required when creating a new client"),
+            form.setError,
           );
-        } else {
-          // Create mode: create invoice and navigate to edit page
-          const result = await actions.handleCreate(
-            apiData as CreateInvoiceDTO,
-          );
-
-          const sequence = result.sequence;
-
-          // Navigate to edit page
-          router.push(`/invoices/${sequence}/edit`);
+          return;
         }
 
-        options?.onAfterSubmit?.();
-      } catch (error) {
-        handleErrorWithToast(error);
+        apiData.createClient = true;
+        apiData.clientData = {
+          name: clientData.name,
+          email: clientData.email,
+          phone: clientData.phone ?? null,
+          address: clientData.address ?? null,
+          nit: clientData.nit ?? null,
+          businessName: clientData.businessName ?? null,
+          reminderBeforeDueIntervalDays:
+            clientData.reminderBeforeDueIntervalDays ?? null,
+          reminderAfterDueIntervalDays:
+            clientData.reminderAfterDueIntervalDays ?? null,
+        };
+      }
+
+      if (mode === "create") {
+        (apiData as CreateInvoiceDTO).businessId = selectedBusiness.id;
+      }
+
+      if (mode === "edit") {
+        if (!existingInvoice) {
+          handleMutationError(
+            new Error("No invoice data loaded"),
+            form.setError,
+          );
+          return;
+        }
+
+        actions.handleUpdate(existingInvoice.id, apiData as UpdateInvoiceDTO, {
+          onSuccess: () => options?.onAfterSubmit?.(),
+        });
+      } else {
+        actions.handleCreate(apiData as CreateInvoiceDTO, {
+          onSuccess: (result) => {
+            if (result?.sequence != null) {
+              router.push(`/invoices/${result.sequence}/edit`);
+            }
+            options?.onAfterSubmit?.();
+          },
+        });
       }
     },
     (errors) => {
@@ -401,6 +398,25 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
         scrollToField(firstErrorField);
       }
     },
+  );
+
+  /** Save current form (edit mode only). Resolves when update succeeds. Use before opening send dialog when form is dirty. */
+  const saveBeforeSend = useCallback(
+    async (callbacks?: InvoiceMutationCallbacks) => {
+      const valid = await form.trigger();
+      if (!valid) return;
+      if (mode !== "edit" || !existingInvoice) {
+        throw new Error("Cannot save: not in edit mode or invoice not loaded");
+      }
+      const data = form.getValues();
+      const apiData = (
+        mode === "edit" ? getDirtyValues(data) : data
+      ) as UpdateInvoiceDTO;
+      actions.handleUpdate(existingInvoice.id, apiData, {
+        onSuccess: () => callbacks?.onSuccess?.(),
+      });
+    },
+    [form, mode, existingInvoice, actions, getDirtyValues],
   );
 
   return {
@@ -437,5 +453,8 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     setShowBusinessDialog,
     handleCreateInvoice,
     hasSelectedBusiness: selectedBusiness !== null,
+
+    // Save before send
+    saveBeforeSend,
   };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { UseFormReturn } from "react-hook-form";
+import type { UseFormReturn } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,10 +15,10 @@ import {
 } from "lucide-react";
 import { useWorkspacePaymentMethods } from "@/features/workspace";
 import Image from "next/image";
-import { BusinessResponse } from "@/features/businesses";
+import type { BusinessResponse } from "@/features/businesses";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { downloadInvoicePdf } from "../lib/utils";
-import {
+import type {
   CreateInvoiceDTO,
   InvoiceItemCreateInput,
 } from "../schemas/invoice.schema";
@@ -35,9 +35,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
 import LoadingComponent from "@/components/loading-component";
 import { toast } from "sonner";
+import type { InvoiceMutationCallbacks } from "../hooks/useInvoiceActions";
 
 interface InvoiceFormProps {
   selectedBusiness: BusinessResponse;
@@ -51,6 +51,8 @@ interface InvoiceFormProps {
   invoiceError: Error | null;
   existingInvoice?: InvoiceResponse | null;
   ensureInvoiceExists?: (data: InvoiceItemCreateInput) => Promise<number>;
+  /** When provided (edit mode), save is run before opening send dialog if form is dirty. */
+  saveBeforeSend?: (callbacks?: InvoiceMutationCallbacks) => Promise<void>;
 }
 
 export function InvoiceForm({
@@ -65,11 +67,27 @@ export function InvoiceForm({
   isLoadingInvoice,
   invoiceError,
   isLoading,
+  saveBeforeSend,
 }: InvoiceFormProps) {
   const router = useRouter();
   const isDirty = form.formState.isDirty;
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSavingBeforeSend, setIsSavingBeforeSend] = useState(false);
+
+  const handleSendClick = async () => {
+    if (saveBeforeSend && isDirty) {
+      setIsSavingBeforeSend(true);
+      await saveBeforeSend({
+        onSuccess: () => {
+          setSendDialogOpen(true);
+          setIsSavingBeforeSend(false);
+        },
+      });
+    } else {
+      setSendDialogOpen(true);
+    }
+  };
 
   const taxData = {
     taxMode: form.watch("taxMode") || "NONE",
@@ -215,16 +233,28 @@ export function InvoiceForm({
               </Button>
               <Button
                 type="button"
-                onClick={() => setSendDialogOpen(true)}
-                disabled={!hasItems}
+                onClick={handleSendClick}
+                disabled={!hasItems || isSavingBeforeSend}
                 className="gap-2"
-                title={!hasItems ? "Add at least one item to send" : undefined}
                 aria-label={
                   !hasItems ? "Add at least one item to send" : "Send Invoice"
                 }
               >
-                <Send className="h-4 w-4" />
-                Send Invoice
+                {isSavingBeforeSend ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    {!hasItems
+                      ? "Add one item"
+                      : isDirty && saveBeforeSend
+                        ? "Save and send invoice"
+                        : "Send Invoice"}
+                  </>
+                )}
               </Button>
             </>
           ) : (
@@ -302,7 +332,7 @@ export function InvoiceForm({
                 <Input
                   placeholder="123456789-0"
                   className="mt-1"
-                  value={selectedBusiness.nit}
+                  value={selectedBusiness.nit ?? ""}
                   disabled
                 />
               </div>

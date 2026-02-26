@@ -1,3 +1,4 @@
+import type { UseFormSetError } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { invoicesService } from "../service/invoices.service";
 import { invoiceKeys } from "./useInvoices";
@@ -5,13 +6,16 @@ import type {
   InvoiceItemCreateInput,
   InvoiceItemUpdateInput,
 } from "../schemas/invoice.schema";
+import { handleMutationError } from "@/lib/errors/handle-error";
 import { toast } from "sonner";
 
 /**
- * Hook to create an invoice item
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to create an invoice item.
+ * Pass setError when used with a form for field-level errors.
  */
-export function useCreateInvoiceItem() {
+export function useCreateInvoiceItem(
+  setError?: UseFormSetError<InvoiceItemCreateInput>,
+) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -23,22 +27,23 @@ export function useCreateInvoiceItem() {
       data: InvoiceItemCreateInput;
     }) => invoicesService.createItem(invoiceId, data),
     onSuccess: () => {
-      // Invalidate all invoice details since we key by sequence, not id
       queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast.success("Product added", {
         description: "The product has been added to the invoice successfully.",
       });
     },
-    // Don't handle errors here - let the form component handle them
+    onError: (err) => handleMutationError(err, setError),
   });
 }
 
 /**
- * Hook to update an invoice item
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to update an invoice item.
+ * Pass setError when used with a form for field-level errors.
  */
-export function useUpdateInvoiceItem() {
+export function useUpdateInvoiceItem(
+  setError?: UseFormSetError<InvoiceItemUpdateInput>,
+) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -52,19 +57,18 @@ export function useUpdateInvoiceItem() {
       data: InvoiceItemUpdateInput;
     }) => invoicesService.updateItem(invoiceId, itemId, data),
     onSuccess: () => {
-      // Invalidate all invoice details since we key by sequence, not id
       queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast.success("Product updated", {
         description: "The product has been updated successfully.",
       });
     },
-    // Don't handle errors here - let the form component handle them
+    onError: (err) => handleMutationError(err, setError),
   });
 }
 
 /**
- * Hook to delete an invoice item
+ * Hook to delete an invoice item.
  */
 export function useDeleteInvoiceItem() {
   const queryClient = useQueryClient();
@@ -78,17 +82,12 @@ export function useDeleteInvoiceItem() {
       itemId: number;
     }) => invoicesService.deleteItem(invoiceId, itemId),
     onSuccess: () => {
-      // Invalidate all invoice details since we key by sequence, not id
       queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast.success("Product deleted", {
         description: "The product has been removed from the invoice.",
       });
     },
-    onError: (error: Error) => {
-      toast.error("Failed to delete product", {
-        description: error.message || "Failed to delete product",
-      });
-    },
+    onError: (err) => handleMutationError(err),
   });
 }

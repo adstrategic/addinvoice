@@ -33,15 +33,21 @@ export function useInvoiceDelete(options?: UseInvoiceDeleteOptions) {
     setInvoiceToDelete(null);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     if (!invoiceToDelete) return;
 
-    await deleteMutation.mutateAsync({
-      id: invoiceToDelete.id,
-      sequence: invoiceToDelete.sequence,
-    });
-    closeDeleteModal();
-    options?.onAfterDelete?.();
+    deleteMutation.mutate(
+      {
+        id: invoiceToDelete.id,
+        sequence: invoiceToDelete.sequence,
+      },
+      {
+        onSuccess: () => {
+          closeDeleteModal();
+          options?.onAfterDelete?.();
+        },
+      },
+    );
   };
 
   return {

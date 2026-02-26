@@ -1,3 +1,4 @@
+import type { UseFormSetError } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ListInvoicesParams, invoicesService } from "@/features/invoices";
 import type {
@@ -5,6 +6,7 @@ import type {
   UpdateInvoiceDTO,
 } from "../schemas/invoice.schema";
 import { clientKeys } from "@/features/clients";
+import { handleMutationError } from "@/lib/errors/handle-error";
 import { toast } from "sonner";
 
 /**
@@ -68,10 +70,12 @@ export function useNextInvoiceNumber(
 }
 
 /**
- * Hook to create a new invoice
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to create a new invoice.
+ * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useCreateInvoice() {
+export function useCreateInvoice(
+  setError?: UseFormSetError<CreateInvoiceDTO>,
+) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -89,16 +93,17 @@ export function useCreateInvoice() {
         description: "The invoice has been created successfully.",
       });
     },
-    // Don't handle errors here - let the form component handle them
-    // This allows the form to show field-specific errors
+    onError: (err) => handleMutationError(err, setError),
   });
 }
 
 /**
- * Hook to update an existing invoice
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to update an existing invoice.
+ * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useUpdateInvoice() {
+export function useUpdateInvoice(
+  setError?: UseFormSetError<CreateInvoiceDTO>,
+) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -119,12 +124,13 @@ export function useUpdateInvoice() {
         description: "The invoice has been updated successfully.",
       });
     },
-    // Don't handle errors here - let the form component handle them
+    onError: (err) => handleMutationError(err, setError),
   });
 }
 
 /**
- * Hook to delete an invoice
+ * Hook to delete an invoice.
+ * Errors are handled by the central dispatcher (handleMutationError).
  */
 export function useDeleteInvoice() {
   const queryClient = useQueryClient();
@@ -137,7 +143,6 @@ export function useDeleteInvoice() {
       queryClient.invalidateQueries({
         queryKey: invoiceKeys.detail(variables.sequence),
       });
-      // Invalidate all next-number caches (we don't have businessId on delete)
       queryClient.invalidateQueries({
         queryKey: [...invoiceKeys.all, "next-number"],
       });
@@ -145,10 +150,6 @@ export function useDeleteInvoice() {
         description: "The invoice has been deleted successfully.",
       });
     },
-    onError: (error: Error) => {
-      toast.error("Failed to delete invoice", {
-        description: error.message || "Failed to delete invoice",
-      });
-    },
+    onError: (err) => handleMutationError(err, undefined),
   });
 }
