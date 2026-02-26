@@ -2,15 +2,20 @@ import type { NextFunction, Request, Response } from "express";
 
 import { prisma } from "@addinvoice/db";
 
+import {
+  BusinessRequiredError,
+  InternalError,
+  UnauthorizedError,
+} from "../errors/EntityErrors.js";
+
 /**
  * Middleware to check if workspace has at least one business
  * Must be used after verifyWorkspaceAccess middleware
- * Returns 403 with BUSINESS_REQUIRED error code if no business exists
+ * Throws BusinessRequiredError (403) if no business exists; frontend interceptor redirects to /setup.
  *
  * Usage:
  * - Applied globally in routes/index.ts
  * - Excluded for /businesses routes (so users can create their first business)
- * - Frontend interceptor catches this error and redirects to /setup
  */
 export async function requireBusiness(
   req: Request,
@@ -21,38 +26,29 @@ export async function requireBusiness(
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {
-      res.status(401).json({
-        error: "UNAUTHORIZED",
-        message: "Workspace not found",
-      });
+      next(new UnauthorizedError("Workspace not found"));
       return;
     }
 
-    // Check if workspace has at least one business (efficient query)
-    // Using count with take:1 stops after finding first business
     const businessCount = await prisma.business.count({
-      take: 1, // Stop after finding first one (performance optimization)
+      take: 1,
       where: {
         workspaceId,
       },
     });
 
     if (businessCount === 0) {
-      // Return special error that frontend interceptor will catch
-      res.status(403).json({
-        error: "BUSINESS_REQUIRED",
-        message: "You need to create a business before accessing this feature",
-        redirectTo: "/setup", // Tell frontend where to redirect
-      });
+      next(
+        new BusinessRequiredError(
+          "You need to create a business before accessing this feature",
+          "/setup",
+        ),
+      );
       return;
     }
 
-    // Has business, continue to next middleware/controller
     next();
   } catch {
-    res.status(500).json({
-      error: "INTERNAL_ERROR",
-      message: "Internal server error",
-    });
+    next(new InternalError("Internal server error"));
   }
 }

@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError } from "axios";
+import axios, { type AxiosError, type AxiosInstance } from "axios";
 
 // Global reference to getToken function
 // This is set by the ClerkTokenProvider when the app loads
@@ -50,46 +50,29 @@ const createApiClient = (): AxiosInstance => {
     }
   );
 
-  // Response interceptor for error handling
+  // Response interceptor: single place for redirects on auth/subscription errors.
+  // Mutations and queries both get redirect here; handleMutationError only shows toasts.
   client.interceptors.response.use(
-    (response) => {
-      // Axios automatically handles non-2xx status codes as errors
-      // No need to validate success property anymore
-      return response;
-    },
+    (response) => response,
     (error: AxiosError) => {
-      // Type the error response for better type safety
-      const errorData = error.response?.data as
-        | {
-            error: string;
-            message: string;
-            redirectTo?: string;
-          }
+      const status = error.response?.status;
+      const data = error.response?.data as
+        | { code?: string; error?: string; redirectTo?: string }
         | undefined;
+      const code = data?.code ?? data?.error;
 
-      // Handle business required error (403 with BUSINESS_REQUIRED code)
-      // Backend returns this when user tries to access a protected resource without a business
-      if (
-        error.response?.status === 403 &&
-        errorData?.error === "BUSINESS_REQUIRED"
-      ) {
-        if (typeof window !== "undefined") {
-          // Use redirectTo from response or default to /setup
-          const redirectPath = errorData.redirectTo || "/setup";
-          window.location.href = redirectPath;
-        }
-        return Promise.reject(error);
-      }
-
-      // Handle unauthorized - redirect to sign-in
-      if (error.response?.status === 401) {
-        if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && status !== undefined) {
+        if (status === 401) {
           window.location.href = "/sign-in";
+        } else if (status === 403 && code === "BUSINESS_REQUIRED") {
+          window.location.href = data?.redirectTo ?? "/setup";
+        } else if (status === 402 && code === "SUBSCRIPTION_REQUIRED") {
+          window.location.href = data?.redirectTo ?? "/subscribe";
         }
       }
 
       return Promise.reject(error);
-    }
+    },
   );
 
   return client;

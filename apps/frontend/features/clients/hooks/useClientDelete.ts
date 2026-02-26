@@ -33,16 +33,14 @@ export function useClientDelete(options?: UseClientDeleteOptions) {
     setClientToDelete(null);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     if (!clientToDelete) return;
-    try {
-      await actions.handleDelete(clientToDelete.id, clientToDelete.sequence);
-      closeDeleteModal();
-      options?.onAfterDelete?.();
-    } catch (error) {
-      // El error ya es manejado por el toast en actions
-      console.error(error);
-    }
+    actions.handleDelete(clientToDelete.id, clientToDelete.sequence, {
+      onSuccess: () => {
+        closeDeleteModal();
+        options?.onAfterDelete?.();
+      },
+    });
   };
 
   return {

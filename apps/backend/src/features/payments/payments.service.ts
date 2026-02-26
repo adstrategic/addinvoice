@@ -29,11 +29,7 @@ export async function getPaymentById(
   });
 
   if (!payment) {
-    throw new EntityNotFoundError({
-      code: "ERR_NF",
-      message: "Payment not found",
-      statusCode: 404,
-    });
+    throw new EntityNotFoundError("Payment not found");
   }
 
   const inv = payment.invoice;

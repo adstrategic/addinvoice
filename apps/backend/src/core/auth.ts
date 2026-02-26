@@ -3,6 +3,8 @@ import type { NextFunction, Request, Response } from "express";
 import { prisma } from "@addinvoice/db";
 import { getAuth } from "@clerk/express";
 
+import { InternalError, UnauthorizedError } from "../errors/EntityErrors.js";
+
 // Extend Express Request with auth fields (namespace required for declaration merging)
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace -- Express Request augmentation
@@ -40,7 +42,7 @@ export async function verifyWorkspaceAccess(
     const { userId } = getAuth(req);
 
     if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      next(new UnauthorizedError("Unauthorized"));
       return;
     }
 
@@ -66,6 +68,6 @@ export async function verifyWorkspaceAccess(
     next();
   } catch (error) {
     console.error("Workspace verification error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    next(new InternalError("Internal server error"));
   }
 }

@@ -68,11 +68,7 @@ export async function deleteCatalog(
     });
 
     if (existingCatalog?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Catalog not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Catalog not found");
     }
 
     await tx.catalog.delete({
@@ -103,11 +99,7 @@ export async function getCatalogBySequence(
   });
 
   if (!catalog) {
-    throw new EntityNotFoundError({
-      code: "ERR_NF",
-      message: "Catalog not found",
-      statusCode: 404,
-    });
+    throw new EntityNotFoundError("Catalog not found");
   }
 
   return {
@@ -203,20 +195,14 @@ export async function updateCatalog(
     });
 
     if (!existingCatalog) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Catalog not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Catalog not found");
     }
 
     if (existingCatalog.businessId !== data.businessId) {
       if (existingCatalog.invoiceItems.length > 0) {
-        throw new EntityValidationError({
-          code: "ERR_VALID",
-          message: "Cannot change business of a catalog with invoice items",
-          statusCode: 400,
-        });
+        throw new EntityValidationError(
+          "Cannot change business of a catalog with invoice items",
+        );
       }
     }
 

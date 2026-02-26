@@ -1,19 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DefaultValues, useForm } from "react-hook-form";
+import { type DefaultValues, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type CreateClientDto,
   type UpdateClientDto,
   createClientSchema,
-  type ClientResponse,
 } from "../schema/clients.schema";
 import { useClientActions } from "./useClientActions";
 import { useClientBySequence } from "./useClients";
-import { useFormErrorHandler } from "@/hooks/useFormErrorHandler";
 import { useDirtyFields } from "@/hooks/useDirtyValues";
 import { useFormScroll } from "@/hooks/useFormScroll";
+import { handleMutationError } from "@/lib/errors/handle-error";
 
 interface UseClientManagerOptions {
   onAfterSubmit?: () => void;
@@ -43,10 +42,6 @@ export function useClientManager(options?: UseClientManagerOptions) {
     mode === "edit" && !!clientSequence,
   );
 
-  // === ACCIONES ===
-  const actions = useClientActions();
-
-  // === CONFIGURACIÓN DEL FORMULARIO ===
   const defaultValues: DefaultValues<CreateClientDto> = {
     name: "",
     email: "",
@@ -55,6 +50,14 @@ export function useClientManager(options?: UseClientManagerOptions) {
     nit: "",
     businessName: "",
   };
+
+  const form = useForm<CreateClientDto>({
+    resolver: zodResolver(createClientSchema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+    defaultValues,
+  });
+  const actions = useClientActions(form.setError);
 
   // Transform validated ClientResponse to form format
   // No need to parse again - service already validated the data
@@ -77,27 +80,13 @@ export function useClientManager(options?: UseClientManagerOptions) {
     return undefined;
   };
 
-  const form = useForm<CreateClientDto>({
-    resolver: zodResolver(createClientSchema),
-    mode: "onSubmit",
-    reValidateMode: "onChange",
-    defaultValues,
-  });
-
-  // Add this useEffect after the form declaration
   useEffect(() => {
     if (mode === "edit" && existingClient) {
       form.reset(getFormValues());
     }
   }, [existingClient, mode, form]);
 
-  // Hooks de utilidad para el formulario
   const { getDirtyValues } = useDirtyFields(form);
-  const { handleErrorWithToast } = useFormErrorHandler({
-    form,
-    mode,
-    entityName: "client",
-  });
   const { scrollToField } = useFormScroll();
 
   // === HANDLERS ===
@@ -128,26 +117,29 @@ export function useClientManager(options?: UseClientManagerOptions) {
     return mode === "edit" ? getDirtyValues(data) : data;
   };
 
+  const onSuccessCallback = () => {
+    close();
+    options?.onAfterSubmit?.();
+  };
+
   const onSubmit = form.handleSubmit(
-    async (data) => {
-      try {
-        const apiData = processFormData(data);
+    (data) => {
+      const apiData = processFormData(data);
 
-        if (mode === "edit") {
-          if (!existingClient) throw new Error("No client data loaded");
-
-          await actions.handleUpdate(
-            existingClient.id,
-            apiData as UpdateClientDto,
-          );
-        } else {
-          await actions.handleCreate(apiData as CreateClientDto);
+      if (mode === "edit") {
+        if (!existingClient) {
+          handleMutationError(new Error("No client data loaded"));
+          return;
         }
-
-        close(); // Cerrar modal tras éxito
-        options?.onAfterSubmit?.();
-      } catch (error) {
-        handleErrorWithToast(error);
+        actions.handleUpdate(
+          existingClient.id,
+          apiData as UpdateClientDto,
+          { onSuccess: onSuccessCallback },
+        );
+      } else {
+        actions.handleCreate(apiData as CreateClientDto, {
+          onSuccess: onSuccessCallback,
+        });
       }
     },
     (errors) => {

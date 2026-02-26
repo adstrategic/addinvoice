@@ -23,7 +23,7 @@ export const createClientSchema = z.object({
     .trim()
     .regex(
       PHONE_REGEX,
-      "The phone must have a valid international format (e.g. +573011234567)"
+      "The phone must have a valid international format (e.g. +573011234567)",
     )
     .nullish(),
   address: z

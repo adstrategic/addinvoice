@@ -68,19 +68,11 @@ export async function addInvoiceItem(
     });
 
     if (invoice?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Invoice not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Invoice not found");
     }
 
     if (invoice.status !== "DRAFT") {
-      throw new EntityValidationError({
-        code: "ERR_VALID",
-        message: "Cannot add item to a non-draft invoice",
-        statusCode: 400,
-      });
+      throw new EntityValidationError("Cannot add item to a non-draft invoice");
     }
 
     // Handle catalog integration if needed
@@ -94,19 +86,13 @@ export async function addInvoiceItem(
       });
 
       if (!catalog) {
-        throw new EntityNotFoundError({
-          code: "ERR_NF",
-          message: "Catalog item not found",
-          statusCode: 404,
-        });
+        throw new EntityNotFoundError("Catalog item not found");
       }
 
       if (catalog.businessId !== invoice.businessId) {
-        throw new EntityValidationError({
-          code: "ERR_VALID",
-          message: "Catalog item does not belong to the invoice's business",
-          statusCode: 400,
-        });
+        throw new EntityValidationError(
+          "Catalog item does not belong to the invoice's business",
+        );
       }
 
       catalogId = data.catalogId;
@@ -304,27 +290,19 @@ export async function addPayment(
     });
 
     if (!invoice || invoice.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Invoice not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Invoice not found");
     }
 
     if (invoice._count.items === 0) {
-      throw new EntityValidationError({
-        code: "ERR_VALID",
-        message: "Cannot add payment to an invoice with no items",
-        statusCode: 400,
-      });
+      throw new EntityValidationError(
+        "Cannot add payment to an invoice with no items",
+      );
     }
 
     if (Number(invoice.balance) <= 0) {
-      throw new EntityValidationError({
-        code: "ERR_VALID",
-        message: "Cannot add payment: invoice balance is zero or already paid",
-        statusCode: 400,
-      });
+      throw new EntityValidationError(
+        "Cannot add payment: invoice balance is zero or already paid",
+      );
     }
 
     // Check if transactionId already exists only when provided
@@ -579,12 +557,9 @@ export async function createInvoice(
     });
 
     if (businessCount === 0) {
-      throw new EntityValidationError({
-        code: "ERR_VALID",
-        message:
-          "You must create a business before creating invoices. Please complete the setup first.",
-        statusCode: 400,
-      });
+      throw new EntityValidationError(
+        "You must create a business before creating invoices. Please complete the setup first.",
+      );
     }
 
     const business = await tx.business.findFirst({
@@ -595,11 +570,9 @@ export async function createInvoice(
     });
 
     if (!business) {
-      throw new EntityValidationError({
-        code: "ERR_VALID",
-        message: "Business not found or does not belong to your workspace",
-        statusCode: 400,
-      });
+      throw new EntityValidationError(
+        "Business not found or does not belong to your workspace",
+      );
     }
 
     // Generate invoice number if not provided
@@ -618,11 +591,7 @@ export async function createInvoice(
         },
       });
       if (existing) {
-        throw new EntityValidationError({
-          code: "ERR_VALID",
-          message: "Invoice number already exists",
-          statusCode: 400,
-        });
+        throw new EntityValidationError("Invoice number already exists");
       }
     }
 
@@ -641,20 +610,13 @@ export async function createInvoice(
               });
 
               if (!catalog) {
-                throw new EntityNotFoundError({
-                  code: "ERR_NF",
-                  message: "Catalog item not found",
-                  statusCode: 404,
-                });
+                throw new EntityNotFoundError("Catalog item not found");
               }
 
               if (catalog.businessId !== data.businessId) {
-                throw new EntityValidationError({
-                  code: "ERR_VALID",
-                  message:
-                    "Catalog item does not belong to the selected business",
-                  statusCode: 400,
-                });
+                throw new EntityValidationError(
+                  "Catalog item does not belong to the selected business",
+                );
               }
 
               catalogId = item.catalogId;
@@ -786,11 +748,9 @@ export async function createInvoice(
     } else {
       // Use existing client
       if (!data.clientId) {
-        throw new EntityValidationError({
-          code: "ERR_VALID",
-          message: "Client ID is required when not creating a new client",
-          statusCode: 400,
-        });
+        throw new EntityValidationError(
+          "Client ID is required when not creating a new client",
+        );
       }
 
       const existingClient = await tx.client.findUnique({
@@ -798,11 +758,7 @@ export async function createInvoice(
       });
 
       if (!existingClient) {
-        throw new EntityValidationError({
-          code: "ERR_VALID",
-          message: "Client not found",
-          statusCode: 400,
-        });
+        throw new EntityValidationError("Client not found");
       }
 
       clientId = existingClient.id;
@@ -905,27 +861,17 @@ export async function deleteInvoice(
     });
 
     if (!existingInvoice || existingInvoice.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Invoice not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Invoice not found");
     }
 
     if (existingInvoice.status !== "DRAFT") {
-      throw new EntityValidationError({
-        code: "ERR_VALID",
-        message: "Cannot delete a non-draft invoice",
-        statusCode: 400,
-      });
+      throw new EntityValidationError("Cannot delete a non-draft invoice");
     }
 
     if (existingInvoice.payments.length > 0) {
-      throw new EntityValidationError({
-        code: "ERR_VALID",
-        message: "Cannot delete an invoice with payments",
-        statusCode: 400,
-      });
+      throw new EntityValidationError(
+        "Cannot delete an invoice with payments",
+      );
     }
 
     await tx.invoice.delete({
@@ -949,19 +895,13 @@ export async function deleteInvoiceItem(
     });
 
     if (invoice?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Invoice not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Invoice not found");
     }
 
     if (invoice.status !== "DRAFT") {
-      throw new EntityValidationError({
-        code: "ERR_VALID",
-        message: "Cannot delete item from a non-draft invoice",
-        statusCode: 400,
-      });
+      throw new EntityValidationError(
+        "Cannot delete item from a non-draft invoice",
+      );
     }
 
     // Verify item exists
@@ -970,11 +910,7 @@ export async function deleteInvoiceItem(
     });
 
     if (existingItem?.invoiceId !== invoiceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Invoice item not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Invoice item not found");
     }
 
     // Delete item
@@ -1034,11 +970,7 @@ export async function deletePayment(
     });
 
     if (invoice?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Invoice not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Invoice not found");
     }
 
     // Verify payment exists
@@ -1047,11 +979,7 @@ export async function deletePayment(
     });
 
     if (existingPayment?.invoiceId !== invoiceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Payment not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Payment not found");
     }
 
     await tx.payment.delete({
@@ -1088,11 +1016,7 @@ export async function getInvoiceById(
   });
 
   if (!invoice) {
-    throw new EntityNotFoundError({
-      code: "ERR_NF",
-      message: "Invoice not found",
-      statusCode: 404,
-    });
+    throw new EntityNotFoundError("Invoice not found");
   }
 
   return {
@@ -1159,11 +1083,7 @@ export async function getInvoiceBySequence(
   });
 
   if (!invoice || invoice.workspaceId !== workspaceId) {
-    throw new EntityNotFoundError({
-      code: "ERR_NF",
-      message: "Invoice not found",
-      statusCode: 404,
-    });
+    throw new EntityNotFoundError("Invoice not found");
   }
 
   return {
@@ -1344,19 +1264,11 @@ export async function markInvoiceAsSent(
   });
 
   if (!invoice || invoice.workspaceId !== workspaceId) {
-    throw new EntityNotFoundError({
-      code: "ERR_NF",
-      message: "Invoice not found",
-      statusCode: 404,
-    });
+    throw new EntityNotFoundError("Invoice not found");
   }
 
   if (invoice._count.items === 0) {
-    throw new EntityValidationError({
-      code: "ERR_VALID",
-      message: "Cannot send an invoice with no items",
-      statusCode: 400,
-    });
+    throw new EntityValidationError("Cannot send an invoice with no items");
   }
 
   // Idempotent: if already sent (SENT, VIEWED, or PAID), don't overwrite status—return current state
@@ -1366,11 +1278,7 @@ export async function markInvoiceAsSent(
       where: { id: invoiceId },
     });
     if (!existing)
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Invoice not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Invoice not found");
     return {
       ...existing,
       balance: Number(existing.balance),
@@ -1470,19 +1378,11 @@ export async function updateInvoice(
     });
 
     if (existingInvoice?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Invoice not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Invoice not found");
     }
 
     if (existingInvoice.status !== "DRAFT") {
-      throw new EntityValidationError({
-        code: "ERR_VALID",
-        message: "Cannot update a sent invoice",
-        statusCode: 400,
-      });
+      throw new EntityValidationError("Cannot update a sent invoice");
     }
 
     // If items are being updated, recalculate totals
@@ -1551,11 +1451,7 @@ export async function updateInvoice(
       });
 
       if (!newClient) {
-        throw new EntityValidationError({
-          code: "ERR_VALID",
-          message: "Client not found",
-          statusCode: 400,
-        });
+        throw new EntityValidationError("Client not found");
       }
 
       // If invoice-specific fields not provided, use new client defaults
@@ -1777,19 +1673,13 @@ export async function updateInvoiceItem(
     });
 
     if (invoice?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Invoice not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Invoice not found");
     }
 
     if (invoice.status !== "DRAFT") {
-      throw new EntityValidationError({
-        code: "ERR_VALID",
-        message: "Cannot update item of a non-draft invoice",
-        statusCode: 400,
-      });
+      throw new EntityValidationError(
+        "Cannot update item of a non-draft invoice",
+      );
     }
 
     // Verify item exists
@@ -1798,11 +1688,7 @@ export async function updateInvoiceItem(
     });
 
     if (existingItem?.invoiceId !== invoiceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Invoice item not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Invoice item not found");
     }
 
     // Handle catalog integration if needed
@@ -1820,19 +1706,13 @@ export async function updateInvoiceItem(
         });
 
         if (!catalog) {
-          throw new EntityNotFoundError({
-            code: "ERR_NF",
-            message: "Catalog item not found",
-            statusCode: 404,
-          });
+          throw new EntityNotFoundError("Catalog item not found");
         }
 
         if (catalog.businessId !== invoice.businessId) {
-          throw new EntityValidationError({
-            code: "ERR_VALID",
-            message: "Catalog item does not belong to the invoice's business",
-            statusCode: 400,
-          });
+          throw new EntityValidationError(
+            "Catalog item does not belong to the invoice's business",
+          );
         }
 
         itemCatalogId = data.catalogId;
@@ -2075,11 +1955,7 @@ export async function updatePayment(
     });
 
     if (invoice?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Invoice not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Invoice not found");
     }
 
     // Verify payment exists
@@ -2088,11 +1964,7 @@ export async function updatePayment(
     });
 
     if (existingPayment?.invoiceId !== invoiceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Payment not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Payment not found");
     }
 
     // Update payment

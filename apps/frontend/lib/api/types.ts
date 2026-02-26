@@ -1,36 +1,45 @@
-/**
- * API Response Types
- * Shared types for all API responses across the application
- */
-
 import z from "zod";
 
-/**
- * Success response wrapper from API
- */
 export interface ApiSuccessResponse<T> {
   data: T;
 }
 
 /**
- * Error response from API
+ * Error codes from backend (EntityErrors / global handler) and frontend-only codes.
+ * Used for typed switching in handleMutationError; generic HTTP errors use `HTTP_${status}`.
  */
-export interface ApiErrorResponse {
-  error: string;
+export type ApiErrorCode =
+  | "ERR_VALID"
+  | "CONFLICT"
+  | "ERR_NF"
+  | "UNAUTHORIZED"
+  | "BUSINESS_REQUIRED"
+  | "SUBSCRIPTION_REQUIRED"
+  | "INTERNAL_ERROR"
+  | "NETWORK_ERROR";
+
+/**
+ * Unified error contract from backend global error handler.
+ * Every error is sent as `{ code, message, statusCode }` with optional `fields`, `redirectTo`.
+ */
+export interface UnifiedErrorResponse {
+  code: string;
   message: string;
+  statusCode: number;
+  fields?: Record<string, string[]>;
+  redirectTo?: string;
+  /** Reserved for future use (e.g. read-only mode); not used in UI yet */
+  readOnly?: boolean;
 }
 
 /**
- * Validation error response from zod-express-middleware
- * Includes field-specific validation issues
+ * Validator middleware (processRequest / zod-express-middleware) sends
+ * a 400 with an array body: `[{ type, errors: { issues } }]`.
  */
-export interface ValidationErrorResponse extends ApiErrorResponse {
-  error: "Validation error" | "ZodError";
-  details?: Array<{
-    path: (string | number)[];
-    message: string;
-  }>;
-}
+export type ValidatorErrorItem = {
+  type: "Body" | "Params" | "Query";
+  errors: { issues?: Array<{ path: (string | number)[]; message: string }> };
+};
 
 export const paginationMetaSchema = z.object({
   total: z.number(),
@@ -39,20 +48,4 @@ export const paginationMetaSchema = z.object({
   totalPages: z.number(),
 });
 
-/**
- * Pagination metadata
- */
 export type PaginationMeta = z.infer<typeof paginationMetaSchema>;
-
-/**
- * Type guard to check if error is a validation error
- */
-export function isValidationErrorResponse(
-  error: ApiErrorResponse
-): error is ValidationErrorResponse {
-  return (
-    error.error === "Validation error" ||
-    error.error === "ZodError" ||
-    "details" in error
-  );
-}

@@ -10,7 +10,7 @@ import {
   clientResponseSchema,
   clientResponseListSchema,
   type ClientResponse,
-  ClientResponseList,
+  type ClientResponseList,
 } from "../schema/clients.schema";
 
 /**
@@ -28,7 +28,7 @@ const BASE_URL = "/clients";
  * List all clients with pagination and search
  */
 async function listClients(
-  params?: ListClientsParams
+  params?: ListClientsParams,
 ): Promise<ClientResponseList> {
   try {
     const { data } = await apiClient.get<ClientResponseList>(BASE_URL, {
@@ -55,7 +55,7 @@ async function listClients(
 async function getClientBySequence(sequence: number): Promise<ClientResponse> {
   try {
     const { data } = await apiClient.get<ApiSuccessResponse<ClientResponse>>(
-      `${BASE_URL}/${sequence}`
+      `${BASE_URL}/${sequence}`,
     );
 
     // Validate response data with Zod
@@ -72,7 +72,7 @@ async function createClient(dto: CreateClientDto): Promise<ClientResponse> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<ClientResponse>>(
       BASE_URL,
-      dto
+      dto,
     );
 
     // Validate response data with Zod
@@ -87,12 +87,12 @@ async function createClient(dto: CreateClientDto): Promise<ClientResponse> {
  */
 async function updateClient(
   id: number,
-  dto: UpdateClientDto
+  dto: UpdateClientDto,
 ): Promise<ClientResponse> {
   try {
     const { data } = await apiClient.patch<ApiSuccessResponse<ClientResponse>>(
       `${BASE_URL}/${id}`,
-      dto
+      dto,
     );
 
     // Validate response data with Zod

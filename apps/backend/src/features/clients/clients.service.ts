@@ -51,11 +51,7 @@ export async function deleteClient(
     // Verify client exists and belongs to workspace
     const existingClient = await findById(tx, id);
     if (existingClient?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Client not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Client not found");
     }
 
     await tx.client.delete({
@@ -99,11 +95,7 @@ export async function getClientBySequence(
   });
 
   if (!client) {
-    throw new EntityNotFoundError({
-      code: "ERR_NF",
-      message: "Client not found",
-      statusCode: 404,
-    });
+    throw new EntityNotFoundError("Client not found");
   }
 
   return client;
@@ -166,11 +158,7 @@ export async function updateClient(
     // Verify client exists and belongs to workspace
     const existingClient = await findById(tx, id);
     if (existingClient?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Client not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Client not found");
     }
 
     const client = await tx.client.update({

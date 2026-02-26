@@ -1,3 +1,4 @@
+import type { UseFormSetError } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   type CreateClientDto,
@@ -6,6 +7,7 @@ import {
 } from "@/features/clients";
 import type { ClientResponseList } from "../schema/clients.schema";
 import { toast } from "sonner";
+import { handleMutationError } from "@/lib/errors/handle-error";
 
 type ListClientsParams = {
   page?: number;
@@ -59,10 +61,10 @@ export function useClientBySequence(sequence: number | null, enabled: boolean) {
 }
 
 /**
- * Hook to create a new client
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to create a new client.
+ * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useCreateClient() {
+export function useCreateClient(setError?: UseFormSetError<CreateClientDto>) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -73,16 +75,17 @@ export function useCreateClient() {
         description: "The client has been added successfully.",
       });
     },
-    // Don't handle errors here - let the form component handle them
-    // This allows the form to show field-specific errors
+    onError: (err) => {
+      handleMutationError(err, setError);
+    },
   });
 }
 
 /**
- * Hook to update an existing client
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to update an existing client.
+ * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useUpdateClient() {
+export function useUpdateClient(setError?: UseFormSetError<CreateClientDto>) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -100,12 +103,15 @@ export function useUpdateClient() {
         description: "The client has been updated successfully.",
       });
     },
-    // Don't handle errors here - let the form component handle them
+    onError: (err) => {
+      handleMutationError(err, setError);
+    },
   });
 }
 
 /**
- * Hook to delete a client
+ * Hook to delete a client.
+ * Errors are handled by the central dispatcher (handleMutationError).
  */
 export function useDeleteClient() {
   const queryClient = useQueryClient();
@@ -113,16 +119,14 @@ export function useDeleteClient() {
   return useMutation({
     mutationFn: ({ id, sequence }: { id: number; sequence: number }) =>
       clientsService.delete(id),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
       toast.success("Client deleted", {
         description: "The client has been deleted successfully.",
       });
     },
-    onError: (error: Error) => {
-      toast.error("Failed to delete client", {
-        description: error.message || "Failed to delete client",
-      });
+    onError: (err) => {
+      handleMutationError(err, undefined);
     },
   });
 }

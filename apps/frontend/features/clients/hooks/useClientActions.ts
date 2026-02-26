@@ -1,3 +1,4 @@
+import type { UseFormSetError } from "react-hook-form";
 import {
   useCreateClient,
   useUpdateClient,
@@ -7,78 +8,52 @@ import type {
   CreateClientDto,
   UpdateClientDto,
 } from "../schema/clients.schema";
-import { toast } from "sonner";
+
+/** Options passed when invoking an action; UI callbacks run only if component is still mounted. */
+export interface ClientMutationCallbacks {
+  onSuccess?: () => void;
+}
 
 /**
- * Custom hook that encapsulates all client business logic and side effects:
- * - Create/Update/Delete operations
- * - Toast notifications
- * - Success/Error handling
- *
- * This hook follows the Single Responsibility Principle by handling ONLY
- * business logic and side effects, not UI state.
- *
- * @example
- * ```tsx
- * const clientActions = useClientActions();
- *
- * // Create a client
- * await clientActions.handleCreate(formData);
- *
- * // Update a client
- * await clientActions.handleUpdate(clientId, updatedData);
- *
- * // Delete a client
- * await clientActions.handleDelete(clientId, sequence);
- * ```
+ * Facade over client mutations: one place to pass setError, consistent handler APIs,
+ * and aggregated loading state. Uses mutate (not mutateAsync) so no unhandled rejections.
+ * Success toasts and invalidation in useClients (onSuccess); errors in onError (handleMutationError).
+ * Pass onSuccess for UI follow-up (e.g. close modal, navigate) so it runs after mutation success.
  */
-export function useClientActions() {
-  // React Query mutations
-  const createMutation = useCreateClient();
-  const updateMutation = useUpdateClient();
+export function useClientActions(setError?: UseFormSetError<CreateClientDto>) {
+  const createMutation = useCreateClient(setError);
+  const updateMutation = useUpdateClient(setError);
   const deleteMutation = useDeleteClient();
 
-  /**
-   * Create a new client
-   */
-  const handleCreate = async (data: CreateClientDto) => {
-    await createMutation.mutateAsync(data);
-
-    toast.success("Client created successfully", {
-      description: "The client has been added to the system",
+  const handleCreate = (
+    data: CreateClientDto,
+    callbacks?: ClientMutationCallbacks,
+  ) => {
+    createMutation.mutate(data, {
+      onSuccess: callbacks?.onSuccess,
     });
   };
 
-  /**
-   * Update an existing client
-   */
-  const handleUpdate = async (id: number, data: UpdateClientDto) => {
-    await updateMutation.mutateAsync({ id, data });
-
-    toast.success("Client updated successfully", {
-      description: "The client has been updated successfully",
-    });
+  const handleUpdate = (
+    id: number,
+    data: UpdateClientDto,
+    callbacks?: ClientMutationCallbacks,
+  ) => {
+    updateMutation.mutate(
+      { id, data },
+      { onSuccess: callbacks?.onSuccess },
+    );
   };
 
-  /**
-   * Delete a client
-   */
-  const handleDelete = async (id: number, sequence: number) => {
-    try {
-      await deleteMutation.mutateAsync({ id, sequence });
-
-      toast.success("Client deleted successfully", {
-        description: "The client has been deleted from the system",
-      });
-    } catch (error: any) {
-      toast.error("Error deleting client", {
-        description:
-          error.message || "An error occurred while deleting the client",
-      });
-
-      // Re-throw to allow caller to handle if needed
-      throw error;
-    }
+  const handleDelete = (
+    id: number,
+    sequence: number,
+    callbacks?: ClientMutationCallbacks,
+  ) => {
+    deleteMutation.mutate(
+      { id, sequence },
+      { onSuccess: callbacks?.onSuccess },
+    );
   };
 
   return {

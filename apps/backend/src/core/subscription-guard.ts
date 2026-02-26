@@ -2,6 +2,12 @@ import type { NextFunction, Request, Response } from "express";
 
 import { prisma } from "@addinvoice/db";
 
+import {
+  InternalError,
+  SubscriptionRequiredError,
+  UnauthorizedError,
+} from "../errors/EntityErrors.js";
+
 /**
  * Middleware to check if workspace has active subscription
  * Allows read-only access (GET requests) without subscription
@@ -17,14 +23,10 @@ export async function requireSubscription(
     const workspaceId = req.workspaceId;
 
     if (!workspaceId) {
-      res.status(401).json({
-        error: "UNAUTHORIZED",
-        message: "Workspace not found",
-      });
+      next(new UnauthorizedError("Workspace not found"));
       return;
     }
 
-    // Check subscription status (from local cache - Stripe is source of truth)
     const workspace = await prisma.workspace.findUnique({
       select: {
         subscriptionStatus: true,
@@ -36,35 +38,29 @@ export async function requireSubscription(
       workspace?.subscriptionStatus === "ACTIVE" ||
       workspace?.subscriptionStatus === "TRIALING";
 
-    // Allow read-only access (GET requests) without subscription
     if (req.method === "GET" && !isActive) {
-      // Return 402 Payment Required but allow the request to continue
-      // Frontend can handle this to show read-only mode
-      res.status(402).json({
-        error: "SUBSCRIPTION_REQUIRED",
-        message: "Active subscription required for full access",
-        readOnly: true,
-      });
+      next(
+        new SubscriptionRequiredError(
+          "Active subscription required for full access",
+          { readOnly: true },
+        ),
+      );
       return;
     }
 
-    // Block write operations without active subscription
     if (!isActive && ["DELETE", "PATCH", "POST", "PUT"].includes(req.method)) {
-      res.status(402).json({
-        error: "SUBSCRIPTION_REQUIRED",
-        message: "Active subscription required to perform this action",
-        redirectTo: "/subscribe",
-      });
+      next(
+        new SubscriptionRequiredError(
+          "Active subscription required to perform this action",
+          { redirectTo: "/subscribe" },
+        ),
+      );
       return;
     }
 
-    // Has active subscription or is read-only GET request
     next();
   } catch (error) {
     console.error("Subscription guard error:", error);
-    res.status(500).json({
-      error: "INTERNAL_ERROR",
-      message: "Internal server error",
-    });
+    next(new InternalError("Internal server error"));
   }
 }

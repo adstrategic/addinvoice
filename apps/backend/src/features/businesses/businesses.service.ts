@@ -60,11 +60,7 @@ export async function deleteBusiness(
     // Verify business exists and belongs to workspace
     const existingBusiness = await findById(tx, id);
     if (existingBusiness?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Business not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Business not found");
     }
 
     await tx.business.delete({
@@ -115,11 +111,7 @@ export async function getBusinessById(
   });
 
   if (!business) {
-    throw new EntityNotFoundError({
-      code: "ERR_NF",
-      message: "Business not found",
-      statusCode: 404,
-    });
+    throw new EntityNotFoundError("Business not found");
   }
 
   return {
@@ -192,11 +184,7 @@ export async function setDefaultBusiness(
     // Verify business exists and belongs to workspace
     const existingBusiness = await findById(tx, id);
     if (existingBusiness?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Business not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Business not found");
     }
 
     // Unset all other default businesses in this workspace
@@ -242,11 +230,7 @@ export async function updateBusiness(
     // Verify business exists and belongs to workspace
     const existingBusiness = await findById(tx, id);
     if (existingBusiness?.workspaceId !== workspaceId) {
-      throw new EntityNotFoundError({
-        code: "ERR_NF",
-        message: "Business not found",
-        statusCode: 404,
-      });
+      throw new EntityNotFoundError("Business not found");
     }
 
     const business = await tx.business.update({
