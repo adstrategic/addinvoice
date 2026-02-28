@@ -40,6 +40,8 @@ RUN apt-get update -qq && apt-get install --no-install-recommends -y \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
+ENV XDG_CONFIG_HOME=/tmp/.chromium
+ENV XDG_CACHE_HOME=/tmp/.chromium
 # ---
 FROM base AS prepare
 RUN pnpm add -g turbo
