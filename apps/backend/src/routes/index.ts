@@ -8,9 +8,12 @@ import { businessesRoutes } from "../features/businesses/businesses.routes.js";
 import { catalogRoutes } from "../features/catalog/catalog.routes.js";
 import { clientsRoutes } from "../features/clients/clients.routes.js";
 import { dashboardRoutes } from "../features/dashboard/dashboard.routes.js";
+import { expensesRoutes } from "../features/expenses/expenses.routes.js";
 import { invoicesRoutes } from "../features/invoices/invoices.routes.js";
+import { merchantsRoutes } from "../features/merchants/merchants.routes.js";
 import { paymentsRoutes } from "../features/payments/payments.routes.js";
 import { subscriptionsRoutes } from "../features/subscriptions/subscriptions.routes.js";
+import { workCategoriesRoutes } from "../features/work-categories/work-categories.routes.js";
 import { workspaceRoutes } from "../features/workspace/workspace.routes.js";
 import { livekitRouter } from "./livekit.routes.js";
 
@@ -58,11 +61,12 @@ apiRouter.use("/invoices", invoicesRoutes);
 apiRouter.use("/businesses", businessesRoutes);
 apiRouter.use("/catalog", catalogRoutes);
 apiRouter.use("/dashboard", dashboardRoutes);
+apiRouter.use("/expenses", expensesRoutes);
+apiRouter.use("/merchants", merchantsRoutes);
+apiRouter.use("/work-categories", workCategoriesRoutes);
 apiRouter.use("/payments", paymentsRoutes);
 apiRouter.use("/workspace", workspaceRoutes);
 apiRouter.use("/livekit", livekitRouter);
-// TODO: Add other feature routes
-// apiRouter.use("/estimates", estimatesRoutes);
 
 // Placeholder route
 apiRouter.get("/", (req, res) => {

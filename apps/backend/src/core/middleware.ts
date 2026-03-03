@@ -29,6 +29,7 @@ export function errorHandler(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction,
 ): void {
+  console.error(err);
   // Handle our custom errors (CustomError and subclasses including FieldValidationError)
   if (err instanceof CustomError) {
     const payload: {

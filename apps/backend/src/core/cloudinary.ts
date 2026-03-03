@@ -1,5 +1,9 @@
 import type { UploadApiErrorResponse, UploadApiResponse } from "cloudinary";
 
+import { randomUUID } from "node:crypto";
+
+export type { UploadApiResponse };
+
 import { v2 as cloudinary } from "cloudinary";
 
 // Configure Cloudinary
@@ -51,6 +55,29 @@ export async function deleteBusinessLogo(
 
     if (result.result !== "ok") {
       throw new Error(`Failed to delete logo: ${result.result}`);
+    }
+
+    return result;
+  } catch (error) {
+    const err = error as Error;
+    throw new Error(`Cloudinary delete failed: ${err.message}`);
+  }
+}
+
+/**
+ * Delete expense receipt from Cloudinary by public ID.
+ * Uses same destroy semantics as business logo (invalidate CDN).
+ */
+export async function deleteReceiptByPublicId(
+  publicId: string,
+): Promise<{ result: string }> {
+  try {
+    const result = (await cloudinary.uploader.destroy(publicId, {
+      invalidate: true,
+    })) as DestroyApiResponse;
+
+    if (result.result !== "ok") {
+      throw new Error(`Failed to delete receipt: ${result.result}`);
     }
 
     return result;
@@ -119,6 +146,50 @@ export async function uploadBusinessLogo(
     };
 
     // Convert buffer to base64 data URI for Cloudinary
+    const base64 = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+    const result = await cloudinary.uploader.upload(base64, uploadOptions);
+
+    return result;
+  } catch (error) {
+    const uploadError = error as UploadApiErrorResponse;
+    throw new Error(
+      `Cloudinary upload failed: ${uploadError.message || "Unknown error"}`,
+    );
+  }
+}
+
+/**
+ * Upload expense receipt to Cloudinary.
+ * Uses a unique public_id so uploads can happen before an expense exists.
+ */
+export async function uploadExpenseReceipt(
+  file: Express.Multer.File,
+  workspaceId: number,
+): Promise<UploadApiResponse> {
+  const uniqueId = randomUUID();
+  const folder = `workspaces/${String(workspaceId)}/expenses/receipts`;
+  const publicId = `${folder}/${uniqueId}`;
+
+  try {
+    const uploadOptions = {
+      folder,
+      invalidate: true,
+      public_id: publicId,
+      resource_type: "image" as const,
+      transformation: [
+        {
+          crop: "limit" as const,
+          fetch_format: "auto" as const,
+          height: MAX_DIMENSIONS.height,
+          quality: "auto" as const,
+          width: MAX_DIMENSIONS.width,
+        },
+        {
+          strip_metadata: true,
+        },
+      ],
+    };
+
     const base64 = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
     const result = await cloudinary.uploader.upload(base64, uploadOptions);
 
