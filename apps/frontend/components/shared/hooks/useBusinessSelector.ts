@@ -5,15 +5,16 @@ import type { BusinessResponse } from "@/features/businesses";
 
 export const useBusinessSelector = (
   initialBusiness: BusinessResponse | null,
-  mode: "create" | "edit"
+  mode: "create" | "edit",
 ) => {
   // Inicializar con business si se proporciona, sino ""
   const [openBusinesses, setOpenBusinesses] = useState(false);
-  const [businessQuery, setBusinessQuery] = useState(initialBusiness?.name || "");
-  // Estado para guardar el business seleccionado completo
-  const [selectedBusiness, setSelectedBusiness] = useState<BusinessResponse | null>(
-    initialBusiness || null
+  const [businessQuery, setBusinessQuery] = useState(
+    initialBusiness?.name || "",
   );
+  // Estado para guardar el business seleccionado completo
+  const [selectedBusiness, setSelectedBusiness] =
+    useState<BusinessResponse | null>(initialBusiness || null);
 
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
@@ -66,7 +67,7 @@ export const useBusinessSelector = (
     mode === "edit" && !hasUserInteracted
       ? initialBusiness
         ? [initialBusiness]
-        : []
+        : [...(businessesData?.data || [])]
       : businessesData?.data || [];
 
   // Función para manejar la búsqueda de businesses
@@ -88,7 +89,7 @@ export const useBusinessSelector = (
         setBusinessQuery(selectedBusiness?.name || "");
       }
     },
-    [selectedBusiness]
+    [selectedBusiness],
   );
 
   // Función para manejar la selección de un business
@@ -119,7 +120,3 @@ export const useBusinessSelector = (
     handleCreateNewBusiness,
   };
 };
-
-
-
-

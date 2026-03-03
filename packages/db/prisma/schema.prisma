@@ -42,6 +42,9 @@ model Workspace {
     catalogs       Catalog[]
     businesses     Business[]
     paymentMethods WorkspacePaymentMethod[]
+    merchants      Merchant[]
+    workCategories WorkCategory[]
+    expenses       Expense[]
 
     // Subscription fields (cached from Stripe - Stripe is source of truth)
     stripeCustomerId     String?             @unique
@@ -347,6 +350,70 @@ model Business {
     @@index([workspaceId])
     @@index([isDefault])
     @@map("businesses")
+}
+
+model Merchant {
+    id          Int @id @default(autoincrement())
+    workspaceId Int
+
+    name String
+
+    sequence  Int
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    expenses  Expense[]
+
+    @@unique([workspaceId, sequence])
+    @@index([workspaceId])
+    @@map("merchants")
+}
+
+model WorkCategory {
+    id          Int @id @default(autoincrement())
+    workspaceId Int
+
+    name String
+
+    sequence  Int
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    expenses  Expense[]
+
+    @@unique([workspaceId, sequence])
+    @@index([workspaceId])
+    @@map("work_categories")
+}
+
+model Expense {
+    id             Int  @id @default(autoincrement())
+    workspaceId    Int
+    merchantId     Int?
+    workCategoryId Int?
+
+    expenseDate DateTime
+    total       Decimal  @db.Decimal(10, 2)
+    tax         Decimal? @db.Decimal(10, 2)
+    description String?
+    image       String?
+
+    sequence  Int
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    merchant     Merchant?     @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+    workCategory WorkCategory? @relation(fields: [workCategoryId], references: [id], onDelete: SetNull)
+
+    @@unique([workspaceId, sequence])
+    @@index([workspaceId])
+    @@index([expenseDate])
+    @@index([merchantId])
+    @@index([workCategoryId])
+    @@map("expenses")
 }
 
 enum SubscriptionPlan {

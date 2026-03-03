@@ -125,13 +125,13 @@ export function CreateCompanyForm({
     }
   };
 
-  const handleSubmit = async (data: CreateCompanyFormValues) => {
+  const handleSubmit = (data: CreateCompanyFormValues) => {
     if (logoRequired && !selectedLogoFile) {
       setLogoError(true);
       return;
     }
     const payload = buildPayload(data);
-    await onSubmitProp(payload, selectedLogoFile);
+    onSubmitProp(payload, selectedLogoFile);
   };
 
   return (

@@ -14,7 +14,7 @@ import { AlertTriangle, Trash2 } from "lucide-react";
 interface EntityDeleteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => Promise<void>;
+  onConfirm: () => void;
   entity: string;
   entityName: string;
   isDeleting: boolean;

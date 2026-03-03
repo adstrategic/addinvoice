@@ -7,15 +7,12 @@ import {
   type CreateCatalogDto,
   type UpdateCatalogDto,
   createCatalogSchema,
-  type CatalogResponse,
 } from "../schema/catalog.schema";
 import { useCatalogActions } from "./useCatalogActions";
 import { useCatalogBySequence } from "./useCatalogs";
-import { useFormErrorHandler } from "@/hooks/useFormErrorHandler";
 import { useDirtyFields } from "@/hooks/useDirtyValues";
 import { useFormScroll } from "@/hooks/useFormScroll";
-import { useBusiness } from "@/features/businesses";
-import type { BusinessResponse } from "@/features/businesses";
+import { handleMutationError } from "@/lib/errors/handle-error";
 
 interface UseCatalogManagerOptions {
   onAfterSubmit?: () => void;
@@ -37,19 +34,6 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
     mode === "edit" && !!catalogSequence,
   );
 
-  // === ACCIONES ===
-  const actions = useCatalogActions();
-
-  // // === BUSINESS FETCHING ===
-  // // Fetch business data when editing
-  // const {
-  //   data: businessData,
-  //   isLoading: isLoadingBusiness,
-  // } = useBusiness(
-  //   existingCatalog?.businessId || null,
-  //   mode === "edit" && !!existingCatalog?.businessId
-  // );
-
   // === CONFIGURACIÓN DEL FORMULARIO ===
   const defaultValues: CreateCatalogDto = {
     name: "",
@@ -58,6 +42,14 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
     quantityUnit: "UNITS",
     businessId: 0,
   };
+
+  const form = useForm<CreateCatalogDto>({
+    resolver: zodResolver(createCatalogSchema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+    defaultValues,
+  });
+  const actions = useCatalogActions(form.setError);
 
   // Transform validated CatalogResponse to form format
   // No need to parse again - service already validated the data
@@ -75,27 +67,13 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
     return undefined;
   };
 
-  const form = useForm<CreateCatalogDto>({
-    resolver: zodResolver(createCatalogSchema),
-    mode: "onSubmit",
-    reValidateMode: "onChange",
-    defaultValues,
-  });
-
-  // Add this useEffect after the form declaration
   useEffect(() => {
     if (mode === "edit" && existingCatalog) {
       form.reset(getFormValues());
     }
   }, [existingCatalog, mode, form]);
 
-  // Hooks de utilidad para el formulario
   const { getDirtyValues } = useDirtyFields(form);
-  const { handleErrorWithToast } = useFormErrorHandler({
-    form,
-    mode,
-    entityName: "catalog item",
-  });
   const { scrollToField } = useFormScroll();
 
   // === HANDLERS ===
@@ -126,26 +104,27 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
     return mode === "edit" ? getDirtyValues(data) : data;
   };
 
+  const onSuccessCallback = () => {
+    close();
+    options?.onAfterSubmit?.();
+  };
+
   const onSubmit = form.handleSubmit(
-    async (data) => {
-      try {
-        const apiData = processFormData(data);
+    (data) => {
+      const apiData = processFormData(data);
 
-        if (mode === "edit") {
-          if (!existingCatalog) throw new Error("No catalog data loaded");
-
-          await actions.handleUpdate(
-            existingCatalog.id,
-            apiData as UpdateCatalogDto,
-          );
-        } else {
-          await actions.handleCreate(apiData as CreateCatalogDto);
+      if (mode === "edit") {
+        if (!existingCatalog) {
+          handleMutationError(new Error("No catalog data loaded"));
+          return;
         }
-
-        close(); // Cerrar modal tras éxito
-        options?.onAfterSubmit?.();
-      } catch (error) {
-        handleErrorWithToast(error);
+        actions.handleUpdate(existingCatalog.id, apiData as UpdateCatalogDto, {
+          onSuccess: onSuccessCallback,
+        });
+      } else {
+        actions.handleCreate(apiData as CreateCatalogDto, {
+          onSuccess: onSuccessCallback,
+        });
       }
     },
     (errors) => {

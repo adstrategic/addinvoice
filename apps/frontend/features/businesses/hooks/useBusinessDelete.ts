@@ -31,16 +31,13 @@ export function useBusinessDelete(options?: UseBusinessDeleteOptions) {
     setBusinessToDelete(null);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     if (!businessToDelete) return;
-    try {
-      await deleteMutation.mutateAsync(businessToDelete.id);
+    const onSuccess = () => {
       closeDeleteModal();
       options?.onAfterDelete?.();
-    } catch (error) {
-      // El error ya es manejado por el toast en la mutation
-      console.error(error);
-    }
+    };
+    deleteMutation.mutate(businessToDelete.id, { onSuccess });
   };
 
   return {

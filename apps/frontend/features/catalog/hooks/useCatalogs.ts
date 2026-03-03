@@ -1,3 +1,4 @@
+import type { UseFormSetError } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   type CreateCatalogDto,
@@ -7,6 +8,7 @@ import {
 import type { ListCatalogsParams as ListCatalogsParamsSchema } from "../schema/catalog.schema";
 import type { CatalogResponseList } from "../schema/catalog.schema";
 import { toast } from "sonner";
+import { handleMutationError } from "@/lib/errors/handle-error";
 
 type ListCatalogsParams = ListCatalogsParamsSchema & {
   enabled?: boolean;
@@ -59,10 +61,10 @@ export function useCatalogBySequence(
 }
 
 /**
- * Hook to create a new catalog
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to create a new catalog.
+ * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useCreateCatalog() {
+export function useCreateCatalog(setError?: UseFormSetError<CreateCatalogDto>) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -73,16 +75,17 @@ export function useCreateCatalog() {
         description: "The catalog item has been added successfully.",
       });
     },
-    // Don't handle errors here - let the form component handle them
-    // This allows the form to show field-specific errors
+    onError: (err) => {
+      handleMutationError(err, setError);
+    },
   });
 }
 
 /**
- * Hook to update an existing catalog
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to update an existing catalog.
+ * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useUpdateCatalog() {
+export function useUpdateCatalog(setError?: UseFormSetError<CreateCatalogDto>) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -100,12 +103,15 @@ export function useUpdateCatalog() {
         description: "The catalog item has been updated successfully.",
       });
     },
-    // Don't handle errors here - let the form component handle them
+    onError: (err) => {
+      handleMutationError(err, setError);
+    },
   });
 }
 
 /**
- * Hook to delete a catalog
+ * Hook to delete a catalog.
+ * Errors are handled by the central dispatcher (handleMutationError).
  */
 export function useDeleteCatalog() {
   const queryClient = useQueryClient();
@@ -113,16 +119,14 @@ export function useDeleteCatalog() {
   return useMutation({
     mutationFn: ({ id, sequence }: { id: number; sequence: number }) =>
       catalogService.delete(id),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: catalogKeys.lists() });
       toast.success("Catalog item deleted", {
         description: "The catalog item has been deleted successfully.",
       });
     },
-    onError: (error: Error) => {
-      toast.error("Failed to delete catalog item", {
-        description: error.message || "Failed to delete catalog item",
-      });
+    onError: (err) => {
+      handleMutationError(err);
     },
   });
 }

@@ -1,9 +1,5 @@
-import { ComingSoonCountdown } from "@/components/coming-soon-countdown";
+import ExpensesContent from "@/features/expenses/components/ExpensesContent";
 
 export default function ExpensesPage() {
-  return (
-    <div data-tour-id="expenses-list">
-      <ComingSoonCountdown />
-    </div>
-  );
+  return <ExpensesContent />;
 }

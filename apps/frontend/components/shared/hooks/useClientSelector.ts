@@ -5,14 +5,14 @@ import type { ClientResponse } from "@/features/clients";
 
 export const useClientSelector = (
   initialClient: ClientResponse | null,
-  mode: "create" | "edit"
+  mode: "create" | "edit",
 ) => {
   // Inicializar con cliente si se proporciona, sino ""
   const [openClients, setOpenClients] = useState(false);
   const [clientQuery, setClientQuery] = useState(initialClient?.name || "");
   // Estado para guardar el cliente seleccionado completo
   const [selectedClient, setSelectedClient] = useState<ClientResponse | null>(
-    initialClient || null
+    initialClient || null,
   );
 
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
@@ -66,7 +66,7 @@ export const useClientSelector = (
     mode === "edit" && !hasUserInteracted
       ? initialClient
         ? [initialClient]
-        : []
+        : [...(clientsData?.data || [])]
       : clientsData?.data || [];
 
   // Función para manejar la búsqueda de clientes
@@ -88,7 +88,7 @@ export const useClientSelector = (
         setClientQuery(selectedClient?.name || "");
       }
     },
-    [selectedClient]
+    [selectedClient],
   );
 
   // Función para manejar la selección de un cliente

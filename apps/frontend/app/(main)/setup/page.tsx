@@ -28,43 +28,38 @@ export default function SetupPage() {
   const uploadLogoMutation = useUploadLogo();
   const { data: businessesData, isLoading: isLoadingBusinesses } =
     useBusinesses();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   useEffect(() => {
     if (!isLoadingBusinesses && (businessesData?.data?.length ?? 0) > 0) {
       router.push("/");
     }
   }, [businessesData, isLoadingBusinesses, router]);
 
-  const handleSubmit = async (
+  const handleSubmit = (
     data: CreateBusinessDto,
     logoFile: File | null,
   ) => {
-    try {
-      setIsSubmitting(true);
-
-      const business = await createBusinessMutation.mutateAsync(data);
-      await setDefaultBusinessMutation.mutateAsync(business.id);
-
-      if (logoFile) {
-        try {
-          await uploadLogoMutation.mutateAsync({
-            id: business.id,
-            file: logoFile,
-          });
-        } catch (error) {
-          console.error("Failed to upload logo:", error);
-        }
-      }
-
+    const done = () => {
       toast.success("Setup complete!", {
         description: "The business has been created successfully.",
       });
-
       router.push("/");
-    } catch {
-      setIsSubmitting(false);
-    }
+    };
+    createBusinessMutation.mutate(data, {
+      onSuccess: (business) => {
+        setDefaultBusinessMutation.mutate(business.id, {
+          onSuccess: () => {
+            if (logoFile) {
+              uploadLogoMutation.mutate(
+                { id: business.id, file: logoFile },
+                { onSuccess: done },
+              );
+            } else {
+              done();
+            }
+          },
+        });
+      },
+    });
   };
 
   if (isLoadingBusinesses) {
@@ -119,15 +114,15 @@ export default function SetupPage() {
                   type="submit"
                   form="setup-company-form"
                   disabled={
-                    isSubmitting ||
                     createBusinessMutation.isPending ||
-                    setDefaultBusinessMutation.isPending
+                    setDefaultBusinessMutation.isPending ||
+                    uploadLogoMutation.isPending
                   }
                   className="gap-2"
                 >
-                  {isSubmitting ||
-                  createBusinessMutation.isPending ||
-                  setDefaultBusinessMutation.isPending
+                  {createBusinessMutation.isPending ||
+                  setDefaultBusinessMutation.isPending ||
+                  uploadLogoMutation.isPending
                     ? "Setting up..."
                     : "Complete Setup"}
                   <ArrowRight className="h-4 w-4" />

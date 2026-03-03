@@ -12,10 +12,15 @@ import {
   Phone,
   MapPin,
   FileDigit,
+  BriefcaseBusiness,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useClientBySequence, useClientDelete } from "@/features/clients";
+import {
+  ClientFormModal,
+  useClientDelete,
+  useClientManager,
+} from "@/features/clients";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import {
   Tooltip,
@@ -31,16 +36,16 @@ export default function ClientDetailPage() {
     onAfterDelete: () => router.push("/clients"),
   });
 
-  const sequence =
-    params?.sequence != null ? parseInt(params.sequence as string) : null;
+  const sequence = parseInt(params.sequence as string);
 
-  const {
-    data: client,
-    isLoading,
-    error,
-  } = useClientBySequence(sequence, sequence != null);
+  const editClient = useClientManager({
+    mode: "edit",
+    sequence: sequence,
+  });
 
-  if (isLoading) {
+  const client = editClient.client;
+
+  if (editClient.isLoadingClient) {
     return (
       <div className="container mx-auto px-6 py-8 max-w-5xl">
         <div className="flex items-center justify-center h-64">
@@ -50,7 +55,7 @@ export default function ClientDetailPage() {
     );
   }
 
-  if (error || !client) {
+  if (editClient.clientError || !client) {
     return (
       <div className="container mx-auto px-6 py-8 max-w-5xl">
         <div className="flex items-center justify-center h-64">
@@ -94,11 +99,14 @@ export default function ClientDetailPage() {
           <div className="flex gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Link href={`/clients/${sequence}/edit`}>
-                  <Button variant="outline" size="icon" className="bg-transparent">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </Link>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="bg-transparent"
+                  onClick={() => editClient.openEdit(sequence)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Edit client</p>
@@ -117,19 +125,6 @@ export default function ClientDetailPage() {
               </TooltipTrigger>
               <TooltipContent>
                 <p>Delete client</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link href="/invoices">
-                  <Button variant="outline" className="gap-2 bg-transparent">
-                    <FileText className="h-4 w-4" />
-                    View Invoices
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>View invoices</p>
               </TooltipContent>
             </Tooltip>
             {client.email && (
@@ -169,22 +164,29 @@ export default function ClientDetailPage() {
           </CardHeader>
           <CardContent className="pt-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {client.email && (
-                <div className="flex items-start gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Email
-                    </p>
-                    <a
-                      href={`mailto:${client.email}`}
-                      className="text-foreground hover:underline"
-                    >
-                      {client.email}
-                    </a>
-                  </div>
+              <div className="flex items-start gap-3">
+                <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Email
+                  </p>
+                  <a
+                    href={`mailto:${client.email}`}
+                    className="text-foreground hover:underline"
+                  >
+                    {client.email}
+                  </a>
                 </div>
-              )}
+              </div>
+              <div className="flex items-start gap-3">
+                <BriefcaseBusiness className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Business Name
+                  </p>
+                  <p className="text-foreground">{client.businessName}</p>
+                </div>
+              </div>
               {client.phone && (
                 <div className="flex items-start gap-3">
                   <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
@@ -196,28 +198,24 @@ export default function ClientDetailPage() {
                   </div>
                 </div>
               )}
-              {client.address && (
-                <div className="flex items-start gap-3 md:col-span-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Address
-                    </p>
-                    <p className="text-foreground">{client.address}</p>
-                  </div>
+              <div className="flex items-start gap-3">
+                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Address
+                  </p>
+                  <p className="text-foreground">{client.address ?? "N/A"}</p>
                 </div>
-              )}
-              {client.nit && (
-                <div className="flex items-start gap-3">
-                  <FileDigit className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      NIT / Tax ID
-                    </p>
-                    <p className="text-foreground">{client.nit}</p>
-                  </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <FileDigit className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    NIT / Tax ID
+                  </p>
+                  <p className="text-foreground">{client.nit ?? "N/A"}</p>
                 </div>
-              )}
+              </div>
             </div>
 
             {hasReminders && (
@@ -228,15 +226,14 @@ export default function ClientDetailPage() {
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                   {client.reminderBeforeDueIntervalDays != null && (
                     <span>
-                      Before due: every{" "}
-                      {client.reminderBeforeDueIntervalDays} day
+                      Before due: every {client.reminderBeforeDueIntervalDays}{" "}
+                      day
                       {client.reminderBeforeDueIntervalDays !== 1 ? "s" : ""}
                     </span>
                   )}
                   {client.reminderAfterDueIntervalDays != null && (
                     <span>
-                      After due: every{" "}
-                      {client.reminderAfterDueIntervalDays} day
+                      After due: every {client.reminderAfterDueIntervalDays} day
                       {client.reminderAfterDueIntervalDays !== 1 ? "s" : ""}
                     </span>
                   )}
@@ -246,6 +243,19 @@ export default function ClientDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Client Form Modal - handles both create and edit */}
+      <ClientFormModal
+        isOpen={editClient.isOpen}
+        onClose={editClient.close}
+        mode={editClient.mode}
+        initialData={editClient.client}
+        form={editClient.form}
+        onSubmit={editClient.onSubmit}
+        isLoading={editClient.isMutating}
+        isLoadingClient={editClient.isLoadingClient}
+        clientError={editClient.clientError}
+      />
 
       <EntityDeleteModal
         isOpen={clientDelete.isDeleteModalOpen}

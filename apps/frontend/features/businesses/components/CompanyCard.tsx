@@ -75,26 +75,25 @@ export function CompanyCard({
     defaultValues: getDefaultValues(company),
   });
 
-  const updateBusinessMutation = useUpdateBusiness();
+  const updateBusinessMutation = useUpdateBusiness(form.setError);
   const uploadLogoMutation = useUploadLogo();
   const deleteLogoMutation = useDeleteLogo();
   const setDefaultBusinessMutation = useSetDefaultBusiness();
 
-  const onSubmit = async (data: EditCompanyForm) => {
-    try {
-      const payload: UpdateBusinessDto = { ...data };
-      await updateBusinessMutation.mutateAsync({
-        id: company.id,
-        data: payload,
-      });
-      form.reset(data);
-      onSaveSuccess?.();
-    } catch {
-      // Error handled by mutation hook
-    }
+  const onSubmit = (data: EditCompanyForm) => {
+    const payload: UpdateBusinessDto = { ...data };
+    updateBusinessMutation.mutate(
+      { id: company.id, data: payload },
+      {
+        onSuccess: () => {
+          form.reset(data);
+          onSaveSuccess?.();
+        },
+      },
+    );
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -109,11 +108,7 @@ export function CompanyCard({
       });
       return;
     }
-    try {
-      await uploadLogoMutation.mutateAsync({ id: company.id, file });
-    } catch {
-      // Error handled by mutation hook
-    }
+    uploadLogoMutation.mutate({ id: company.id, file });
   };
 
   const displayName = form.watch("name") || company.name;
@@ -188,6 +183,7 @@ export function CompanyCard({
                       placeholder="123456789-0"
                       className="mt-1"
                       aria-invalid={fieldState.invalid}
+                      value={field.value ?? ""}
                     />
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
@@ -428,13 +424,7 @@ export function CompanyCard({
                   type="button"
                   variant="outline"
                   className="gap-2 bg-transparent"
-                  onClick={async () => {
-                    try {
-                      await deleteLogoMutation.mutateAsync(company.id);
-                    } catch {
-                      // Error handled by mutation hook
-                    }
-                  }}
+                  onClick={() => deleteLogoMutation.mutate(company.id)}
                   disabled={deleteLogoMutation.isPending}
                 >
                   <Trash2 className="h-4 w-4" />

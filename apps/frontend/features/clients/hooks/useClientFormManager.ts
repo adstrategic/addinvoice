@@ -108,7 +108,6 @@ export function useClientManager(options?: UseClientManagerOptions) {
 
   const close = () => {
     setIsOpen(false);
-    setClientSequence(null);
   };
 
   // Envío del formulario
@@ -131,11 +130,9 @@ export function useClientManager(options?: UseClientManagerOptions) {
           handleMutationError(new Error("No client data loaded"));
           return;
         }
-        actions.handleUpdate(
-          existingClient.id,
-          apiData as UpdateClientDto,
-          { onSuccess: onSuccessCallback },
-        );
+        actions.handleUpdate(existingClient.id, apiData as UpdateClientDto, {
+          onSuccess: onSuccessCallback,
+        });
       } else {
         actions.handleCreate(apiData as CreateClientDto, {
           onSuccess: onSuccessCallback,

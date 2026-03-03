@@ -27,19 +27,26 @@ export function CreateCompanyDialog({
   const createBusinessMutation = useCreateBusiness();
   const uploadLogoMutation = useUploadLogo();
 
-  const handleSubmit = async (
+  const handleSubmit = (
     data: CreateBusinessDto,
     logoFile: File | null,
   ) => {
-    const business = await createBusinessMutation.mutateAsync(data);
-    if (logoFile) {
-      await uploadLogoMutation.mutateAsync({
-        id: business.id,
-        file: logoFile,
-      });
-    }
-    onOpenChange(false);
-    onSuccess?.();
+    const done = () => {
+      onOpenChange(false);
+      onSuccess?.();
+    };
+    createBusinessMutation.mutate(data, {
+      onSuccess: (business) => {
+        if (logoFile) {
+          uploadLogoMutation.mutate(
+            { id: business.id, file: logoFile },
+            { onSuccess: done },
+          );
+        } else {
+          done();
+        }
+      },
+    });
   };
 
   return (

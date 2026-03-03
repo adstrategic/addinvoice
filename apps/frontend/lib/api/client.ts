@@ -47,7 +47,7 @@ const createApiClient = (): AxiosInstance => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   // Response interceptor: single place for redirects on auth/subscription errors.

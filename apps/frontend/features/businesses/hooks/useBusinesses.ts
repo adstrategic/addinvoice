@@ -1,3 +1,4 @@
+import type { UseFormSetError } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   type CreateBusinessDto,
@@ -8,6 +9,7 @@ import {
 } from "@/features/businesses";
 import type { ListBusinessesParams as ListBusinessesParamsSchema } from "../schema/businesses.schema";
 import { toast } from "sonner";
+import { handleMutationError } from "@/lib/errors/handle-error";
 
 type ListBusinessesParams = ListBusinessesParamsSchema & {
   enabled?: boolean;
@@ -55,10 +57,12 @@ export function useBusiness(id: number | null, enabled = true) {
 }
 
 /**
- * Hook to create a new business
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to create a new business.
+ * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useCreateBusiness() {
+export function useCreateBusiness(
+  setError?: UseFormSetError<CreateBusinessDto>,
+) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -69,14 +73,17 @@ export function useCreateBusiness() {
         description: "The business has been added successfully.",
       });
     },
+    onError: (err) => handleMutationError(err, setError),
   });
 }
 
 /**
- * Hook to update an existing business
- * Errors are NOT handled here - they are thrown to be handled by the form component
+ * Hook to update an existing business.
+ * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useUpdateBusiness() {
+export function useUpdateBusiness(
+  setError?: UseFormSetError<UpdateBusinessDto>,
+) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -91,11 +98,13 @@ export function useUpdateBusiness() {
         description: "The business has been updated successfully.",
       });
     },
+    onError: (err) => handleMutationError(err, setError),
   });
 }
 
 /**
- * Hook to delete a business
+ * Hook to delete a business.
+ * Errors are handled by the central dispatcher (handleMutationError).
  */
 export function useDeleteBusiness() {
   const queryClient = useQueryClient();
@@ -108,16 +117,13 @@ export function useDeleteBusiness() {
         description: "The business has been deleted successfully.",
       });
     },
-    onError: (error: Error) => {
-      toast.error("Failed to delete business", {
-        description: error.message || "Failed to delete business",
-      });
-    },
+    onError: (err) => handleMutationError(err, undefined),
   });
 }
 
 /**
- * Hook to set a business as default
+ * Hook to set a business as default.
+ * Errors are handled by the central dispatcher (handleMutationError).
  */
 export function useSetDefaultBusiness() {
   const queryClient = useQueryClient();
@@ -130,16 +136,13 @@ export function useSetDefaultBusiness() {
         description: "The default business has been updated successfully.",
       });
     },
-    onError: (error: Error) => {
-      toast.error("Failed to set default business", {
-        description: error.message || "Failed to set default business",
-      });
-    },
+    onError: (err) => handleMutationError(err, undefined),
   });
 }
 
 /**
- * Hook to upload business logo
+ * Hook to upload business logo.
+ * Errors are handled by the central dispatcher (handleMutationError).
  */
 export function useUploadLogo() {
   const queryClient = useQueryClient();
@@ -147,7 +150,7 @@ export function useUploadLogo() {
   return useMutation({
     mutationFn: ({ id, file }: { id: number; file: File }) =>
       businessesService.uploadLogo(id, file),
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: businessKeys.lists() });
       queryClient.invalidateQueries({
         queryKey: businessKeys.detail(variables.id),
@@ -156,35 +159,28 @@ export function useUploadLogo() {
         description: "The business logo has been uploaded successfully.",
       });
     },
-    onError: (error: Error) => {
-      toast.error("Upload failed", {
-        description: error.message || "Failed to upload logo",
-      });
-    },
+    onError: (err) => handleMutationError(err, undefined),
   });
 }
 
 /**
- * Hook to delete business logo
+ * Hook to delete business logo.
+ * Errors are handled by the central dispatcher (handleMutationError).
  */
 export function useDeleteLogo() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (id: number) => businessesService.deleteLogo(id),
-    onSuccess: (data, variables) => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: businessKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: businessKeys.detail(variables),
+        queryKey: businessKeys.detail(id),
       });
       toast.success("Logo deleted", {
         description: "The business logo has been deleted successfully.",
       });
     },
-    onError: (error: Error) => {
-      toast.error("Failed to delete logo", {
-        description: error.message || "Failed to delete logo",
-      });
-    },
+    onError: (err) => handleMutationError(err, undefined),
   });
 }

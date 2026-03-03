@@ -33,16 +33,15 @@ export function useCatalogDelete(options?: UseCatalogDeleteOptions) {
     setCatalogToDelete(null);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     if (!catalogToDelete) return;
-    try {
-      await actions.handleDelete(catalogToDelete.id, catalogToDelete.sequence);
+    const onSuccess = () => {
       closeDeleteModal();
       options?.onAfterDelete?.();
-    } catch (error) {
-      // El error ya es manejado por el toast en actions
-      console.error(error);
-    }
+    };
+    actions.handleDelete(catalogToDelete.id, catalogToDelete.sequence, {
+      onSuccess,
+    });
   };
 
   return {

@@ -1,5 +1,10 @@
 import type { UseFormSetError } from "react-hook-form";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import {
   type CreateClientDto,
   type UpdateClientDto,
@@ -40,7 +45,7 @@ export function useClients(params?: ListClientsParams) {
     queryKey: clientKeys.list(queryParams),
     queryFn: () => clientsService.list(queryParams),
     staleTime: 30 * 1000, // 30 seconds
-    placeholderData: (previousData) => previousData, // Smooth pagination transitions
+    placeholderData: keepPreviousData, // Smooth pagination transitions
     enabled,
     initialData,
   });

@@ -40,7 +40,6 @@ async function list(
     });
     return paymentListResponseListSchema.parse(data);
   } catch (error) {
-    console.error(error);
     handleApiError(error);
   }
 }
@@ -55,7 +54,6 @@ async function getById(id: number): Promise<PaymentDetailResponse> {
     >(`${BASE_URL}/${id}`);
     return paymentDetailResponseSchema.parse(data.data);
   } catch (error) {
-    console.error(error);
     handleApiError(error);
   }
 }

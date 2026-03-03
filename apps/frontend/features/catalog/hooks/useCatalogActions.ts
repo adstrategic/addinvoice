@@ -1,3 +1,4 @@
+import type { UseFormSetError } from "react-hook-form";
 import {
   useCreateCatalog,
   useUpdateCatalog,
@@ -7,78 +8,54 @@ import type {
   CreateCatalogDto,
   UpdateCatalogDto,
 } from "../schema/catalog.schema";
-import { toast } from "sonner";
+
+/** Options passed when invoking an action; UI callbacks run only if component is still mounted. */
+export interface CatalogMutationCallbacks {
+  onSuccess?: () => void;
+}
 
 /**
- * Custom hook that encapsulates all catalog business logic and side effects:
- * - Create/Update/Delete operations
- * - Toast notifications
- * - Success/Error handling
- *
- * This hook follows the Single Responsibility Principle by handling ONLY
- * business logic and side effects, not UI state.
- *
- * @example
- * ```tsx
- * const catalogActions = useCatalogActions();
- *
- * // Create a catalog
- * await catalogActions.handleCreate(formData);
- *
- * // Update a catalog
- * await catalogActions.handleUpdate(catalogId, updatedData);
- *
- * // Delete a catalog
- * await catalogActions.handleDelete(catalogId, sequence);
- * ```
+ * Facade over catalog mutations: one place to pass setError, consistent handler APIs,
+ * and aggregated loading state. Uses mutate (not mutateAsync) so no unhandled rejections.
+ * Success toasts and invalidation in useCatalogs (onSuccess); errors in onError (handleMutationError).
+ * Pass onSuccess for UI follow-up (e.g. close modal, navigate) so it runs after mutation success.
  */
-export function useCatalogActions() {
-  // React Query mutations
-  const createMutation = useCreateCatalog();
-  const updateMutation = useUpdateCatalog();
+export function useCatalogActions(
+  setError?: UseFormSetError<CreateCatalogDto>,
+) {
+  const createMutation = useCreateCatalog(setError);
+  const updateMutation = useUpdateCatalog(setError);
   const deleteMutation = useDeleteCatalog();
 
-  /**
-   * Create a new catalog
-   */
-  const handleCreate = async (data: CreateCatalogDto) => {
-    await createMutation.mutateAsync(data);
-
-    toast.success("Catalog item created successfully", {
-      description: "The catalog item has been added to the system",
+  const handleCreate = (
+    data: CreateCatalogDto,
+    callbacks?: CatalogMutationCallbacks,
+  ) => {
+    createMutation.mutate(data, {
+      onSuccess: callbacks?.onSuccess,
     });
   };
 
-  /**
-   * Update an existing catalog
-   */
-  const handleUpdate = async (id: number, data: UpdateCatalogDto) => {
-    await updateMutation.mutateAsync({ id, data });
-
-    toast.success("Catalog item updated successfully", {
-      description: "The catalog item has been updated successfully",
-    });
+  const handleUpdate = (
+    id: number,
+    data: UpdateCatalogDto,
+    callbacks?: CatalogMutationCallbacks,
+  ) => {
+    updateMutation.mutate(
+      { id, data },
+      { onSuccess: callbacks?.onSuccess },
+    );
   };
 
-  /**
-   * Delete a catalog
-   */
-  const handleDelete = async (id: number, sequence: number) => {
-    try {
-      await deleteMutation.mutateAsync({ id, sequence });
-
-      toast.success("Catalog item deleted successfully", {
-        description: "The catalog item has been deleted from the system",
-      });
-    } catch (error: any) {
-      toast.error("Error deleting catalog item", {
-        description:
-          error.message || "An error occurred while deleting the catalog item",
-      });
-
-      // Re-throw to allow caller to handle if needed
-      throw error;
-    }
+  const handleDelete = (
+    id: number,
+    sequence: number,
+    callbacks?: CatalogMutationCallbacks,
+  ) => {
+    deleteMutation.mutate(
+      { id, sequence },
+      { onSuccess: callbacks?.onSuccess },
+    );
   };
 
   return {
