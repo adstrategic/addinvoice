@@ -38,7 +38,7 @@ FROM dependencies AS shared-builder
 COPY packages/db/ ./packages/db/
 COPY packages/schemas/ ./packages/schemas/
 
-RUN pnpm --filter @addinvoice/db db:generate \
+RUN pnpm --filter @addinvoice/db build \
     && pnpm --filter @addinvoice/schemas build
 
 # ---- Backend dev (API): same as shared-builder for env; source mounted at runtime ----

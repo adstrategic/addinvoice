@@ -54,6 +54,7 @@ services:
       target: backend-dev
     ports:
       - "4000:4000"
+      - "51212:51212"
     develop:
       watch:
         - action: sync
