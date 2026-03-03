@@ -103,7 +103,26 @@ export function ExpenseCard({
             </DropdownMenuItem>
             {expense.image && (
               <DropdownMenuItem
-                onClick={() => window.open(expense.image!, "_blank")}
+                onClick={async () => {
+                  try {
+                    const res = await fetch(expense.image!, {
+                      mode: "cors",
+                    });
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download =
+                      expense.image!.split("/").pop()?.split("?")[0] ||
+                      "receipt";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  } catch {
+                    window.open(expense.image!, "_blank");
+                  }
+                }}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Download receipt

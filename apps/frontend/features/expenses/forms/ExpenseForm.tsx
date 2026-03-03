@@ -158,16 +158,15 @@ export function ExpenseForm({
 
         <Separator />
 
-        <div className="flex flex-col items-end gap-3">
+        <div className="flex flex-col items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 type="button"
-                variant="outline"
-                className="gap-2"
+                className="gap-2 flex-col h-32 w-32"
                 disabled={isLoading || isScanningReceipt}
               >
-                <Scan className="h-4 w-4" />
+                <Scan className="size-6" />
                 Scan receipt
               </Button>
             </DropdownMenuTrigger>
