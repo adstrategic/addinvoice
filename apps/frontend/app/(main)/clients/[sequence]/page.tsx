@@ -71,9 +71,9 @@ export default function ClientDetailPage() {
 
   return (
     <>
-      <div className="container mx-auto px-6 py-8 max-w-5xl">
+      <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 max-w-5xl">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <Link href="/clients">
               <Button variant="ghost" size="icon">
@@ -81,31 +81,31 @@ export default function ClientDetailPage() {
               </Button>
             </Link>
             <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold text-foreground">
-                  {client.name}
-                </h1>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                 {client.businessName && (
                   <Badge className="bg-primary/20 text-primary">
                     {client.businessName}
                   </Badge>
                 )}
+                <h1 className="text-3xl font-bold text-foreground">
+                  {client.name}
+                </h1>
               </div>
               <p className="text-muted-foreground mt-1">
                 Client details and information
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="bg-transparent"
+                  className="h-14 w-14 bg-transparent"
                   onClick={() => editClient.openEdit(sequence)}
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit className="size-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -117,10 +117,10 @@ export default function ClientDetailPage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="text-destructive hover:text-destructive bg-transparent"
+                  className="h-14 w-14 text-destructive hover:text-destructive bg-transparent"
                   onClick={() => clientDelete.openDeleteModal(client)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="size-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -131,7 +131,10 @@ export default function ClientDetailPage() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <a href={`mailto:${client.email}`}>
-                    <Button variant="outline" className="gap-2 bg-transparent">
+                    <Button
+                      variant="outline"
+                      className="h-14 gap-2 bg-transparent"
+                    >
                       <Mail className="h-4 w-4" />
                       Send Email
                     </Button>
@@ -172,7 +175,7 @@ export default function ClientDetailPage() {
                   </p>
                   <a
                     href={`mailto:${client.email}`}
-                    className="text-foreground hover:underline"
+                    className="text-foreground hover:underline break-all"
                   >
                     {client.email}
                   </a>

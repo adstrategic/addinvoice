@@ -36,7 +36,7 @@ export const GENERAL_TOUR_STEPS: TourStep[] = [
     targetId: "dashboard-total-invoices",
     title: "Dashboard Overview",
     content:
-      "Welcome to AddInvoices! This dashboard gives you a quick snapshot of your business health, including total, paid, and overdue invoices.",
+      "Welcome to ADDINVOICES! This dashboard gives you a quick snapshot of your business health, including total, paid, and overdue invoices.",
     position: "bottom",
   },
   {

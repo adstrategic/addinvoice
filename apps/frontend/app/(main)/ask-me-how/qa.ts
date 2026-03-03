@@ -21,7 +21,7 @@ export const QA_DB: Record<string, string> = {
   configuration:
     "Configure your companies, user profile, billing, and notification preferences in Configuration.",
   hello:
-    "Hi there! I'm here to help you use AddInvoices. Ask me anything about creating invoices, payments, or voice features.",
+    "Hi there! I'm here to help you use ADDINVOICES. Ask me anything about creating invoices, payments, or voice features.",
   help: "I can help with Invoices, Payments, Catalog, Clients, Quotes, Expenses, and Configuration. What do you need to know?",
 };
 

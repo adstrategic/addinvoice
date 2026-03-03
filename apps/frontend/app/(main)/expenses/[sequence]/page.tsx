@@ -10,13 +10,11 @@ import {
   Calendar,
   DollarSign,
   Tag,
-  FileImage,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ExpenseFormModal,
-  useExpenseBySequence,
   useExpenseDelete,
   useExpenseManager,
 } from "@/features/expenses";
@@ -71,8 +69,8 @@ export default function ExpenseDetailPage() {
 
   return (
     <>
-      <div className="container mx-auto px-6 py-8 max-w-5xl">
-        <div className="flex items-center justify-between mb-8">
+      <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 max-w-5xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <Link href="/expenses">
               <Button variant="ghost" size="icon">
@@ -95,16 +93,16 @@ export default function ExpenseDetailPage() {
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex justify-center gap-6">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="bg-transparent"
+                  className="h-14 w-14 bg-transparent"
                   onClick={() => editExpense.openEdit(sequence)}
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit className="size-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -116,10 +114,10 @@ export default function ExpenseDetailPage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="text-destructive hover:text-destructive bg-transparent"
+                  className="h-14 w-14 text-destructive hover:text-destructive bg-transparent"
                   onClick={() => expenseDelete.openDeleteModal(expense)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="size-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -201,21 +199,26 @@ export default function ExpenseDetailPage() {
               </p>
             </div>
             {expense.image && (
-              <div className="pt-4 border-t border-border flex items-start gap-3">
-                <FileImage className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Image
-                  </p>
-                  <a
-                    href={expense.image}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline break-all"
-                  >
-                    {expense.image}
-                  </a>
+              <div className="pt-4 border-t border-border">
+                <p className="text-sm font-medium text-muted-foreground mb-3">
+                  Receipt image
+                </p>
+                <div className="rounded-lg border border-border overflow-hidden bg-muted/30 max-w-md">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- Receipt URL may be external (e.g. S3/R2); img works for any origin */}
+                  <img
+                    src={expense.image}
+                    alt="Expense receipt"
+                    className="w-full h-auto object-contain max-h-96"
+                  />
                 </div>
+                <a
+                  href={expense.image}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline text-sm mt-2 inline-block"
+                >
+                  Open in new tab
+                </a>
               </div>
             )}
           </CardContent>

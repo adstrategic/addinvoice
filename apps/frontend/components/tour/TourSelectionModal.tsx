@@ -61,7 +61,7 @@ export function TourSelectionModal({
                 Choose Your Tour
               </DialogTitle>
               <DialogDescription className="text-base">
-                Select how you'd like to explore AddInvoices
+                Select how you'd like to explore ADDINVOICES
               </DialogDescription>
             </DialogHeader>
 
@@ -81,7 +81,7 @@ export function TourSelectionModal({
                     </div>
                     <CardTitle className="text-xl">General Tour</CardTitle>
                     <CardDescription className="text-base">
-                      A complete walkthrough of AddInvoices
+                      A complete walkthrough of ADDINVOICES
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

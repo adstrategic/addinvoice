@@ -11,7 +11,7 @@ export function AskMeHowHeader({ onStartTour }: AskMeHowHeaderProps) {
       <div>
         <h1 className="text-3xl font-bold text-foreground">Ask Me How</h1>
         <p className="text-muted-foreground mt-1">
-          Learn how to make the most of AddInvoices
+          Learn how to make the most of ADDINVOICES
         </p>
       </div>
       <Button

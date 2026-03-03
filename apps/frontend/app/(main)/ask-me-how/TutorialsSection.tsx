@@ -20,7 +20,7 @@ export function TutorialsSection({ onStartTour }: TutorialsSectionProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <GraduationCap className="h-5 w-5 text-primary" />
-            New to AddInvoices?
+            New to ADDINVOICES?
           </CardTitle>
           <CardDescription>
             Take a quick interactive tour to see where everything is.

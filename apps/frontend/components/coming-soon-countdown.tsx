@@ -86,7 +86,7 @@ export function ComingSoonCountdown() {
             Something Awesome
             <br />
             Is In The Works For{" "}
-            <span className="text-primary">AddInvoices</span>
+            <span className="text-primary">ADDINVOICES</span>
           </motion.h1>
 
           <motion.p

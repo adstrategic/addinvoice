@@ -159,7 +159,7 @@ export function Sidebar() {
 
         {/* The sidebar trigger will be positioned here by the Sidebar component */}
         <span className="ml-2 font-semibold text-lg md:hidden">
-          AddInvoices
+          ADDINVOICES
         </span>
       </div>
 
