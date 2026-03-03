@@ -3,8 +3,9 @@ import { z } from "zod";
 
 export const workCategoryResponseSchema = z.object({
   id: z.number().int().positive(),
-  workspaceId: z.number().int().positive(),
+  workspaceId: z.number().int().positive().nullable(),
   name: z.string(),
+  icon: z.string().nullable().optional(),
   sequence: z.number().int().positive(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

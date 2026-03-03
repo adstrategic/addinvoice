@@ -49,11 +49,6 @@ export function useExpenseManager(options?: UseExpenseManagerOptions) {
     expenseDate: new Date(),
     merchantId: null,
     workCategoryId: null,
-    merchantName: undefined,
-    total: 1,
-    tax: undefined,
-    description: "",
-    image: "",
   };
 
   const form = useForm<CreateExpenseDTO>({
@@ -84,7 +79,7 @@ export function useExpenseManager(options?: UseExpenseManagerOptions) {
     if (mode === "edit" && existingExpense) {
       form.reset(getFormValues());
     }
-  }, [existingExpense, mode, form]);
+  }, [existingExpense, mode]);
 
   const { getDirtyValues } = useDirtyFields(form);
   const { scrollToField } = useFormScroll();

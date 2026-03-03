@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ChevronsUpDown, Loader2, Minus } from "lucide-react";
+import { getWorkCategoryIcon } from "@/features/work-categories";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -69,6 +70,10 @@ export const WorkCategorySelector = ({
       ? selectedCategory.name
       : "Select category...";
 
+  const TriggerIcon = selectedCategory
+    ? getWorkCategoryIcon(selectedCategory.icon)
+    : null;
+
   return (
     <FormItem>
       <FormLabel>Category (optional)</FormLabel>
@@ -85,7 +90,10 @@ export const WorkCategorySelector = ({
               )}
               type="button"
             >
-              {triggerLabel}
+              <span className="flex items-center gap-2">
+                {TriggerIcon && <TriggerIcon className="h-4 w-4 shrink-0" />}
+                {triggerLabel}
+              </span>
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </FormControl>
@@ -121,23 +129,27 @@ export const WorkCategorySelector = ({
                 />
               </CommandItem>
               {!loadingCategories &&
-                categories.map((category) => (
-                  <CommandItem
-                    key={category.id}
-                    value={String(category.id)}
-                    onSelect={() => handleSelect(category)}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedCategory?.id === category.id
-                          ? "opacity-100"
-                          : "opacity-0",
-                      )}
-                    />
-                    {category.name}
-                  </CommandItem>
-                ))}
+                categories.map((category) => {
+                  const Icon = getWorkCategoryIcon(category.icon);
+                  return (
+                    <CommandItem
+                      key={category.id}
+                      value={String(category.id)}
+                      onSelect={() => handleSelect(category)}
+                    >
+                      <Icon className="mr-2 h-4 w-4 shrink-0" />
+                      {category.name}
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedCategory?.id === category.id
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      />
+                    </CommandItem>
+                  );
+                })}
             </CommandGroup>
           </Command>
         </PopoverContent>

@@ -371,16 +371,17 @@ model Merchant {
 }
 
 model WorkCategory {
-    id          Int @id @default(autoincrement())
-    workspaceId Int
+    id          Int  @id @default(autoincrement())
+    workspaceId Int? // null = global (shared); set = workspace-specific custom category
 
     name String
+    icon String?
 
     sequence  Int
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     expenses  Expense[]
 
     @@unique([workspaceId, sequence])

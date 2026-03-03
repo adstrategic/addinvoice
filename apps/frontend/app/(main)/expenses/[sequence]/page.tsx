@@ -11,6 +11,7 @@ import {
   DollarSign,
   Tag,
 } from "lucide-react";
+import { getWorkCategoryIcon } from "@/features/work-categories";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -82,11 +83,15 @@ export default function ExpenseDetailPage() {
                 <h1 className="text-3xl font-bold text-foreground">
                   {expense.merchant?.name ?? "N/A"}
                 </h1>
-                {expense.workCategory && (
-                  <Badge className="bg-primary/20 text-primary">
-                    {expense.workCategory.name}
-                  </Badge>
-                )}
+                {expense.workCategory && (() => {
+                  const CategoryIcon = getWorkCategoryIcon(expense.workCategory.icon);
+                  return (
+                    <Badge className="bg-primary/20 text-primary inline-flex items-center gap-1">
+                      <CategoryIcon className="h-3 w-3 shrink-0" />
+                      {expense.workCategory.name}
+                    </Badge>
+                  );
+                })()}
               </div>
               <p className="text-muted-foreground mt-1">
                 {formatDate(expense.expenseDate)} · Expense details
@@ -179,15 +184,31 @@ export default function ExpenseDetailPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <Tag className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Category
-                  </p>
-                  <p className="text-foreground">
-                    {expense.workCategory?.name ?? "None"}
-                  </p>
-                </div>
+                {(() => {
+                  const CategoryIcon = expense.workCategory
+                    ? getWorkCategoryIcon(expense.workCategory.icon)
+                    : Tag;
+                  return (
+                    <>
+                      <CategoryIcon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Category
+                        </p>
+                        <p className="text-foreground flex items-center gap-2">
+                          {expense.workCategory ? (
+                            <>
+                              <CategoryIcon className="h-4 w-4 shrink-0" />
+                              {expense.workCategory.name}
+                            </>
+                          ) : (
+                            "None"
+                          )}
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
             <div className="pt-4 border-t border-border">

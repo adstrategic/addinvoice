@@ -16,7 +16,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Search, CalendarIcon } from "lucide-react";
 import React from "react";
-import { useWorkCategories } from "@/features/work-categories";
+import { getWorkCategoryIcon, useWorkCategories } from "@/features/work-categories";
 import { format, parseISO } from "date-fns";
 import type { DateRange } from "react-day-picker";
 
@@ -126,11 +126,17 @@ export function ExpenseFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id.toString()}>
-                {category.name}
-              </SelectItem>
-            ))}
+            {categories.map((category) => {
+              const Icon = getWorkCategoryIcon(category.icon);
+              return (
+                <SelectItem key={category.id} value={category.id.toString()}>
+                  <span className="flex items-center gap-2">
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {category.name}
+                  </span>
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>

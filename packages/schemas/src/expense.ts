@@ -23,6 +23,7 @@ export const createWorkCategorySchema = z.object({
     .trim()
     .min(1, "Category name is required")
     .max(255, "Category name is too long"),
+  icon: z.string().trim().max(50).optional(),
 });
 
 export const createExpenseBaseSchema = z.object({
