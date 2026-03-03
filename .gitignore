@@ -2,6 +2,8 @@ docs/*.md
 .cursor/*
 node_modules/
 
+dist/
+
 # Lockfiles from other package managers (use pnpm-lock.yaml at root)
 yarn.lock
 package-lock.json

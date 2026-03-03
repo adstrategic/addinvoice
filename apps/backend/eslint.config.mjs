@@ -8,4 +8,8 @@ export default defineConfig(...backendConfig, {
       tsconfigRootDir: import.meta.dirname,
     },
   },
+  rules: {
+    "perfectionist/sort-modules": "off",
+    "perfectionist/sort-objects": "off",
+  },
 });

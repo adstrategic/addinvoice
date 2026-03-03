@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["DATABASE_URL","NODE_ENV"],
+  "globalEnv": ["DATABASE_URL", "NODE_ENV"],
   "ui": "tui",
   "tasks": {
     "build": {
@@ -13,6 +13,7 @@
       "cache": false,
       "persistent": true,
       "env": [
+        "ANTHROPIC_API_KEY",
         "PORT",
         "FRONTEND_URL",
         "DATABASE_URL_TEST",

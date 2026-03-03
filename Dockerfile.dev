@@ -52,7 +52,7 @@ RUN pnpm install --frozen-lockfile
 CMD ["pnpm", "dev:backend"]
 
 # ---- Frontend dev: deps + frontend app (source mounted at runtime) ----
-FROM dependencies AS frontend-dev
+FROM shared-builder AS frontend-dev
 
 COPY apps/frontend/ ./apps/frontend/
 
