@@ -2,20 +2,28 @@
   "name": "@addinvoice/db",
   "version": "1.0.0",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
   },
   "scripts": {
+    "build": "tsc",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx src/seed.ts",
     "db:generate": "prisma generate",
     "format": "prisma format",
-    "prebuild": "pnpm run generate",
-    "predev": "pnpm run generate",
+    "prebuild": "pnpm run db:generate",
+    "predev": "pnpm run db:generate",
     "studio": "prisma studio"
   },
+  "files": ["dist"],
   "dependencies": {
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.0.0",

@@ -1,8 +1,10 @@
 {
   "extends": "@addinvoice/typescript-config/backend.json",
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "tsup.config.ts"],
-  "exclude": ["node_modules"],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"],
   "compilerOptions": {
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "rootDir": "src",
+    "outDir": "dist"
   }
 }
