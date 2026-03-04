@@ -7,6 +7,7 @@ export default defineConfig({
     sourcemap: true,
     outDir: 'dist',
     rollupOptions: {
+      external: ['@addinvoice/db', '@addinvoice/schemas'],
       output: {
         entryFileNames: 'main.js',
       },

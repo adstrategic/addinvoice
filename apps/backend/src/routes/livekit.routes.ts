@@ -29,17 +29,24 @@ const token_request_schema = {
 
 function buildRoomConfigFromBody(
   body: z.infer<typeof token_request_schema.body>,
+  workspace_id: number,
 ): RoomConfiguration | undefined {
   const room_config_input = body.room_config;
   const agent_name_input = body.agent_name;
 
   if (room_config_input?.agents?.length) {
     const agents: RoomAgentDispatch[] = room_config_input.agents.map(
-      (a: { agent_name?: string; metadata?: string }) =>
-        new RoomAgentDispatch({
+      (a: { agent_name?: string; metadata?: string }) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const existing_meta = a.metadata ? JSON.parse(a.metadata) : {};
+        return new RoomAgentDispatch({
           agentName: a.agent_name ?? "invoice-agent",
-          metadata: a.metadata ?? undefined,
-        }),
+          metadata: JSON.stringify({
+            ...existing_meta,
+            workspaceId: workspace_id,
+          }),
+        });
+      },
     );
     const config = new RoomConfiguration({});
     config.agents = agents;
@@ -51,6 +58,7 @@ function buildRoomConfigFromBody(
     config.agents = [
       new RoomAgentDispatch({
         agentName: agent_name_input,
+        metadata: JSON.stringify({ workspaceId: workspace_id }),
       }),
     ];
     return config;
@@ -76,7 +84,7 @@ livekitRouter.post(
       const participant_name = body.participant_name ?? "User";
       const identity = body.participant_identity ?? user_id;
 
-      const room_config = buildRoomConfigFromBody(body);
+      const room_config = buildRoomConfigFromBody(body, workspace_id);
 
       const token = new AccessToken(
         process.env.LIVEKIT_API_KEY,

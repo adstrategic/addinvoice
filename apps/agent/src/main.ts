@@ -23,9 +23,13 @@ export default defineAgent({
   },
   entry: async (ctx: JobContext) => {
     // Extract workspace from participant metadata (set by backend token)
-    const participantMetadata = JSON.parse(ctx.room.localParticipant?.metadata || '{}');
-    const workspaceId =
-      participantMetadata.workspaceId || parseInt(process.env.DEFAULT_WORKSPACE_ID || '1');
+    const jobMetadata = JSON.parse(ctx.job.metadata || '{}');
+    console.log('jobMetadata', jobMetadata);
+    const workspaceId = Number(jobMetadata.workspaceId);
+
+    if (!workspaceId) {
+      throw new Error('Workspace ID is required');
+    }
 
     // Initialize session data
     const sessionData: InvoiceSessionData = {
