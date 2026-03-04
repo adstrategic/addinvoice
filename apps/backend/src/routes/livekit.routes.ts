@@ -40,7 +40,7 @@ function buildRoomConfigFromBody(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const existing_meta = a.metadata ? JSON.parse(a.metadata) : {};
         return new RoomAgentDispatch({
-          agentName: a.agent_name ?? "invoice-agent",
+          agentName: a.agent_name,
           metadata: JSON.stringify({
             ...existing_meta,
             workspaceId: workspace_id,
@@ -67,7 +67,6 @@ function buildRoomConfigFromBody(
   const config = new RoomConfiguration({});
   config.agents = [
     new RoomAgentDispatch({
-      agentName: "invoice-agent",
       metadata: JSON.stringify({ workspaceId: workspace_id }),
     }),
   ];
