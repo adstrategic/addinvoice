@@ -64,7 +64,14 @@ function buildRoomConfigFromBody(
     return config;
   }
 
-  return undefined;
+  const config = new RoomConfiguration({});
+  config.agents = [
+    new RoomAgentDispatch({
+      agentName: "invoice-agent",
+      metadata: JSON.stringify({ workspaceId: workspace_id }),
+    }),
+  ];
+  return config;
 }
 
 livekitRouter.post(
@@ -84,8 +91,6 @@ livekitRouter.post(
       const participant_name = body.participant_name ?? "User";
       const identity = body.participant_identity ?? user_id;
 
-      const room_config = buildRoomConfigFromBody(body, workspace_id);
-
       const token = new AccessToken(
         process.env.LIVEKIT_API_KEY,
         process.env.LIVEKIT_API_SECRET,
@@ -96,16 +101,14 @@ livekitRouter.post(
         },
       );
 
+      token.roomConfig = buildRoomConfigFromBody(body, workspace_id);
+
       token.addGrant({
         canPublish: true,
         canSubscribe: true,
         room: room_name,
         roomJoin: true,
       });
-
-      if (room_config) {
-        token.roomConfig = room_config;
-      }
 
       const jwt = await token.toJwt();
 
