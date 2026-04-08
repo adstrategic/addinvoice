@@ -6,13 +6,13 @@ import {
   keepPreviousData,
 } from "@tanstack/react-query";
 import {
-  type CreateClientDto,
-  type UpdateClientDto,
-  clientsService,
-} from "@/features/clients";
+  type CreateClientDTO,
+  type UpdateClientDTO,
+} from "@addinvoice/schemas";
 import type { ClientResponseList } from "../schema/clients.schema";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/errors/handle-error";
+import { clientsService } from "../service/clients.service";
 
 type ListClientsParams = {
   page?: number;
@@ -69,11 +69,11 @@ export function useClientBySequence(sequence: number | null, enabled: boolean) {
  * Hook to create a new client.
  * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useCreateClient(setError?: UseFormSetError<CreateClientDto>) {
+export function useCreateClient(setError?: UseFormSetError<CreateClientDTO>) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateClientDto) => clientsService.create(data),
+    mutationFn: (data: CreateClientDTO) => clientsService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
       toast.success("Client created", {
@@ -90,11 +90,11 @@ export function useCreateClient(setError?: UseFormSetError<CreateClientDto>) {
  * Hook to update an existing client.
  * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useUpdateClient(setError?: UseFormSetError<CreateClientDto>) {
+export function useUpdateClient(setError?: UseFormSetError<CreateClientDTO>) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateClientDto }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateClientDTO }) =>
       clientsService.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() });

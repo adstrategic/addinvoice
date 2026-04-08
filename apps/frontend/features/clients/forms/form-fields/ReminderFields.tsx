@@ -1,6 +1,6 @@
 "use client";
 
-import { Control } from "react-hook-form";
+import type { Control } from "react-hook-form";
 import {
   FormControl,
   FormField,
@@ -9,11 +9,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { CreateClientDto } from "../../schema/clients.schema";
+import type { CreateClientDTO } from "@addinvoice/schemas";
 import { NumericFormat } from "react-number-format";
 
 interface ReminderFieldsProps {
-  control: Control<CreateClientDto>;
+  control: Control<CreateClientDTO>;
   isLoading?: boolean;
 }
 
@@ -45,8 +45,8 @@ export function ReminderFields({
                 />
               </FormControl>
               <p className="text-xs text-muted-foreground">
-                Leave empty to disable. Send reminder every N days while invoice
-                is active (not yet past due).
+                Leave empty to disable. Send reminder every N days while
+                Estimate is active (not yet past due).
               </p>
               <FormMessage />
             </FormItem>
@@ -73,7 +73,7 @@ export function ReminderFields({
                 />
               </FormControl>
               <p className="text-xs text-muted-foreground">
-                Leave empty to disable. Send reminder every N days when invoice
+                Leave empty to disable. Send reminder every N days when Estimate
                 is past due.
               </p>
               <FormMessage />

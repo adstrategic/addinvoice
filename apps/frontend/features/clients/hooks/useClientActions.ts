@@ -4,10 +4,7 @@ import {
   useUpdateClient,
   useDeleteClient,
 } from "./useClients";
-import type {
-  CreateClientDto,
-  UpdateClientDto,
-} from "../schema/clients.schema";
+import type { CreateClientDTO, UpdateClientDTO } from "@addinvoice/schemas";
 
 /** Options passed when invoking an action; UI callbacks run only if component is still mounted. */
 export interface ClientMutationCallbacks {
@@ -20,13 +17,13 @@ export interface ClientMutationCallbacks {
  * Success toasts and invalidation in useClients (onSuccess); errors in onError (handleMutationError).
  * Pass onSuccess for UI follow-up (e.g. close modal, navigate) so it runs after mutation success.
  */
-export function useClientActions(setError?: UseFormSetError<CreateClientDto>) {
+export function useClientActions(setError?: UseFormSetError<CreateClientDTO>) {
   const createMutation = useCreateClient(setError);
   const updateMutation = useUpdateClient(setError);
   const deleteMutation = useDeleteClient();
 
   const handleCreate = (
-    data: CreateClientDto,
+    data: CreateClientDTO,
     callbacks?: ClientMutationCallbacks,
   ) => {
     createMutation.mutate(data, {
@@ -36,13 +33,10 @@ export function useClientActions(setError?: UseFormSetError<CreateClientDto>) {
 
   const handleUpdate = (
     id: number,
-    data: UpdateClientDto,
+    data: UpdateClientDTO,
     callbacks?: ClientMutationCallbacks,
   ) => {
-    updateMutation.mutate(
-      { id, data },
-      { onSuccess: callbacks?.onSuccess },
-    );
+    updateMutation.mutate({ id, data }, { onSuccess: callbacks?.onSuccess });
   };
 
   const handleDelete = (

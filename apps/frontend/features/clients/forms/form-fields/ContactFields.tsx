@@ -1,6 +1,6 @@
 "use client";
 
-import { Control } from "react-hook-form";
+import type { Control } from "react-hook-form";
 import {
   FormControl,
   FormField,
@@ -11,10 +11,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { PhoneInputField } from "@/components/phone-input/phone-input";
 import { PhoneHelp } from "@/components/phone-input/phone-help";
-import { CreateClientDto } from "../../schema/clients.schema";
+import type { CreateClientDTO } from "@addinvoice/schemas";
 
 interface ContactFieldsProps {
-  control: Control<CreateClientDto>;
+  control: Control<CreateClientDTO>;
   isLoading?: boolean;
 }
 

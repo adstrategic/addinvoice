@@ -8,13 +8,7 @@
 
 // Schemas and Types
 export {
-  createClientSchema,
-  updateClientSchema,
-  clientResponseSchema,
   clientResponseListSchema,
-  type CreateClientDto,
-  type UpdateClientDto,
-  type ClientResponse,
   type ListClientsParams,
 } from "./schema/clients.schema";
 

@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { type DefaultValues, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  type CreateClientDto,
-  type UpdateClientDto,
+  type CreateClientDTO,
+  type UpdateClientDTO,
   createClientSchema,
-} from "../schema/clients.schema";
+} from "@addinvoice/schemas";
 import { useClientActions } from "./useClientActions";
 import { useClientBySequence } from "./useClients";
 import { useDirtyFields } from "@/hooks/useDirtyValues";
@@ -42,7 +42,7 @@ export function useClientManager(options?: UseClientManagerOptions) {
     mode === "edit" && !!clientSequence,
   );
 
-  const defaultValues: DefaultValues<CreateClientDto> = {
+  const defaultValues: DefaultValues<CreateClientDTO> = {
     name: "",
     email: "",
     phone: "",
@@ -51,7 +51,7 @@ export function useClientManager(options?: UseClientManagerOptions) {
     businessName: "",
   };
 
-  const form = useForm<CreateClientDto>({
+  const form = useForm<CreateClientDTO>({
     resolver: zodResolver(createClientSchema),
     mode: "onSubmit",
     reValidateMode: "onChange",
@@ -61,7 +61,7 @@ export function useClientManager(options?: UseClientManagerOptions) {
 
   // Transform validated ClientResponse to form format
   // No need to parse again - service already validated the data
-  const getFormValues = (): CreateClientDto | undefined => {
+  const getFormValues = (): CreateClientDTO | undefined => {
     if (mode === "edit" && existingClient) {
       // existingClient is already validated by the service layer
       return {
@@ -111,7 +111,7 @@ export function useClientManager(options?: UseClientManagerOptions) {
   };
 
   // Envío del formulario
-  const processFormData = (data: CreateClientDto) => {
+  const processFormData = (data: CreateClientDTO) => {
     // En modo edición, solo enviamos campos modificados
     return mode === "edit" ? getDirtyValues(data) : data;
   };
@@ -130,11 +130,11 @@ export function useClientManager(options?: UseClientManagerOptions) {
           handleMutationError(new Error("No client data loaded"));
           return;
         }
-        actions.handleUpdate(existingClient.id, apiData as UpdateClientDto, {
+        actions.handleUpdate(existingClient.id, apiData as UpdateClientDTO, {
           onSuccess: onSuccessCallback,
         });
       } else {
-        actions.handleCreate(apiData as CreateClientDto, {
+        actions.handleCreate(apiData as CreateClientDTO, {
           onSuccess: onSuccessCallback,
         });
       }

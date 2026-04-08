@@ -13,10 +13,10 @@ import { ReminderFields } from "./form-fields/ReminderFields";
 // import { VendedorSelector } from "@/components/shared/selectors/vendedor-selector";
 import { FormField } from "@/components/ui/form";
 import type { UseFormReturn } from "react-hook-form";
-import type { ClientResponse, CreateClientDto } from "../schema/clients.schema";
+import type { ClientResponse, CreateClientDTO } from "@addinvoice/schemas";
 
 interface ClientFormProps {
-  form: UseFormReturn<CreateClientDto>;
+  form: UseFormReturn<CreateClientDTO>;
   mode: "create" | "edit";
   initialData?: ClientResponse;
   onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
@@ -96,7 +96,7 @@ export function ClientForm({
         {/* Reminder settings */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-base font-medium">Invoice reminders</h3>
+            <h3 className="text-base font-medium">Estimate reminders</h3>
             <p className="text-sm text-muted-foreground">
               Optional: how often to send payment reminders for this client.
             </p>

@@ -7,21 +7,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  ClientForm,
-  type ClientResponse,
-  type CreateClientDto,
-} from "@/features/clients";
+import { ClientForm } from "@/features/clients";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ErrorBoundary } from "@/components/error-boundary";
 import LoadingComponent from "@/components/loading-component";
+import type { CreateClientDTO, ClientResponse } from "@addinvoice/schemas";
 
 interface ClientFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: "create" | "edit";
   initialData?: ClientResponse;
-  form: UseFormReturn<CreateClientDto>;
+  form: UseFormReturn<CreateClientDTO>;
   onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   isLoading?: boolean;
   isLoadingClient?: boolean;

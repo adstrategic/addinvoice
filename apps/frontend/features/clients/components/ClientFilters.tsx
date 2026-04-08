@@ -17,7 +17,7 @@ export function ClientFilters({
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
       <Input
         placeholder="Search clients..."
-        className="pl-10"
+        className="pl-10 bg-white"
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
       />

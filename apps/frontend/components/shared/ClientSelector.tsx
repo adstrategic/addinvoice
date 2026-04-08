@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/popover";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -20,54 +19,46 @@ import {
 } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 import { useClientSelector } from "./hooks/useClientSelector";
-import type { ClientResponse } from "@/features/clients";
-
-// Special value to represent "Create New Client" mode
-export const CREATE_NEW_CLIENT_VALUE = -1;
+import type { ClientResponse } from "@addinvoice/schemas";
 
 interface ClientSelectorProps {
-  field: {
-    value: number;
-    onChange: (value: number) => void;
-  };
+  value: number;
+  onValueChange: (value: number) => void;
   initialClient: ClientResponse | null;
   mode: "create" | "edit";
   onSelect?: (client: ClientResponse) => void;
+  onCreateNew?: () => void;
 }
 
 export const ClientSelector = ({
-  field,
+  value,
+  onValueChange,
   initialClient,
   mode,
   onSelect,
+  onCreateNew,
 }: ClientSelectorProps) => {
   const {
     clientQuery,
     openClients,
     clients,
     loadingClients,
-    hasUserInteracted,
     isFetched,
     selectedClient,
     handleClientSearch,
-    handleClientSelect,
     toggleClientPopover,
-    handleCreateNewClient,
-  } = useClientSelector(initialClient, mode);
+    closePopover,
+  } = useClientSelector(value, initialClient, mode);
 
-  const isCreateNewMode = field.value === CREATE_NEW_CLIENT_VALUE;
-
-  // Función para manejar la selección
   const handleSelect = (client: ClientResponse) => {
-    field.onChange(client.id);
-    handleClientSelect(client);
+    onValueChange(client.id);
+    closePopover();
     onSelect?.(client);
   };
 
-  // Función para manejar "Create New Client"
   const handleCreateNew = () => {
-    field.onChange(CREATE_NEW_CLIENT_VALUE);
-    handleCreateNewClient();
+    closePopover();
+    onCreateNew?.();
   };
 
   return (
@@ -82,15 +73,11 @@ export const ClientSelector = ({
               aria-expanded={openClients}
               className={cn(
                 "w-full justify-between text-left font-normal",
-                !selectedClient && !isCreateNewMode && "text-muted-foreground"
+                !selectedClient && value <= 0 && "text-muted-foreground",
               )}
               type="button"
             >
-              {isCreateNewMode
-                ? "➕ Create New Client"
-                : selectedClient
-                ? selectedClient.name
-                : "Select customer..."}
+              {selectedClient ? selectedClient.name : "Select customer..."}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </FormControl>
@@ -102,18 +89,6 @@ export const ClientSelector = ({
               value={clientQuery}
               onValueChange={handleClientSearch}
             />
-            {(loadingClients || isFetched) && (
-              <CommandEmpty>
-                {loadingClients ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">Loading...</span>
-                  </div>
-                ) : (
-                  "No customers found."
-                )}
-              </CommandEmpty>
-            )}
             <CommandGroup className="max-h-64 overflow-auto">
               {/* Create New Client option - always first */}
               <CommandItem
@@ -123,31 +98,27 @@ export const ClientSelector = ({
               >
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Create New Client</span>
-                <Check
-                  className={cn(
-                    "ml-auto h-4 w-4",
-                    isCreateNewMode ? "opacity-100" : "opacity-0"
-                  )}
-                />
               </CommandItem>
-              {!hasUserInteracted && (
+              {loadingClients && (
                 <CommandItem disabled>
-                  Type to search for a customer...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading...
                 </CommandItem>
+              )}
+              {!loadingClients && isFetched && clients.length === 0 && (
+                <CommandItem disabled>No customers found.</CommandItem>
               )}
               {!loadingClients &&
                 clients.map((client) => (
                   <CommandItem
                     key={client.id}
-                    value={client.name}
+                    value={`${client.id}:${client.name}`}
                     onSelect={() => handleSelect(client)}
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        selectedClient?.id === client.id
-                          ? "opacity-100"
-                          : "opacity-0"
+                        value === client.id ? "opacity-100" : "opacity-0",
                       )}
                     />
                     {client.name}

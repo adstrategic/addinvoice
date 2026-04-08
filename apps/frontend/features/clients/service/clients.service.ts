@@ -1,16 +1,16 @@
 import { apiClient } from "@/lib/api/client";
 import { handleApiError, ApiError } from "@/lib/errors/handler";
 import type { ApiSuccessResponse } from "@/lib/api/types";
-import type {
-  CreateClientDto,
-  UpdateClientDto,
-  ListClientsParams,
-} from "../index";
 import {
   clientResponseSchema,
-  clientResponseListSchema,
   type ClientResponse,
+  type CreateClientDTO,
+  type UpdateClientDTO,
+} from "@addinvoice/schemas";
+import {
+  clientResponseListSchema,
   type ClientResponseList,
+  type ListClientsParams,
 } from "../schema/clients.schema";
 
 /**
@@ -68,7 +68,7 @@ async function getClientBySequence(sequence: number): Promise<ClientResponse> {
 /**
  * Create a new client
  */
-async function createClient(dto: CreateClientDto): Promise<ClientResponse> {
+async function createClient(dto: CreateClientDTO): Promise<ClientResponse> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<ClientResponse>>(
       BASE_URL,
@@ -87,7 +87,7 @@ async function createClient(dto: CreateClientDto): Promise<ClientResponse> {
  */
 async function updateClient(
   id: number,
-  dto: UpdateClientDto,
+  dto: UpdateClientDTO,
 ): Promise<ClientResponse> {
   try {
     const { data } = await apiClient.patch<ApiSuccessResponse<ClientResponse>>(
