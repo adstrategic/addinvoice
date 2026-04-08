@@ -448,7 +448,10 @@ export function InvoiceForm({
                     {enabledPaymentMethods.map((method) => {
                       const labels: Record<
                         string,
-                        { name: string; icon: "paypal" | "venmo" | "zelle" | "stripe" }
+                        {
+                          name: string;
+                          icon: "paypal" | "venmo" | "zelle" | "stripe";
+                        }
                       > = {
                         PAYPAL: { name: "PayPal", icon: "paypal" },
                         VENMO: { name: "Venmo", icon: "venmo" },
@@ -500,7 +503,7 @@ export function InvoiceForm({
                             )}
                             {label?.icon === "stripe" && (
                               <Image
-                                src="/images/stripe-icon.png"
+                                src="/images/stripe-icon.webp"
                                 alt="Stripe"
                                 width={32}
                                 height={32}

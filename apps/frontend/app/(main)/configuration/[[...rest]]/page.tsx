@@ -126,10 +126,8 @@ export default function ConfigurationPage() {
   const { data: paymentMethodsList } = useWorkspacePaymentMethods();
   const upsertPaymentMethod = useUpsertPaymentMethod();
 
-  const {
-    data: workspaceLanguageData,
-    isLoading: isLoadingWorkspaceLanguage,
-  } = useWorkspaceLanguage();
+  const { data: workspaceLanguageData, isLoading: isLoadingWorkspaceLanguage } =
+    useWorkspaceLanguage();
   const upsertWorkspaceLanguage = useUpsertWorkspaceLanguage();
   const selectedWorkspaceLanguage: AgentLanguage =
     workspaceLanguageData?.language ?? "es";
@@ -138,13 +136,18 @@ export default function ConfigurationPage() {
     "PAYPAL",
     "VENMO",
     "ZELLE",
+    "STRIPE",
   ];
   const [localPaymentState, setLocalPaymentState] = useState<
-    Record<"PAYPAL" | "VENMO" | "ZELLE", { isEnabled: boolean; handle: string | null }>
+    Record<
+      "PAYPAL" | "VENMO" | "ZELLE" | "STRIPE",
+      { isEnabled: boolean; handle: string | null }
+    >
   >({
     PAYPAL: { isEnabled: false, handle: null },
     VENMO: { isEnabled: false, handle: null },
     ZELLE: { isEnabled: false, handle: null },
+    STRIPE: { isEnabled: false, handle: null },
   });
 
   useEffect(() => {
@@ -163,41 +166,44 @@ export default function ConfigurationPage() {
   }, [paymentMethodsList]);
 
   // Stripe-specific state
-  const stripeMethod = paymentMethodsList?.find((m) => m.type === "STRIPE")
-  const stripeConnected = stripeMethod?.stripeConnected ?? false
-  const stripeWebhookPending = stripeMethod?.stripeWebhookPending ?? false
-  const [stripeKeyInput, setStripeKeyInput] = useState('')
-  const [stripeKeyVisible, setStripeKeyVisible] = useState(false)
-  const [stripeGuideOpen, setStripeGuideOpen] = useState(false)
-  const [stripeEditingKey, setStripeEditingKey] = useState(false)
-  const [stripeEnabled, setStripeEnabled] = useState(false)
+  const stripeMethod = paymentMethodsList?.find((m) => m.type === "STRIPE");
+  const stripeConnected = stripeMethod?.stripeConnected ?? false;
+  const stripeWebhookPending = stripeMethod?.stripeWebhookPending ?? false;
+  const [stripeKeyInput, setStripeKeyInput] = useState("");
+  const [stripeKeyVisible, setStripeKeyVisible] = useState(false);
+  const [stripeGuideOpen, setStripeGuideOpen] = useState(false);
+  const [stripeEditingKey, setStripeEditingKey] = useState(false);
+  const [stripeEnabled, setStripeEnabled] = useState(false);
 
   useEffect(() => {
-    if (stripeMethod) setStripeEnabled(stripeMethod.isEnabled)
-  }, [stripeMethod])
+    if (stripeMethod) setStripeEnabled(stripeMethod.isEnabled);
+  }, [stripeMethod]);
 
   const handleSaveStripe = () => {
-    if (!stripeKeyInput.trim()) return
+    if (!stripeKeyInput.trim()) return;
     upsertPaymentMethod.mutate(
-      { type: 'STRIPE', dto: { isEnabled: true, stripeSecretKey: stripeKeyInput.trim() } },
+      {
+        type: "STRIPE",
+        dto: { isEnabled: true, stripeSecretKey: stripeKeyInput.trim() },
+      },
       {
         onSuccess: () => {
-          setStripeKeyInput('')
-          setStripeEditingKey(false)
+          setStripeKeyInput("");
+          setStripeEditingKey(false);
         },
       },
-    )
-  }
+    );
+  };
 
   const handleStripeToggle = (enabled: boolean) => {
-    setStripeEnabled(enabled)
+    setStripeEnabled(enabled);
     if (!enabled) {
-      upsertPaymentMethod.mutate({ type: 'STRIPE', dto: { isEnabled: false } })
+      upsertPaymentMethod.mutate({ type: "STRIPE", dto: { isEnabled: false } });
     } else if (stripeConnected) {
-      upsertPaymentMethod.mutate({ type: 'STRIPE', dto: { isEnabled: true } })
+      upsertPaymentMethod.mutate({ type: "STRIPE", dto: { isEnabled: true } });
     }
     // If enabling for the first time (not connected), the key input section appears
-  }
+  };
 
   const handlePaymentToggle = (type: PaymentMethodType, isEnabled: boolean) => {
     const current = localPaymentState[type];
@@ -372,8 +378,8 @@ export default function ConfigurationPage() {
               <CardHeader>
                 <CardTitle>Voice agent language</CardTitle>
                 <CardDescription>
-                  Choose the preferred language for the voice assistant.
-                  The agent will start in this language.
+                  Choose the preferred language for the voice assistant. The
+                  agent will start in this language.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -381,7 +387,10 @@ export default function ConfigurationPage() {
                   <Label>Language</Label>
                   <Select
                     value={selectedWorkspaceLanguage}
-                    disabled={isLoadingWorkspaceLanguage || upsertWorkspaceLanguage.isPending}
+                    disabled={
+                      isLoadingWorkspaceLanguage ||
+                      upsertWorkspaceLanguage.isPending
+                    }
                     onValueChange={(v) => {
                       upsertWorkspaceLanguage.mutate({
                         language: v as AgentLanguage,
@@ -457,10 +466,13 @@ export default function ConfigurationPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {PAYMENT_METHOD_TYPES.map((type) => {
-                  const state = localPaymentState[type as "PAYPAL" | "VENMO" | "ZELLE"];
+                {/* {PAYMENT_METHOD_TYPES.map((type) => {
+                  const state =
+                    localPaymentState[
+                      type as "PAYPAL" | "VENMO" | "ZELLE" | "STRIPE"
+                    ];
                   const labels: Record<
-                    "PAYPAL" | "VENMO" | "ZELLE",
+                    "PAYPAL" | "VENMO" | "ZELLE" | "STRIPE",
                     { name: string; placeholder: string; label: string }
                   > = {
                     PAYPAL: {
@@ -479,7 +491,8 @@ export default function ConfigurationPage() {
                       label: "Zelle (email or phone)",
                     },
                   };
-                  const { name, placeholder, label } = labels[type as "PAYPAL" | "VENMO" | "ZELLE"];
+                  const { name, placeholder, label } =
+                    labels[type as "PAYPAL" | "VENMO" | "ZELLE"];
                   return (
                     <div
                       key={type}
@@ -514,6 +527,17 @@ export default function ConfigurationPage() {
                               <Image
                                 src="/images/zelle-icon.png"
                                 alt="Zelle"
+                                width={24}
+                                height={24}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                          )}
+                          {type === "STRIPE" && (
+                            <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center border border-border overflow-hidden p-2">
+                              <Image
+                                src="/images/stripe-icon.webp"
+                                alt="Stripe"
                                 width={24}
                                 height={24}
                                 className="h-full w-full object-contain"
@@ -558,7 +582,7 @@ export default function ConfigurationPage() {
                       )}
                     </div>
                   );
-                })}
+                })} */}
 
                 {/* Stripe Integration */}
                 <div className="space-y-3 p-4 rounded-lg bg-secondary/50 border border-border">
@@ -566,7 +590,7 @@ export default function ConfigurationPage() {
                     <div className="flex items-start gap-4">
                       <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center border border-border overflow-hidden p-2">
                         <Image
-                          src="/images/stripe-icon.png"
+                          src="/images/stripe-icon.webp"
                           alt="Stripe"
                           width={24}
                           height={24}
@@ -575,7 +599,9 @@ export default function ConfigurationPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-foreground">Stripe</p>
+                          <p className="font-semibold text-foreground">
+                            Stripe
+                          </p>
                           {stripeConnected && (
                             <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
                               <CheckCircle2 className="h-3.5 w-3.5" />
@@ -584,7 +610,8 @@ export default function ConfigurationPage() {
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          Accept card payments — customers pay directly from the invoice email
+                          Accept card payments — customers pay directly from the
+                          invoice email
                         </p>
                       </div>
                     </div>
@@ -605,21 +632,43 @@ export default function ConfigurationPage() {
                           className="flex items-center gap-1 text-muted-foreground font-medium w-full text-left"
                         >
                           <ChevronDown
-                            className={`h-4 w-4 transition-transform ${stripeGuideOpen ? 'rotate-180' : ''}`}
+                            className={`h-4 w-4 transition-transform ${stripeGuideOpen ? "rotate-180" : ""}`}
                           />
                           How to get your Stripe API key
                         </button>
                         {stripeGuideOpen && (
                           <div className="mt-3 space-y-2 text-muted-foreground">
                             <ol className="list-decimal pl-4 space-y-1">
-                              <li>Log in to your Stripe dashboard at <strong>dashboard.stripe.com</strong></li>
-                              <li>Go to <strong>Developers → API Keys</strong></li>
-                              <li>Copy your <strong>Secret key</strong> (starts with <code className="text-xs bg-muted px-1 rounded">sk_live_</code> or <code className="text-xs bg-muted px-1 rounded">sk_test_</code>)</li>
-                              <li>Paste it below and click <strong>Save Stripe Key</strong></li>
+                              <li>
+                                Log in to your Stripe dashboard at{" "}
+                                <strong>dashboard.stripe.com</strong>
+                              </li>
+                              <li>
+                                Go to <strong>Developers → API Keys</strong>
+                              </li>
+                              <li>
+                                Copy your <strong>Secret key</strong> (starts
+                                with{" "}
+                                <code className="text-xs bg-muted px-1 rounded">
+                                  sk_live_
+                                </code>{" "}
+                                or{" "}
+                                <code className="text-xs bg-muted px-1 rounded">
+                                  sk_test_
+                                </code>
+                                )
+                              </li>
+                              <li>
+                                Paste it below and click{" "}
+                                <strong>Save Stripe Key</strong>
+                              </li>
                             </ol>
                             <p className="text-xs pt-1">
-                              For better security, create a <strong>Restricted Key</strong> with{' '}
-                              <em>Checkout Sessions: Write</em> and <em>Webhook Endpoints: Write</em> permissions only.
+                              For better security, create a{" "}
+                              <strong>Restricted Key</strong> with{" "}
+                              <em>Checkout Sessions: Write</em> and{" "}
+                              <em>Webhook Endpoints: Write</em> permissions
+                              only.
                             </p>
                           </div>
                         )}
@@ -632,9 +681,11 @@ export default function ConfigurationPage() {
                           <div className="relative mt-1">
                             <Input
                               id="stripe-key"
-                              type={stripeKeyVisible ? 'text' : 'password'}
+                              type={stripeKeyVisible ? "text" : "password"}
                               value={stripeKeyInput}
-                              onChange={(e) => setStripeKeyInput(e.target.value)}
+                              onChange={(e) =>
+                                setStripeKeyInput(e.target.value)
+                              }
                               placeholder="sk_live_... or sk_test_..."
                               className="pr-10"
                             />
@@ -644,24 +695,34 @@ export default function ConfigurationPage() {
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                               tabIndex={-1}
                             >
-                              {stripeKeyVisible
-                                ? <EyeOff className="h-4 w-4" />
-                                : <Eye className="h-4 w-4" />}
+                              {stripeKeyVisible ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
                             </button>
                           </div>
                           <div className="flex gap-2 mt-2">
                             <Button
                               className="gap-2"
-                              disabled={!stripeKeyInput.trim() || upsertPaymentMethod.isPending}
+                              disabled={
+                                !stripeKeyInput.trim() ||
+                                upsertPaymentMethod.isPending
+                              }
                               onClick={handleSaveStripe}
                             >
                               <Save className="h-4 w-4" />
-                              {upsertPaymentMethod.isPending ? 'Saving…' : 'Save Stripe Key'}
+                              {upsertPaymentMethod.isPending
+                                ? "Saving…"
+                                : "Save Stripe Key"}
                             </Button>
                             {stripeEditingKey && (
                               <Button
                                 variant="outline"
-                                onClick={() => { setStripeEditingKey(false); setStripeKeyInput('') }}
+                                onClick={() => {
+                                  setStripeEditingKey(false);
+                                  setStripeKeyInput("");
+                                }}
                               >
                                 Cancel
                               </Button>
@@ -675,17 +736,24 @@ export default function ConfigurationPage() {
                         <div className="space-y-2">
                           <p className="text-sm text-green-600 flex items-center gap-1">
                             <CheckCircle2 className="h-4 w-4" />
-                            Stripe is connected. Invoices sent with Stripe will include a Pay Now button.
+                            Stripe is connected. Invoices sent with Stripe will
+                            include a Pay Now button.
                           </p>
                           {stripeWebhookPending && (
                             <p className="text-xs text-amber-600">
-                              ⚠ Webhook could not be registered automatically. Please make sure your key has{' '}
-                              <strong>Webhook Endpoints: Write</strong> permission, then re-save your key.
+                              ⚠ Webhook could not be registered automatically.
+                              Please make sure your key has{" "}
+                              <strong>Webhook Endpoints: Write</strong>{" "}
+                              permission, then re-save your key.
                             </p>
                           )}
                           <p className="text-xs text-muted-foreground">
-                            Your webhook was registered automatically. Verify it in{' '}
-                            <strong>Stripe Dashboard → Developers → Webhooks</strong>.
+                            Your webhook was registered automatically. Verify it
+                            in{" "}
+                            <strong>
+                              Stripe Dashboard → Developers → Webhooks
+                            </strong>
+                            .
                           </p>
                           <Button
                             variant="outline"
