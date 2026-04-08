@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import type { Prisma } from "@addinvoice/db";
+import type { Estimate, EstimateItem, Prisma } from "@addinvoice/db";
 import type { EstimateResponse } from "@addinvoice/schemas";
 
 import { prisma } from "@addinvoice/db";
@@ -38,7 +38,7 @@ import { type ClientEntity } from "../clients/clients.schemas.js";
  */
 export async function createInvoiceFromEstimate(
   workspaceId: number,
-  estimate: EstimateResponse,
+  estimate: Estimate & { items: EstimateItem[] },
   tx?: Prisma.TransactionClient,
 ): Promise<InvoiceEntityWithRelations> {
   const client = tx ?? prisma;
@@ -57,6 +57,9 @@ export async function createInvoiceFromEstimate(
       workspaceId,
       businessId: estimate.businessId,
       clientId: estimate.clientId,
+      clientEmail: estimate.clientEmail,
+      invoiceNumber: estimate.estimateNumber,
+      sequence: estimate.sequence,
       currency: estimate.currency,
       // TODO: add these fields correctly
       // clientEmail: estimate.client.email,
@@ -75,7 +78,7 @@ export async function createInvoiceFromEstimate(
       total: 0,
       balance: 0,
       items: {
-        create: (estimate.items ?? []).map((item) => ({
+        create: estimate.items.map((item) => ({
           name: item.name,
           description: item.description,
           quantity: item.quantity,

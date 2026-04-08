@@ -13,16 +13,14 @@ import { randomUUID } from "node:crypto";
 
 import type { ListEstimatesQuery } from "./estimates.schemas.js";
 
+import { uploadEstimateSignatureFromDataUrl } from "../../core/cloudinary.js";
 import {
   EntityNotFoundError,
   EntityValidationError,
   FieldValidationError,
   GoneError,
 } from "../../errors/EntityErrors.js";
-import { type BusinessEntity } from "../businesses/businesses.schemas.js";
-import { type ClientEntity } from "../clients/clients.schemas.js";
 import { createInvoiceFromEstimate } from "../invoices/invoices.service.js";
-import { uploadEstimateSignatureFromDataUrl } from "../../core/cloudinary.js";
 
 // ===== HELPER FUNCTIONS =====
 
@@ -290,30 +288,7 @@ export async function convertEstimateToInvoice(
       );
     }
 
-    const invoice = await createInvoiceFromEstimate(
-      workspaceId,
-      {
-        businessId: estimate.businessId,
-        clientId: estimate.clientId,
-        currency: estimate.currency,
-        notes: estimate.notes ?? null,
-        terms: estimate.terms ?? null,
-        items: estimate.items.map((item) => ({
-          catalogId: item.catalogId,
-          description: item.description,
-          discount: Number(item.discount),
-          discountType: item.discountType,
-          name: item.name,
-          quantity: Number(item.quantity),
-          quantityUnit: item.quantityUnit,
-          tax: Number(item.tax),
-          total: Number(item.total),
-          unitPrice: Number(item.unitPrice),
-          vatEnabled: item.vatEnabled,
-        })),
-      },
-      tx,
-    );
+    const invoice = await createInvoiceFromEstimate(workspaceId, estimate, tx);
 
     await tx.estimate.update({
       data: {
@@ -359,8 +334,8 @@ export async function markEstimateAsAccepted(
   return {
     ...updated,
     signatureData: updated.signatureData as unknown as
-      | Record<string, unknown>
       | null
+      | Record<string, unknown>
       | undefined,
     business: {
       ...updated.business,
@@ -477,7 +452,7 @@ export async function acceptEstimateByToken(
 
   const rawSignatureImage =
     rawSignatureData && typeof rawSignatureData.signatureImage === "string"
-      ? (rawSignatureData.signatureImage as string)
+      ? rawSignatureData.signatureImage
       : null;
 
   // If signature is required, enforce it end-to-end (not just UI-level).
