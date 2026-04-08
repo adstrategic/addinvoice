@@ -32,6 +32,59 @@ function generateInvoiceIdempotencyKey(
 }
 
 /**
+ * Generate invoice number aligned with backend `getNextInvoiceNumberInternal`.
+ *
+ * - Uses `workspace.invoiceNumberPrefix` if configured.
+ * - Searches the last invoice for the selected business that matches the prefix.
+ * - Extracts the last numeric run from the invoice number, increments it, and pads to 4 digits.
+ */
+async function getNextInvoiceNumber(workspaceId: number, businessId: number): Promise<string> {
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { invoiceNumberPrefix: true },
+  });
+
+  const configuredPrefix = workspace?.invoiceNumberPrefix ?? null;
+
+  if (configuredPrefix) {
+    const lastInvoiceWithPrefix = await prisma.invoice.findFirst({
+      where: {
+        businessId,
+        workspaceId,
+        invoiceNumber: { startsWith: configuredPrefix },
+      },
+      orderBy: { invoiceNumber: 'desc' },
+      select: { invoiceNumber: true },
+    });
+
+    if (!lastInvoiceWithPrefix) return `${configuredPrefix}0001`;
+
+    const matches = lastInvoiceWithPrefix.invoiceNumber.match(/\d+/g);
+    const extracted = matches && matches.length > 0 ? parseInt(matches.at(-1)!, 10) : null;
+    const nextNumber = extracted != null && !isNaN(extracted) ? extracted + 1 : 1;
+    const padded = nextNumber.toString().padStart(4, '0');
+    return `${configuredPrefix}${padded}`;
+  }
+
+  const lastInvoice = await prisma.invoice.findFirst({
+    where: { businessId, workspaceId },
+    orderBy: { invoiceNumber: 'desc' },
+    select: { invoiceNumber: true },
+  });
+
+  if (!lastInvoice) return 'INV-0001';
+
+  const prefixMatch = /^[^0-9]*/.exec(lastInvoice.invoiceNumber);
+  const preservedPrefix = prefixMatch ? prefixMatch[0] : 'INV-';
+
+  const matches = lastInvoice.invoiceNumber.match(/\d+/g);
+  const extracted = matches && matches.length > 0 ? parseInt(matches.at(-1)!, 10) : null;
+  const nextNumber = extracted != null && !isNaN(extracted) ? extracted + 1 : 1;
+  const padded = nextNumber.toString().padStart(4, '0');
+  return `${preservedPrefix}${padded}`;
+}
+
+/**
  * Add invoice line item
  */
 export function createAddInvoiceItemTool() {
@@ -50,9 +103,15 @@ export function createAddInvoiceItemTool() {
         const sessionData = ctx.session.userData as InvoiceSessionData;
 
         // description is already trimmed by Zod schema
+
+        if (!sessionData.selectedBusinessId && !sessionData.currentInvoice?.businessId) {
+          throw new llm.ToolError('No business selected. Please select a business first.');
+        }
+
         // Initialize invoice if needed
         if (!sessionData.currentInvoice) {
           sessionData.currentInvoice = {
+            businessId: sessionData.selectedBusinessId!,
             items: [],
             subtotal: 0,
             totalTax: 0,
@@ -61,7 +120,8 @@ export function createAddInvoiceItemTool() {
           };
         }
 
-        const items = sessionData.currentInvoice.items;
+        const currentInvoice = sessionData.currentInvoice!;
+        const items = currentInvoice.items;
 
         // Idempotent: check for duplicate using normalized description (case-insensitive)
         const descNorm = description.toLowerCase();
@@ -74,7 +134,7 @@ export function createAddInvoiceItemTool() {
         );
 
         if (isDuplicate) {
-          const runningTotal = items.reduce((sum, i) => sum + i.total, 0);
+          const runningTotal = currentInvoice.total;
           return {
             success: true,
             itemNumber: items.length,
@@ -101,11 +161,15 @@ export function createAddInvoiceItemTool() {
 
         items.push(item); // Push NOW to prevent race condition
 
-        // Resolve vatEnabled and tax from business default (align with backend invoices.service.ts)
-        if (sessionData.currentInvoice.businessId) {
+        // Resolve tax defaults from business default (align with backend invoices.service.ts)
+        let effectiveTaxMode: 'BY_PRODUCT' | 'BY_TOTAL' | 'NONE' = 'NONE';
+        let effectiveTaxPercentage = 0;
+
+        const effectiveBusinessId = currentInvoice.businessId ?? sessionData.selectedBusinessId;
+        if (effectiveBusinessId) {
           const business = await prisma.business.findFirst({
             where: {
-              id: sessionData.currentInvoice.businessId,
+              id: effectiveBusinessId,
               workspaceId: sessionData.workspaceId,
             },
             select: {
@@ -113,25 +177,46 @@ export function createAddInvoiceItemTool() {
               defaultTaxPercentage: true,
             },
           });
-          if (business?.defaultTaxMode === 'BY_TOTAL') {
+
+          effectiveTaxMode = business?.defaultTaxMode ?? 'NONE';
+          effectiveTaxPercentage =
+            business?.defaultTaxPercentage != null ? Number(business.defaultTaxPercentage) : 0;
+
+          if (effectiveTaxMode === 'BY_TOTAL') {
             item.vatEnabled = true;
-            item.tax =
-              business.defaultTaxPercentage != null ? Number(business.defaultTaxPercentage) : 0;
+            item.tax = effectiveTaxPercentage;
+          } else if (effectiveTaxMode === 'BY_PRODUCT') {
+            item.vatEnabled = false;
+            item.tax = effectiveTaxPercentage;
+          } else {
+            item.vatEnabled = false;
+            item.tax = 0;
           }
-          // BY_PRODUCT or NONE: vatEnabled false, tax 0 (already set)
         }
 
-        sessionData.currentInvoice.subtotal = items.reduce((sum, i) => sum + i.total, 0);
-        sessionData.currentInvoice.total = sessionData.currentInvoice.subtotal;
+        currentInvoice.subtotal = items.reduce((sum, i) => sum + i.total, 0);
+        let totalTax = 0;
+        if (effectiveTaxMode === 'BY_TOTAL') {
+          totalTax = items.reduce(
+            (sum, i) => sum + (i.vatEnabled ? i.total : 0) * (effectiveTaxPercentage / 100),
+            0,
+          );
+        } else if (effectiveTaxMode === 'BY_PRODUCT') {
+          totalTax = items.reduce((sum, i) => sum + i.total * (i.tax / 100), 0);
+        }
+
+        currentInvoice.totalTax = totalTax;
+        currentInvoice.total = currentInvoice.subtotal + currentInvoice.totalTax;
 
         return {
           success: true,
           itemNumber: items.length,
           itemTotal: itemTotal.toFixed(2),
-          runningTotal: sessionData.currentInvoice.total.toFixed(2),
-          message: `Added item ${items.length}. Current total: $${sessionData.currentInvoice.total.toFixed(2)}`,
+          runningTotal: currentInvoice.total.toFixed(2),
+          message: `Added item ${items.length}. Current total: $${currentInvoice.total.toFixed(2)}`,
         };
       } catch (error) {
+        console.error('[tool][addInvoiceItem] failed', error);
         if (error instanceof llm.ToolError) throw error;
         throw new llm.ToolError('Unable to add invoice item. Please try again.');
       }
@@ -170,7 +255,8 @@ export function createCreateInvoiceTool() {
           throw new llm.ToolError('No customer selected. Please select a customer first.');
         }
 
-        if (!invoiceData.businessId) {
+        const effectiveBusinessId = invoiceData.businessId ?? sessionData.selectedBusinessId;
+        if (!effectiveBusinessId) {
           throw new llm.ToolError(
             'No business selected. Please select a business first using selectBusiness tool.',
           );
@@ -180,7 +266,7 @@ export function createCreateInvoiceTool() {
           throw new llm.ToolError('Cannot create invoice without line items.');
         }
 
-        // Parse and validate issue date when provided
+        // Parse and validate issue date when provided (treat as date-only in UTC)
         let parsedIssueDate: Date;
         if (issueDateParam) {
           try {
@@ -191,13 +277,15 @@ export function createCreateInvoiceTool() {
             const year = parseInt(dateParts[0]!, 10);
             const month = parseInt(dateParts[1]!, 10) - 1;
             const day = parseInt(dateParts[2]!, 10);
-            const currentYear = new Date().getFullYear();
+            const now = new Date();
+            const currentYear = now.getUTCFullYear();
             const finalYear = year && year >= 2000 ? year : currentYear;
-            parsedIssueDate = new Date(finalYear, month, day);
+            // Use UTC midnight to avoid timezone-based date shifts
+            parsedIssueDate = new Date(Date.UTC(finalYear, month, day));
             if (isNaN(parsedIssueDate.getTime())) {
               throw new Error('Invalid date');
             }
-            parsedIssueDate.setHours(0, 0, 0, 0);
+            parsedIssueDate.setUTCHours(0, 0, 0, 0);
           } catch (error) {
             if (error instanceof llm.ToolError) {
               throw error;
@@ -207,8 +295,12 @@ export function createCreateInvoiceTool() {
             );
           }
         } else {
-          parsedIssueDate = new Date();
-          parsedIssueDate.setHours(0, 0, 0, 0);
+          // Today in UTC (date-only)
+          const now = new Date();
+          parsedIssueDate = new Date(
+            Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+          );
+          parsedIssueDate.setUTCHours(0, 0, 0, 0);
         }
 
         // Generate idempotency key from invoice content
@@ -248,7 +340,7 @@ export function createCreateInvoiceTool() {
         // Get selected business with defaults (use local invoiceData)
         const business = await prisma.business.findFirst({
           where: {
-            id: invoiceData.businessId,
+            id: effectiveBusinessId,
             workspaceId: sessionData.workspaceId,
           },
           select: {
@@ -270,7 +362,7 @@ export function createCreateInvoiceTool() {
           where: { id: invoiceData.customerId },
         });
 
-        // Parse and validate due date
+        // Parse and validate due date (treat as date-only in UTC)
         let parsedDueDate: Date;
         try {
           // Parse date string (YYYY-MM-DD format)
@@ -283,24 +375,29 @@ export function createCreateInvoiceTool() {
           const month = parseInt(dateParts[1]!, 10) - 1; // Month is 0-indexed
           const day = parseInt(dateParts[2]!, 10);
 
-          // If year is missing or invalid, use current year
-          const currentYear = new Date().getFullYear();
+          // If year is missing or invalid, use current year (in UTC)
+          const now = new Date();
+          const currentYear = now.getUTCFullYear();
           const finalYear = year && year >= 2000 ? year : currentYear;
 
-          parsedDueDate = new Date(finalYear, month, day);
+          // Use UTC midnight to avoid timezone-based date shifts
+          parsedDueDate = new Date(Date.UTC(finalYear, month, day));
 
           // Validate date
           if (isNaN(parsedDueDate.getTime())) {
             throw new Error('Invalid date');
           }
 
-          // Ensure due date is not in the past
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          parsedDueDate.setHours(0, 0, 0, 0);
+          // Ensure due date is not in the past (compare using UTC date-only)
+          const todayUtc = new Date(
+            Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+          );
+          parsedDueDate.setUTCHours(0, 0, 0, 0);
 
-          if (parsedDueDate < today) {
-            throw new llm.ToolError('Due date cannot be in the past. Please provide a future date.');
+          if (parsedDueDate < todayUtc) {
+            throw new llm.ToolError(
+              'Due date cannot be in the past. Please provide a future date.',
+            );
           }
         } catch (error) {
           if (error instanceof llm.ToolError) {
@@ -323,19 +420,27 @@ export function createCreateInvoiceTool() {
         const taxMode = business.defaultTaxMode || 'NONE';
         const taxName = taxMode === 'BY_TOTAL' ? business.defaultTaxName : null;
         const taxPercentage =
-          taxMode === 'BY_TOTAL' && business.defaultTaxPercentage
+          taxMode === 'BY_TOTAL' && business.defaultTaxPercentage != null
             ? Number(business.defaultTaxPercentage)
             : null;
         const invoiceTerms = business.defaultTerms || null;
 
-        // Calculate tax if taxMode is BY_TOTAL (use local invoiceData)
+        // Calculate totals aligned with backend logic (discount=0, discountType=NONE).
         let totalTax = 0;
-        let finalTotal = invoiceData.subtotal;
-
-        if (taxMode === 'BY_TOTAL' && taxPercentage) {
-          totalTax = (invoiceData.subtotal * taxPercentage) / 100;
-          finalTotal = invoiceData.subtotal + totalTax;
+        if (taxMode === 'BY_TOTAL' && taxPercentage != null) {
+          totalTax = invoiceData.items.reduce(
+            (sum, i) => sum + (i.vatEnabled ? i.total : 0) * (taxPercentage / 100),
+            0,
+          );
+        } else if (taxMode === 'BY_PRODUCT') {
+          totalTax = invoiceData.items.reduce((sum, i) => sum + i.total * (i.tax / 100), 0);
         }
+        const finalTotal = invoiceData.subtotal + totalTax;
+
+        const invoiceNumber = await getNextInvoiceNumber(
+          sessionData.workspaceId,
+          effectiveBusinessId,
+        );
 
         // Create invoice in database
         const invoice = await prisma.invoice.create({
@@ -347,18 +452,18 @@ export function createCreateInvoiceTool() {
             clientPhone: customer?.phone ?? null,
             clientAddress: customer?.address ?? null,
             sequence: nextSequence,
-            invoiceNumber: `INV-${nextSequence.toString().padStart(5, '0')}`,
+            invoiceNumber,
             status: 'DRAFT',
             issueDate: parsedIssueDate,
             dueDate: parsedDueDate,
-            currency: 'USD',
+            currency: invoiceData.currency ?? 'USD',
             subtotal: invoiceData.subtotal,
             totalTax: totalTax,
             discount: 0,
             total: finalTotal,
             balance: finalTotal,
-            notes: business.defaultNotes ?? null,
-            terms: invoiceTerms,
+            notes: invoiceData.notes ?? business.defaultNotes ?? null,
+            terms: invoiceData.terms ?? invoiceTerms,
             taxMode: taxMode,
             taxName: taxName,
             taxPercentage: taxPercentage,
@@ -393,6 +498,7 @@ export function createCreateInvoiceTool() {
           message: `Invoice ${invoice.invoiceNumber} created successfully! Total: $${invoice.total}`,
         };
       } catch (error) {
+        console.error('[tool][createInvoice] failed', error);
         if (error instanceof llm.ToolError) throw error;
         throw new llm.ToolError('Unable to create invoice. Please try again.');
       }

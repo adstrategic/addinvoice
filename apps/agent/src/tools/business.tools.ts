@@ -51,6 +51,7 @@ export function createListBusinessesTool() {
           message: `Found ${businesses.length} business(es):\n${businessList}\nPlease select which business to use for this invoice.`,
         };
       } catch (error) {
+        console.error('[tool][listBusinesses] failed', error);
         if (error instanceof llm.ToolError) throw error;
         throw new llm.ToolError('Unable to list businesses. Please try again.');
       }
@@ -74,6 +75,9 @@ export function createSelectBusinessTool() {
     execute: async ({ businessId }, { ctx }) => {
       try {
         const sessionData = ctx.session.userData as InvoiceSessionData;
+        console.log(
+          `[tool][selectBusiness] workspaceId=${sessionData.workspaceId} businessId=${businessId}`,
+        );
 
         // Verify business exists and belongs to workspace
         const business = await prisma.business.findFirst({
@@ -98,19 +102,35 @@ export function createSelectBusinessTool() {
           );
         }
 
-        // Initialize invoice session if needed
+        // Remember selection for the currently active create flow.
+        sessionData.selectedBusinessId = business.id;
+
+        // Initialize drafts for entities that may be created next.
         if (!sessionData.currentInvoice) {
           sessionData.currentInvoice = {
+            businessId: business.id,
             items: [],
             subtotal: 0,
             totalTax: 0,
             discount: 0,
             total: 0,
           };
+        } else {
+          sessionData.currentInvoice.businessId = business.id;
         }
 
-        // Set the business for this invoice
-        sessionData.currentInvoice.businessId = business.id;
+        if (!sessionData.currentEstimate) {
+          sessionData.currentEstimate = {
+            businessId: business.id,
+            items: [],
+            subtotal: 0,
+            totalTax: 0,
+            discount: 0,
+            total: 0,
+          };
+        } else {
+          sessionData.currentEstimate.businessId = business.id;
+        }
 
         return {
           success: true,
@@ -119,6 +139,7 @@ export function createSelectBusinessTool() {
           message: `Business "${business.name}" selected for this invoice.`,
         };
       } catch {
+        console.error('[tool][selectBusiness] failed');
         throw new llm.ToolError('Unable to select business');
       }
     },

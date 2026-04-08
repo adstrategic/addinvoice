@@ -6,6 +6,7 @@ import {
 } from "livekit-server-sdk";
 import { z } from "zod";
 import { validateRequest } from "zod-express-middleware";
+import { prisma } from "@addinvoice/db";
 
 export const livekitRouter: Router = Router();
 
@@ -30,6 +31,7 @@ const token_request_schema = {
 function buildRoomConfigFromBody(
   body: z.infer<typeof token_request_schema.body>,
   workspace_id: number,
+  language: string,
 ): RoomConfiguration | undefined {
   const room_config_input = body.room_config;
   const agent_name_input = body.agent_name;
@@ -44,6 +46,7 @@ function buildRoomConfigFromBody(
           metadata: JSON.stringify({
             ...existing_meta,
             workspaceId: workspace_id,
+            language,
           }),
         });
       },
@@ -58,7 +61,7 @@ function buildRoomConfigFromBody(
     config.agents = [
       new RoomAgentDispatch({
         agentName: agent_name_input,
-        metadata: JSON.stringify({ workspaceId: workspace_id }),
+        metadata: JSON.stringify({ workspaceId: workspace_id, language }),
       }),
     ];
     return config;
@@ -67,7 +70,7 @@ function buildRoomConfigFromBody(
   const config = new RoomConfiguration({});
   config.agents = [
     new RoomAgentDispatch({
-      metadata: JSON.stringify({ workspaceId: workspace_id }),
+      metadata: JSON.stringify({ workspaceId: workspace_id, language }),
     }),
   ];
   return config;
@@ -85,6 +88,17 @@ livekitRouter.post(
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      const workspace = await prisma.workspace.findUnique({
+        select: { language: true },
+        where: { id: workspace_id },
+      });
+
+      if (!workspace) {
+        return res.status(404).json({ error: "Workspace not found" });
+      }
+
+      const language = workspace.language;
+
       const body = req.body as z.infer<typeof token_request_schema.body>;
       const room_name = `invoice-${String(workspace_id)}-${String(Date.now())}`;
       const participant_name = body.participant_name ?? "User";
@@ -96,11 +110,12 @@ livekitRouter.post(
         {
           identity,
           metadata: JSON.stringify({ workspaceId: workspace_id }),
+          // metadata: JSON.stringify({ workspaceId: workspace_id, language }),
           name: participant_name,
         },
       );
 
-      token.roomConfig = buildRoomConfigFromBody(body, workspace_id);
+      token.roomConfig = buildRoomConfigFromBody(body, workspace_id, language);
 
       token.addGrant({
         canPublish: true,

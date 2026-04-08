@@ -5,7 +5,6 @@ import {
   cli,
   defineAgent,
   inference,
-  metrics,
   voice,
 } from '@livekit/agents';
 import * as livekit from '@livekit/agents-plugin-livekit';
@@ -13,8 +12,14 @@ import * as silero from '@livekit/agents-plugin-silero';
 import { BackgroundVoiceCancellation } from '@livekit/noise-cancellation-node';
 import 'dotenv/config';
 import { fileURLToPath } from 'node:url';
-// import { Agent } from './agent';
-import { InvoiceAgent } from './agent';
+import { AddInvoicesRootAgent } from './agent';
+import {
+  type SupportedLanguage,
+  getCartesiaLanguageCode,
+  getCartesiaVoiceId,
+  getDeepgramLanguageCode,
+  normalizeAgentLanguage,
+} from './i18n/language';
 import type { InvoiceSessionData } from './types/session-data';
 
 export default defineAgent({
@@ -26,6 +31,7 @@ export default defineAgent({
     const jobMetadata = JSON.parse(ctx.job.metadata || '{}');
     console.log('jobMetadata', jobMetadata);
     const workspaceId = Number(jobMetadata.workspaceId);
+    const language: SupportedLanguage = normalizeAgentLanguage(jobMetadata.language);
 
     if (!workspaceId) {
       throw new Error('Workspace ID is required');
@@ -35,8 +41,16 @@ export default defineAgent({
     const sessionData: InvoiceSessionData = {
       workspaceId,
       currentInvoice: null,
+      currentEstimate: null,
+      currentCatalog: null,
+      currentClientDraft: null,
+      currentPayment: null,
+      currentExpense: null,
       ctx,
+      language,
     };
+
+    const cartesiaVoiceId = getCartesiaVoiceId(language);
 
     // Set up a voice AI pipeline using OpenAI, Cartesia, Deepgram, and the LiveKit turn detector
     const session = new voice.AgentSession({
@@ -45,7 +59,7 @@ export default defineAgent({
       // See all available models at https://docs.livekit.io/agents/models/stt/
       stt: new inference.STT({
         model: 'deepgram/nova-3',
-        language: 'multi',
+        language: getDeepgramLanguageCode(language),
       }),
 
       // A Large Language Model (LLM) is your agent's brain, processing user input and generating a response
@@ -58,7 +72,9 @@ export default defineAgent({
       // See all available models as well as voice selections at https://docs.livekit.io/agents/models/tts/
       tts: new inference.TTS({
         model: 'cartesia/sonic-3',
-        voice: '9626c31c-bec5-4cca-baa8-f8ba9e84c8bc',
+        // voice: '9626c31c-bec5-4cca-baa8-f8ba9e84c8bc',
+        language: getCartesiaLanguageCode(language),
+        ...(cartesiaVoiceId ? { voice: cartesiaVoiceId } : {}),
       }),
 
       // VAD and turn detection are used to determine when the user is speaking and when the agent should respond
@@ -83,17 +99,9 @@ export default defineAgent({
     //   llm: new openai.realtime.RealtimeModel({ voice: 'marin' }),
     // });
 
-    // Metrics collection, to measure pipeline performance
-    // For more information, see https://docs.livekit.io/agents/build/metrics/
-    const usageCollector = new metrics.UsageCollector();
-    session.on(voice.AgentSessionEventTypes.MetricsCollected, (ev) => {
-      metrics.logMetrics(ev.metrics);
-      usageCollector.collect(ev.metrics);
-    });
-
     // Start the session, which initializes the voice pipeline and warms up the models
     await session.start({
-      agent: new InvoiceAgent(),
+      agent: new AddInvoicesRootAgent({ language }),
       room: ctx.room,
       inputOptions: {
         // LiveKit Cloud enhanced noise cancellation
@@ -105,11 +113,6 @@ export default defineAgent({
 
     // Join the room and connect to the user
     await ctx.connect();
-
-    // Greet the user on joining
-    session.generateReply({
-      instructions: 'Greet the user in a helpful and friendly manner.',
-    });
   },
 });
 
