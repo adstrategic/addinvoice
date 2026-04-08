@@ -59,19 +59,23 @@ async function getExpenseBySequence(
 }
 
 async function getExpenseDashboardStats(
-  params?: { workCategoryId?: number },
+  params?: { workCategoryId?: number; period?: "7d" | "30d" | "6m" | "12m" },
 ): Promise<ExpenseDashboardStats> {
   try {
     const { data } = await apiClient.get<
       ApiSuccessResponse<ExpenseDashboardStatsResponse>
     >(`${BASE_URL}/stats`, {
-      params: { workCategoryId: params?.workCategoryId },
+      params: {
+        workCategoryId: params?.workCategoryId,
+        period: params?.period,
+      },
     });
     const raw = data.data;
     const recentExpenses = Array.isArray(raw.recentExpenses)
       ? raw.recentExpenses.map((e: unknown) => expenseResponseSchema.parse(e))
       : [];
     return {
+      chartSeries: raw.chartSeries ?? [],
       totalExpenses: raw.totalExpenses,
       totalAmount: raw.totalAmount,
       thisWeekExpenses: raw.thisWeekExpenses,

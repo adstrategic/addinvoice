@@ -26,12 +26,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
-
-function formatDate(value: string | Date): string {
-  if (typeof value === "string") return value.slice(0, 10);
-  return value.toISOString().slice(0, 10);
-}
+import { formatCurrency, formatDateOnly } from "@/lib/utils";
 
 export default function ExpenseDetailPage() {
   const params = useParams();
@@ -83,18 +78,21 @@ export default function ExpenseDetailPage() {
                 <h1 className="text-3xl font-bold text-foreground">
                   {expense.merchant?.name ?? "N/A"}
                 </h1>
-                {expense.workCategory && (() => {
-                  const CategoryIcon = getWorkCategoryIcon(expense.workCategory.icon);
-                  return (
-                    <Badge className="bg-primary/20 text-primary inline-flex items-center gap-1">
-                      <CategoryIcon className="h-3 w-3 shrink-0" />
-                      {expense.workCategory.name}
-                    </Badge>
-                  );
-                })()}
+                {expense.workCategory &&
+                  (() => {
+                    const CategoryIcon = getWorkCategoryIcon(
+                      expense.workCategory.icon,
+                    );
+                    return (
+                      <Badge className="bg-primary/20 text-primary inline-flex items-center gap-1">
+                        <CategoryIcon className="h-3 w-3 shrink-0" />
+                        {expense.workCategory.name}
+                      </Badge>
+                    );
+                  })()}
               </div>
               <p className="text-muted-foreground mt-1">
-                {formatDate(expense.expenseDate)} · Expense details
+                {formatDateOnly(expense.expenseDate)} · Expense details
               </p>
             </div>
           </div>
@@ -157,7 +155,7 @@ export default function ExpenseDetailPage() {
                     Date
                   </p>
                   <p className="text-foreground">
-                    {formatDate(expense.expenseDate)}
+                    {formatDateOnly(expense.expenseDate)}
                   </p>
                 </div>
               </div>

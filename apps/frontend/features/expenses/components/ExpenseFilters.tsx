@@ -16,7 +16,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Search, CalendarIcon } from "lucide-react";
 import React from "react";
-import { getWorkCategoryIcon, useWorkCategories } from "@/features/work-categories";
+import {
+  getWorkCategoryIcon,
+  useWorkCategories,
+} from "@/features/work-categories";
 import { format, parseISO } from "date-fns";
 import type { DateRange } from "react-day-picker";
 
@@ -68,7 +71,7 @@ export function ExpenseFilters({
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search expenses..."
-          className="pl-10"
+          className="pl-10 bg-white"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -82,6 +85,7 @@ export function ExpenseFilters({
               className={cn(
                 "w-full sm:w-[260px] justify-start text-left font-normal",
                 !fromDate && !toDate && "text-muted-foreground",
+                "bg-white",
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
@@ -121,7 +125,7 @@ export function ExpenseFilters({
       </div>
       <div className="flex items-center gap-2">
         <Select value={workCategoryId} onValueChange={onWorkCategoryIdChange}>
-          <SelectTrigger className="w-full sm:w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px] bg-white">
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
           <SelectContent>

@@ -14,6 +14,8 @@ import { useExpenseBySequence } from "./useExpenses";
 import { useDirtyFields } from "@/hooks/useDirtyValues";
 import { useFormScroll } from "@/hooks/useFormScroll";
 import { handleMutationError } from "@/lib/errors/handle-error";
+import { startOfDay } from "date-fns";
+import { normalizeDateFromDb } from "@/lib/utils";
 
 interface UseExpenseManagerOptions {
   onAfterSubmit?: () => void;
@@ -46,7 +48,7 @@ export function useExpenseManager(options?: UseExpenseManagerOptions) {
   );
 
   const defaultValues: DefaultValues<CreateExpenseDTO> = {
-    expenseDate: new Date(),
+    expenseDate: startOfDay(new Date()),
     merchantId: null,
     workCategoryId: null,
   };
@@ -62,7 +64,7 @@ export function useExpenseManager(options?: UseExpenseManagerOptions) {
   const getFormValues = (): CreateExpenseDTO | undefined => {
     if (mode === "edit" && existingExpense) {
       return {
-        expenseDate: new Date(existingExpense.expenseDate),
+        expenseDate: normalizeDateFromDb(existingExpense.expenseDate),
         merchantId: existingExpense.merchantId ?? null,
         merchantName: null,
         workCategoryId: existingExpense.workCategoryId ?? null,

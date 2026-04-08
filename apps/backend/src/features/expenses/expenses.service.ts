@@ -365,7 +365,7 @@ export async function getExpenseDashboardStats(
   workspaceId: number,
   query: ExpenseStatsQuery,
 ): Promise<{
-  monthlyExpenses: { amount: number; month: string; }[];
+  monthlyExpenses: { amount: number; month: string }[];
   recentExpenses: ExpenseEntity[];
   thisMonthExpenses: number;
   thisWeekExpenses: number;
@@ -433,7 +433,7 @@ export async function getExpenseDashboardStats(
   const totalExpenses = aggregate._count.id;
   const totalAmount = Number(aggregate._sum.total ?? 0);
 
-  const monthlyExpenses: { amount: number; month: string; }[] = [];
+  const monthlyExpenses: { amount: number; month: string }[] = [];
   for (let i = 11; i >= 0; i--) {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);

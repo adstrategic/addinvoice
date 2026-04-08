@@ -20,21 +20,13 @@ import {
 } from "lucide-react";
 import { getWorkCategoryIcon } from "@/features/work-categories";
 import type { ExpenseResponse } from "../schema/expenses.schema";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDateOnly } from "@/lib/utils";
 
 interface ExpenseCardProps {
   expense: ExpenseResponse;
   onViewDetails: (sequence: number) => void;
   onEdit: (sequence: number) => void;
   onDelete: (expense: ExpenseResponse) => void;
-}
-
-// TODO change this function
-function formatDate(value: string | Date): string {
-  if (typeof value === "string") {
-    return value.slice(0, 10);
-  }
-  return value.toISOString().slice(0, 10);
 }
 
 export function ExpenseCard({
@@ -54,23 +46,26 @@ export function ExpenseCard({
             <p className="font-semibold text-foreground text-sm sm:text-base">
               {expense.merchant?.name ?? "N/A"}
             </p>
-            {expense.workCategory && (() => {
-              const CategoryIcon = getWorkCategoryIcon(expense.workCategory.icon);
-              return (
-                <Badge
-                  variant="default"
-                  className="bg-primary/20 text-primary hover:bg-primary/30 inline-flex items-center gap-1"
-                >
-                  <CategoryIcon className="h-3 w-3 shrink-0" />
-                  {expense.workCategory.name}
-                </Badge>
-              );
-            })()}
+            {expense.workCategory &&
+              (() => {
+                const CategoryIcon = getWorkCategoryIcon(
+                  expense.workCategory.icon,
+                );
+                return (
+                  <Badge
+                    variant="default"
+                    className="bg-primary/20 text-primary hover:bg-primary/30 inline-flex items-center gap-1"
+                  >
+                    <CategoryIcon className="h-3 w-3 shrink-0" />
+                    {expense.workCategory.name}
+                  </Badge>
+                );
+              })()}
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
             <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
               <Calendar className="h-3 w-3 shrink-0" />
-              {formatDate(expense.expenseDate)}
+              {formatDateOnly(expense.expenseDate)}
             </p>
             {expense.description && (
               <p className="text-xs sm:text-sm text-muted-foreground truncate max-w-[200px]">

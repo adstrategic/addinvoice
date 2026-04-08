@@ -10,7 +10,10 @@ import { merchantsQueryKey } from "@/features/merchants";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/errors/handle-error";
 
-export type ExpenseDashboardStatsParams = { workCategoryId?: number };
+export type ExpenseDashboardStatsParams = {
+  workCategoryId?: number;
+  period?: "7d" | "30d" | "6m" | "12m";
+};
 
 export const expenseKeys = {
   all: ["expenses"] as const,

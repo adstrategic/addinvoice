@@ -352,9 +352,9 @@ export function ExpenseForm({
                   <FormControl>
                     <NumericFormat
                       id="total"
-                      value={field.value}
+                      value={field.value ?? ""}
                       onValueChange={(values) => {
-                        field.onChange(values.floatValue);
+                        field.onChange(values.floatValue ?? null);
                       }}
                       placeholder="0,00"
                       thousandSeparator="."
@@ -379,9 +379,9 @@ export function ExpenseForm({
                   <FormControl>
                     <NumericFormat
                       id="tax"
-                      value={field.value}
+                      value={field.value ?? ""}
                       onValueChange={(values) => {
-                        field.onChange(values.floatValue);
+                        field.onChange(values.floatValue ?? null);
                       }}
                       placeholder="0,00"
                       thousandSeparator="."

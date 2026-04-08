@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nullableOptional } from "./shared.js";
+import { nullableOptional } from "./shared/index.js";
 
 /**
  * Schema for listing expenses
@@ -31,8 +31,8 @@ export const createExpenseBaseSchema = z.object({
   merchantId: z.number().int().min(-1).nullable(),
   merchantName: nullableOptional(z.string().trim().min(1).max(255)),
   expenseDate: z.coerce.date(),
-  total: z.number().positive("Total must be a positive number"),
-  tax: nullableOptional(z.number().min(0)),
+  total: z.coerce.number().positive("Total must be a positive number"),
+  tax: nullableOptional(z.coerce.number().min(0)),
   description: nullableOptional(z.string().trim().max(2000)),
   image: nullableOptional(z.string().trim().max(2000)),
 });
