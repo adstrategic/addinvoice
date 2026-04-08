@@ -21,6 +21,7 @@ export { estimatesService } from "./service/estimates.service";
 export type {
   ListEstimatesParams,
   ConvertEstimateToInvoiceResponse,
+  ConvertEstimateToInvoiceRequest,
 } from "./service/estimates.service";
 
 // Hooks

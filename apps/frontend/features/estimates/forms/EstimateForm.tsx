@@ -14,7 +14,6 @@ import {
   CreditCard,
   Receipt,
 } from "lucide-react";
-import { useWorkspacePaymentMethods } from "@/features/workspace";
 import type { BusinessResponse } from "@addinvoice/schemas";
 import { SendEstimateDialog } from "@/components/send-estimate-dialog";
 import type {
@@ -45,6 +44,7 @@ import LoadingComponent from "@/components/loading-component";
 import { toast } from "sonner";
 import type { EstimateMutationCallbacks } from "../hooks/useEstimateActions";
 import { useDownloadEstimatePdf } from "../hooks/useDownloadEstimatePDF";
+import { ConvertEstimateToInvoiceModal } from "../components/ConvertEstimateToInvoiceModal";
 
 interface EstimateFormProps {
   selectedBusiness: BusinessResponse;
@@ -65,7 +65,10 @@ interface EstimateFormProps {
   /** When provided (edit mode), save dirty header before opening item/catalog modals. Rejects on validation or mutation failure. */
   saveBeforeOpenSubform?: () => Promise<void>;
   /** When provided (edit mode), convert accepted estimate to invoice. */
-  onConvertToInvoice?: (estimate: EstimateResponse) => void;
+  onConvertToInvoice?: (estimate: {
+    sequence: number;
+    selectedPaymentMethodId: number | null;
+  }) => void;
   isConvertingToInvoice?: boolean;
 }
 
@@ -90,6 +93,7 @@ export function EstimateForm({
   const router = useRouter();
   const isDirty = form.formState.isDirty;
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isSavingBeforeSend, setIsSavingBeforeSend] = useState(false);
 
@@ -132,9 +136,6 @@ export function EstimateForm({
     taxPercentage: form.watch("taxPercentage") || null,
   };
 
-  const { data: paymentMethods } = useWorkspacePaymentMethods();
-  const enabledPaymentMethods =
-    paymentMethods?.filter((m) => m.isEnabled) ?? [];
   const hasItems = (existingEstimate?.items?.length ?? 0) > 0;
 
   // Show loading state in edit mode while estimate is loading
@@ -277,26 +278,26 @@ export function EstimateForm({
                 )}
               </Button>
               {existingEstimate.status === "ACCEPTED" && onConvertToInvoice && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => onConvertToInvoice(existingEstimate)}
-                    disabled={isConvertingToInvoice}
-                    className="gap-2"
-                  >
-                    {isConvertingToInvoice ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Converting…
-                      </>
-                    ) : (
-                      <>
-                        <Receipt className="h-4 w-4" />
-                        Convert to Invoice
-                      </>
-                    )}
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setConvertDialogOpen(true)}
+                  disabled={isConvertingToInvoice}
+                  className="gap-2"
+                >
+                  {isConvertingToInvoice ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Converting…
+                    </>
+                  ) : (
+                    <>
+                      <Receipt className="h-4 w-4" />
+                      Convert to Invoice
+                    </>
+                  )}
+                </Button>
+              )}
             </>
           ) : (
             <Button
@@ -620,6 +621,22 @@ export function EstimateForm({
           estimateNumber={existingEstimate.estimateNumber}
           clientName={existingEstimate.client?.name ?? "Client"}
           clientEmail={existingEstimate.clientEmail}
+        />
+      )}
+
+      {mode === "edit" && existingEstimate && onConvertToInvoice && (
+        <ConvertEstimateToInvoiceModal
+          isOpen={convertDialogOpen}
+          onOpenChange={setConvertDialogOpen}
+          estimateNumber={existingEstimate.estimateNumber}
+          isConverting={isConvertingToInvoice}
+          onConfirm={(selectedPaymentMethodId) => {
+            onConvertToInvoice({
+              sequence: existingEstimate.sequence,
+              selectedPaymentMethodId,
+            });
+            setConvertDialogOpen(false);
+          }}
         />
       )}
     </div>

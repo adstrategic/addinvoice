@@ -65,12 +65,19 @@ export function useEstimateActions(
 
   const handleConvertToInvoice = (estimate: {
     sequence: number;
+    selectedPaymentMethodId?: number | null;
   }) => {
-    convertToInvoiceMutation.mutate(estimate.sequence, {
+    convertToInvoiceMutation.mutate(
+      {
+        sequence: estimate.sequence,
+        selectedPaymentMethodId: estimate.selectedPaymentMethodId ?? null,
+      },
+      {
       onSuccess: (invoice) => {
         router.push(`/invoices/${invoice.sequence}`);
       },
-    });
+      },
+    );
   };
 
   return {

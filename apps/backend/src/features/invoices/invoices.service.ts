@@ -52,19 +52,31 @@ export async function createInvoiceFromEstimate(
     );
   }
 
+  const invoiceNumber = await getNextInvoiceNumber(
+    client,
+    business.id,
+    workspaceId,
+  );
+
+  const lastInvoice = await client.invoice.findFirst({
+    orderBy: {
+      sequence: "desc",
+    },
+    where: {
+      workspaceId,
+    },
+  });
+  const sequence = lastInvoice ? lastInvoice.sequence + 1 : 1;
+
   const invoiceCreated = await client.invoice.create({
     data: {
       workspaceId,
       businessId: estimate.businessId,
       clientId: estimate.clientId,
       clientEmail: estimate.clientEmail,
-      invoiceNumber: estimate.estimateNumber,
-      sequence: estimate.sequence,
+      invoiceNumber,
+      sequence,
       currency: estimate.currency,
-      // TODO: add these fields correctly
-      // clientEmail: estimate.client.email,
-      // invoiceNumber: estimate.estimateNumber,
-      // sequence: estimate.sequence,
       notes: estimate.notes ?? null,
       terms: estimate.terms ?? null,
       status: "DRAFT",

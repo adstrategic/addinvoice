@@ -148,16 +148,21 @@ export type ConvertEstimateToInvoiceResponse = {
   invoiceNumber: string;
 };
 
+export type ConvertEstimateToInvoiceRequest = {
+  selectedPaymentMethodId: number | null;
+};
+
 /**
  * Convert an accepted estimate to an invoice
  */
 async function convertEstimateToInvoice(
   sequence: number,
+  payload: ConvertEstimateToInvoiceRequest,
 ): Promise<ConvertEstimateToInvoiceResponse> {
   try {
     const { data } = await apiClient.post<
       ApiSuccessResponse<ConvertEstimateToInvoiceResponse>
-    >(`${BASE_URL}/${sequence}/convert-to-invoice`);
+    >(`${BASE_URL}/${sequence}/convert-to-invoice`, payload);
 
     return data.data;
   } catch (error) {

@@ -177,8 +177,16 @@ export function useConvertEstimateToInvoice() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (sequence: number) =>
-      estimatesService.convertToInvoice(sequence),
+    mutationFn: ({
+      sequence,
+      selectedPaymentMethodId,
+    }: {
+      sequence: number;
+      selectedPaymentMethodId: number | null;
+    }) =>
+      estimatesService.convertToInvoice(sequence, {
+        selectedPaymentMethodId,
+      }),
     onSuccess: (invoice) => {
       queryClient.invalidateQueries({ queryKey: estimateKeys.all });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
