@@ -24,9 +24,10 @@ import {
 import { handleMutationError } from "@/lib/errors/handle-error";
 import { useDirtyFields } from "@/hooks/useDirtyValues";
 import { useFormScroll } from "@/hooks/useFormScroll";
-import { type BusinessResponse, useBusinesses } from "@/features/businesses";
-import { useQueryClient } from "@tanstack/react-query";
+import { type BusinessResponse } from "@addinvoice/schemas";
+import { useBusinesses } from "@/features/businesses";
 import { useCreateInvoiceItem } from "./useInvoiceItems";
+import { startOfDay } from "date-fns";
 
 interface UseInvoiceManagerOptions {
   onAfterSubmit?: () => void;
@@ -76,7 +77,6 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       selectedBusiness?.id ?? null,
     );
 
-  const queryClient = useQueryClient();
   const createItem = useCreateInvoiceItem();
 
   // === CONFIGURACIÓN DEL FORMULARIO ===
@@ -84,8 +84,8 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     business?: BusinessResponse | null,
   ): DefaultValues<CreateInvoiceDTO> {
     const base: DefaultValues<CreateInvoiceDTO> = {
-      issueDate: new Date(),
-      dueDate: new Date(),
+      issueDate: startOfDay(new Date()),
+      dueDate: startOfDay(new Date()),
       taxPercentage: null,
       taxName: null,
       discountType: "NONE",
@@ -130,6 +130,7 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
   // Add this useEffect after the form declaration
   useEffect(() => {
     if (mode === "edit" && existingInvoice) {
+      console.log("existingInvoice", existingInvoice);
       form.reset({
         ...existingInvoice,
         createClient: false,
@@ -317,7 +318,6 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       form,
       existingInvoice,
       createMutation,
-      queryClient,
       router,
       selectedBusiness,
       createItem,

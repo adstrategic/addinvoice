@@ -17,8 +17,6 @@ const STATUS_TO_TITLE: Record<string, string> = {
 interface InvoiceListProps {
   invoices: InvoiceResponse[];
   statusFilter: string;
-  onView: (sequence: number | string) => void;
-  onEdit: (sequence: number) => void;
   onDownload: (invoice: InvoiceResponse) => void;
   onSend: (invoice: InvoiceResponse) => void;
   onAddPayment: (invoice: InvoiceResponse) => void;
@@ -33,16 +31,13 @@ interface InvoiceListProps {
 export function InvoiceList({
   invoices,
   statusFilter,
-  onView,
-  onEdit,
   onDownload,
   onSend,
   onAddPayment,
   onDelete,
   children,
 }: InvoiceListProps) {
-  const listTitle =
-    STATUS_TO_TITLE[statusFilter] ?? STATUS_TO_TITLE.all;
+  const listTitle = STATUS_TO_TITLE[statusFilter] ?? STATUS_TO_TITLE.all;
 
   return (
     <motion.div
@@ -73,8 +68,6 @@ export function InvoiceList({
                   key={invoice.id}
                   invoice={invoice}
                   index={index}
-                  onView={onView}
-                  onEdit={onEdit}
                   onDownload={onDownload}
                   onSend={onSend}
                   onAddPayment={onAddPayment}

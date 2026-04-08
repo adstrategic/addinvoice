@@ -2,12 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Send, Edit, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Download, Send, Edit, Trash2, Plus, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
-import { downloadInvoicePdf } from "@/features/invoices/lib/utils";
 import { useInvoiceBySequence } from "@/features/invoices/hooks/useInvoices";
 import { PaymentFormDialog } from "@/features/invoices/components/PaymentFormDialog";
 import { PaymentsSection } from "@/features/invoices/forms/form-fields/PaymentsSection";
@@ -23,6 +22,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { useDownloadInvoicePdf } from "@/features/invoices/hooks/useDownloadInvoicePDF";
 
 const statusConfig = {
   paid: { label: "Paid", className: "bg-primary/20 text-primary" },
@@ -61,6 +61,8 @@ export default function InvoiceDetailPage() {
     ? parseInt(params.sequence as string)
     : null;
 
+  const downloadPdf = useDownloadInvoicePdf();
+
   const {
     data: invoice,
     isLoading,
@@ -93,16 +95,13 @@ export default function InvoiceDetailPage() {
   const uiStatus = mapStatusToUI(invoice.status);
 
   const handleDownloadPDF = async () => {
-    if (!sequence) return;
-    setDownloading(true);
     try {
-      await downloadInvoicePdf(sequence, invoice.invoiceNumber);
+      await downloadPdf(invoice);
+      toast.success("PDF downloaded");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to download PDF",
-      );
-    } finally {
-      setDownloading(false);
+      toast.error("Failed to download PDF", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   };
 
@@ -154,6 +153,27 @@ export default function InvoiceDetailPage() {
                 <p>Download PDF</p>
               </TooltipContent>
             </Tooltip>
+            {invoice.paymentProvider === "stripe" &&
+              invoice.paymentLink &&
+              invoice.status !== "PAID" && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <a
+                      href={invoice.paymentLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                        <ExternalLink className="h-4 w-4" />
+                        Stripe Payment Link
+                      </Button>
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Open Stripe payment page</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             {invoice.status === "DRAFT" && (
               <Tooltip>
                 <TooltipTrigger asChild>

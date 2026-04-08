@@ -15,9 +15,8 @@ import {
 } from "lucide-react";
 import { useWorkspacePaymentMethods } from "@/features/workspace";
 import Image from "next/image";
-import type { BusinessResponse } from "@/features/businesses";
+import type { BusinessResponse } from "@addinvoice/schemas";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
-import { downloadInvoicePdf } from "../lib/utils";
 import type {
   CreateInvoiceDTO,
   InvoiceItemCreateInput,
@@ -38,6 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 import LoadingComponent from "@/components/loading-component";
 import { toast } from "sonner";
 import type { InvoiceMutationCallbacks } from "../hooks/useInvoiceActions";
+import { useDownloadInvoicePdf } from "../hooks/useDownloadInvoicePDF";
 
 interface InvoiceFormProps {
   selectedBusiness: BusinessResponse;
@@ -52,7 +52,7 @@ interface InvoiceFormProps {
   existingInvoice?: InvoiceResponse | null;
   ensureInvoiceExists?: (data: InvoiceItemCreateInput) => Promise<number>;
   /** When provided (edit mode), save is run before opening send dialog if form is dirty. */
-  saveBeforeSend?: (callbacks?: InvoiceMutationCallbacks) => Promise<void>;
+  saveBeforeSend?: (callbacks?: InvoiceMutationCallbacks) => void;
 }
 
 export function InvoiceForm({
@@ -75,10 +75,29 @@ export function InvoiceForm({
   const [isExporting, setIsExporting] = useState(false);
   const [isSavingBeforeSend, setIsSavingBeforeSend] = useState(false);
 
-  const handleSendClick = async () => {
+  const downloadPdf = useDownloadInvoicePdf();
+
+  const handleDownloadPDF = async () => {
+    if (!existingInvoice) return;
+
+    setIsExporting(true);
+
+    try {
+      await downloadPdf(existingInvoice);
+      toast.success("PDF downloaded");
+    } catch (error) {
+      toast.error("Failed to download PDF", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleSendClick = () => {
     if (saveBeforeSend && isDirty) {
       setIsSavingBeforeSend(true);
-      await saveBeforeSend({
+      saveBeforeSend({
         onSuccess: () => {
           setSendDialogOpen(true);
           setIsSavingBeforeSend(false);
@@ -180,24 +199,7 @@ export function InvoiceForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={async () => {
-                  setIsExporting(true);
-                  try {
-                    await downloadInvoicePdf(
-                      existingInvoice.sequence,
-                      existingInvoice.invoiceNumber,
-                    );
-                  } catch (error) {
-                    toast.error("Failed to download PDF", {
-                      description:
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to download PDF",
-                    });
-                  } finally {
-                    setIsExporting(false);
-                  }
-                }}
+                onClick={handleDownloadPDF}
                 disabled={isExporting}
                 className="gap-2"
               >
@@ -446,11 +448,12 @@ export function InvoiceForm({
                     {enabledPaymentMethods.map((method) => {
                       const labels: Record<
                         string,
-                        { name: string; icon: "paypal" | "venmo" | "zelle" }
+                        { name: string; icon: "paypal" | "venmo" | "zelle" | "stripe" }
                       > = {
                         PAYPAL: { name: "PayPal", icon: "paypal" },
                         VENMO: { name: "Venmo", icon: "venmo" },
                         ZELLE: { name: "Zelle", icon: "zelle" },
+                        STRIPE: { name: "Stripe", icon: "stripe" },
                       };
                       const label = labels[method.type];
                       const isSelected =
@@ -490,6 +493,15 @@ export function InvoiceForm({
                               <Image
                                 src="/images/zelle-icon.png"
                                 alt="Zelle"
+                                width={32}
+                                height={32}
+                                className="h-8 w-8 object-contain"
+                              />
+                            )}
+                            {label?.icon === "stripe" && (
+                              <Image
+                                src="/images/stripe-icon.png"
+                                alt="Stripe"
                                 width={32}
                                 height={32}
                                 className="h-8 w-8 object-contain"

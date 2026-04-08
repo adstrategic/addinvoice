@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Prisma } from "@addinvoice/db";
+import type { EstimateResponse } from "@addinvoice/schemas";
 
 import { prisma } from "@addinvoice/db";
 
@@ -28,6 +29,111 @@ import { type BusinessEntity } from "../businesses/businesses.schemas.js";
 import { type ClientEntity } from "../clients/clients.schemas.js";
 
 // ===== HELPER FUNCTIONS =====
+
+/**
+ * Create an invoice from an accepted estimate.
+ *
+ * Used by the estimates conversion flow. If a transaction client is provided,
+ * all writes are performed inside that transaction.
+ */
+export async function createInvoiceFromEstimate(
+  workspaceId: number,
+  estimate: EstimateResponse,
+  tx?: Prisma.TransactionClient,
+): Promise<InvoiceEntityWithRelations> {
+  const client = tx ?? prisma;
+
+  const business = await client.business.findFirst({
+    where: { id: estimate.businessId, workspaceId },
+  });
+  if (!business) {
+    throw new EntityValidationError(
+      "Business not found or does not belong to your workspace",
+    );
+  }
+
+  const invoiceCreated = await client.invoice.create({
+    data: {
+      workspaceId,
+      businessId: estimate.businessId,
+      clientId: estimate.clientId,
+      currency: estimate.currency,
+      // TODO: add these fields correctly
+      // clientEmail: estimate.client.email,
+      // invoiceNumber: estimate.estimateNumber,
+      // sequence: estimate.sequence,
+      notes: estimate.notes ?? null,
+      terms: estimate.terms ?? null,
+      status: "DRAFT",
+      // issue/due dates are required for invoices in some flows; set to today by default.
+      issueDate: new Date(),
+      dueDate: new Date(),
+      discount: 0,
+      discountType: "NONE",
+      subtotal: 0,
+      totalTax: 0,
+      total: 0,
+      balance: 0,
+      items: {
+        create: (estimate.items ?? []).map((item) => ({
+          name: item.name,
+          description: item.description,
+          quantity: item.quantity,
+          quantityUnit: item.quantityUnit,
+          unitPrice: item.unitPrice,
+          discount: item.discount,
+          discountType: item.discountType,
+          tax: item.tax,
+          vatEnabled: item.vatEnabled,
+          total: item.total,
+          catalogId: item.catalogId ?? null,
+        })),
+      },
+    },
+    include: {
+      business: true,
+      client: true,
+      items: true,
+      payments: true,
+    },
+  });
+
+  return {
+    ...invoiceCreated,
+    balance: Number(invoiceCreated.balance),
+    business: {
+      ...invoiceCreated.business,
+      defaultTaxMode: invoiceCreated.business.defaultTaxMode as
+        | "BY_PRODUCT"
+        | "BY_TOTAL"
+        | "NONE"
+        | null
+        | undefined,
+      defaultTaxPercentage: invoiceCreated.business.defaultTaxPercentage
+        ? Number(invoiceCreated.business.defaultTaxPercentage)
+        : null,
+    },
+    discount: Number(invoiceCreated.discount),
+    items: invoiceCreated.items.map((item) => ({
+      ...item,
+      discount: Number(item.discount),
+      quantity: Number(item.quantity),
+      tax: Number(item.tax),
+      total: Number(item.total),
+      unitPrice: Number(item.unitPrice),
+    })),
+    payments: invoiceCreated.payments.map((payment) => ({
+      ...payment,
+      amount: Number(payment.amount),
+    })),
+    subtotal: Number(invoiceCreated.subtotal),
+    taxPercentage: invoiceCreated.taxPercentage
+      ? Number(invoiceCreated.taxPercentage)
+      : null,
+    total: Number(invoiceCreated.total),
+    totalTax: Number(invoiceCreated.totalTax),
+  };
+}
 
 /**
  * Payload for the pdf-service POST /generate-receipt endpoint.
@@ -874,9 +980,7 @@ export async function deleteInvoice(
     }
 
     if (existingInvoice.payments.length > 0) {
-      throw new EntityValidationError(
-        "Cannot delete an invoice with payments",
-      );
+      throw new EntityValidationError("Cannot delete an invoice with payments");
     }
 
     await tx.invoice.delete({
@@ -1282,8 +1386,7 @@ export async function markInvoiceAsSent(
       include: { business: true, client: true },
       where: { id: invoiceId },
     });
-    if (!existing)
-      throw new EntityNotFoundError("Invoice not found");
+    if (!existing) throw new EntityNotFoundError("Invoice not found");
     return {
       ...existing,
       balance: Number(existing.balance),

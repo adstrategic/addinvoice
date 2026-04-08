@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm, Controller, DefaultValues } from "react-hook-form";
+import { useForm, Controller, type DefaultValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
@@ -113,9 +113,10 @@ export function PaymentFormDialog({
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="amount">Amount *</FieldLabel>
                     <NumericFormat
-                      value={field.value}
+                      id="amount"
+                      value={field.value ?? ""}
                       onValueChange={(values) => {
-                        field.onChange(values.floatValue);
+                        field.onChange(values.floatValue ?? null);
                       }}
                       placeholder="0,00"
                       thousandSeparator="."

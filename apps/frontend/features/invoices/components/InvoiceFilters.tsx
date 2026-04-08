@@ -40,14 +40,14 @@ export function InvoiceFilters({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search invoices..."
-            className="pl-10"
+            className="pl-10 bg-white"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
         <Select value={statusFilter} onValueChange={onStatusChange}>
           <SelectTrigger
-            className="w-full sm:w-[180px]"
+            className="w-full sm:w-[180px] bg-white"
             data-tour-id="invoices-filter"
           >
             <SelectValue placeholder="Filter by status" />

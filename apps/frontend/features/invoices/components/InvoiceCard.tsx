@@ -24,6 +24,7 @@ import Link from "next/link";
 import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { mapStatusToUI } from "../types/api";
 import { cn, formatCurrency } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 // Status config (used for badge classes/labels)
 const statusConfig = {
@@ -48,8 +49,6 @@ const statusConfig = {
 interface InvoiceCardProps {
   invoice: InvoiceResponse;
   index: number;
-  onView: (sequence: number) => void;
-  onEdit: (sequence: number) => void;
   onDownload: (invoice: InvoiceResponse) => void;
   onSend: (invoice: InvoiceResponse) => void;
   onAddPayment: (invoice: InvoiceResponse) => void;
@@ -63,14 +62,14 @@ interface InvoiceCardProps {
 export function InvoiceCard({
   invoice,
   index,
-  onView,
-  onEdit,
   onDownload,
   onSend,
   onAddPayment,
   onDelete,
   linkOnly = false,
 }: InvoiceCardProps) {
+  const router = useRouter();
+
   const clientName =
     invoice.client?.name || invoice.client?.businessName || "Unknown Client";
   const businessName = invoice.business?.name;
@@ -82,7 +81,6 @@ export function InvoiceCard({
   const hasItems = (invoice.items?.length ?? 0) > 0;
   const hasBalance = (invoice.balance ?? 0) > 0;
   const canAddPayment = uiStatus !== "paid" && hasBalance;
-
   const cardContent = (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -144,12 +142,18 @@ export function InvoiceCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onView(invoice.sequence)}>
+              <DropdownMenuItem
+                onClick={() => router.push(`/invoices/${invoice.sequence}`)}
+              >
                 <Eye className="h-4 w-4 mr-2" />
                 View
               </DropdownMenuItem>
               {invoice.status === "DRAFT" && (
-                <DropdownMenuItem onClick={() => onEdit(invoice.sequence)}>
+                <DropdownMenuItem
+                  onClick={() =>
+                    router.push(`/invoices/${invoice.sequence}/edit`)
+                  }
+                >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </DropdownMenuItem>

@@ -25,6 +25,7 @@ import { useInvoiceManager } from "../hooks/useInvoiceFormManager";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
+import { useDownloadInvoicePdf } from "../hooks/useDownloadInvoicePDF";
 
 const VALID_STATUSES = ["all", "paid", "overdue", "issued", "draft"] as const;
 
@@ -76,29 +77,15 @@ export default function InvoicesContent() {
 
   const invoiceManager = useInvoiceManager();
   const invoiceDelete = useInvoiceDelete();
+  const downloadPdf = useDownloadInvoicePdf();
 
   const handleDownloadPDF = async (invoice: InvoiceResponse) => {
     try {
-      const response = await fetch(`/api/invoices/${invoice.sequence}/pdf`);
-      if (!response.ok) {
-        throw new Error("Failed to generate PDF");
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `invoice-${invoice.invoiceNumber}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast.success("PDF downloaded", {
-        description: "The invoice PDF has been downloaded successfully.",
-      });
+      await downloadPdf(invoice);
+      toast.success("PDF downloaded");
     } catch (error) {
       toast.error("Failed to download PDF", {
-        description:
-          error instanceof Error ? error.message : "Failed to download PDF",
+        description: error instanceof Error ? error.message : "Unknown error",
       });
     }
   };
@@ -195,8 +182,6 @@ export default function InvoicesContent() {
         <InvoiceList
           invoices={invoices}
           statusFilter={statusFilter}
-          onEdit={(sequence) => router.push(`/invoices/${sequence}/edit`)}
-          onView={(sequence) => router.push(`/invoices/${sequence}`)}
           onDownload={handleDownloadPDF}
           onSend={handleSendInvoice}
           onAddPayment={paymentDialog.openPaymentDialog}

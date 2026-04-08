@@ -4,32 +4,6 @@ import type {
   InvoiceResponse,
   InvoiceItemResponse,
 } from "../schemas/invoice.schema";
-import { toast } from "sonner";
-
-/**
- * Download invoice PDF from API and trigger file save. Shows toast on success/error.
- */
-export async function downloadInvoicePdf(
-  sequence: number,
-  invoiceNumber: string,
-): Promise<void> {
-  const response = await fetch(`/api/invoices/${sequence}/pdf`);
-  if (!response.ok) {
-    throw new Error("Failed to generate PDF");
-  }
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `invoice-${invoiceNumber}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
-  toast.success("PDF downloaded", {
-    description: "The invoice PDF has been downloaded successfully.",
-  });
-}
 
 /**
  * Calculate item total with tax

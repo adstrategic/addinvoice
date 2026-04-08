@@ -191,9 +191,9 @@ export function DiscountsVATSection({ form }: DiscountsVATSectionProps) {
                     <FormControl>
                       <NumericFormat
                         id="taxPercentage"
-                        value={field.value}
+                        value={field.value ?? ""}
                         onValueChange={(values) => {
-                          field.onChange(values.floatValue);
+                          field.onChange(values.floatValue ?? null);
                         }}
                         placeholder="0,00"
                         thousandSeparator="."

@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { paginationMetaSchema } from "@/lib/api/types";
-import { businessResponseSchema } from "@/features/businesses";
-import { clientResponseSchema, createClientSchema } from "@/features/clients";
+import {
+  businessResponseSchema,
+  fixedDateFromPrisma,
+} from "@addinvoice/schemas";
+import { clientResponseSchema, createClientSchema } from "@addinvoice/schemas";
 import { nullableOptional } from "@/lib/utils";
 import { paymentResponseSchema } from "@/features/payments/schemas/payments.schema";
 
@@ -51,7 +54,7 @@ export const invoiceItemSchema = z.object({
   taxMode: z.enum(["NONE", "BY_PRODUCT", "BY_TOTAL"]).optional(),
   // Optional taxName and taxPercentage - if provided, will update the invoice's tax info
   taxName: z.string().optional().nullable(),
-  taxPercentage: z.coerce.number().min(0).max(100).optional().nullable(),
+  taxPercentage: nullableOptional(z.coerce.number().min(0).max(100)),
 });
 
 /**
@@ -160,7 +163,7 @@ export const baseInvoiceSchema = z.object({
   discountType: z.enum(["NONE", "PERCENTAGE", "FIXED"]).default("NONE"),
   taxMode: z.enum(["NONE", "BY_PRODUCT", "BY_TOTAL"]).default("NONE"),
   taxName: emptyStringToNull,
-  taxPercentage: z.coerce.number().min(0).max(100).nullable(),
+  taxPercentage: nullableOptional(z.coerce.number().min(0).max(100)),
   notes: emptyStringToNull,
   terms: emptyStringToNull,
   currency: z.string().default("USD"),
@@ -321,7 +324,7 @@ export const invoiceItemResponseSchema = z.object({
  */
 export const invoiceSelectedPaymentMethodSchema = z.object({
   id: z.number().int().positive(),
-  type: z.enum(["PAYPAL", "VENMO", "ZELLE"]),
+  type: z.enum(["PAYPAL", "VENMO", "ZELLE", "STRIPE"]),
   handle: z.string().nullable(),
   isEnabled: z.boolean(),
 });
@@ -333,6 +336,10 @@ export const invoiceSelectedPaymentMethodSchema = z.object({
  */
 export const invoiceResponseSchema = baseInvoiceSchema
   .extend({
+    issueDate: z
+      .string()
+      .transform((val) => fixedDateFromPrisma(new Date(val))),
+    dueDate: z.string().transform((val) => fixedDateFromPrisma(new Date(val))),
     id: z.number().int().positive(),
     subtotal: z.number(),
     totalTax: z.number(),

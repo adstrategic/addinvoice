@@ -214,9 +214,10 @@ export function ProductFormDialog({
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="quantity">Quantity *</FieldLabel>
                     <NumericFormat
-                      value={field.value}
+                      id="quantity"
+                      value={field.value ?? ""}
                       onValueChange={(values) => {
-                        field.onChange(values.floatValue);
+                        field.onChange(values.floatValue ?? null);
                       }}
                       placeholder="0,00"
                       thousandSeparator="."
@@ -280,9 +281,9 @@ export function ProductFormDialog({
                   <NumericFormat
                     id="unitPrice"
                     aria-invalid={fieldState.invalid}
-                    value={field.value}
+                    value={field.value ?? ""}
                     onValueChange={(values) => {
-                      field.onChange(values.floatValue);
+                      field.onChange(values.floatValue ?? null);
                     }}
                     placeholder="0,00"
                     thousandSeparator="."
@@ -347,9 +348,9 @@ export function ProductFormDialog({
                         <NumericFormat
                           id="discount"
                           aria-invalid={fieldState.invalid}
-                          value={field.value}
+                          value={field.value ?? ""}
                           onValueChange={(values) => {
-                            field.onChange(values.floatValue);
+                            field.onChange(values.floatValue ?? null);
                           }}
                           placeholder={
                             form.watch("discountType") === "PERCENTAGE"
@@ -386,9 +387,9 @@ export function ProductFormDialog({
                     <NumericFormat
                       id="tax"
                       aria-invalid={fieldState.invalid}
-                      value={field.value}
+                      value={field.value ?? ""}
                       onValueChange={(values) => {
-                        field.onChange(values.floatValue);
+                        field.onChange(values.floatValue ?? null);
                       }}
                       placeholder="0,00"
                       thousandSeparator="."

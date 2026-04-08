@@ -89,10 +89,9 @@ async function getInvoiceBySequence(
       `${BASE_URL}/${sequence}`,
     );
 
-    console.log("data", data.data);
-
     return invoiceResponseSchema.parse(data.data);
   } catch (error) {
+    console.error(error);
     handleApiError(error);
   }
 }

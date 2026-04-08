@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from "lucide-react";
 import {
@@ -14,16 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PhoneInputField } from "@/components/phone-input/phone-input";
 import { PhoneHelp } from "@/components/phone-input/phone-help";
-import {
-  ClientSelector,
-  CREATE_NEW_CLIENT_VALUE,
-} from "@/components/shared/ClientSelector";
+import { ClientSelector } from "@/components/shared/ClientSelector";
 import type { UseFormReturn } from "react-hook-form";
 import type {
   CreateInvoiceDTO,
   InvoiceResponse,
 } from "../../schemas/invoice.schema";
-import type { ClientResponse } from "@/features/clients";
+import type { ClientResponse } from "@addinvoice/schemas";
 import { useInvoiceAutofill } from "../../hooks/useInvoiceAutofill";
 import { NumericFormat } from "react-number-format";
 
@@ -40,8 +37,7 @@ export const ClientSection = ({
   initialClient,
   mode,
 }: ClientSectionProps) => {
-  const clientId = form.watch("clientId");
-  const isCreateNewMode = clientId === CREATE_NEW_CLIENT_VALUE;
+  const isCreateNewMode = form.watch("createClient") === true;
   const { handleClientSelect, selectedClient } = useInvoiceAutofill({
     invoice: invoice,
     setValue: form.setValue,
@@ -50,11 +46,6 @@ export const ClientSection = ({
   // Set createClient flag based on mode
   useEffect(() => {
     if (isCreateNewMode) {
-      form.setValue("createClient", true, {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-
       form.setValue("clientEmail", undefined, {
         shouldValidate: false,
         shouldDirty: false,
@@ -68,7 +59,10 @@ export const ClientSection = ({
         shouldDirty: false,
       });
     } else {
-      form.setValue("createClient", false);
+      form.setValue("createClient", false, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
     }
   }, [isCreateNewMode, form]);
 
@@ -86,12 +80,29 @@ export const ClientSection = ({
           name="clientId"
           render={({ field }) => (
             <ClientSelector
-              field={{
-                value: field.value || 0,
-                onChange: (value) => field.onChange(value),
+              value={field.value || 0}
+              onValueChange={(value) => {
+                field.onChange(value);
+                form.setValue("createClient", false, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+                form.resetField("clientData", { defaultValue: undefined });
               }}
               initialClient={initialClient}
-              onSelect={handleClientSelect}
+              onSelect={(client) => {
+                handleClientSelect(client);
+              }}
+              onCreateNew={() => {
+                form.setValue("createClient", true, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+                form.setValue("clientId", 0, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+              }}
               mode={mode}
             />
           )}
@@ -237,9 +248,9 @@ export const ClientSection = ({
                     <FormLabel>Reminder before due (days)</FormLabel>
                     <FormControl>
                       <NumericFormat
-                        value={field.value}
+                        value={field.value ?? ""}
                         onValueChange={(values) => {
-                          field.onChange(values.floatValue);
+                          field.onChange(values.floatValue ?? null);
                         }}
                         placeholder="e.g. 3 (every 3 days)"
                         thousandSeparator="."
@@ -262,9 +273,9 @@ export const ClientSection = ({
                     <FormLabel>Reminder after due (days)</FormLabel>
                     <FormControl>
                       <NumericFormat
-                        value={field.value}
+                        value={field.value ?? ""}
                         onValueChange={(values) => {
-                          field.onChange(values.floatValue);
+                          field.onChange(values.floatValue ?? null);
                         }}
                         placeholder="e.g. 3 (every 3 days)"
                         thousandSeparator="."
@@ -289,7 +300,7 @@ export const ClientSection = ({
                 Invoice Contact Information
               </h3>
               <p className="text-sm text-muted-foreground">
-                These fields can differ from the client's default contact
+                These fields can differ from the client&apos;s default contact
                 information for this specific invoice.
               </p>
             </div>
