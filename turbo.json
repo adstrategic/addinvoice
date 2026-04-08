@@ -16,6 +16,8 @@
         "ANTHROPIC_API_KEY",
         "PORT",
         "FRONTEND_URL",
+        "APP_BASE_URL",
+        "ENCRYPTION_KEY",
         "DATABASE_URL_TEST",
         "RESEND_API_KEY",
         "STRIPE_*",
