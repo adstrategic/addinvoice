@@ -2,14 +2,14 @@ import { z } from "zod";
 import { paginationMetaSchema } from "@/lib/api/types";
 
 import { nullableOptional } from "@/lib/utils";
-import { clientResponseSchema } from "@/features/clients";
-import { businessResponseSchema } from "@/features/businesses";
+import { clientResponseSchema } from "@addinvoice/schemas";
+import { businessResponseSchema } from "@addinvoice/schemas";
 
 /**
  * Payment schema
  */
 export const createPaymentSchema = z.object({
-  amount: z.number().min(0.01, "Amount must be greater than 0"),
+  amount: z.coerce.number().min(0.01, "Amount must be greater than 0"),
   paymentMethod: z.string().min(1, "Payment method is required"),
   transactionId: nullableOptional(
     z.string().trim().max(255, "Transaction ID is too long"),

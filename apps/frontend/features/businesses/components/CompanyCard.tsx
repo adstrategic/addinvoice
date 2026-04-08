@@ -6,8 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   updateBusinessSchema,
   type BusinessResponse,
-  type UpdateBusinessDto,
-} from "@/features/businesses";
+  type UpdateBusinessDTO,
+} from "@addinvoice/schemas";
 import type { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,7 +81,7 @@ export function CompanyCard({
   const setDefaultBusinessMutation = useSetDefaultBusiness();
 
   const onSubmit = (data: EditCompanyForm) => {
-    const payload: UpdateBusinessDto = { ...data };
+    const payload: UpdateBusinessDTO = { ...data };
     updateBusinessMutation.mutate(
       { id: company.id, data: payload },
       {

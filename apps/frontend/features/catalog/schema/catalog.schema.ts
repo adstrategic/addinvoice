@@ -1,4 +1,4 @@
-import { businessResponseSchema } from "@/features/businesses";
+import { businessResponseSchema } from "@addinvoice/schemas";
 import { paginationMetaSchema } from "@/lib/api/types";
 import { z } from "zod";
 

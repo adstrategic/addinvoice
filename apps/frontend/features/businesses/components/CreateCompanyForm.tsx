@@ -1,13 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, type DefaultValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createBusinessSchema,
-  type CreateBusinessDto,
-} from "@/features/businesses";
-import type { z } from "zod";
+  type CreateBusinessDTO,
+} from "@addinvoice/schemas";
 import { Building2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +26,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
-export type CreateCompanyFormValues = z.infer<typeof createBusinessSchema>;
-
-const defaultFormValues: CreateCompanyFormValues = {
+const defaultFormValues: DefaultValues<CreateBusinessDTO> = {
   name: "",
   nit: "",
   address: "",
@@ -42,7 +39,7 @@ const defaultFormValues: CreateCompanyFormValues = {
   defaultTerms: "",
 };
 
-function buildPayload(data: CreateCompanyFormValues): CreateBusinessDto {
+function buildPayload(data: CreateBusinessDTO): CreateBusinessDTO {
   return {
     ...data,
     defaultTaxMode: data.defaultTaxMode ?? "NONE",
@@ -61,12 +58,12 @@ function buildPayload(data: CreateCompanyFormValues): CreateBusinessDto {
 
 export interface CreateCompanyFormProps {
   onSubmit: (
-    data: CreateBusinessDto,
+    data: CreateBusinessDTO,
     logoFile: File | null,
   ) => void | Promise<void>;
   logoRequired?: boolean;
   formId?: string;
-  defaultValues?: Partial<CreateCompanyFormValues>;
+  defaultValues?: DefaultValues<CreateBusinessDTO>;
   idPrefix?: string;
   children?: React.ReactNode;
 }
@@ -84,7 +81,7 @@ export function CreateCompanyForm({
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [logoError, setLogoError] = useState(false);
 
-  const form = useForm<CreateCompanyFormValues>({
+  const form = useForm<CreateBusinessDTO>({
     resolver: zodResolver(createBusinessSchema),
     mode: "onSubmit",
     defaultValues: { ...defaultFormValues, ...defaultValuesProp },
@@ -125,7 +122,7 @@ export function CreateCompanyForm({
     }
   };
 
-  const handleSubmit = (data: CreateCompanyFormValues) => {
+  const handleSubmit = (data: CreateBusinessDTO) => {
     if (logoRequired && !selectedLogoFile) {
       setLogoError(true);
       return;

@@ -84,11 +84,9 @@ export function ReceivePaymentDialog({
   }, [open, invoice]);
 
   const loadPaymentMethods = () => {
-    const methods = JSON.parse(
-      localStorage.getItem("paymentMethods") || "[]"
-    );
+    const methods = JSON.parse(localStorage.getItem("paymentMethods") || "[]");
     setPaymentMethods(methods);
-    
+
     // Set default method if available
     const defaultMethod = methods.find((m: PaymentMethod) => m.isDefault);
     if (defaultMethod) {
@@ -132,10 +130,10 @@ export function ReceivePaymentDialog({
 
     // Load invoices
     const emittedInvoices = JSON.parse(
-      localStorage.getItem("emittedInvoices") || "[]"
+      localStorage.getItem("emittedInvoices") || "[]",
     );
     const draftInvoices = JSON.parse(
-      localStorage.getItem("invoiceDrafts") || "[]"
+      localStorage.getItem("invoiceDrafts") || "[]",
     );
 
     // Find and update invoice
@@ -148,8 +146,8 @@ export function ReceivePaymentDialog({
           newPaidAmount >= total
             ? "paid"
             : newPaidAmount > 0
-            ? "pending"
-            : inv.status;
+              ? "pending"
+              : inv.status;
 
         return {
           ...inv,
@@ -159,8 +157,8 @@ export function ReceivePaymentDialog({
             newPaidAmount >= total
               ? "paid"
               : newPaidAmount > 0
-              ? "partially_paid"
-              : "pending",
+                ? "partially_paid"
+                : "pending",
         };
       }
       return inv;
@@ -174,8 +172,8 @@ export function ReceivePaymentDialog({
           newPaidAmount >= total
             ? "paid"
             : newPaidAmount > 0
-            ? "pending"
-            : inv.status;
+              ? "pending"
+              : inv.status;
 
         return {
           ...inv,
@@ -185,8 +183,8 @@ export function ReceivePaymentDialog({
             newPaidAmount >= total
               ? "paid"
               : newPaidAmount > 0
-              ? "partially_paid"
-              : "pending",
+                ? "partially_paid"
+                : "pending",
         };
       }
       return inv;
@@ -323,7 +321,7 @@ export function ReceivePaymentDialog({
                   variant="outline"
                   className={cn(
                     "w-full justify-start text-left font-normal",
-                    !paymentDate && "text-muted-foreground"
+                    !paymentDate && "text-muted-foreground",
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
@@ -368,4 +366,3 @@ export function ReceivePaymentDialog({
     </Dialog>
   );
 }
-

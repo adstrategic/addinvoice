@@ -1,6 +1,6 @@
 "use client";
 
-import type { CreateBusinessDto } from "@/features/businesses";
+import type { CreateBusinessDTO } from "@addinvoice/schemas";
 import {
   Dialog,
   DialogContent,
@@ -27,10 +27,7 @@ export function CreateCompanyDialog({
   const createBusinessMutation = useCreateBusiness();
   const uploadLogoMutation = useUploadLogo();
 
-  const handleSubmit = (
-    data: CreateBusinessDto,
-    logoFile: File | null,
-  ) => {
+  const handleSubmit = (data: CreateBusinessDTO, logoFile: File | null) => {
     const done = () => {
       onOpenChange(false);
       onSuccess?.();

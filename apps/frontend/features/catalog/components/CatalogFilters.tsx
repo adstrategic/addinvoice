@@ -39,14 +39,14 @@ export function CatalogFilters({
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search products or services..."
-          className="pl-10"
+          className="pl-10 bg-white"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
       <Select value={businessId} onValueChange={onBusinessIdChange}>
         <SelectTrigger
-          className="w-full sm:w-[200px]"
+          className="w-full sm:w-[200px] bg-white"
           data-tour-id="catalog-filter"
         >
           <SelectValue placeholder="Filter by Business" />
@@ -64,7 +64,7 @@ export function CatalogFilters({
         value={sortBy}
         onValueChange={(v) => onSortByChange(v as CatalogSortBy)}
       >
-        <SelectTrigger className="w-full sm:w-[200px]">
+        <SelectTrigger className="w-full sm:w-[200px] bg-white">
           <SelectValue placeholder="Sort by" />
         </SelectTrigger>
         <SelectContent>

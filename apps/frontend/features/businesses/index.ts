@@ -5,13 +5,7 @@
 
 // Schemas and Types
 export {
-  createBusinessSchema,
-  updateBusinessSchema,
-  businessResponseSchema,
   businessResponseListSchema,
-  type CreateBusinessDto,
-  type UpdateBusinessDto,
-  type BusinessResponse,
   type BusinessResponseList,
   type ListBusinessesParams,
 } from "./schema/businesses.schema";
@@ -38,5 +32,4 @@ export { useBusinessDelete } from "./hooks/useBusinessDelete";
 export {
   CreateCompanyForm,
   type CreateCompanyFormProps,
-  type CreateCompanyFormValues,
 } from "./components/CreateCompanyForm";
