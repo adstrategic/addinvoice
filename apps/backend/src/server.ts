@@ -6,9 +6,11 @@ import helmet from "helmet";
 
 import asyncHandler from "./core/async-handler.js";
 import { apiRateLimiter, errorHandler } from "./core/middleware.js";
+import { estimatesPublicRoutes } from "./features/estimates/estimates-public.routes.js";
 import { handleClerkWebhook } from "./features/subscriptions/clerk-webhook.handler.js";
 import { handleStripeWebhook } from "./features/subscriptions/stripe-webhook.handler.js";
 import { apiRouter } from "./routes/index.js";
+import { stripePaymentWebhookRouter } from "./routes/stripe-webhook.routes.js";
 
 const app = express();
 
@@ -34,12 +36,16 @@ app.use(clerkMiddleware());
 // These MUST be registered before express.json() to preserve raw body
 // for signature verification
 
-// Stripe webhook - requires raw body for signature verification
+// Stripe subscription webhook - requires raw body for signature verification
 app.post(
   "/api/v1/subscription/webhooks/stripe",
   express.raw({ type: "application/json" }),
   asyncHandler(handleStripeWebhook),
 );
+
+// Stripe per-workspace payment webhook router — express.raw() is applied inside
+// the router route itself, so it only affects the webhook path
+app.use("/api/v1", stripePaymentWebhookRouter);
 
 // Clerk webhook - can use JSON body
 app.use(express.json());
@@ -52,7 +58,10 @@ app.post(
 // Rate limiting
 app.use("/api", apiRateLimiter);
 
-// API routes
+// Public API routes (no auth) - must be before main apiRouter
+app.use("/api/v1/public", estimatesPublicRoutes);
+
+// API routes (auth required)
 app.use("/api/v1", apiRouter);
 
 // Health check endpoint

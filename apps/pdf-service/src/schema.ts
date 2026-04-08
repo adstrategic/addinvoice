@@ -96,3 +96,54 @@ export const invoicePdfBatchSchema = z.object({
 });
 
 export type InvoicePdfBatchPayload = z.infer<typeof invoicePdfBatchSchema>;
+
+/** Estimate PDF payload (same shape as invoice but documentType: "estimate", no dueDate/issueDate) */
+export const estimatePdfPayloadSchema = z.object({
+  client: z.object({
+    address: z.string().nullish(),
+    businessName: z.string().nullish(),
+    email: z.string().nullish(),
+    name: z.string(),
+    nit: z.string().nullish(),
+    phone: z.string().nullish(),
+  }),
+  company: z.object({
+    address: z.string().nullish(),
+    email: z.string().nullish(),
+    logo: z.string().nullish(),
+    name: z.string(),
+    nit: z.string().nullish(),
+    phone: z.string().nullish(),
+  }),
+  invoice: z.object({
+    currency: z.string(),
+    discount: z.number(),
+    documentType: z.literal("estimate"),
+    invoiceNumber: z.string(),
+    notes: z.string().nullish(),
+    status: z.string(),
+    subtotal: z.number(),
+    summary: z.string().nullish(),
+    terms: z.string().nullish(),
+    timelineEndDate: z.union([z.string(), z.date()]).nullish(),
+    timelineStartDate: z.union([z.string(), z.date()]).nullish(),
+    total: z.number(),
+    totalTax: z.number(),
+  }),
+  items: z.array(
+    z.object({
+      description: z.string().nullish(),
+      discount: z.number(),
+      discountAmount: z.number().optional(),
+      name: z.string(),
+      quantity: z.number(),
+      quantityUnit: z.string().nullish(),
+      tax: z.number().optional(),
+      total: z.number(),
+      unitPrice: z.number(),
+    }),
+  ),
+  paymentMethod: z.null(),
+});
+
+export type EstimatePdfPayload = z.infer<typeof estimatePdfPayloadSchema>;

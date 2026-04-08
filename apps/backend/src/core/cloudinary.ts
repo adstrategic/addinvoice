@@ -24,6 +24,11 @@ const ALLOWED_MIME_TYPES = [
   "image/svg+xml",
 ];
 
+const ALLOWED_QUOTE_ATTACHMENT_MIME_TYPES = [
+  ...ALLOWED_MIME_TYPES,
+  "application/pdf",
+];
+
 /**
  * Maximum file size in bytes (5MB)
  */
@@ -203,6 +208,50 @@ export async function uploadExpenseReceipt(
 }
 
 /**
+ * Upload an estimate signature image (provided as a data URL) to Cloudinary.
+ * Used for end-customer signatures captured from the public acceptance page.
+ */
+export async function uploadEstimateSignatureFromDataUrl(
+  dataUrl: string,
+  workspaceId: number,
+  estimateId: number,
+): Promise<UploadApiResponse> {
+  const folder = `workspaces/${String(workspaceId)}/estimates/signatures/${String(
+    estimateId,
+  )}`;
+  const publicId = `${folder}/${randomUUID()}`;
+
+  try {
+    const uploadOptions = {
+      folder,
+      invalidate: true,
+      public_id: publicId,
+      resource_type: "image" as const,
+      transformation: [
+        {
+          crop: "limit" as const,
+          fetch_format: "auto" as const,
+          height: MAX_DIMENSIONS.height,
+          quality: "auto" as const,
+          width: MAX_DIMENSIONS.width,
+        },
+        {
+          strip_metadata: true,
+        },
+      ],
+    };
+
+    const result = await cloudinary.uploader.upload(dataUrl, uploadOptions);
+    return result;
+  } catch (error) {
+    const uploadError = error as UploadApiErrorResponse;
+    throw new Error(
+      `Cloudinary upload failed: ${uploadError.message || "Unknown error"}`,
+    );
+  }
+}
+
+/**
  * Validate image file
  */
 export function validateImageFile(file: Express.Multer.File): {
@@ -232,4 +281,79 @@ export function validateImageFile(file: Express.Multer.File): {
   }
 
   return { valid: true };
+}
+
+/**
+ * Validate estimate attachment file (image or PDF)
+ */
+export function validateEstimateAttachmentFile(file: Express.Multer.File): {
+  error?: string;
+  valid: boolean;
+} {
+  if (file.size > MAX_FILE_SIZE) {
+    return {
+      error: `File size exceeds maximum of ${String(MAX_FILE_SIZE / 1024 / 1024)}MB`,
+      valid: false,
+    };
+  }
+  if (
+    !file.mimetype ||
+    !ALLOWED_QUOTE_ATTACHMENT_MIME_TYPES.includes(file.mimetype)
+  ) {
+    return {
+      error: `Invalid file type. Allowed: images (JPEG, PNG, WebP, SVG) or PDF`,
+      valid: false,
+    };
+  }
+  return { valid: true };
+}
+
+/**
+ * Upload estimate attachment (image or PDF) to Cloudinary
+ */
+export async function uploadEstimateAttachment(
+  file: Express.Multer.File,
+  workspaceId: number,
+  estimateId: number,
+): Promise<UploadApiResponse> {
+  const uniqueId = randomUUID();
+  const folder = `workspaces/${String(workspaceId)}/estimates/attachments/${String(estimateId)}`;
+  const publicId = `${folder}/${uniqueId}`;
+  const isPdf = file.mimetype === "application/pdf";
+  const resourceType = isPdf ? ("raw" as const) : ("image" as const);
+
+  try {
+    const base64 = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+    const uploadOptions: {
+      folder: string;
+      invalidate: boolean;
+      public_id: string;
+      resource_type: "raw" | "image";
+      transformation?: unknown[];
+    } = {
+      folder,
+      invalidate: true,
+      public_id: publicId,
+      resource_type: resourceType,
+    };
+    if (!isPdf) {
+      uploadOptions.transformation = [
+        {
+          crop: "limit" as const,
+          fetch_format: "auto" as const,
+          height: MAX_DIMENSIONS.height,
+          quality: "auto" as const,
+          width: MAX_DIMENSIONS.width,
+        },
+        { strip_metadata: true },
+      ];
+    }
+    const result = await cloudinary.uploader.upload(base64, uploadOptions);
+    return result;
+  } catch (error) {
+    const uploadError = error as UploadApiErrorResponse;
+    throw new Error(
+      `Cloudinary upload failed: ${uploadError.message || "Unknown error"}`,
+    );
+  }
 }

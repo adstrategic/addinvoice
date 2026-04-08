@@ -38,6 +38,17 @@ export class ConflictError extends CustomError<ErrorCode> {
 }
 
 /**
+ * Gone error (410)
+ * Thrown when a resource is no longer available (e.g. link expired or already used).
+ */
+export class GoneError extends CustomError<ErrorCode> {
+  constructor(message = "This link has expired or is no longer valid") {
+    super({ code: "GONE", message, statusCode: 410 });
+    this.name = "GoneError";
+  }
+}
+
+/**
  * Entity not found error (404)
  * Thrown when an entity cannot be found by ID or sequence.
  * Pass only the message; code and statusCode are defaulted.

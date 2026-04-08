@@ -8,6 +8,7 @@ import { businessesRoutes } from "../features/businesses/businesses.routes.js";
 import { catalogRoutes } from "../features/catalog/catalog.routes.js";
 import { clientsRoutes } from "../features/clients/clients.routes.js";
 import { dashboardRoutes } from "../features/dashboard/dashboard.routes.js";
+import { estimatesRoutes } from "../features/estimates/estimates.routes.js";
 import { expensesRoutes } from "../features/expenses/expenses.routes.js";
 import { invoicesRoutes } from "../features/invoices/invoices.routes.js";
 import { merchantsRoutes } from "../features/merchants/merchants.routes.js";
@@ -58,6 +59,7 @@ apiRouter.use((req, res, next) => {
 // Feature routes
 apiRouter.use("/clients", clientsRoutes);
 apiRouter.use("/invoices", invoicesRoutes);
+apiRouter.use("/estimates", estimatesRoutes);
 apiRouter.use("/businesses", businessesRoutes);
 apiRouter.use("/catalog", catalogRoutes);
 apiRouter.use("/dashboard", dashboardRoutes);

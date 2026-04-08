@@ -50,7 +50,7 @@ export interface InvoicePdfPayload {
     totalTax: number;
   };
   items: InvoicePdfItem[];
-  paymentMethod?: null | { handle: null | string; type: string; };
+  paymentMethod?: null | { handle: null | string; type: string };
 }
 
 export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
@@ -267,7 +267,6 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
-
 function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString();
 }

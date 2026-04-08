@@ -3,7 +3,9 @@ import express, { type Request, type Response } from "express";
 
 import { generateInvoicePdf, generateInvoicePdfBatch } from "./invoice-pdf.js";
 import { generateReceiptPdf } from "./receipt-pdf.js";
+import { generateEstimatePdf } from "./estimate-pdf.js";
 import {
+  estimatePdfPayloadSchema,
   invoicePdfBatchSchema,
   type InvoicePdfPayload,
   invoicePdfPayloadSchema,
@@ -72,6 +74,37 @@ app.post(
       console.error("Batch PDF generation failed:", err);
       res.status(500).json({
         error: "Failed to generate PDFs",
+        message: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
+  },
+);
+
+app.post(
+  "/generate-estimate",
+  requirePdfServiceSecret,
+  async (req: Request, res: Response) => {
+    const parsed = estimatePdfPayloadSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        details: parsed.error.flatten(),
+        error: "Invalid payload",
+      });
+      return;
+    }
+    const payload = parsed.data;
+    try {
+      const pdfBuffer = await generateEstimatePdf(payload);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="estimate-${payload.invoice.invoiceNumber}.pdf"`,
+      );
+      res.send(pdfBuffer);
+    } catch (err) {
+      console.error("Estimate PDF generation failed:", err);
+      res.status(500).json({
+        error: "Failed to generate PDF",
         message: err instanceof Error ? err.message : "Unknown error",
       });
     }

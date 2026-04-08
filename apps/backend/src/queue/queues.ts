@@ -18,6 +18,11 @@ export const sendInvoiceQueue = new Queue("email-invoice", {
   defaultJobOptions,
 });
 
+export const sendEstimateQueue = new Queue("email-estimate", {
+  connection,
+  defaultJobOptions,
+});
+
 export const sendReceiptQueue = new Queue("email-receipt", {
   connection,
   defaultJobOptions,
@@ -37,6 +42,15 @@ export interface SendReceiptJobData {
   invoiceId: number;
   message: string;
   paymentId: number;
+  subject: string;
+  workspaceId: number;
+}
+
+export interface SendEstimateJobData {
+  email: string;
+  estimateId: number;
+  message: string;
+  sequence: number;
   subject: string;
   workspaceId: number;
 }
