@@ -1,14 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workspaceService } from "../service/workspace.service";
 import type {
+  AgentLanguage,
   UpsertPaymentMethodDto,
   PaymentMethodType,
+  UpsertWorkspaceLanguageDto,
 } from "../schema/workspace.schema";
 import { toast } from "sonner";
 
 export const workspaceKeys = {
   all: ["workspace"] as const,
   paymentMethods: () => [...workspaceKeys.all, "paymentMethods"] as const,
+  language: () => [...workspaceKeys.all, "language"] as const,
 };
 
 /**
@@ -47,6 +50,44 @@ export function useUpsertPaymentMethod() {
     onError: (error: Error) => {
       toast.error("Failed to save payment settings", {
         description: error.message || "Failed to save payment settings",
+      });
+    },
+  });
+}
+
+/**
+ * Hook to fetch the workspace language
+ */
+export function useWorkspaceLanguage() {
+  return useQuery({
+    queryKey: workspaceKeys.language(),
+    queryFn: () => workspaceService.getWorkspaceLanguage(),
+    staleTime: 30 * 1000,
+  });
+}
+
+/**
+ * Hook to update the workspace language
+ */
+export function useUpsertWorkspaceLanguage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ language }: { language: AgentLanguage }) =>
+      workspaceService.updateWorkspaceLanguage({
+        language,
+      } satisfies UpsertWorkspaceLanguageDto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.language(),
+      });
+      toast.success("Language updated", {
+        description: "Your voice agent language preference has been saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to save language", {
+        description: error.message || "Failed to save language",
       });
     },
   });

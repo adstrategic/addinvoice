@@ -1,12 +1,10 @@
 import type { UseFormSetError } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  type CreateBusinessDto,
-  type UpdateBusinessDto,
   businessesService,
-  type BusinessResponse,
   type BusinessResponseList,
 } from "@/features/businesses";
+import type { CreateBusinessDTO, UpdateBusinessDTO } from "@addinvoice/schemas";
 import type { ListBusinessesParams as ListBusinessesParamsSchema } from "../schema/businesses.schema";
 import { toast } from "sonner";
 import { handleMutationError } from "@/lib/errors/handle-error";
@@ -61,12 +59,12 @@ export function useBusiness(id: number | null, enabled = true) {
  * Pass setError when used with a form so validation/field errors are set on the form.
  */
 export function useCreateBusiness(
-  setError?: UseFormSetError<CreateBusinessDto>,
+  setError?: UseFormSetError<CreateBusinessDTO>,
 ) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateBusinessDto) => businessesService.create(data),
+    mutationFn: (data: CreateBusinessDTO) => businessesService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: businessKeys.lists() });
       toast.success("Business created", {
@@ -82,12 +80,12 @@ export function useCreateBusiness(
  * Pass setError when used with a form so validation/field errors are set on the form.
  */
 export function useUpdateBusiness(
-  setError?: UseFormSetError<UpdateBusinessDto>,
+  setError?: UseFormSetError<UpdateBusinessDTO>,
 ) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateBusinessDto }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateBusinessDTO }) =>
       businessesService.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: businessKeys.lists() });

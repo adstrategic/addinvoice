@@ -4,6 +4,9 @@
  */
 
 export {
+  agentLanguageEnum,
+  type AgentLanguage,
+  type WorkspaceLanguageResponse,
   paymentMethodSchema,
   paymentMethodTypeEnum,
   upsertPaymentMethodSchema,
@@ -17,5 +20,7 @@ export { workspaceService } from "./service/workspace.service";
 export {
   useWorkspacePaymentMethods,
   useUpsertPaymentMethod,
+  useWorkspaceLanguage,
+  useUpsertWorkspaceLanguage,
   workspaceKeys,
 } from "./hooks/useWorkspace";

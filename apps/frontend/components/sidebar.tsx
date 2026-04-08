@@ -30,7 +30,7 @@ const navigation = [
   // { name: "Reminders", href: "/reminders", icon: Bell },
   { name: "Clients", href: "/clients", icon: Users },
   { name: "Catalog", href: "/catalog", icon: Package },
-  { name: "Quotes", href: "/quotes", icon: FileCheck },
+  { name: "Estimates", href: "/estimates", icon: FileCheck },
   { name: "Expenses", href: "/expenses", icon: Receipt },
   { name: "Ask Me How", href: "/ask-me-how", icon: HelpCircle },
   { name: "Configuration", href: "/configuration", icon: Settings },
@@ -42,9 +42,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   // const { logout } = useAuth();
 
   return (
-    <div className="flex h-full flex-col bg-card border-r border-border">
+    <div className="flex h-full flex-col bg-sidebar border-r border-sidebar-border">
       {/* Logo Section */}
-      <div className="flex h-16 items-center gap-3 border-b border-border px-6">
+      <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
         <Image
           src="/images/addinvoices-icon.png"
           alt="ADDINVOICES"
@@ -52,13 +52,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           height={32}
           className="h-16 w-16 -rotate-45"
         />
-        <span className="text-sm sm:text-lg font-semibold text-foreground">
+        <span className="text-sm sm:text-lg font-semibold text-sidebar-foreground">
           ADDINVOICES
         </span>
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-0.5 px-3 py-4">
         {navigation.map((item) => {
           const isActive = pathname === item.href;
           const tourId =
@@ -72,13 +72,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               onClick={onNavigate}
               data-tour-id={`sidebar-nav-${tourId}`}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                  ? "bg-sidebar-accent text-sidebar-foreground border-l-2 border-sidebar-primary"
+                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground border-l-2 border-transparent",
               )}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className="h-4 w-4 shrink-0" />
               {item.name}
             </Link>
           );
@@ -86,7 +86,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       {/* Bottom Section */}
-      <div className="border-t border-border p-4 space-y-4">
+      <div className="border-t border-sidebar-border p-4 space-y-4">
         {/* Theme Toggle */}
         {/* <Button
           variant="outline"
@@ -120,7 +120,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
         {/* Branding */}
         <div className="text-center">
-          <p className="text-xs text-muted-foreground">Powered by</p>
+          <p className="text-xs text-sidebar-foreground/50">Powered by</p>
           <Image
             src="/images/addstrategic-banner.png"
             alt="ADSTRATEGIC"
@@ -140,7 +140,7 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile Sidebar */}
-      <div className="h-16 md:hidden w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 fixed top-0 left-0 z-40 border-b border-border flex items-center px-4">
+      <div className="h-16 md:hidden w-full bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 fixed top-0 left-0 z-40 border-b border-border flex items-center px-4">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button

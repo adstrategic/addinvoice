@@ -1,15 +1,15 @@
 import { apiClient } from "@/lib/api/client";
 import { handleApiError, ApiError } from "@/lib/errors/handler";
 import type { ApiSuccessResponse } from "@/lib/api/types";
-import type {
-  CreateBusinessDto,
-  UpdateBusinessDto,
-  ListBusinessesParams,
-} from "../index";
+import { type ListBusinessesParams } from "../index";
 import {
-  businessResponseSchema,
-  businessResponseListSchema,
   type BusinessResponse,
+  type CreateBusinessDTO,
+  type UpdateBusinessDTO,
+  businessResponseSchema,
+} from "@addinvoice/schemas";
+import {
+  businessResponseListSchema,
   type BusinessResponseList,
 } from "../schema/businesses.schema";
 import { ZodError } from "zod";
@@ -29,7 +29,7 @@ const BASE_URL = "/businesses";
  * List all businesses with pagination and search
  */
 async function listBusinesses(
-  params?: ListBusinessesParams
+  params?: ListBusinessesParams,
 ): Promise<BusinessResponseList> {
   try {
     const { data } = await apiClient.get<BusinessResponseList>(BASE_URL, {
@@ -52,7 +52,7 @@ async function listBusinesses(
 async function getBusinessById(id: number): Promise<BusinessResponse> {
   try {
     const { data } = await apiClient.get<ApiSuccessResponse<BusinessResponse>>(
-      `${BASE_URL}/${id}`
+      `${BASE_URL}/${id}`,
     );
 
     return businessResponseSchema.parse(data.data);
@@ -65,12 +65,12 @@ async function getBusinessById(id: number): Promise<BusinessResponse> {
  * Create a new business
  */
 async function createBusiness(
-  dto: CreateBusinessDto
+  dto: CreateBusinessDTO,
 ): Promise<BusinessResponse> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<BusinessResponse>>(
       BASE_URL,
-      dto
+      dto,
     );
 
     return businessResponseSchema.parse(data.data);
@@ -84,7 +84,7 @@ async function createBusiness(
  */
 async function updateBusiness(
   id: number,
-  dto: UpdateBusinessDto
+  dto: UpdateBusinessDTO,
 ): Promise<BusinessResponse> {
   try {
     const { data } = await apiClient.patch<
@@ -138,7 +138,7 @@ async function uploadLogo(id: number, file: File): Promise<BusinessResponse> {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
 
     return businessResponseSchema.parse(data.data);

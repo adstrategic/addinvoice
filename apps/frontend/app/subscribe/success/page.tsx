@@ -26,11 +26,11 @@ function SubscribeSuccessContent() {
     }
   }, [sessionId, refetch]);
 
-  // Redirect to dashboard if subscription is active
+  // Redirect to onboarding if subscription is active
   useEffect(() => {
     if (subscription?.isActive) {
       const timer = setTimeout(() => {
-        router.push("/");
+        router.push("/onboarding");
       }, 3000);
 
       return () => clearTimeout(timer);
@@ -66,7 +66,7 @@ function SubscribeSuccessContent() {
         <CardContent className="text-center">
           {subscription?.isActive ? (
             <Button asChild className="w-full">
-              <Link href="/">Go to Dashboard</Link>
+              <Link href="/onboarding">Continue to Onboarding</Link>
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground">

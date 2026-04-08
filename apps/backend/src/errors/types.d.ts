@@ -3,6 +3,7 @@ export type ErrorCode =
   | "CONFLICT"
   | "ERR_NF"
   | "ERR_VALID"
+  | "GONE"
   | "INTERNAL_ERROR"
   | "SUBSCRIPTION_REQUIRED"
   | "UNAUTHORIZED";

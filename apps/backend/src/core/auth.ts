@@ -58,6 +58,7 @@ export async function verifyWorkspaceAccess(
       data: {
         clerkId: userId,
         name: "My Workspace",
+        language: "en",
       },
     });
 
