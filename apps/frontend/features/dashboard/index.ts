@@ -5,9 +5,9 @@
 
 // Types
 export type {
+  ChartSeriesPoint,
   DashboardStats,
   DashboardStatsParams,
-  MonthlyRevenue,
 } from "./types/dashboard.types";
 
 // Service

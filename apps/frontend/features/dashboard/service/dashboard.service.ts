@@ -4,24 +4,22 @@ import type { ApiSuccessResponse } from "@/lib/api/types";
 import type { DashboardStats, DashboardStatsParams } from "../types/dashboard.types";
 import { z } from "zod";
 
-/**
- * Dashboard stats response schema
- */
-const monthlyRevenueSchema = z.object({
-  month: z.string(),
+const chartSeriesPointSchema = z.object({
+  label: z.string(),
   revenue: z.number(),
 });
 
 const dashboardStatsSchema = z.object({
+  chartSeries: z.array(chartSeriesPointSchema),
   totalInvoices: z.number(),
   paidInvoices: z.number(),
   pendingInvoices: z.number(),
   overdueInvoices: z.number(),
   thisWeekInvoices: z.number(),
   thisMonthInvoices: z.number(),
+  totalOutstanding: z.number(),
   totalRevenue: z.number(),
-  monthlyRevenue: z.array(monthlyRevenueSchema),
-  recentInvoices: z.array(z.any()), // Using z.any() since InvoiceResponse is complex
+  recentInvoices: z.array(z.any()),
 });
 
 /**
@@ -42,6 +40,7 @@ async function getDashboardStats(
       {
         params: {
           businessId: params?.businessId,
+          period: params?.period,
         },
       }
     );

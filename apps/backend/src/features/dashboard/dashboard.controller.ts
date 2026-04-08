@@ -1,9 +1,11 @@
 import type { Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
-import type { dashboardStatsSchema } from "./dashboard.schemas.js";
-
 import { getWorkspaceId } from "../../core/auth.js";
+import {
+  dashboardStatsResponseSchema,
+  type dashboardStatsSchema,
+} from "./dashboard.schemas.js";
 import * as dashboardService from "./dashboard.service.js";
 
 /**
@@ -18,5 +20,6 @@ export async function getDashboardStats(
   const query = req.query;
 
   const result = await dashboardService.getDashboardStats(workspaceId, query);
-  res.json({ data: result });
+  const parsed = dashboardStatsResponseSchema.parse(result);
+  res.json({ data: parsed });
 }

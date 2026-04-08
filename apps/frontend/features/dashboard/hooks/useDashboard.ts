@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { dashboardService } from "../service/dashboard.service";
 import type { DashboardStatsParams } from "../types/dashboard.types";
 
@@ -20,6 +20,7 @@ export function useDashboardStats(params?: DashboardStatsParams) {
     queryKey: dashboardKeys.stats(params),
     queryFn: () => dashboardService.getStats(params),
     staleTime: 30 * 1000, // 30 seconds
+    placeholderData: keepPreviousData,
   });
 }
 

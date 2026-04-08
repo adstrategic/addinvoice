@@ -1,10 +1,10 @@
 import type { InvoiceResponse } from "@/features/invoices";
 
 /**
- * Monthly revenue data point
+ * Chart series point (label = day "Mar 12" or month "Jan")
  */
-export interface MonthlyRevenue {
-  month: string;
+export interface ChartSeriesPoint {
+  label: string;
   revenue: number;
 }
 
@@ -12,14 +12,15 @@ export interface MonthlyRevenue {
  * Dashboard statistics response
  */
 export interface DashboardStats {
+  chartSeries: ChartSeriesPoint[];
   totalInvoices: number;
   paidInvoices: number;
   pendingInvoices: number;
   overdueInvoices: number;
   thisWeekInvoices: number;
   thisMonthInvoices: number;
+  totalOutstanding: number;
   totalRevenue: number;
-  monthlyRevenue: MonthlyRevenue[];
   recentInvoices: InvoiceResponse[];
 }
 
@@ -28,6 +29,7 @@ export interface DashboardStats {
  */
 export interface DashboardStatsParams {
   businessId?: number;
+  period?: "7d" | "30d" | "6m" | "12m";
 }
 
 

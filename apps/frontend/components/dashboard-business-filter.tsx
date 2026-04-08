@@ -31,7 +31,7 @@ export function DashboardBusinessFilter({
   return (
     <div className="flex items-center gap-2">
       <Select value={businessId} onValueChange={onBusinessIdChange}>
-        <SelectTrigger className="w-full sm:w-[200px]">
+        <SelectTrigger className="w-full sm:w-[200px] bg-white">
           <SelectValue placeholder="Filter by Business" />
         </SelectTrigger>
         <SelectContent>
