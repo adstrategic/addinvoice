@@ -11,6 +11,14 @@ datasource db {
     provider = "postgresql"
 }
 
+enum AgentLanguage {
+    es
+    en
+    fr
+    pt
+    de
+}
+
 model Workspace {
     id      Int    @id @default(autoincrement())
     clerkId String @unique // Clerk's user ID - no need for separate User table
@@ -31,6 +39,13 @@ model Workspace {
     defaultTaxRate      Decimal? @db.Decimal(10, 2) // Default tax percentage
     invoiceFooterText   String? // Custom footer text
     invoiceColor        String? // Brand color for invoices
+
+    // Onboarding
+    onboardingCompletedAt DateTime?
+    onboardingAnswers     Json?
+
+    // Preferred language for the voice agent
+    language AgentLanguage @default(en)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -100,9 +115,10 @@ model Catalog {
     createdAt    DateTime     @default(now())
     updatedAt    DateTime     @updatedAt
 
-    workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-    business     Business      @relation(fields: [businessId], references: [id], onDelete: Restrict)
-    invoiceItems InvoiceItem[]
+    workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    business      Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+    invoiceItems  InvoiceItem[]
+    estimateItems EstimateItem[]
 
     @@unique([workspaceId, sequence])
     @@index([workspaceId])
@@ -140,6 +156,7 @@ enum PaymentMethodType {
     PAYPAL
     VENMO
     ZELLE
+    STRIPE
 }
 
 model WorkspacePaymentMethod {
@@ -150,6 +167,11 @@ model WorkspacePaymentMethod {
     isEnabled   Boolean           @default(true)
     createdAt   DateTime          @default(now())
     updatedAt   DateTime          @updatedAt
+
+    // Stripe-specific fields (encrypted at rest)
+    stripeSecretKey     String? // AES-256-GCM encrypted Stripe secret key
+    stripeWebhookSecret String? // AES-256-GCM encrypted webhook signing secret
+    stripeWebhookId     String? // Stripe webhook endpoint ID (for deregistration)
 
     workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     invoices  Invoice[]
@@ -173,8 +195,8 @@ model Invoice {
     sequence                Int
     invoiceNumber           String
     status                  InvoiceStatus @default(DRAFT)
-    issueDate               DateTime
-    dueDate                 DateTime
+    issueDate               DateTime      @db.Date
+    dueDate                 DateTime      @db.Date
     purchaseOrder           String? // Optional purchase order number
     customHeader            String? // Optional custom header with work details
     currency                String        @default("USD")
@@ -203,8 +225,10 @@ model Invoice {
     client                Client                  @relation(fields: [clientId], references: [id], onDelete: Restrict)
     business              Business                @relation(fields: [businessId], references: [id], onDelete: Restrict)
     selectedPaymentMethod WorkspacePaymentMethod? @relation(fields: [selectedPaymentMethodId], references: [id], onDelete: SetNull)
-    items                 InvoiceItem[]
-    payments              Payment[]
+    estimate              Estimate?
+
+    items    InvoiceItem[]
+    payments Payment[]
 
     @@unique([workspaceId, businessId, invoiceNumber])
     @@unique([workspaceId, sequence])
@@ -265,59 +289,118 @@ enum EstimateStatus {
     SENT
     ACCEPTED
     REJECTED
-    EXPIRED
+    INVOICED
+}
+
+enum AcceptedBy {
+    CLIENT
+    END_CUSTOMER
+}
+
+enum EstimateAttachmentFileType {
+    IMAGE
+    PDF
 }
 
 model Estimate {
     id          Int @id @default(autoincrement())
     workspaceId Int
+    clientId    Int
     businessId  Int
 
-    clientId       Int
-    estimateNumber String
-    status         EstimateStatus @default(DRAFT)
-    issueDate      DateTime
-    expirationDate DateTime?
-    currency       String         @default("USD")
-    subtotal       Decimal        @default(0) @db.Decimal(10, 2)
-    totalTax       Decimal        @default(0) @db.Decimal(10, 2)
-    discount       Decimal        @default(0) @db.Decimal(10, 2)
-    discountType   String? // "percentage" or "fixed"
-    total          Decimal        @default(0) @db.Decimal(10, 2)
-    notes          String?
-    terms          String?
-    sentAt         DateTime?
-    acceptedAt     DateTime?
-    createdAt      DateTime       @default(now())
-    updatedAt      DateTime       @updatedAt
+    // Client Information
+    clientEmail   String
+    clientPhone   String?
+    clientAddress String?
 
-    workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-    client    Client         @relation(fields: [clientId], references: [id], onDelete: Restrict)
-    items     EstimateItem[]
+    summary           String?
+    timelineStartDate DateTime? @db.Date
+    timelineEndDate   DateTime? @db.Date
+
+    sequence              Int
+    estimateNumber        String
+    purchaseOrder         String?
+    status                EstimateStatus @default(DRAFT)
+    currency              String         @default("USD")
+    subtotal              Decimal        @default(0) @db.Decimal(10, 2)
+    totalTax              Decimal        @default(0) @db.Decimal(10, 2)
+    discount              Decimal        @default(0) @db.Decimal(10, 2)
+    discountType          DiscountType   @default(NONE)
+    taxMode               TaxMode        @default(NONE)
+    taxName               String?
+    taxPercentage         Decimal?       @db.Decimal(10, 2)
+    total                 Decimal        @default(0) @db.Decimal(10, 2)
+    notes                 String?
+    terms                 String?
+    requireSignature      Boolean        @default(false)
+    rejectionReason       String?
+    sentAt                DateTime?
+    acceptedAt            DateTime?
+    acceptedBy            AcceptedBy?
+    signingToken          String?        @unique // UUID for public accept link
+    signingTokenExpiresAt DateTime?
+    signatureData         Json? // fullName, IP, timestamp, optional signature image URL
+    convertedToInvoiceId  Int?           @unique
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    workspace          Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    client             Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
+    business           Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
+    items              EstimateItem[]
+    attachments        EstimateAttachment[]
+    convertedToInvoice Invoice?             @relation(fields: [convertedToInvoiceId], references: [id], onDelete: SetNull)
 
     @@unique([workspaceId, businessId, estimateNumber])
+    @@unique([workspaceId, sequence])
     @@index([workspaceId])
     @@index([clientId])
     @@index([status])
     @@index([createdAt])
+    @@index([signingToken])
     @@map("estimates")
 }
 
 model EstimateItem {
-    id          Int      @id @default(autoincrement())
-    estimateId  Int
-    description String
-    quantity    Decimal  @default(1)
-    unitPrice   Decimal  @db.Decimal(10, 2)
-    tax         Decimal  @default(0) @db.Decimal(10, 2) // Tax percentage
-    total       Decimal  @default(0) @db.Decimal(10, 2)
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+    id           Int          @id @default(autoincrement())
+    estimateId   Int
+    name         String
+    description  String
+    quantity     Decimal      @default(1)
+    quantityUnit QuantityUnit @default(UNITS)
+    unitPrice    Decimal      @db.Decimal(10, 2)
+    discount     Decimal      @default(0) @db.Decimal(10, 2)
+    discountType DiscountType @default(NONE)
+    tax          Decimal      @default(0) @db.Decimal(10, 2)
+    vatEnabled   Boolean      @default(false)
+    total        Decimal      @default(0) @db.Decimal(10, 2)
+    catalogId    Int?
+    createdAt    DateTime     @default(now())
+    updatedAt    DateTime     @updatedAt
+
+    estimate Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+    catalog  Catalog? @relation(fields: [catalogId], references: [id], onDelete: SetNull)
+
+    @@index([estimateId])
+    @@index([catalogId])
+    @@map("estimate_items")
+}
+
+model EstimateAttachment {
+    id         Int                        @id @default(autoincrement())
+    estimateId Int
+    url        String // Cloudinary URL
+    fileName   String
+    fileType   EstimateAttachmentFileType
+    sequence   Int
+    createdAt  DateTime                   @default(now())
+    updatedAt  DateTime                   @updatedAt
 
     estimate Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
 
     @@index([estimateId])
-    @@map("estimate_items")
+    @@map("estimate_attachments")
 }
 
 model Business {
@@ -342,8 +425,9 @@ model Business {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     invoices  Invoice[]
+    estimates Estimate[]
     catalog   Catalog[]
 
     @@unique([workspaceId, sequence])
@@ -395,7 +479,7 @@ model Expense {
     merchantId     Int?
     workCategoryId Int?
 
-    expenseDate DateTime
+    expenseDate DateTime @db.Date
     total       Decimal  @db.Decimal(10, 2)
     tax         Decimal? @db.Decimal(10, 2)
     description String?

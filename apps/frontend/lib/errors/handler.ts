@@ -141,3 +141,18 @@ export function handleApiError(error: unknown): never {
     error,
   );
 }
+
+/**
+ * Error for public (no-auth) API calls, e.g. 409 Conflict on estimate accept.
+ * Used by publicApiClient so callers can branch on code === "CONFLICT".
+ */
+export class PublicEstimateError extends Error {
+  constructor(
+    public statusCode: number,
+    public code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "PublicEstimateError";
+  }
+}

@@ -63,9 +63,26 @@ export const getPageNumbers = (totalPages: number, currentPage: number) => {
   return pages;
 };
 
+/**
+ * Format a date-only value (stored as @db.Date) in a timezone-safe way.
+ * Interprets the underlying value in UTC so that a given calendar day
+ * renders consistently for all users regardless of local timezone.
+ */
+export function formatDateOnly(
+  date: string | Date,
+  options?: Intl.DateTimeFormatOptions,
+): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleDateString(undefined, { timeZone: "UTC", ...options });
+}
+
+export function normalizeDateFromDb(date: Date): Date {
+  return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
 // Generic helper for nullable optional fields that converts empty strings to null
 export const nullableOptional = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess(
     (val) => (val === "" || val === undefined ? null : val),
     schema.nullable(),
-  );
+  ) as unknown as z.ZodNullable<T>;

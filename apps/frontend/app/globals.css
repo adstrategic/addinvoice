@@ -4,78 +4,84 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Light mode colors - clean white background with AdStrategic aqua accents */
-  --background: oklch(0.98 0 0);
-  --foreground: oklch(0.15 0.01 240);
+  /* Light mode — reference: clean blue-gray bg, dark teal sidebar, white cards */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.14 0.02 220);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.01 240);
+  --card-foreground: oklch(0.14 0.02 220);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.01 240);
-  /* Using AdStrategic blue #007587 as primary color */
-  --primary: oklch(0.65 0.15 195);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.95 0.01 240);
-  --secondary-foreground: oklch(0.15 0.01 240);
-  --muted: oklch(0.95 0.01 240);
-  --muted-foreground: oklch(0.45 0.01 240);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.14 0.02 220);
+  /* AdStrategic teal — #00afc0 family */
+  --primary: oklch(0.64 0.13 200);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.94 0.012 210);
+  --secondary-foreground: oklch(0.14 0.02 220);
+  --muted: oklch(0.94 0.012 210);
+  --muted-foreground: oklch(0.5 0.018 220);
+  --accent: oklch(0.94 0.012 210);
+  --accent-foreground: oklch(0.14 0.02 220);
   --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.88 0.01 240);
-  --input: oklch(0.88 0.01 240);
-  --ring: oklch(0.65 0.15 195);
-  --chart-1: oklch(0.65 0.15 195);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.9 0.01 210);
+  --input: oklch(0.9 0.01 210);
+  --ring: oklch(0.64 0.13 200);
+  --chart-1: oklch(0.64 0.13 200);
   --chart-2: oklch(0.55 0.18 280);
   --chart-3: oklch(0.6 0.2 160);
   --chart-4: oklch(0.58 0.22 50);
   --chart-5: oklch(0.5 0.2 340);
-  --radius: 1rem;
-  --sidebar: oklch(0.98 0 0);
-  --sidebar-foreground: oklch(0.15 0.01 240);
-  --sidebar-primary: oklch(0.65 0.15 195);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.95 0.01 240);
-  --sidebar-accent-foreground: oklch(0.15 0.01 240);
-  --sidebar-border: oklch(0.88 0.01 240);
-  --sidebar-ring: oklch(0.65 0.15 195);
+  /* Dashboard chart: earnings = primary, expenses = destructive */
+  --chart-earnings: var(--primary);
+  --chart-expenses: var(--destructive);
+  --radius: 0.625rem;
+  /* Dark teal sidebar — matching reference image */
+  --sidebar: oklch(0.2 0.05 205);
+  --sidebar-foreground: oklch(0.95 0 0);
+  --sidebar-primary: oklch(0.64 0.13 200);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.28 0.06 205);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(0.28 0.04 205);
+  --sidebar-ring: oklch(0.64 0.13 200);
 }
 
 .dark {
-  /* Enhanced dark mode colors with better contrast and AdStrategic branding */
-  --background: oklch(0.08 0.01 240);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.12 0.01 240);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.12 0.01 240);
-  --popover-foreground: oklch(0.98 0 0);
-  /* Brighter AdStrategic blue for better dark mode visibility */
-  --primary: oklch(0.75 0.12 195);
-  --primary-foreground: oklch(0.08 0.01 240);
-  --secondary: oklch(0.15 0.02 220);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.18 0.01 240);
-  --muted-foreground: oklch(0.65 0.01 240);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Dark mode — darker bg, same dark teal sidebar */
+  --background: oklch(0.1 0.015 215);
+  --foreground: oklch(0.95 0 0);
+  --card: oklch(0.16 0.03 215 / 0.5);
+  --card-foreground: oklch(0.95 0 0);
+  --popover: oklch(0.14 0.02 215);
+  --popover-foreground: oklch(0.95 0 0);
+  --primary: oklch(0.7 0.12 200);
+  --primary-foreground: oklch(0.1 0.015 215);
+  --secondary: oklch(0.18 0.02 215);
+  --secondary-foreground: oklch(0.95 0 0);
+  --muted: oklch(0.18 0.02 215);
+  --muted-foreground: oklch(0.6 0.015 220);
+  --accent: oklch(0.18 0.02 215);
+  --accent-foreground: oklch(0.95 0 0);
   --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.22 0.01 240);
-  --input: oklch(0.22 0.01 240);
-  --ring: oklch(0.75 0.12 195);
-  --chart-1: oklch(0.75 0.12 195);
+  --destructive-foreground: oklch(0.95 0 0);
+  --border: oklch(0.24 0.02 215);
+  --input: oklch(0.24 0.02 215);
+  --ring: oklch(0.7 0.12 200);
+  --chart-1: oklch(0.7 0.12 200);
   --chart-2: oklch(0.65 0.15 280);
   --chart-3: oklch(0.7 0.18 160);
   --chart-4: oklch(0.68 0.2 50);
   --chart-5: oklch(0.6 0.18 340);
-  --sidebar: oklch(0.1 0.01 240);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.75 0.12 195);
-  --sidebar-primary-foreground: oklch(0.08 0.01 240);
-  --sidebar-accent: oklch(0.15 0.02 220);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.22 0.01 240);
-  --sidebar-ring: oklch(0.75 0.12 195);
+  --chart-earnings: var(--primary);
+  --chart-expenses: var(--destructive);
+  /* Sidebar stays dark teal in dark mode too */
+  --sidebar: oklch(0.15 0.04 205);
+  --sidebar-foreground: oklch(0.95 0 0);
+  --sidebar-primary: oklch(0.7 0.12 200);
+  --sidebar-primary-foreground: oklch(0.1 0.015 215);
+  --sidebar-accent: oklch(0.22 0.05 205);
+  --sidebar-accent-foreground: oklch(0.95 0 0);
+  --sidebar-border: oklch(0.22 0.04 205);
+  --sidebar-ring: oklch(0.7 0.12 200);
 }
 
 @theme inline {
@@ -134,29 +140,29 @@
       color 0.3s ease-in-out;
   }
 
-  /* Custom scrollbar styling for better UX */
+  /* Custom scrollbar styling */
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
-    border-radius: 5px;
+    background: var(--muted);
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--primary) / 0.5);
-    border-radius: 5px;
+    background: color-mix(in oklch, var(--primary) 40%, transparent);
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary) / 0.7);
+    background: color-mix(in oklch, var(--primary) 65%, transparent);
   }
 
   /* Smooth focus rings for accessibility */
   *:focus-visible {
-    outline: 2px solid hsl(var(--ring));
+    outline: 2px solid var(--ring);
     outline-offset: 2px;
     transition: outline-offset 0.2s ease;
   }
