@@ -179,7 +179,7 @@ export const createInvoiceSchema = baseInvoiceSchema
       return true;
     },
     {
-      message: "Client ID is required when not creating a new client",
+      message: "Client must be selected",
       path: ["clientId"],
     },
   )

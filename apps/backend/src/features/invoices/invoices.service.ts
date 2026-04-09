@@ -874,9 +874,7 @@ export async function createInvoice(
     } else {
       // Use existing client
       if (!data.clientId) {
-        throw new EntityValidationError(
-          "Client ID is required when not creating a new client",
-        );
+        throw new EntityValidationError("Client must be selected");
       }
 
       const existingClient = await tx.client.findUnique({
