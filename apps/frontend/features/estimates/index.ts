@@ -28,6 +28,7 @@ export type {
 export {
   useEstimates,
   useEstimateBySequence,
+  useEstimatePdfBytes,
   useCreateEstimate,
   useUpdateEstimate,
   useMarkEstimateAsAccepted,

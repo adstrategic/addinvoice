@@ -1,4 +1,5 @@
 import type { UseFormSetError } from "react-hook-form";
+import { useAuth } from "@clerk/nextjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   type ListEstimatesParams,
@@ -21,6 +22,7 @@ export const estimateKeys = {
   detail: (id: number) => [...estimateKeys.details(), id] as const,
   nextNumber: (businessId: number | null) =>
     [...estimateKeys.all, "next-number", businessId] as const,
+  pdf: (sequence: number) => [...estimateKeys.detail(sequence), "pdf"] as const,
 };
 
 /**
@@ -49,6 +51,39 @@ export function useEstimateBySequence(
     enabled: enabled && sequence !== null,
     staleTime: 5 * 60 * 1000, // 5 minutes
     placeholderData: (previousData) => previousData, // Keep previous data while loading
+  });
+}
+
+/**
+ * Raw PDF bytes for inline preview (pdf.js). Authenticated fetch with deduplication via TanStack Query.
+ */
+export function useEstimatePdfBytes(
+  sequence: number | null,
+  enabled: boolean,
+) {
+  const { getToken } = useAuth();
+
+  return useQuery({
+    queryKey: estimateKeys.pdf(sequence!),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/estimates/${sequence}/pdf`;
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load PDF preview");
+      }
+
+      const buffer = await response.arrayBuffer();
+      return new Uint8Array(buffer);
+    },
+    enabled: enabled && sequence !== null,
+    staleTime: 60 * 1000,
+    retry: 1,
   });
 }
 
@@ -108,6 +143,9 @@ export function useUpdateEstimate(
       queryClient.invalidateQueries({ queryKey: estimateKeys.lists() });
       queryClient.invalidateQueries({
         queryKey: estimateKeys.detail(updatedEstimate.sequence),
+      });
+      queryClient.invalidateQueries({
+        queryKey: estimateKeys.pdf(updatedEstimate.sequence),
       });
       queryClient.invalidateQueries({
         queryKey: estimateKeys.nextNumber(updatedEstimate.business.id),

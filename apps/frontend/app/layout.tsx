@@ -1,5 +1,5 @@
 import type React from "react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
@@ -61,6 +61,13 @@ export const metadata: Metadata = {
       "Streamline your billing with ADDINVOICES. Create professional invoices and get paid faster.",
     images: ["/addinvoices_seo_app.png"],
   },
+};
+
+/** Allows pinch-to-zoom on mobile (e.g. PDF preview, accessibility). */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
