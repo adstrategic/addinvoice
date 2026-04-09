@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -14,6 +15,10 @@ import {
   CreditCard,
   Receipt,
 } from "lucide-react";
+import {
+  type PaymentMethodType,
+  useWorkspacePaymentMethods,
+} from "@/features/workspace";
 import type { BusinessResponse } from "@addinvoice/schemas";
 import { SendEstimateDialog } from "@/components/send-estimate-dialog";
 import type {
@@ -28,13 +33,6 @@ import { DiscountsVATSection } from "./form-fields/DiscountsVATSection";
 import { NotesSection } from "./form-fields/NotesSection";
 import { TermsSection } from "./form-fields/TermsSection";
 import { ProductsSection } from "./form-fields/ProductsSection";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Form } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -44,7 +42,6 @@ import LoadingComponent from "@/components/loading-component";
 import { toast } from "sonner";
 import type { EstimateMutationCallbacks } from "../hooks/useEstimateActions";
 import { useDownloadEstimatePdf } from "../hooks/useDownloadEstimatePDF";
-import { ConvertEstimateToInvoiceModal } from "../components/ConvertEstimateToInvoiceModal";
 
 interface EstimateFormProps {
   selectedBusiness: BusinessResponse;
@@ -67,7 +64,7 @@ interface EstimateFormProps {
   /** When provided (edit mode), convert accepted estimate to invoice. */
   onConvertToInvoice?: (estimate: {
     sequence: number;
-    selectedPaymentMethodId: number | null;
+    selectedPaymentMethodId?: number | null;
   }) => void;
   isConvertingToInvoice?: boolean;
 }
@@ -93,9 +90,11 @@ export function EstimateForm({
   const router = useRouter();
   const isDirty = form.formState.isDirty;
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
-  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isSavingBeforeSend, setIsSavingBeforeSend] = useState(false);
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
+    number | null
+  >(null);
 
   const handleSendClick = async () => {
     if (saveBeforeSend && isDirty) {
@@ -135,8 +134,34 @@ export function EstimateForm({
     taxName: form.watch("taxName") || null,
     taxPercentage: form.watch("taxPercentage") || null,
   };
+  const { data: paymentMethods } = useWorkspacePaymentMethods();
+  const enabledPaymentMethods =
+    paymentMethods?.filter((method) => method.isEnabled) ?? [];
+  const paymentMethodLabels: Record<
+    PaymentMethodType,
+    { name: string; icon: "paypal" | "venmo" | "zelle" | "stripe" }
+  > = {
+    PAYPAL: { name: "PayPal", icon: "paypal" },
+    VENMO: { name: "Venmo", icon: "venmo" },
+    ZELLE: { name: "Zelle", icon: "zelle" },
+    STRIPE: { name: "Stripe", icon: "stripe" },
+  };
 
   const hasItems = (existingEstimate?.items?.length ?? 0) > 0;
+
+  useEffect(() => {
+    if (!existingEstimate) {
+      setSelectedPaymentMethodId(null);
+      return;
+    }
+
+    const estimateWithPayment = existingEstimate as EstimateResponse & {
+      selectedPaymentMethodId?: number | null;
+    };
+    setSelectedPaymentMethodId(
+      estimateWithPayment.selectedPaymentMethodId ?? null,
+    );
+  }, [existingEstimate]);
 
   // Show loading state in edit mode while estimate is loading
   if (mode === "edit" && isLoadingEstimate) {
@@ -178,7 +203,7 @@ export function EstimateForm({
   }
 
   return (
-    <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 max-w-7xl">
+    <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 pb-28 max-w-7xl">
       {/* Header */}
       <div className="sm:flex items-center justify-between mb-8">
         <div className="flex mb-4 sm:mb-0 items-center gap-4">
@@ -201,130 +226,11 @@ export function EstimateForm({
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {mode === "edit" && existingEstimate ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  router.push(`/estimates/${existingEstimate.sequence}`)
-                }
-                className="gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Preview
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDownloadPDF}
-                disabled={isExporting}
-                className="gap-2"
-              >
-                {isExporting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Exporting…
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4" />
-                    Export PDF
-                  </>
-                )}
-              </Button>
-              <Button
-                type="button"
-                onClick={onSubmit}
-                disabled={form.formState.isSubmitting || isLoading || !isDirty}
-                className="gap-2"
-              >
-                {isLoading || form.formState.isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving…
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </Button>
-              <Button
-                type="button"
-                onClick={handleSendClick}
-                disabled={!hasItems || isSavingBeforeSend}
-                className="gap-2"
-                aria-label={
-                  !hasItems ? "Add at least one item to send" : "Send Estimate"
-                }
-              >
-                {isSavingBeforeSend ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving…
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4" />
-                    {!hasItems
-                      ? "Add one item"
-                      : isDirty && saveBeforeSend
-                        ? "Save and send estimate"
-                        : "Send Estimate"}
-                  </>
-                )}
-              </Button>
-              {existingEstimate.status === "ACCEPTED" && onConvertToInvoice && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setConvertDialogOpen(true)}
-                  disabled={isConvertingToInvoice}
-                  className="gap-2"
-                >
-                  {isConvertingToInvoice ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Converting…
-                    </>
-                  ) : (
-                    <>
-                      <Receipt className="h-4 w-4" />
-                      Convert to Invoice
-                    </>
-                  )}
-                </Button>
-              )}
-            </>
-          ) : (
-            <Button
-              type="button"
-              onClick={onSubmit}
-              disabled={form.formState.isSubmitting || isLoading || !isDirty}
-              className="gap-2"
-            >
-              {isLoading || form.formState.isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating Estimate…
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save Estimate
-                </>
-              )}
-            </Button>
-          )}
-        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Company Information Sidebar */}
-        <Card className="bg-card border-border lg:col-span-1">
+        <Card className="order-2 bg-card border-border lg:order-1 lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg font-bold text-foreground">
               Company Information
@@ -403,7 +309,7 @@ export function EstimateForm({
         </Card>
 
         <div
-          className={`space-y-6 lg:col-span-2 ${
+          className={`order-1 space-y-6 lg:order-2 lg:col-span-2 ${
             isLoading ? "pointer-events-none opacity-60" : ""
           }`}
           aria-disabled={isLoading}
@@ -417,7 +323,9 @@ export function EstimateForm({
               <ClientSection
                 form={form}
                 estimate={existingEstimate || null}
-                initialClient={createdClient ?? existingEstimate?.client ?? null}
+                initialClient={
+                  createdClient ?? existingEstimate?.client ?? null
+                }
                 mode={mode}
               />
             </form>
@@ -425,48 +333,14 @@ export function EstimateForm({
 
           {/* Create mode: blur overlay over items and other sections until estimate is created */}
           {mode === "create" ? (
-            <div className="relative">
-              <div
-                className="pointer-events-none select-none space-y-6 opacity-60 blur-[2px]"
-                aria-hidden
-              >
-                <ProductsSection
-                  estimateId={null}
-                  items={[]}
-                  taxData={taxData}
-                  mode={mode}
-                  form={form}
-                  existingEstimate={null}
-                  estimateTotals={null}
-                />
-                <Form {...form}>
-                  <form
-                    onSubmit={(e) => e.preventDefault()}
-                    className="space-y-6"
-                  >
-                    <DiscountsVATSection form={form} />
-                    <Card className="bg-card border-border">
-                      <CardHeader>
-                        <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-                          <CreditCard className="h-5 w-5" />
-                          Payment Method
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          Optional. Choose how the client can pay this estimate.
-                        </p>
-                      </CardHeader>
-                    </Card>
-                    <NotesSection form={form} />
-                    <TermsSection form={form} />
-                  </form>
-                </Form>
-              </div>
-              <div
-                className="absolute inset-0 flex items-center justify-center rounded-lg border border-border bg-background/80 backdrop-blur-sm"
-                aria-live="polite"
-              >
-                <p className="text-center text-sm text-muted-foreground max-w-xs px-4">
-                  Create the estimate first to add items and edit other details.
+            <div
+              className="rounded-lg border border-border bg-background/80 p-8 text-center backdrop-blur-sm"
+              aria-live="polite"
+            >
+              <div className="mx-auto max-w-md rounded-md border border-border/60 bg-card/70 px-4 py-3">
+                <p className="text-sm text-muted-foreground">
+                  Items, discounts, payment method, notes, and terms are enabled
+                  after you create this estimate.
                 </p>
               </div>
             </div>
@@ -519,86 +393,79 @@ export function EstimateForm({
                         Optional. Choose how the client can pay this estimate.
                       </p>
                     </CardHeader>
-                    {/* <CardContent className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div
-                      className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${form.watch("selectedPaymentMethodId") == null ? "border-primary bg-secondary/50" : "border-border"}`}
-                      onClick={() =>
-                        form.setValue("selectedPaymentMethodId", null, {
-                          shouldDirty: true,
-                        })
-                      }
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                          <CreditCard className="h-4 w-4 text-foreground" />
-                        </div>
-                        <span className="font-medium text-foreground">
-                          None
-                        </span>
-                      </div>
-                    </div>
-                    {enabledPaymentMethods.map((method) => {
-                      const labels: Record<
-                        string,
-                        { name: string; icon: "paypal" | "venmo" | "zelle" }
-                      > = {
-                        PAYPAL: { name: "PayPal", icon: "paypal" },
-                        VENMO: { name: "Venmo", icon: "venmo" },
-                        ZELLE: { name: "Zelle", icon: "zelle" },
-                      };
-                      const label = labels[method.type];
-                      const isSelected =
-                        form.watch("selectedPaymentMethodId") === method.id;
-                      return (
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
                         <div
-                          key={method.id}
-                          className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${isSelected ? "border-primary bg-secondary/50" : "border-border"}`}
-                          onClick={() =>
-                            form.setValue(
-                              "selectedPaymentMethodId",
-                              method.id,
-                              { shouldDirty: true },
-                            )
-                          }
+                          className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${selectedPaymentMethodId == null ? "border-primary bg-secondary/50" : "border-border"}`}
+                          onClick={() => setSelectedPaymentMethodId(null)}
                         >
                           <div className="flex items-center gap-3">
-                            {label?.icon === "paypal" && (
-                              <Image
-                                src="/images/PayPal-icon.png"
-                                alt="PayPal"
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 object-contain"
-                              />
-                            )}
-                            {label?.icon === "venmo" && (
-                              <Image
-                                src="/images/venmo-icon.png"
-                                alt="PayPal"
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 object-contain"
-                              />
-                            )}
-                            {label?.icon === "zelle" && (
-                              <Image
-                                src="/images/zelle-icon.png"
-                                alt="Zelle"
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 object-contain"
-                              />
-                            )}
+                            <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                              <CreditCard className="h-4 w-4 text-foreground" />
+                            </div>
                             <span className="font-medium text-foreground">
-                              {label?.name ?? method.type}
+                              Manual
                             </span>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </CardContent> */}
+                        {enabledPaymentMethods.map((method) => {
+                          const label = paymentMethodLabels[method.type];
+                          const isSelected =
+                            selectedPaymentMethodId === method.id;
+                          return (
+                            <div
+                              key={method.id}
+                              className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${isSelected ? "border-primary bg-secondary/50" : "border-border"}`}
+                              onClick={() =>
+                                setSelectedPaymentMethodId(method.id)
+                              }
+                            >
+                              <div className="flex items-center gap-3">
+                                {label?.icon === "paypal" && (
+                                  <Image
+                                    src="/images/PayPal-icon.png"
+                                    alt="PayPal"
+                                    width={32}
+                                    height={32}
+                                    className="h-8 w-8 object-contain"
+                                  />
+                                )}
+                                {label?.icon === "venmo" && (
+                                  <Image
+                                    src="/images/venmo-icon.png"
+                                    alt="Venmo"
+                                    width={32}
+                                    height={32}
+                                    className="h-8 w-8 object-contain"
+                                  />
+                                )}
+                                {label?.icon === "zelle" && (
+                                  <Image
+                                    src="/images/zelle-icon.png"
+                                    alt="Zelle"
+                                    width={32}
+                                    height={32}
+                                    className="h-8 w-8 object-contain"
+                                  />
+                                )}
+                                {label?.icon === "stripe" && (
+                                  <Image
+                                    src="/images/stripe-icon.webp"
+                                    alt="Stripe"
+                                    width={32}
+                                    height={32}
+                                    className="h-8 w-8 object-contain"
+                                  />
+                                )}
+                                <span className="font-medium text-foreground">
+                                  {label?.name ?? method.type}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
                   </Card>
 
                   {/* Notes Section */}
@@ -613,6 +480,121 @@ export function EstimateForm({
         </div>
       </div>
 
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-backdrop-filter:bg-background/80 md:left-64">
+        <div className="mx-auto flex max-w-7xl gap-2 pb-2 overflow-x-auto">
+          {mode === "edit" && existingEstimate ? (
+            <>
+              <Button
+                type="button"
+                onClick={onSubmit}
+                disabled={form.formState.isSubmitting || isLoading || !isDirty}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                {isLoading || form.formState.isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                <span className="text-xs">Save</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSendClick}
+                disabled={!hasItems || isSavingBeforeSend}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+                aria-label={
+                  !hasItems ? "Add at least one item to send" : "Send Estimate"
+                }
+              >
+                {isSavingBeforeSend ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                <span className="text-xs">Send</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  router.push(`/estimates/${existingEstimate.sequence}`)
+                }
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                <FileText className="h-4 w-4" />
+                <span className="text-xs">Preview</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDownloadPDF}
+                disabled={isExporting}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                <span className="text-xs">Export</span>
+              </Button>
+
+              {existingEstimate.status === "ACCEPTED" && onConvertToInvoice && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    onConvertToInvoice({
+                      sequence: existingEstimate.sequence,
+                      selectedPaymentMethodId,
+                    })
+                  }
+                  disabled={isConvertingToInvoice}
+                  className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+                >
+                  {isConvertingToInvoice ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Receipt className="h-4 w-4" />
+                  )}
+                  <span className="text-xs">Convert</span>
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onSubmit}
+                disabled={form.formState.isSubmitting || isLoading || !isDirty}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                {isLoading || form.formState.isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowLeft className="h-4 w-4" />
+                )}
+                <span className="text-xs">Back</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={onSubmit}
+                disabled={form.formState.isSubmitting || isLoading || !isDirty}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                {isLoading || form.formState.isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                <span className="text-xs">Create</span>
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
       {mode === "edit" && existingEstimate && (
         <SendEstimateDialog
           open={sendDialogOpen}
@@ -621,22 +603,6 @@ export function EstimateForm({
           estimateNumber={existingEstimate.estimateNumber}
           clientName={existingEstimate.client?.name ?? "Client"}
           clientEmail={existingEstimate.clientEmail}
-        />
-      )}
-
-      {mode === "edit" && existingEstimate && onConvertToInvoice && (
-        <ConvertEstimateToInvoiceModal
-          isOpen={convertDialogOpen}
-          onOpenChange={setConvertDialogOpen}
-          estimateNumber={existingEstimate.estimateNumber}
-          isConverting={isConvertingToInvoice}
-          onConfirm={(selectedPaymentMethodId) => {
-            onConvertToInvoice({
-              sequence: existingEstimate.sequence,
-              selectedPaymentMethodId,
-            });
-            setConvertDialogOpen(false);
-          }}
         />
       )}
     </div>

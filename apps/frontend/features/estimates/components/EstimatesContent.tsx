@@ -26,7 +26,6 @@ import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useDownloadEstimatePdf } from "../hooks/useDownloadEstimatePDF";
-import { ConvertEstimateToInvoiceModal } from "./ConvertEstimateToInvoiceModal";
 
 const VALID_STATUSES = ["all", "paid", "overdue", "issued", "draft"] as const;
 
@@ -64,11 +63,6 @@ export default function EstimatesContent() {
   const [selectedEstimateForSend, setSelectedEstimateForSend] = useState<
     EstimateDashboardResponse | undefined
   >(undefined);
-  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
-  const [
-    selectedEstimateForConversion,
-    setSelectedEstimateForConversion,
-  ] = useState<EstimateDashboardResponse | null>(null);
   // Fetch estimates with pagination, search, and status (server-side)
   const {
     data: estimatesData,
@@ -105,21 +99,6 @@ export default function EstimatesContent() {
   const handleSendEstimate = (estimate: EstimateDashboardResponse) => {
     setSelectedEstimateForSend(estimate);
     setSendDialogOpen(true);
-  };
-
-  const handleConvertRequest = (estimate: EstimateDashboardResponse) => {
-    setSelectedEstimateForConversion(estimate);
-    setConvertDialogOpen(true);
-  };
-
-  const handleConvertConfirm = (selectedPaymentMethodId: number | null) => {
-    if (!selectedEstimateForConversion) return;
-    estimateActions.handleConvertToInvoice({
-      sequence: selectedEstimateForConversion.sequence,
-      selectedPaymentMethodId,
-    });
-    setConvertDialogOpen(false);
-    setSelectedEstimateForConversion(null);
   };
 
   if (isLoading) {
@@ -201,7 +180,7 @@ export default function EstimatesContent() {
           />
         </motion.div>
 
-        <EstimateStats stats={estimatesData.stats} />
+        {/* <EstimateStats stats={estimatesData.stats} /> */}
 
         <EstimateFilters
           searchTerm={searchTerm}
@@ -218,7 +197,7 @@ export default function EstimatesContent() {
           onSend={handleSendEstimate}
           onDelete={estimateDelete.openDeleteModal}
           onAccept={handleAccept}
-          onConvertToInvoice={handleConvertRequest}
+          onConvertToInvoice={estimateActions.handleConvertToInvoice}
         >
           {pagination && (
             <TablePagination
@@ -264,19 +243,6 @@ export default function EstimatesContent() {
         businesses={estimateManager.businesses}
         onSelect={estimateManager.selectBusiness}
         onOpenChange={estimateManager.setShowBusinessDialog}
-      />
-
-      <ConvertEstimateToInvoiceModal
-        isOpen={convertDialogOpen}
-        onOpenChange={(open) => {
-          setConvertDialogOpen(open);
-          if (!open) {
-            setSelectedEstimateForConversion(null);
-          }
-        }}
-        estimateNumber={selectedEstimateForConversion?.estimateNumber}
-        isConverting={estimateActions.isConvertingToInvoice}
-        onConfirm={handleConvertConfirm}
       />
     </>
   );

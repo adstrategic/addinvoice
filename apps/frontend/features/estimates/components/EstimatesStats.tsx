@@ -57,59 +57,6 @@ export function EstimateStats({ stats }: { stats: EstimateListStatsResponse }) {
           </CardContent>
         </Card>
       </motion.div>
-
-      <motion.div variants={cardVariants}>
-        <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 h-full">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
-              Paid
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold text-foreground">
-              {stats.paidCount}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      <motion.div variants={cardVariants}>
-        <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 h-full">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
-              Overdue
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-chart-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold text-foreground">
-              {stats.pendingCount}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      <motion.div variants={cardVariants}>
-        <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 h-full">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
-              Revenue
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold text-foreground">
-              {formatCurrency(stats.revenue)}
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Estimated: {formatCurrency(stats.totalEstimated)}
-              <br />
-              Outstanding: {formatCurrency(stats.outstanding)}
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
     </motion.div>
   );
 }
