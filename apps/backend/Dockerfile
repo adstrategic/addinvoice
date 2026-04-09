@@ -9,7 +9,7 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 RUN apt-get update -qq && apt-get install --no-install-recommends -y ca-certificates && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+RUN corepack enable && corepack prepare pnpm@10.30.1 --activate
 
 WORKDIR /app
 
@@ -25,7 +25,6 @@ WORKDIR /app
 
 # Install dependencies (layer only invalidated when this app's deps change)
 COPY --from=prepare /app/out/json/ .
-# COPY --from=prepare /app/out/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Build the project and its dependencies
@@ -39,7 +38,7 @@ COPY --from=prepare /app/out/full/ .
 RUN pnpm turbo build
 
 # Production bundle for backend (and worker/cron use same image, different CMD)
-RUN pnpm --filter @addinvoice/backend --prod deploy /app-prod
+RUN pnpm --filter @addinvoice/backend --prod deploy --legacy /app-prod
 
 # ---
 FROM node:${NODE_VERSION}-slim AS runner
