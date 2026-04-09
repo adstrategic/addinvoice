@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useEffect } from "react";
+import { useForm, Controller, type DefaultValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +19,6 @@ import {
   FieldLabel,
   FieldError,
   FieldGroup,
-  FieldContent,
 } from "@/components/ui/field";
 import {
   Select,
@@ -30,18 +28,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  invoiceItemCreateSchema,
-  invoiceItemUpdateSchema,
-  type InvoiceItemCreateInput,
-  type InvoiceItemUpdateInput,
-} from "../schemas/invoice.schema";
+import { invoiceItemCreateSchema, type InvoiceItemCreateInput } from "../schemas/invoice.schema";
 import {
   useCreateInvoiceItem,
   useUpdateInvoiceItem,
 } from "../hooks/useInvoiceItems";
-import type { InvoiceItemResponse } from "../schemas/invoice.schema";
+import type { InvoiceEditorItem } from "../types/editor";
 import { NumericFormat } from "react-number-format";
+
+function invoiceItemDialogDefaults(
+  editingItem: InvoiceEditorItem | null | undefined,
+): DefaultValues<InvoiceItemCreateInput> {
+  return {
+    name: editingItem?.data.name || "",
+    description: editingItem?.data.description || "",
+    quantity: editingItem?.data.quantity || 1,
+    quantityUnit: editingItem?.data.quantityUnit || "UNITS",
+    unitPrice: editingItem?.data.unitPrice || 0,
+    discount: editingItem?.data.discount || 0,
+    discountType: editingItem?.data.discountType || "NONE",
+    tax: editingItem?.data.tax || 0,
+    vatEnabled: editingItem?.data.vatEnabled || false,
+    saveToCatalog:
+      Boolean(editingItem?.data.saveToCatalog) ||
+      editingItem?.data.catalogId != null,
+  };
+}
 
 interface ProductFormDialogProps {
   open: boolean;
@@ -52,9 +64,10 @@ interface ProductFormDialogProps {
     taxName: string | null;
     taxPercentage: number | null;
   };
-  item?: InvoiceItemResponse | null;
+  item?: InvoiceEditorItem | null;
   mode?: "create" | "edit";
-  onEnsureInvoiceExists?: (data: InvoiceItemCreateInput) => Promise<number>;
+  onDraftCreate?: (data: InvoiceItemCreateInput) => void;
+  onDraftUpdate?: (uiKey: string, data: InvoiceItemCreateInput) => void;
   onSuccess: (invoiceId?: number) => void;
 }
 
@@ -65,29 +78,24 @@ export function ProductFormDialog({
   taxData,
   item,
   mode = "edit",
-  onEnsureInvoiceExists,
+  onDraftCreate,
+  onDraftUpdate,
   onSuccess,
 }: ProductFormDialogProps) {
   const createItem = useCreateInvoiceItem();
   const updateItem = useUpdateInvoiceItem();
   const isEditing = !!item;
-  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
 
   const form = useForm<InvoiceItemCreateInput>({
     resolver: zodResolver(invoiceItemCreateSchema),
-    defaultValues: {
-      name: item?.name || "",
-      description: item?.description || "",
-      quantity: item?.quantity || 1,
-      quantityUnit: item?.quantityUnit || "UNITS",
-      unitPrice: item?.unitPrice || 0,
-      discount: item?.discount || 0,
-      discountType: item?.discountType || "NONE",
-      tax: item?.tax || 0,
-      vatEnabled: item?.vatEnabled || false,
-      saveToCatalog: item?.catalogId !== null && item?.catalogId !== undefined,
-    },
+    defaultValues: invoiceItemDialogDefaults(item),
   });
+
+  useEffect(() => {
+    if (!open) return;
+    form.reset(invoiceItemDialogDefaults(item));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when opening or switching row; avoid item identity churn
+  }, [open, item?.uiKey, form]);
 
   // Handle discountType change - clear discount when switching to NONE
   const handleDiscountTypeChange = (newValue: string) => {
@@ -104,41 +112,30 @@ export function ProductFormDialog({
   };
 
   const onSubmit = async (data: InvoiceItemCreateInput) => {
-    let currentInvoiceId = invoiceId;
-
-    // Include taxMode, taxName, and taxPercentage in the data to sync with backend
-    const dataWithTaxMode = { ...data, ...taxData };
-
-    // If no invoice exists and we're in create mode, create invoice first
-    if (!currentInvoiceId && mode === "create" && onEnsureInvoiceExists) {
-      setIsCreatingInvoice(true);
-      try {
-        currentInvoiceId = await onEnsureInvoiceExists(dataWithTaxMode);
-        // Navigation will happen in ensureInvoiceExists, so we don't need to do anything else
-        return;
-      } catch (error) {
-        setIsCreatingInvoice(false);
-
-        // If validation failed, close the modal so user can see invoice form errors
-        if (error instanceof Error && error.message === "VALIDATION_FAILED") {
-          onOpenChange(false);
-          return;
-        }
-
-        // For other errors, re-throw
-        throw error;
+    if (mode === "create") {
+      if (isEditing && item && onDraftUpdate) {
+        onDraftUpdate(item.uiKey, data);
+      } else if (onDraftCreate) {
+        onDraftCreate(data);
       }
+      onSuccess(undefined);
+      return;
     }
 
-    // Validate that we have an invoice ID
+    const currentInvoiceId = invoiceId;
+    const dataWithTaxMode = { ...data, ...taxData };
+
     if (!currentInvoiceId) {
       throw new Error("Invoice ID is required to add a product");
     }
 
     if (isEditing && item) {
+      if (typeof item.persistedItemId !== "number") {
+        throw new Error("Invalid item id for persisted invoice update");
+      }
       await updateItem.mutateAsync({
         invoiceId: currentInvoiceId,
-        itemId: item.id,
+        itemId: item.persistedItemId,
         data: dataWithTaxMode,
       });
       onSuccess(currentInvoiceId);
@@ -147,7 +144,6 @@ export function ProductFormDialog({
         invoiceId: currentInvoiceId,
         data: dataWithTaxMode,
       });
-      // Pass the invoiceId back in case it was just created
       onSuccess(currentInvoiceId);
     }
   };
@@ -474,14 +470,9 @@ export function ProductFormDialog({
             </Button>
             <Button
               type="submit"
-              disabled={form.formState.isSubmitting || isCreatingInvoice}
+              disabled={form.formState.isSubmitting}
             >
-              {isCreatingInvoice ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Creating Invoice...
-                </>
-              ) : form.formState.isSubmitting ? (
+              {form.formState.isSubmitting ? (
                 "Saving..."
               ) : isEditing ? (
                 "Update Product"

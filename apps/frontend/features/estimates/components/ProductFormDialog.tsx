@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useEffect } from "react";
+import { useForm, Controller, type DefaultValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -32,13 +31,32 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   createEstimateItemSchema,
   type CreateEstimateItemDTO,
-  type EstimateItemResponse,
 } from "@addinvoice/schemas";
+import type { EstimateEditorItem } from "../types/editor";
 import {
   useCreateEstimateItem,
   useUpdateEstimateItem,
 } from "../hooks/useEstimateItems";
 import { NumericFormat } from "react-number-format";
+
+function estimateItemDialogDefaults(
+  editingItem: EstimateEditorItem | null | undefined,
+): DefaultValues<CreateEstimateItemDTO> {
+  return {
+    name: editingItem?.data.name || "",
+    description: editingItem?.data.description || "",
+    quantity: editingItem?.data.quantity || 1,
+    quantityUnit: editingItem?.data.quantityUnit || "UNITS",
+    unitPrice: editingItem?.data.unitPrice || 0,
+    discount: editingItem?.data.discount || 0,
+    discountType: editingItem?.data.discountType || "NONE",
+    tax: editingItem?.data.tax || 0,
+    vatEnabled: editingItem?.data.vatEnabled || false,
+    saveToCatalog:
+      Boolean(editingItem?.data.saveToCatalog) ||
+      editingItem?.data.catalogId != null,
+  };
+}
 
 interface ProductFormDialogProps {
   open: boolean;
@@ -49,9 +67,10 @@ interface ProductFormDialogProps {
     taxName: string | null;
     taxPercentage: number | null;
   };
-  item?: EstimateItemResponse | null;
+  item?: EstimateEditorItem | null;
   mode?: "create" | "edit";
-  onEnsureEstimateExists?: (data: CreateEstimateItemDTO) => Promise<number>;
+  onDraftCreate?: (data: CreateEstimateItemDTO) => void;
+  onDraftUpdate?: (uiKey: string, data: CreateEstimateItemDTO) => void;
   onSuccess: (estimateId?: number) => void;
 }
 
@@ -62,29 +81,24 @@ export function ProductFormDialog({
   taxData,
   item,
   mode = "edit",
-  onEnsureEstimateExists,
+  onDraftCreate,
+  onDraftUpdate,
   onSuccess,
 }: ProductFormDialogProps) {
   const createItem = useCreateEstimateItem();
   const updateItem = useUpdateEstimateItem();
   const isEditing = !!item;
-  const [isCreatingEstimate, setIsCreatingEstimate] = useState(false);
 
   const form = useForm<CreateEstimateItemDTO>({
     resolver: zodResolver(createEstimateItemSchema),
-    defaultValues: {
-      name: item?.name || "",
-      description: item?.description || "",
-      quantity: item?.quantity || 1,
-      quantityUnit: item?.quantityUnit || "UNITS",
-      unitPrice: item?.unitPrice || 0,
-      discount: item?.discount || 0,
-      discountType: item?.discountType || "NONE",
-      tax: item?.tax || 0,
-      vatEnabled: item?.vatEnabled || false,
-      saveToCatalog: item?.catalogId !== null && item?.catalogId !== undefined,
-    },
+    defaultValues: estimateItemDialogDefaults(item),
   });
+
+  useEffect(() => {
+    if (!open) return;
+    form.reset(estimateItemDialogDefaults(item));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when opening or switching row; avoid item identity churn
+  }, [open, item?.uiKey, form]);
 
   // Handle discountType change - clear discount when switching to NONE
   const handleDiscountTypeChange = (newValue: string) => {
@@ -101,31 +115,18 @@ export function ProductFormDialog({
   };
 
   const onSubmit = async (data: CreateEstimateItemDTO) => {
-    let currentEstimateId = estimateId;
-
-    // Include taxMode, taxName, and taxPercentage in the data to sync with backend
-    const dataWithTaxMode = { ...data, ...taxData };
-
-    // If no estimate exists and we're in create mode, create estimate first
-    if (!currentEstimateId && mode === "create" && onEnsureEstimateExists) {
-      setIsCreatingEstimate(true);
-      try {
-        currentEstimateId = await onEnsureEstimateExists(dataWithTaxMode);
-        // Navigation will happen in ensureEstimateExists, so we don't need to do anything else
-        return;
-      } catch (error) {
-        setIsCreatingEstimate(false);
-
-        // If validation failed, close the modal so user can see estimate form errors
-        if (error instanceof Error && error.message === "VALIDATION_FAILED") {
-          onOpenChange(false);
-          return;
-        }
-
-        // For other errors, re-throw
-        throw error;
+    if (mode === "create") {
+      if (isEditing && item && onDraftUpdate) {
+        onDraftUpdate(item.uiKey, data);
+      } else if (onDraftCreate) {
+        onDraftCreate(data);
       }
+      onSuccess(undefined);
+      return;
     }
+
+    let currentEstimateId = estimateId;
+    const dataWithTaxMode = { ...data, ...taxData };
 
     // Validate that we have an estimate ID
     if (!currentEstimateId) {
@@ -133,9 +134,12 @@ export function ProductFormDialog({
     }
 
     if (isEditing && item) {
+      if (typeof item.persistedItemId !== "number") {
+        throw new Error("Invalid item id for persisted estimate update");
+      }
       await updateItem.mutateAsync({
         estimateId: currentEstimateId,
-        itemId: item.id,
+        itemId: item.persistedItemId,
         data: dataWithTaxMode,
       });
       onSuccess(currentEstimateId);
@@ -470,14 +474,9 @@ export function ProductFormDialog({
             </Button>
             <Button
               type="submit"
-              disabled={form.formState.isSubmitting || isCreatingEstimate}
+              disabled={form.formState.isSubmitting}
             >
-              {isCreatingEstimate ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Creating Estimate...
-                </>
-              ) : form.formState.isSubmitting ? (
+              {form.formState.isSubmitting ? (
                 "Saving..."
               ) : isEditing ? (
                 "Update Product"
