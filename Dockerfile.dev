@@ -20,7 +20,7 @@ WORKDIR /app
 # ---- Dependencies stage: install all workspace deps (good cache when lockfile unchanged) ----
 FROM base AS dependencies
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc turbo.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/db/package.json ./packages/db/
 COPY packages/schemas/package.json ./packages/schemas/
 COPY packages/typescript-config/ ./packages/typescript-config/

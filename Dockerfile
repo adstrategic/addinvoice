@@ -13,12 +13,13 @@ RUN npm install -g pnpm@10.33.0
 
 WORKDIR /app
 
-# Copy root workspace files for dependency resolution (.npmrc enables pnpm v10 deploy without --legacy)
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# Copy root workspace files for dependency resolution (--legacy on deploy matches pnpm without .npmrc)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Copy package.json of each workspace member used by the agent
 COPY packages/db/package.json ./packages/db/
 COPY packages/typescript-config ./packages/typescript-config/
+COPY packages/eslint-config ./packages/eslint-config/
 COPY packages/schemas/package.json ./packages/schemas/
 COPY apps/agent/package.json ./apps/agent/
 
@@ -40,7 +41,7 @@ ARG UID=10001
 RUN adduser --disabled-password --gecos "" --home "/app" --shell "/sbin/nologin" --uid "${UID}" appuser
 
 # Deploy production bundle (includes built dist/ and resolved workspace deps)
-RUN pnpm --filter @addinvoice/agent --prod deploy /app-prod && chown -R appuser:appuser /app-prod
+RUN pnpm --filter @addinvoice/agent --prod deploy --legacy /app-prod && chown -R appuser:appuser /app-prod
 
 USER appuser
 WORKDIR /app-prod
