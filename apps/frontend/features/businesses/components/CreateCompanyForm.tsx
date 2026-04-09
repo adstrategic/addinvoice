@@ -26,6 +26,11 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
+const DEFAULT_INVOICE_NOTES =
+  "Thank you for choosing us. If you have any questions about this invoice, please contact us and reference the invoice number.";
+const DEFAULT_INVOICE_TERMS =
+  "Late payments may be subject to additional charges as permitted by applicable law.";
+
 const defaultFormValues: DefaultValues<CreateBusinessDTO> = {
   name: "",
   nit: "",
@@ -35,8 +40,8 @@ const defaultFormValues: DefaultValues<CreateBusinessDTO> = {
   defaultTaxMode: "NONE",
   defaultTaxName: null,
   defaultTaxPercentage: null,
-  defaultNotes: "",
-  defaultTerms: "",
+  defaultNotes: DEFAULT_INVOICE_NOTES,
+  defaultTerms: DEFAULT_INVOICE_TERMS,
 };
 
 function buildPayload(data: CreateBusinessDTO): CreateBusinessDTO {
@@ -426,6 +431,16 @@ export function CreateCompanyForm({
                   rows={2}
                   aria-invalid={fieldState.invalid}
                 />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => field.onChange("")}
+                  disabled={!field.value}
+                >
+                  Clear text
+                </Button>
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />
                 )}
@@ -448,6 +463,16 @@ export function CreateCompanyForm({
                   rows={2}
                   aria-invalid={fieldState.invalid}
                 />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => field.onChange("")}
+                  disabled={!field.value}
+                >
+                  Clear text
+                </Button>
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />
                 )}

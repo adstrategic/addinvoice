@@ -473,7 +473,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <Link href="/invoices/new">
+      <Link href="/invoices">
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
