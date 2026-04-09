@@ -17,10 +17,8 @@ import { useWorkspacePaymentMethods } from "@/features/workspace";
 import Image from "next/image";
 import type { BusinessResponse } from "@addinvoice/schemas";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
-import type {
-  CreateInvoiceDTO,
-  InvoiceItemCreateInput,
-} from "../schemas/invoice.schema";
+import type { CreateInvoiceDTO, InvoiceItemCreateInput } from "../schemas/invoice.schema";
+import type { InvoiceEditorItem } from "../types/editor";
 import { HeaderSection } from "./form-fields/HeaderSection";
 import { ClientSection } from "./form-fields/ClientSection";
 import { DiscountsVATSection } from "./form-fields/DiscountsVATSection";
@@ -50,9 +48,18 @@ interface InvoiceFormProps {
   isLoadingInvoice: boolean;
   invoiceError: Error | null;
   existingInvoice?: InvoiceResponse | null;
-  ensureInvoiceExists?: (data: InvoiceItemCreateInput) => Promise<number>;
   /** When provided (edit mode), save is run before opening send dialog if form is dirty. */
-  saveBeforeSend?: (callbacks?: InvoiceMutationCallbacks) => void;
+  saveBeforeSend?: (callbacks?: InvoiceMutationCallbacks) => Promise<void>;
+  saveBeforeOpenSubform?: () => Promise<void>;
+  draftItems?: InvoiceEditorItem[];
+  draftTotals?: {
+    subtotal: number;
+    totalTax: number;
+    total: number;
+  } | null;
+  onDraftCreateItem?: (data: InvoiceItemCreateInput) => void;
+  onDraftUpdateItem?: (uiKey: string, data: InvoiceItemCreateInput) => void;
+  onDraftDeleteItem?: (uiKey: string) => void;
 }
 
 export function InvoiceForm({
@@ -62,12 +69,17 @@ export function InvoiceForm({
   form,
   mode,
   existingInvoice,
-  ensureInvoiceExists,
   isLoadingNumber,
   isLoadingInvoice,
   invoiceError,
   isLoading,
   saveBeforeSend,
+  saveBeforeOpenSubform,
+  draftItems = [],
+  draftTotals = null,
+  onDraftCreateItem,
+  onDraftUpdateItem,
+  onDraftDeleteItem,
 }: InvoiceFormProps) {
   const router = useRouter();
   const isDirty = form.formState.isDirty;
@@ -94,15 +106,18 @@ export function InvoiceForm({
     }
   };
 
-  const handleSendClick = () => {
+  const handleSendClick = async () => {
     if (saveBeforeSend && isDirty) {
       setIsSavingBeforeSend(true);
-      saveBeforeSend({
-        onSuccess: () => {
-          setSendDialogOpen(true);
-          setIsSavingBeforeSend(false);
-        },
-      });
+      try {
+        await saveBeforeSend({
+          onSuccess: () => {
+            setSendDialogOpen(true);
+          },
+        });
+      } finally {
+        setIsSavingBeforeSend(false);
+      }
     } else {
       setSendDialogOpen(true);
     }
@@ -117,7 +132,7 @@ export function InvoiceForm({
   const { data: paymentMethods } = useWorkspacePaymentMethods();
   const enabledPaymentMethods =
     paymentMethods?.filter((m) => m.isEnabled) ?? [];
-  const hasItems = (existingInvoice?.items?.length ?? 0) > 0;
+  const hasItems = draftItems.length > 0;
 
   // Show loading state in edit mode while invoice is loading
   if (mode === "edit" && isLoadingInvoice) {
@@ -159,7 +174,7 @@ export function InvoiceForm({
   }
 
   return (
-    <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 max-w-7xl">
+    <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 pb-28 max-w-7xl">
       {/* Header */}
       <div className="sm:flex items-center justify-between mb-8">
         <div className="flex mb-4 sm:mb-0 items-center gap-4">
@@ -182,109 +197,11 @@ export function InvoiceForm({
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {mode === "edit" && existingInvoice ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  router.push(`/invoices/${existingInvoice.sequence}`)
-                }
-                className="gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Preview
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDownloadPDF}
-                disabled={isExporting}
-                className="gap-2"
-              >
-                {isExporting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Exporting…
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4" />
-                    Export PDF
-                  </>
-                )}
-              </Button>
-              <Button
-                type="button"
-                onClick={onSubmit}
-                disabled={form.formState.isSubmitting || isLoading || !isDirty}
-                className="gap-2"
-              >
-                {isLoading || form.formState.isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving…
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </Button>
-              <Button
-                type="button"
-                onClick={handleSendClick}
-                disabled={!hasItems || isSavingBeforeSend}
-                className="gap-2"
-                aria-label={
-                  !hasItems ? "Add at least one item to send" : "Send Invoice"
-                }
-              >
-                {isSavingBeforeSend ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving…
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4" />
-                    {!hasItems
-                      ? "Add one item"
-                      : isDirty && saveBeforeSend
-                        ? "Save and send invoice"
-                        : "Send Invoice"}
-                  </>
-                )}
-              </Button>
-            </>
-          ) : (
-            <Button
-              type="button"
-              onClick={onSubmit}
-              disabled={form.formState.isSubmitting || isLoading || !isDirty}
-              className="gap-2"
-            >
-              {isLoading || form.formState.isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating Invoice…
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save Invoice
-                </>
-              )}
-            </Button>
-          )}
-        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Company Information Sidebar */}
-        <Card className="bg-card border-border lg:col-span-1">
+        <Card className="order-2 bg-card border-border lg:order-1 lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg font-bold text-foreground">
               Company Information
@@ -363,7 +280,7 @@ export function InvoiceForm({
         </Card>
 
         <div
-          className={`space-y-6 lg:col-span-2 ${
+          className={`order-1 space-y-6 lg:order-2 lg:col-span-2 ${
             isLoading ? "pointer-events-none opacity-60" : ""
           }`}
           aria-disabled={isLoading}
@@ -383,151 +300,155 @@ export function InvoiceForm({
             </form>
           </Form>
 
-          {/* Products Section - Always visible (outside form to avoid nested forms) */}
-          <ProductsSection
-            invoiceId={existingInvoice?.id || null}
-            items={existingInvoice?.items || []}
-            taxData={taxData}
-            mode={mode}
-            form={form}
-            onEnsureInvoiceExists={ensureInvoiceExists}
-            existingInvoice={existingInvoice || null}
-            invoiceTotals={
-              existingInvoice
-                ? {
-                    subtotal: existingInvoice.subtotal,
-                    totalTax: existingInvoice.totalTax,
-                    total: existingInvoice.total,
-                    discount: existingInvoice.discount,
-                    discountType:
-                      (existingInvoice.discountType as
-                        | "NONE"
-                        | "PERCENTAGE"
-                        | "FIXED") || "NONE",
-                    taxName: existingInvoice.taxName,
-                    taxPercentage: existingInvoice.taxPercentage,
-                  }
-                : null
-            }
-          />
+          <>
+            <ProductsSection
+              invoiceId={existingInvoice?.id || null}
+              items={draftItems}
+              taxData={taxData}
+              mode={mode}
+              form={form}
+              onBeforeOpenSubform={saveBeforeOpenSubform}
+              existingInvoice={existingInvoice || null}
+              invoiceTotals={
+                existingInvoice
+                  ? {
+                      subtotal: existingInvoice.subtotal,
+                      totalTax: existingInvoice.totalTax,
+                      total: existingInvoice.total,
+                      discount: existingInvoice.discount,
+                      discountType:
+                        (existingInvoice.discountType as
+                          | "NONE"
+                          | "PERCENTAGE"
+                          | "FIXED") || "NONE",
+                      taxName: existingInvoice.taxName,
+                      taxPercentage: existingInvoice.taxPercentage,
+                    }
+                  : null
+              }
+              draftTotals={draftTotals}
+              onDraftCreateItem={onDraftCreateItem}
+              onDraftUpdateItem={onDraftUpdateItem}
+              onDraftDeleteItem={onDraftDeleteItem}
+            />
 
-          <Form {...form}>
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-              {/* Discounts & VAT Section */}
-              <DiscountsVATSection form={form} />
+            <Form {...form}>
+              <form
+                onSubmit={(e) => e.preventDefault()}
+                className="space-y-6"
+              >
+                <DiscountsVATSection form={form} />
 
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Payment Method
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Optional. Choose how the client can pay this invoice.
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div
-                      className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${form.watch("selectedPaymentMethodId") == null ? "border-primary bg-secondary/50" : "border-border"}`}
-                      onClick={() =>
-                        form.setValue("selectedPaymentMethodId", null, {
-                          shouldDirty: true,
-                        })
-                      }
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                          <CreditCard className="h-4 w-4 text-foreground" />
-                        </div>
-                        <span className="font-medium text-foreground">
-                          None
-                        </span>
-                      </div>
-                    </div>
-                    {enabledPaymentMethods.map((method) => {
-                      const labels: Record<
-                        string,
-                        {
-                          name: string;
-                          icon: "paypal" | "venmo" | "zelle" | "stripe";
-                        }
-                      > = {
-                        PAYPAL: { name: "PayPal", icon: "paypal" },
-                        VENMO: { name: "Venmo", icon: "venmo" },
-                        ZELLE: { name: "Zelle", icon: "zelle" },
-                        STRIPE: { name: "Stripe", icon: "stripe" },
-                      };
-                      const label = labels[method.type];
-                      const isSelected =
-                        form.watch("selectedPaymentMethodId") === method.id;
-                      return (
+                <Card className="bg-card border-border">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                        <CreditCard className="h-5 w-5" />
+                        Payment Method
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Optional. Choose how the client can pay this invoice.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
                         <div
-                          key={method.id}
-                          className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${isSelected ? "border-primary bg-secondary/50" : "border-border"}`}
+                          className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${form.watch("selectedPaymentMethodId") == null ? "border-primary bg-secondary/50" : "border-border"}`}
                           onClick={() =>
-                            form.setValue(
-                              "selectedPaymentMethodId",
-                              method.id,
-                              { shouldDirty: true },
-                            )
+                            form.setValue("selectedPaymentMethodId", null, {
+                              shouldDirty: true,
+                            })
                           }
                         >
                           <div className="flex items-center gap-3">
-                            {label?.icon === "paypal" && (
-                              <Image
-                                src="/images/PayPal-icon.png"
-                                alt="PayPal"
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 object-contain"
-                              />
-                            )}
-                            {label?.icon === "venmo" && (
-                              <Image
-                                src="/images/venmo-icon.png"
-                                alt="PayPal"
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 object-contain"
-                              />
-                            )}
-                            {label?.icon === "zelle" && (
-                              <Image
-                                src="/images/zelle-icon.png"
-                                alt="Zelle"
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 object-contain"
-                              />
-                            )}
-                            {label?.icon === "stripe" && (
-                              <Image
-                                src="/images/stripe-icon.webp"
-                                alt="Stripe"
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 object-contain"
-                              />
-                            )}
+                            <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                              <CreditCard className="h-4 w-4 text-foreground" />
+                            </div>
                             <span className="font-medium text-foreground">
-                              {label?.name ?? method.type}
+                              Manual
                             </span>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+                        {enabledPaymentMethods.map((method) => {
+                          const labels: Record<
+                            string,
+                            {
+                              name: string;
+                              icon: "paypal" | "venmo" | "zelle" | "stripe";
+                            }
+                          > = {
+                            PAYPAL: { name: "PayPal", icon: "paypal" },
+                            VENMO: { name: "Venmo", icon: "venmo" },
+                            ZELLE: { name: "Zelle", icon: "zelle" },
+                            STRIPE: { name: "Stripe", icon: "stripe" },
+                          };
+                          const label = labels[method.type];
+                          const isSelected =
+                            form.watch("selectedPaymentMethodId") === method.id;
+                          return (
+                            <div
+                              key={method.id}
+                              className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${isSelected ? "border-primary bg-secondary/50" : "border-border"}`}
+                              onClick={() =>
+                                form.setValue(
+                                  "selectedPaymentMethodId",
+                                  method.id,
+                                  { shouldDirty: true },
+                                )
+                              }
+                            >
+                              <div className="flex items-center gap-3">
+                                {label?.icon === "paypal" && (
+                                  <Image
+                                    src="/images/PayPal-icon.png"
+                                    alt="PayPal"
+                                    width={32}
+                                    height={32}
+                                    className="h-8 w-8 object-contain"
+                                  />
+                                )}
+                                {label?.icon === "venmo" && (
+                                  <Image
+                                    src="/images/venmo-icon.png"
+                                    alt="PayPal"
+                                    width={32}
+                                    height={32}
+                                    className="h-8 w-8 object-contain"
+                                  />
+                                )}
+                                {label?.icon === "zelle" && (
+                                  <Image
+                                    src="/images/zelle-icon.png"
+                                    alt="Zelle"
+                                    width={32}
+                                    height={32}
+                                    className="h-8 w-8 object-contain"
+                                  />
+                                )}
+                                {label?.icon === "stripe" && (
+                                  <Image
+                                    src="/images/stripe-icon.webp"
+                                    alt="Stripe"
+                                    width={32}
+                                    height={32}
+                                    className="h-8 w-8 object-contain"
+                                  />
+                                )}
+                                <span className="font-medium text-foreground">
+                                  {label?.name ?? method.type}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-              {/* Notes Section */}
-              <NotesSection form={form} />
-
-              {/* Terms Section */}
-              <TermsSection form={form} />
-            </form>
-          </Form>
+                <NotesSection form={form} />
+                <TermsSection form={form} />
+              </form>
+            </Form>
+          </>
 
           {/* Payments Section - Only visible in edit mode when invoice has items */}
           {mode === "edit" && existingInvoice && hasItems && (
@@ -537,6 +458,94 @@ export function InvoiceForm({
               payments={existingInvoice.payments || []}
               invoiceTotal={existingInvoice.total}
             />
+          )}
+        </div>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-backdrop-filter:bg-background/80 md:left-64">
+        <div className="mx-auto flex max-w-7xl gap-2 pb-2 overflow-x-auto">
+          {mode === "edit" && existingInvoice ? (
+            <>
+              <Button
+                type="button"
+                onClick={onSubmit}
+                disabled={form.formState.isSubmitting || isLoading || !isDirty}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                {isLoading || form.formState.isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                <span className="text-xs">Save</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSendClick}
+                disabled={!hasItems || isSavingBeforeSend}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+                aria-label={
+                  !hasItems ? "Add at least one item to send" : "Send Invoice"
+                }
+              >
+                {isSavingBeforeSend ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                <span className="text-xs">Send</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  router.push(`/invoices/${existingInvoice.sequence}`)
+                }
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                <FileText className="h-4 w-4" />
+                <span className="text-xs">Preview</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDownloadPDF}
+                disabled={isExporting}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                <span className="text-xs">Export</span>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="text-xs">Back</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={onSubmit}
+                disabled={form.formState.isSubmitting || isLoading || !isDirty}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                {isLoading || form.formState.isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                <span className="text-xs">Create</span>
+              </Button>
+            </>
           )}
         </div>
       </div>

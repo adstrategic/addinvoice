@@ -14,17 +14,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Edit, Package, Loader2 } from "lucide-react";
-import type { InvoiceItemResponse } from "../../schemas/invoice.schema";
+import type { CreateInvoiceDTO, InvoiceItemCreateInput } from "../../schemas/invoice.schema";
+import type { InvoiceEditorItem } from "../../types/editor";
 import type { DiscountType } from "../../types/api";
 import { ProductFormDialog } from "../../components/ProductFormDialog";
 import { CatalogSelectionModal } from "../../components/CatalogSelectionModal";
 import { useDeleteInvoiceItem } from "../../hooks/useInvoiceItems";
 import { formatCurrency } from "@/lib/utils";
 import type { UseFormReturn } from "react-hook-form";
-import type {
-  CreateInvoiceDTO,
-  InvoiceItemCreateInput,
-} from "../../schemas/invoice.schema";
 import { useQueryClient } from "@tanstack/react-query";
 import { invoiceKeys } from "../../hooks/useInvoices";
 
@@ -40,7 +37,7 @@ interface InvoiceTotals {
 
 interface ProductsSectionProps {
   invoiceId: number | null;
-  items: InvoiceItemResponse[];
+  items: InvoiceEditorItem[];
   taxData: {
     taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
     taxName: string | null;
@@ -48,10 +45,17 @@ interface ProductsSectionProps {
   };
   mode: "create" | "edit";
   form: UseFormReturn<CreateInvoiceDTO>;
-  onEnsureInvoiceExists?: (data: InvoiceItemCreateInput) => Promise<number>;
-  // Invoice-level totals from DB (when invoice exists)
+  onBeforeOpenSubform?: () => Promise<void>;
   invoiceTotals?: InvoiceTotals | null;
-  existingInvoice?: { business: { id: number } } | null; // For getting businessId in edit mode
+  existingInvoice?: { business: { id: number } } | null;
+  draftTotals?: {
+    subtotal: number;
+    totalTax: number;
+    total: number;
+  } | null;
+  onDraftDeleteItem?: (uiKey: string) => void;
+  onDraftCreateItem?: (data: InvoiceItemCreateInput) => void;
+  onDraftUpdateItem?: (uiKey: string, data: InvoiceItemCreateInput) => void;
 }
 
 export function ProductsSection({
@@ -60,61 +64,62 @@ export function ProductsSection({
   taxData,
   mode,
   form,
-  onEnsureInvoiceExists,
+  onBeforeOpenSubform,
   invoiceTotals,
   existingInvoice,
+  draftTotals,
+  onDraftDeleteItem,
+  onDraftCreateItem,
+  onDraftUpdateItem,
 }: ProductsSectionProps) {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
-  const [editingItem, setEditingItem] = useState<InvoiceItemResponse | null>(
+  const [editingItem, setEditingItem] = useState<InvoiceEditorItem | null>(
     null,
   );
 
   const deleteItem = useDeleteInvoiceItem();
   const queryClient = useQueryClient();
 
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
     setEditingItem(null);
 
-    // If in create mode, validate that client is selected
-    if (mode === "create" && !invoiceId) {
-      const clientId = form.getValues().clientId;
-      if (!clientId || clientId === 0) {
-        // Set error on form
-        form.setError("clientId", {
-          type: "manual",
-          message: "Please select a client first",
-        });
-        // Scroll to client section
-        const clientField = document.querySelector('[name="clientId"]');
-        if (clientField) {
-          clientField.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
+    if (onBeforeOpenSubform) {
+      try {
+        await onBeforeOpenSubform();
+      } catch {
         return;
       }
-
-      // Clear any previous errors
-      form.clearErrors("clientId");
     }
 
-    // Open dialog - invoice will be created when product is saved
     setShowProductDialog(true);
   };
 
-  const handleEditProduct = (item: InvoiceItemResponse) => {
-    if (!invoiceId) {
+  const handleEditProduct = async (item: InvoiceEditorItem) => {
+    if (mode === "edit" && (!invoiceId || !item.persistedItemId)) {
       console.error("Cannot edit product: no invoice ID");
       return;
+    }
+    if (onBeforeOpenSubform) {
+      try {
+        await onBeforeOpenSubform();
+      } catch {
+        return;
+      }
     }
     setEditingItem(item);
     setShowProductDialog(true);
   };
 
-  const handleDeleteProduct = (itemId: number) => {
-    if (!invoiceId) return;
-    setDeleteItemId(itemId);
+  const handleDeleteProduct = (item: InvoiceEditorItem) => {
+    if (mode === "create" && onDraftDeleteItem) {
+      onDraftDeleteItem(item.uiKey);
+      return;
+    }
+    if (!invoiceId || !item.persistedItemId) return;
+    setDeleteItemId(item.persistedItemId);
     setDeleteDialogOpen(true);
   };
 
@@ -135,18 +140,23 @@ export function ProductsSection({
 
   const isDeleting = deleteItem.isPending;
 
-  const handleAddFromCatalog = () => {
-    // Get businessId from existing invoice or form
+  const handleAddFromCatalog = async () => {
+    if (onBeforeOpenSubform) {
+      try {
+        await onBeforeOpenSubform();
+      } catch {
+        return;
+      }
+    }
+
     const businessId =
       existingInvoice?.business?.id || form.getValues("businessId") || null;
 
     if (!businessId) {
-      // Set error on form
       form.setError("businessId", {
         type: "manual",
         message: "Please select a business first",
       });
-      // Scroll to business section if it exists
       const businessField = document.querySelector('[name="businessId"]');
       if (businessField) {
         businessField.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -154,12 +164,10 @@ export function ProductsSection({
       return;
     }
 
-    // Clear any previous errors
     form.clearErrors("businessId");
     setShowCatalogModal(true);
   };
 
-  // Get businessId for catalog modal (from existing invoice or form)
   const getBusinessId = () => {
     return (
       existingInvoice?.business?.id || form.getValues("businessId") || null
@@ -167,36 +175,52 @@ export function ProductsSection({
   };
 
   const handleCatalogSuccess = () => {
-    // Invalidate invoice queries to refresh the data
+    if (mode === "create") return;
     queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
     queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
   };
 
-  // Calculate items subtotal (before invoice discount and before tax)
-  // This is the sum of all items after item-level discounts, without tax
+  const getItemDisplayTotal = (item: InvoiceEditorItem) => {
+    const baseAmount = item.data.quantity * item.data.unitPrice;
+    if (item.data.discountType === "PERCENTAGE") {
+      return baseAmount - (baseAmount * item.data.discount) / 100;
+    }
+    if (item.data.discountType === "FIXED") {
+      return baseAmount - item.data.discount;
+    }
+    return baseAmount;
+  };
+
   const calculateItemsSubtotal = () => {
     return items.reduce((sum, item) => {
-      let itemSubtotal = item.quantity * item.unitPrice;
+      let itemSubtotal = item.data.quantity * item.data.unitPrice;
 
-      // Apply item-level discount
-      if (item.discountType === "PERCENTAGE") {
-        itemSubtotal = itemSubtotal * (1 - item.discount / 100);
-      } else if (item.discountType === "FIXED") {
-        itemSubtotal = itemSubtotal - item.discount;
+      if (item.data.discountType === "PERCENTAGE") {
+        itemSubtotal = itemSubtotal * (1 - item.data.discount / 100);
+      } else if (item.data.discountType === "FIXED") {
+        itemSubtotal = itemSubtotal - item.data.discount;
       }
 
       return sum + itemSubtotal;
     }, 0);
   };
 
-  // Get the displayed values - use DB values if available, otherwise calculate
   const getDisplayTotals = () => {
-    if (invoiceTotals) {
-      // Use values from DB
-      // Note: invoiceTotals.subtotal is AFTER invoice discount (per backend logic)
-      // const itemsSubtotal = calculateItemsSubtotal();
+    if (mode === "create" && draftTotals) {
       return {
-        itemsSubtotal: invoiceTotals.subtotal, // Sum of items before invoice discount
+        itemsSubtotal: draftTotals.subtotal,
+        discount: form.getValues("discount") || 0,
+        discountType: form.getValues("discountType") || "NONE",
+        totalTax: draftTotals.totalTax,
+        total: draftTotals.total,
+        taxName: form.getValues("taxName") || null,
+        taxPercentage: form.getValues("taxPercentage") || null,
+      };
+    }
+
+    if (invoiceTotals) {
+      return {
+        itemsSubtotal: invoiceTotals.subtotal,
         discount: invoiceTotals.discount,
         discountType: invoiceTotals.discountType,
         totalTax: invoiceTotals.totalTax,
@@ -206,14 +230,12 @@ export function ProductsSection({
       };
     }
 
-    // Fallback: calculate locally (for create mode before invoice exists)
     const itemsSubtotal = calculateItemsSubtotal();
     const formDiscount = form.getValues("discount") || 0;
     const formDiscountType = form.getValues("discountType") || "NONE";
     const formTaxPercentage = form.getValues("taxPercentage") || null;
     const formTaxName = form.getValues("taxName") || null;
 
-    // Apply invoice-level discount (tax must be calculated after all discounts)
     let subtotalAfterDiscount = itemsSubtotal;
     if (formDiscountType === "PERCENTAGE") {
       subtotalAfterDiscount =
@@ -222,29 +244,28 @@ export function ProductsSection({
       subtotalAfterDiscount = itemsSubtotal - formDiscount;
     }
 
-    // Tax base = amount after all discounts; apply proportional discount ratio
     let totalTax = 0;
     if (itemsSubtotal > 0) {
       const ratio = subtotalAfterDiscount / itemsSubtotal;
       const itemTotals = items.map((item) => {
-        let itemSubtotal = item.quantity * item.unitPrice;
-        if (item.discountType === "PERCENTAGE") {
-          itemSubtotal = itemSubtotal * (1 - item.discount / 100);
-        } else if (item.discountType === "FIXED") {
-          itemSubtotal = itemSubtotal - item.discount;
+        let itemSubtotal = item.data.quantity * item.data.unitPrice;
+        if (item.data.discountType === "PERCENTAGE") {
+          itemSubtotal = itemSubtotal * (1 - item.data.discount / 100);
+        } else if (item.data.discountType === "FIXED") {
+          itemSubtotal = itemSubtotal - item.data.discount;
         }
         return itemSubtotal;
       });
       if (taxData.taxMode === "BY_PRODUCT") {
         totalTax = items.reduce(
           (sum, item, index) =>
-            sum + (itemTotals[index] * ratio * (item.tax || 0)) / 100,
+            sum + ((itemTotals[index] ?? 0) * ratio * (item.data.tax || 0)) / 100,
           0,
         );
       } else if (taxData.taxMode === "BY_TOTAL" && formTaxPercentage) {
         const taxableSubtotal = items.reduce(
           (sum, item, index) =>
-            item.vatEnabled ? sum + itemTotals[index] : sum,
+            item.data.vatEnabled ? sum + (itemTotals[index] ?? 0) : sum,
           0,
         );
         const taxableAfterDiscount = taxableSubtotal * ratio;
@@ -305,24 +326,25 @@ export function ProductsSection({
         <CardContent className="space-y-4">
           {items.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No products added yet. Click "Add Product" to get started.
+              No products added yet. Click &quot;Add Product&quot; to get
+              started.
             </div>
           ) : (
             <>
               <div className="space-y-3">
                 {items.map((item) => (
                   <div
-                    key={item.id}
+                    key={item.uiKey}
                     className="p-4 rounded-lg bg-secondary/50 border border-border"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 space-y-2">
                         <div>
                           <h4 className="font-semibold text-foreground">
-                            {item.name}
+                            {item.data.name}
                           </h4>
                           <p className="text-sm text-muted-foreground">
-                            {item.description}
+                            {item.data.description}
                           </p>
                         </div>
                         <div className="grid gap-2 md:grid-cols-4 text-sm">
@@ -331,7 +353,7 @@ export function ProductsSection({
                               Quantity:
                             </span>{" "}
                             <span className="font-medium">
-                              {item.quantity} {item.quantityUnit}
+                              {item.data.quantity} {item.data.quantityUnit}
                             </span>
                           </div>
                           <div>
@@ -339,27 +361,27 @@ export function ProductsSection({
                               Unit Price:
                             </span>{" "}
                             <span className="font-medium">
-                              {formatCurrency(item.unitPrice)}
+                              {formatCurrency(item.data.unitPrice)}
                             </span>
                           </div>
-                          {taxData.taxMode === "BY_PRODUCT" && item.tax && (
+                          {taxData.taxMode === "BY_PRODUCT" && item.data.tax ? (
                             <div>
                               <span className="text-muted-foreground">
                                 Tax:
                               </span>{" "}
-                              <span className="font-medium">{item.tax}%</span>
+                              <span className="font-medium">{item.data.tax}%</span>
                             </div>
-                          )}
-                          {item.discountType !== "NONE" &&
-                            item.discount > 0 && (
+                          ) : null}
+                          {item.data.discountType !== "NONE" &&
+                            item.data.discount > 0 && (
                               <div>
                                 <span className="text-muted-foreground">
                                   Discount:
                                 </span>{" "}
                                 <span className="font-medium">
-                                  {item.discountType === "PERCENTAGE"
-                                    ? `${item.discount}%`
-                                    : formatCurrency(item.discount)}
+                                  {item.data.discountType === "PERCENTAGE"
+                                    ? `${item.data.discount}%`
+                                    : formatCurrency(item.data.discount)}
                                 </span>
                               </div>
                             )}
@@ -367,7 +389,7 @@ export function ProductsSection({
                         <div>
                           <span className="text-muted-foreground">Total:</span>{" "}
                           <span className="font-semibold text-foreground">
-                            {formatCurrency(item.total)}
+                            {formatCurrency(getItemDisplayTotal(item))}
                           </span>
                         </div>
                       </div>
@@ -383,7 +405,7 @@ export function ProductsSection({
                         </Button>
                         <Button
                           type="button"
-                          onClick={() => handleDeleteProduct(item.id)}
+                          onClick={() => handleDeleteProduct(item)}
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
@@ -396,18 +418,14 @@ export function ProductsSection({
                 ))}
               </div>
 
-              {/* Totals */}
               <div className="pt-4 border-t border-border space-y-2">
-                {/* Items Subtotal (before invoice discount) */}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Items Subtotal:</span>
                   <span className="font-semibold text-foreground">
-                    {/* {formatCurrency(totals.itemsSubtotal)} */}
-                    {formatCurrency(invoiceTotals?.subtotal || 0)}
+                    {formatCurrency(totals.itemsSubtotal || 0)}
                   </span>
                 </div>
 
-                {/* Invoice-level Discount */}
                 {hasInvoiceDiscount && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
@@ -428,17 +446,15 @@ export function ProductsSection({
                   </div>
                 )}
 
-                {/* Tax - BY_PRODUCT mode */}
-                {invoiceTotals && invoiceTotals.totalTax > 0 && (
+                {totals.totalTax > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Total Tax:</span>
                     <span className="font-semibold text-foreground">
-                      {formatCurrency(invoiceTotals.totalTax)}
+                      {formatCurrency(totals.totalTax)}
                     </span>
                   </div>
                 )}
 
-                {/* Total */}
                 <div className="flex justify-between text-lg pt-2 border-t border-border">
                   <span className="font-bold text-foreground">Total:</span>
                   <span className="font-bold text-primary">
@@ -459,7 +475,8 @@ export function ProductsSection({
           taxData={taxData}
           item={editingItem}
           mode={mode}
-          onEnsureInvoiceExists={onEnsureInvoiceExists}
+          onDraftCreate={mode === "create" ? onDraftCreateItem : undefined}
+          onDraftUpdate={mode === "create" ? onDraftUpdateItem : undefined}
           onSuccess={() => {
             setShowProductDialog(false);
             setEditingItem(null);
@@ -476,7 +493,7 @@ export function ProductsSection({
           existingItems={items}
           taxData={taxData}
           mode={mode}
-          onEnsureInvoiceExists={onEnsureInvoiceExists}
+          onDraftCreateItem={mode === "create" ? onDraftCreateItem : undefined}
           onSuccess={handleCatalogSuccess}
         />
       )}

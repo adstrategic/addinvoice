@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { type DefaultValues, useForm } from "react-hook-form";
+import {
+  type DefaultValues,
+  useForm,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import {
@@ -28,7 +31,7 @@ import { useBusinesses } from "@/features/businesses";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateClient } from "@/features/clients";
 import { clientKeys } from "@/features/clients";
-
+import { useEstimateDraftFormState } from "./useEstimateDraftFormState";
 interface UseEstimateManagerOptions {
   onAfterSubmit?: () => void;
   mode?: "create" | "edit";
@@ -94,6 +97,7 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
       businessId: business?.id ?? 0,
       estimateNumber: "",
       createClient: false,
+      items: [],
     };
     if (!business) return base;
     return {
@@ -120,6 +124,11 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: getDefaultValues(null),
+  });
+  const draftFormState = useEstimateDraftFormState({
+    form,
+    mode,
+    existingEstimate,
   });
 
   // Add this useEffect after the form declaration
@@ -219,19 +228,6 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
     setCreatedClient(null);
   };
 
-  // Header-first: only used in edit mode when estimate already exists. In create mode, items are behind blur; do not create estimate from item flow.
-  const ensureEstimateExists = useCallback(
-    async (): Promise<number> => {
-      if (existingEstimate?.id) {
-        return existingEstimate.id;
-      }
-      throw new Error(
-        "Create the estimate first by saving the header, then add items.",
-      );
-    },
-    [existingEstimate],
-  );
-
   // Onsubmit: two-step client creation (create client first, then estimate/update).
   const onSubmit = form.handleSubmit(
     async (data) => {
@@ -246,6 +242,14 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
       const isCreatingNewClient = data.createClient === true && data.clientData;
 
       if (mode === "create") {
+        if (draftFormState.watchedItems.length === 0) {
+          form.setError("items", {
+            message: "Add at least one item before creating the estimate",
+            type: "manual",
+          });
+          return;
+        }
+
         let clientId: number;
         if (isCreatingNewClient && data.clientData) {
           try {
@@ -276,6 +280,7 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
 
         const estimatePayload = {
           ...data,
+          items: draftFormState.watchedItems,
           clientId,
           businessId: selectedBusiness.id,
         };
@@ -423,8 +428,12 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
       actions.isMutating ||
       createMutation.isPending ||
       updateMutation.isPending,
-    // Auto-create estimate
-    ensureEstimateExists,
+    draftItems: draftFormState.editorItems,
+    draftTotals: draftFormState.draftTotals,
+    addDraftItem: draftFormState.appendItem,
+    updateDraftItem: draftFormState.updateItemByUiKey,
+    removeDraftItem: draftFormState.removeItemByUiKey,
+    replaceDraftItems: draftFormState.replaceItems,
 
     // Business Selection
     selectedBusiness,

@@ -141,7 +141,12 @@ export default function InvoicesContent() {
         onSubmit={invoiceManager.onSubmit}
         onCancel={invoiceManager.close}
         existingInvoice={invoiceManager.invoice}
-        ensureInvoiceExists={invoiceManager.ensureInvoiceExists}
+        saveBeforeOpenSubform={invoiceManager.saveBeforeOpenSubform}
+        draftItems={invoiceManager.draftItems}
+        draftTotals={invoiceManager.draftTotals}
+        onDraftCreateItem={invoiceManager.addDraftItem}
+        onDraftUpdateItem={invoiceManager.updateDraftItem}
+        onDraftDeleteItem={invoiceManager.removeDraftItem}
       />
     );
   }

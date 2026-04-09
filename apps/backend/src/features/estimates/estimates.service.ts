@@ -188,14 +188,7 @@ export async function addEstimateItem(
         taxMode: effectiveTaxMode,
         taxPercentage: effectiveTaxPercentage,
       },
-      allItems.map((i) => ({
-        discount: Number(i.discount),
-        discountType: i.discountType,
-        quantity: Number(i.quantity),
-        tax: Number(i.tax),
-        unitPrice: Number(i.unitPrice),
-        vatEnabled: i.vatEnabled,
-      })),
+      toEstimateTotalsItems(allItems),
     );
 
     // Prepare final estimate update data
@@ -1065,14 +1058,7 @@ export async function deleteEstimateItem(
           ? Number(estimate.taxPercentage)
           : null,
       },
-      allItems.map((i) => ({
-        discount: Number(i.discount),
-        discountType: i.discountType,
-        quantity: Number(i.quantity),
-        tax: Number(i.tax),
-        unitPrice: Number(i.unitPrice),
-        vatEnabled: i.vatEnabled,
-      })),
+      toEstimateTotalsItems(allItems),
     );
 
     await tx.estimate.update({
@@ -1341,7 +1327,7 @@ export async function markEstimateAsSent(
     },
   });
 
-  if (!estimate || estimate.workspaceId !== workspaceId) {
+  if (estimate?.workspaceId !== workspaceId) {
     throw new EntityNotFoundError("Estimate not found");
   }
 
@@ -1593,14 +1579,7 @@ export async function updateEstimate(
         where: { estimateId: id },
       });
 
-      const itemsToUpdate = estimateItems.map((item) => ({
-        discount: Number(item.discount),
-        discountType: item.discountType,
-        quantity: Number(item.quantity),
-        tax: Number(item.tax),
-        unitPrice: Number(item.unitPrice),
-        vatEnabled: item.vatEnabled,
-      }));
+      const itemsToUpdate = toEstimateTotalsItems(estimateItems);
 
       // Recalculate totals with cleared tax data
       const totalsAfterClear = calculateEstimateTotals(
@@ -1652,14 +1631,7 @@ export async function updateEstimate(
         where: { estimateId: id },
       });
 
-      const itemsToUpdate = estimateItems.map((item) => ({
-        discount: Number(item.discount),
-        discountType: item.discountType,
-        quantity: Number(item.quantity),
-        tax: Number(item.tax),
-        unitPrice: Number(item.unitPrice),
-        vatEnabled: item.vatEnabled,
-      }));
+      const itemsToUpdate = toEstimateTotalsItems(estimateItems);
 
       const totals = calculateEstimateTotals(
         {
@@ -1949,14 +1921,7 @@ export async function updateEstimateItem(
         taxMode: effectiveTaxMode,
         taxPercentage: effectiveTaxPercentage,
       },
-      allItems.map((i) => ({
-        discount: Number(i.discount),
-        discountType: i.discountType,
-        quantity: Number(i.quantity),
-        tax: Number(i.tax),
-        unitPrice: Number(i.unitPrice),
-        vatEnabled: i.vatEnabled,
-      })),
+      toEstimateTotalsItems(allItems),
     );
 
     // Prepare final estimate update data
@@ -2081,6 +2046,33 @@ function calculateEstimateTotals(
     total,
     totalTax,
   };
+}
+
+function toEstimateTotalsItems(
+  items: {
+    discount: number | Prisma.Decimal;
+    discountType: "FIXED" | "NONE" | "PERCENTAGE";
+    quantity: number | Prisma.Decimal;
+    tax: number | Prisma.Decimal;
+    unitPrice: number | Prisma.Decimal;
+    vatEnabled: boolean;
+  }[],
+): {
+  discount: number;
+  discountType: "FIXED" | "NONE" | "PERCENTAGE";
+  quantity: number;
+  tax: number;
+  unitPrice: number;
+  vatEnabled: boolean;
+}[] {
+  return items.map((item) => ({
+    discount: Number(item.discount),
+    discountType: item.discountType,
+    quantity: Number(item.quantity),
+    tax: Number(item.tax),
+    unitPrice: Number(item.unitPrice),
+    vatEnabled: item.vatEnabled,
+  }));
 }
 
 /**

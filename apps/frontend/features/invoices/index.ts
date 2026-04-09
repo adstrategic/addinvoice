@@ -19,6 +19,7 @@ export type {
   QuantityUnit,
   DiscountType,
 } from "./types/api";
+export type { InvoiceEditorItem } from "./types/editor";
 export { mapStatusToUI, mapUIToStatus } from "./types/api";
 
 // Service

@@ -27,6 +27,7 @@ import type {
   CreateEstimateItemDTO,
   EstimateResponse,
 } from "@addinvoice/schemas";
+import type { EstimateEditorItem } from "../types/editor";
 import { HeaderSection } from "./form-fields/HeaderSection";
 import { ClientSection } from "./form-fields/ClientSection";
 import { DiscountsVATSection } from "./form-fields/DiscountsVATSection";
@@ -56,7 +57,6 @@ interface EstimateFormProps {
   existingEstimate?: EstimateResponse | null;
   /** Newly created client (e.g. from in-form create client flow). */
   createdClient?: ClientResponse | null;
-  ensureEstimateExists?: (data: CreateEstimateItemDTO) => Promise<number>;
   /** When provided (edit mode), save is run before opening send dialog if form is dirty. */
   saveBeforeSend?: (callbacks?: EstimateMutationCallbacks) => Promise<void>;
   /** When provided (edit mode), save dirty header before opening item/catalog modals. Rejects on validation or mutation failure. */
@@ -67,6 +67,15 @@ interface EstimateFormProps {
     selectedPaymentMethodId?: number | null;
   }) => void;
   isConvertingToInvoice?: boolean;
+  draftItems?: EstimateEditorItem[];
+  draftTotals?: {
+    subtotal: number;
+    totalTax: number;
+    total: number;
+  } | null;
+  onDraftCreateItem?: (data: CreateEstimateItemDTO) => void;
+  onDraftUpdateItem?: (uiKey: string, data: CreateEstimateItemDTO) => void;
+  onDraftDeleteItem?: (uiKey: string) => void;
 }
 
 export function EstimateForm({
@@ -77,7 +86,6 @@ export function EstimateForm({
   mode,
   existingEstimate,
   createdClient,
-  ensureEstimateExists,
   isLoadingNumber,
   isLoadingEstimate,
   estimateError,
@@ -86,6 +94,11 @@ export function EstimateForm({
   saveBeforeOpenSubform,
   onConvertToInvoice,
   isConvertingToInvoice,
+  draftItems = [],
+  draftTotals = null,
+  onDraftCreateItem,
+  onDraftUpdateItem,
+  onDraftDeleteItem,
 }: EstimateFormProps) {
   const router = useRouter();
   const isDirty = form.formState.isDirty;
@@ -147,7 +160,8 @@ export function EstimateForm({
     STRIPE: { name: "Stripe", icon: "stripe" },
   };
 
-  const hasItems = (existingEstimate?.items?.length ?? 0) > 0;
+  const hasItems =
+    mode === "create" ? draftItems.length > 0 : draftItems.length > 0;
 
   useEffect(() => {
     if (!existingEstimate) {
@@ -331,59 +345,45 @@ export function EstimateForm({
             </form>
           </Form>
 
-          {/* Create mode: blur overlay over items and other sections until estimate is created */}
-          {mode === "create" ? (
-            <div
-              className="rounded-lg border border-border bg-background/80 p-8 text-center backdrop-blur-sm"
-              aria-live="polite"
-            >
-              <div className="mx-auto max-w-md rounded-md border border-border/60 bg-card/70 px-4 py-3">
-                <p className="text-sm text-muted-foreground">
-                  Items, discounts, payment method, notes, and terms are enabled
-                  after you create this estimate.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Products Section - Always visible in edit (outside form to avoid nested forms) */}
-              <ProductsSection
-                estimateId={existingEstimate?.id || null}
-                items={existingEstimate?.items || []}
-                taxData={taxData}
-                mode={mode}
-                form={form}
-                onEnsureEstimateExists={ensureEstimateExists}
-                onBeforeOpenSubform={saveBeforeOpenSubform}
-                existingEstimate={existingEstimate || null}
-                estimateTotals={
-                  existingEstimate
-                    ? {
-                        subtotal: existingEstimate.subtotal,
-                        totalTax: existingEstimate.totalTax,
-                        total: existingEstimate.total,
-                        discount: existingEstimate.discount,
-                        discountType:
-                          (existingEstimate.discountType as
-                            | "NONE"
-                            | "PERCENTAGE"
-                            | "FIXED") || "NONE",
-                        taxName: existingEstimate.taxName ?? null,
-                        taxPercentage: existingEstimate.taxPercentage ?? null,
-                      }
-                    : null
-                }
-              />
+          <>
+            {/* Products Section */}
+            <ProductsSection
+              estimateId={existingEstimate?.id || null}
+              items={draftItems}
+              taxData={taxData}
+              mode={mode}
+              form={form}
+              onBeforeOpenSubform={saveBeforeOpenSubform}
+              existingEstimate={existingEstimate || null}
+              estimateTotals={
+                existingEstimate
+                  ? {
+                      subtotal: existingEstimate.subtotal,
+                      totalTax: existingEstimate.totalTax,
+                      total: existingEstimate.total,
+                      discount: existingEstimate.discount,
+                      discountType:
+                        (existingEstimate.discountType as
+                          | "NONE"
+                          | "PERCENTAGE"
+                          | "FIXED") || "NONE",
+                      taxName: existingEstimate.taxName ?? null,
+                      taxPercentage: existingEstimate.taxPercentage ?? null,
+                    }
+                  : null
+              }
+              draftTotals={draftTotals}
+              onDraftCreateItem={onDraftCreateItem}
+              onDraftUpdateItem={onDraftUpdateItem}
+              onDraftDeleteItem={onDraftDeleteItem}
+            />
 
-              <Form {...form}>
-                <form
-                  onSubmit={(e) => e.preventDefault()}
-                  className="space-y-6"
-                >
-                  {/* Discounts & VAT Section */}
-                  <DiscountsVATSection form={form} />
+            <Form {...form}>
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+                {/* Discounts & VAT Section */}
+                <DiscountsVATSection form={form} />
 
-                  <Card className="bg-card border-border">
+                <Card className="bg-card border-border">
                     <CardHeader>
                       <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
                         <CreditCard className="h-5 w-5" />
@@ -466,17 +466,16 @@ export function EstimateForm({
                         })}
                       </div>
                     </CardContent>
-                  </Card>
+                </Card>
 
-                  {/* Notes Section */}
-                  <NotesSection form={form} />
+                {/* Notes Section */}
+                <NotesSection form={form} />
 
-                  {/* Terms Section */}
-                  <TermsSection form={form} />
-                </form>
-              </Form>
-            </>
-          )}
+                {/* Terms Section */}
+                <TermsSection form={form} />
+              </form>
+            </Form>
+          </>
         </div>
       </div>
 

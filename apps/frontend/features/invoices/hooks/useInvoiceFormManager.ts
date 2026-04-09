@@ -6,10 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import {
   type CreateInvoiceDTO,
-  type InvoiceItemCreateInput,
   type UpdateInvoiceDTO,
   createInvoiceSchema,
 } from "../schemas/invoice.schema";
+import { useInvoiceDraftFormState } from "./useInvoiceDraftFormState";
+import { mapInvoiceItemsForForm } from "../lib/editor-mappers";
 import {
   useInvoiceActions,
   type InvoiceMutationCallbacks,
@@ -26,7 +27,6 @@ import { useDirtyFields } from "@/hooks/useDirtyValues";
 import { useFormScroll } from "@/hooks/useFormScroll";
 import { type BusinessResponse } from "@addinvoice/schemas";
 import { useBusinesses } from "@/features/businesses";
-import { useCreateInvoiceItem } from "./useInvoiceItems";
 import { startOfDay } from "date-fns";
 
 interface UseInvoiceManagerOptions {
@@ -77,8 +77,6 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       selectedBusiness?.id ?? null,
     );
 
-  const createItem = useCreateInvoiceItem();
-
   // === CONFIGURACIÓN DEL FORMULARIO ===
   function getDefaultValues(
     business?: BusinessResponse | null,
@@ -99,6 +97,7 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       businessId: business?.id ?? 0,
       invoiceNumber: "",
       selectedPaymentMethodId: null,
+      items: [],
     };
     if (!business) return base;
     return {
@@ -127,13 +126,19 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     defaultValues: getDefaultValues(null),
   });
 
+  const draftFormState = useInvoiceDraftFormState({
+    form,
+    mode,
+    existingInvoice,
+  });
+
   // Add this useEffect after the form declaration
   useEffect(() => {
     if (mode === "edit" && existingInvoice) {
-      console.log("existingInvoice", existingInvoice);
       form.reset({
         ...existingInvoice,
         createClient: false,
+        items: mapInvoiceItemsForForm(existingInvoice.items),
       });
     }
   }, [existingInvoice, mode, form]);
@@ -222,108 +227,6 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     return mode === "edit" ? getDirtyValues(data) : data;
   };
 
-  // === AUTO-CREATE INVOICE HANDLER ===
-  const ensureInvoiceExists = useCallback(
-    async (data: InvoiceItemCreateInput): Promise<number> => {
-      // If invoice already exists, return its id
-      if (existingInvoice?.id) {
-        return existingInvoice.id;
-      }
-
-      // Trigger form validation - this marks invalid fields with errors in the UI
-      const isValid = await form.trigger();
-      if (!isValid) {
-        // Throw specific error that ProductFormDialog can catch to close modal
-        throw new Error("VALIDATION_FAILED");
-      }
-
-      // Validate that business is selected
-      if (!selectedBusiness) {
-        throw new Error("Business is required before creating invoice");
-      }
-
-      // Get validated form values
-      const formValues = form.getValues();
-      const isCreatingNewClient = formValues.createClient === true;
-
-      // Validate client selection based on mode
-      if (isCreatingNewClient) {
-        if (!formValues.clientData) {
-          throw new Error("Client data is required when creating a new client");
-        }
-      } else {
-        if (!formValues.clientId || formValues.clientId <= 0) {
-          throw new Error("Client is required before adding products");
-        }
-      }
-
-      // Build invoice data with conditional client fields
-      const invoiceData: CreateInvoiceDTO = {
-        invoiceNumber: formValues.invoiceNumber || "",
-        issueDate: formValues.issueDate,
-        dueDate: formValues.dueDate,
-        businessId: selectedBusiness.id,
-        currency: formValues.currency || "USD",
-        discount: formValues.discount ?? 0,
-        discountType: formValues.discountType || "NONE",
-        taxMode: formValues.taxMode || "NONE",
-        taxName: formValues.taxMode === "BY_TOTAL" ? formValues.taxName : null,
-        taxPercentage:
-          formValues.taxMode === "BY_TOTAL" ? formValues.taxPercentage : null,
-        purchaseOrder: formValues.purchaseOrder,
-        customHeader: formValues.customHeader,
-        notes: formValues.notes,
-        terms: formValues.terms,
-        selectedPaymentMethodId: formValues.selectedPaymentMethodId ?? null,
-        // Conditionally include client fields based on create new client mode
-        ...(isCreatingNewClient
-          ? {
-              createClient: true,
-              clientId: formValues.clientId,
-              clientData: {
-                name: formValues.clientData!.name,
-                email: formValues.clientData!.email,
-                phone: formValues.clientData!.phone ?? null,
-                address: formValues.clientData!.address ?? null,
-                nit: formValues.clientData!.nit ?? null,
-                businessName: formValues.clientData!.businessName ?? null,
-                reminderBeforeDueIntervalDays:
-                  formValues.clientData!.reminderBeforeDueIntervalDays ?? null,
-                reminderAfterDueIntervalDays:
-                  formValues.clientData!.reminderAfterDueIntervalDays ?? null,
-              },
-            }
-          : {
-              createClient: false,
-              clientId: formValues.clientId,
-              clientEmail: formValues.clientEmail || "",
-              clientPhone: formValues.clientPhone || null,
-              clientAddress: formValues.clientAddress || null,
-            }),
-      };
-
-      // Create invoice
-      const result = await createMutation.mutateAsync(invoiceData);
-      const sequence = result.sequence;
-
-      await createItem.mutateAsync({
-        invoiceId: result.id,
-        data: data as InvoiceItemCreateInput,
-      });
-
-      router.push(`/invoices/${sequence}/edit`);
-      return result.id;
-    },
-    [
-      form,
-      existingInvoice,
-      createMutation,
-      router,
-      selectedBusiness,
-      createItem,
-    ],
-  );
-
   // Onsubmit
   const onSubmit = form.handleSubmit(
     (data) => {
@@ -335,7 +238,21 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
         return;
       }
 
+      if (mode === "create") {
+        if (draftFormState.watchedItems.length === 0) {
+          form.setError("items", {
+            message: "Add at least one item before creating the invoice",
+            type: "manual",
+          });
+          return;
+        }
+      }
+
       const apiData = processFormData(data);
+      if (mode === "edit" && apiData && typeof apiData === "object") {
+        const patch = apiData as Record<string, unknown>;
+        delete patch.items;
+      }
 
       // Check if we need to create a new client (from form data)
       const isCreatingNewClient = data.createClient === true;
@@ -366,7 +283,20 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       }
 
       if (mode === "create") {
-        (apiData as CreateInvoiceDTO).businessId = selectedBusiness.id;
+        const createPayload = {
+          ...apiData,
+          items: draftFormState.watchedItems,
+          businessId: selectedBusiness.id,
+        } as CreateInvoiceDTO;
+        actions.handleCreate(createPayload, {
+          onSuccess: (result) => {
+            if (result?.sequence != null) {
+              router.push(`/invoices/${result.sequence}/edit`);
+            }
+            options?.onAfterSubmit?.();
+          },
+        });
+        return;
       }
 
       if (mode === "edit") {
@@ -380,15 +310,6 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
 
         actions.handleUpdate(existingInvoice.id, apiData as UpdateInvoiceDTO, {
           onSuccess: () => options?.onAfterSubmit?.(),
-        });
-      } else {
-        actions.handleCreate(apiData as CreateInvoiceDTO, {
-          onSuccess: (result) => {
-            if (result?.sequence != null) {
-              router.push(`/invoices/${result.sequence}/edit`);
-            }
-            options?.onAfterSubmit?.();
-          },
         });
       }
     },
@@ -412,12 +333,45 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       const apiData = (
         mode === "edit" ? getDirtyValues(data) : data
       ) as UpdateInvoiceDTO;
-      actions.handleUpdate(existingInvoice.id, apiData, {
+      const patch = { ...apiData } as Record<string, unknown>;
+      delete patch.items;
+      actions.handleUpdate(existingInvoice.id, patch as UpdateInvoiceDTO, {
         onSuccess: () => callbacks?.onSuccess?.(),
       });
     },
     [form, mode, existingInvoice, actions, getDirtyValues],
   );
+
+  const saveBeforeOpenSubform = useCallback(async (): Promise<void> => {
+    const valid = await form.trigger();
+    if (!valid) {
+      const firstErrorField = Object.keys(form.formState.errors)[0];
+      if (firstErrorField) scrollToField(firstErrorField);
+      throw new Error("VALIDATION_FAILED");
+    }
+    if (mode !== "edit" || !existingInvoice) return;
+    const data = form.getValues();
+    const apiData = getDirtyValues(data) as UpdateInvoiceDTO;
+    const patch = { ...apiData } as Record<string, unknown>;
+    delete patch.items;
+    if (Object.keys(patch).length === 0) return;
+    try {
+      await updateMutation.mutateAsync({
+        id: existingInvoice.id,
+        data: patch as UpdateInvoiceDTO,
+      });
+    } catch (err) {
+      handleMutationError(err, form.setError);
+      throw err;
+    }
+  }, [
+    form,
+    mode,
+    existingInvoice,
+    getDirtyValues,
+    updateMutation,
+    scrollToField,
+  ]);
 
   return {
     // Modal Formulario
@@ -441,8 +395,12 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       actions.isMutating ||
       createMutation.isPending ||
       updateMutation.isPending,
-    // Auto-create invoice
-    ensureInvoiceExists,
+    draftItems: draftFormState.editorItems,
+    draftTotals: draftFormState.draftTotals,
+    addDraftItem: draftFormState.appendItem,
+    updateDraftItem: draftFormState.updateItemByUiKey,
+    removeDraftItem: draftFormState.removeItemByUiKey,
+    replaceDraftItems: draftFormState.replaceItems,
 
     // Business Selection
     selectedBusiness,
@@ -454,7 +412,8 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     handleCreateInvoice,
     hasSelectedBusiness: selectedBusiness !== null,
 
-    // Save before send
+    // Save before send / before open subform
     saveBeforeSend,
+    saveBeforeOpenSubform,
   };
 }

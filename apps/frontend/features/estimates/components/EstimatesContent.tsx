@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  EstimateStats,
   EstimateFilters,
   EstimateList,
   EstimateActions,
@@ -148,11 +147,15 @@ export default function EstimatesContent() {
         onCancel={estimateManager.close}
         existingEstimate={estimateManager.estimate}
         createdClient={estimateManager.createdClient}
-        ensureEstimateExists={estimateManager.ensureEstimateExists}
         saveBeforeSend={estimateManager.saveBeforeSend}
         saveBeforeOpenSubform={estimateManager.saveBeforeOpenSubform}
         onConvertToInvoice={estimateManager.onConvertToInvoice}
         isConvertingToInvoice={estimateManager.isConvertingToInvoice}
+        draftItems={estimateManager.draftItems}
+        draftTotals={estimateManager.draftTotals}
+        onDraftCreateItem={estimateManager.addDraftItem}
+        onDraftUpdateItem={estimateManager.updateDraftItem}
+        onDraftDeleteItem={estimateManager.removeDraftItem}
       />
     );
   }

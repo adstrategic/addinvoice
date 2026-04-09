@@ -170,10 +170,15 @@ export const baseInvoiceSchema = z.object({
   selectedPaymentMethodId: z.coerce.number().int().positive().nullish(),
 });
 
+/** Body for POST /invoices (includes line-items draft synced with backend create DTO). */
+export const createInvoiceBodySchema = baseInvoiceSchema.extend({
+  items: z.array(invoiceItemSchema).default([]),
+});
+
 /**
  * Schema for creating an invoice
  */
-export const createInvoiceSchema = baseInvoiceSchema
+export const createInvoiceSchema = createInvoiceBodySchema
   .refine(
     (data) => {
       // If createClient is true, clientData must be provided
@@ -196,7 +201,7 @@ export const createInvoiceSchema = baseInvoiceSchema
       return true;
     },
     {
-      message: "Client ID is required when not creating a new client",
+      message: "Client must be selected",
       path: ["clientId"],
     },
   )

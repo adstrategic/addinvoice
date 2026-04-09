@@ -17,8 +17,8 @@ import { Plus, Trash2, Edit, Package, Loader2 } from "lucide-react";
 import type {
   CreateEstimateDTO,
   CreateEstimateItemDTO,
-  EstimateItemResponse,
 } from "@addinvoice/schemas";
+import type { EstimateEditorItem } from "../../types/editor";
 import { ProductFormDialog } from "../../components/ProductFormDialog";
 import { CatalogSelectionModal } from "../../components/CatalogSelectionModal";
 import { useDeleteEstimateItem } from "../../hooks/useEstimateItems";
@@ -43,7 +43,7 @@ interface EstimateTotals {
 
 interface ProductsSectionProps {
   estimateId: number | null;
-  items: EstimateItemResponse[];
+  items: EstimateEditorItem[];
   taxData: {
     taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
     taxName: string | null;
@@ -51,13 +51,20 @@ interface ProductsSectionProps {
   };
   mode: "create" | "edit";
   form: UseFormReturn<CreateEstimateDTO>;
-  onEnsureEstimateExists?: (data: CreateEstimateItemDTO) => Promise<number>;
   /** When provided (edit mode), save dirty header before opening product/catalog modal. Call before opening dialogs. */
   onBeforeOpenSubform?: () => Promise<void>;
   // Invoice-level totals from DB (when estimate exists)
   estimateTotals?: EstimateTotals | null;
   existingEstimate?: { id: number; business?: { id: number } } | null;
   existingInvoice?: { business: { id: number } } | null; // For getting businessId in edit mode (legacy)
+  draftTotals?: {
+    subtotal: number;
+    totalTax: number;
+    total: number;
+  } | null;
+  onDraftDeleteItem?: (uiKey: string) => void;
+  onDraftCreateItem?: (data: CreateEstimateItemDTO) => void;
+  onDraftUpdateItem?: (uiKey: string, data: CreateEstimateItemDTO) => void;
 }
 
 export function ProductsSection({
@@ -66,17 +73,20 @@ export function ProductsSection({
   taxData,
   mode,
   form,
-  onEnsureEstimateExists,
   onBeforeOpenSubform,
   estimateTotals,
   existingEstimate,
   existingInvoice,
+  draftTotals,
+  onDraftDeleteItem,
+  onDraftCreateItem,
+  onDraftUpdateItem,
 }: ProductsSectionProps) {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
-  const [editingItem, setEditingItem] = useState<EstimateItemResponse | null>(
+  const [editingItem, setEditingItem] = useState<EstimateEditorItem | null>(
     null,
   );
 
@@ -95,16 +105,11 @@ export function ProductsSection({
       }
     }
 
-    // If in create mode without estimateId, do not open (header-first: items only in edit)
-    if (mode === "create" && !estimateId) {
-      return;
-    }
-
     setShowProductDialog(true);
   };
 
-  const handleEditProduct = async (item: EstimateItemResponse) => {
-    if (!estimateId) {
+  const handleEditProduct = async (item: EstimateEditorItem) => {
+    if (mode === "edit" && (!estimateId || !item.persistedItemId)) {
       console.error("Cannot edit product: no estimate ID");
       return;
     }
@@ -119,9 +124,13 @@ export function ProductsSection({
     setShowProductDialog(true);
   };
 
-  const handleDeleteProduct = (itemId: number) => {
-    if (!estimateId) return;
-    setDeleteItemId(itemId);
+  const handleDeleteProduct = (item: EstimateEditorItem) => {
+    if (mode === "create" && onDraftDeleteItem) {
+      onDraftDeleteItem(item.uiKey);
+      return;
+    }
+    if (!estimateId || !item.persistedItemId) return;
+    setDeleteItemId(item.persistedItemId);
     setDeleteDialogOpen(true);
   };
 
@@ -182,22 +191,34 @@ export function ProductsSection({
   };
 
   const handleCatalogSuccess = () => {
+    if (mode === "create") return;
     // Invalidate estimate queries to refresh the data
     queryClient.invalidateQueries({ queryKey: estimateKeys.details() });
     queryClient.invalidateQueries({ queryKey: estimateKeys.lists() });
+  };
+
+  const getItemDisplayTotal = (item: EstimateEditorItem) => {
+    const baseAmount = item.data.quantity * item.data.unitPrice;
+    if (item.data.discountType === "PERCENTAGE") {
+      return baseAmount - (baseAmount * item.data.discount) / 100;
+    }
+    if (item.data.discountType === "FIXED") {
+      return baseAmount - item.data.discount;
+    }
+    return baseAmount;
   };
 
   // Calculate items subtotal (before estimate discount and before tax)
   // This is the sum of all items after item-level discounts, without tax
   const calculateItemsSubtotal = () => {
     return items.reduce((sum, item) => {
-      let itemSubtotal = item.quantity * item.unitPrice;
+      let itemSubtotal = item.data.quantity * item.data.unitPrice;
 
       // Apply item-level discount
-      if (item.discountType === "PERCENTAGE") {
-        itemSubtotal = itemSubtotal * (1 - item.discount / 100);
-      } else if (item.discountType === "FIXED") {
-        itemSubtotal = itemSubtotal - item.discount;
+      if (item.data.discountType === "PERCENTAGE") {
+        itemSubtotal = itemSubtotal * (1 - item.data.discount / 100);
+      } else if (item.data.discountType === "FIXED") {
+        itemSubtotal = itemSubtotal - item.data.discount;
       }
 
       return sum + itemSubtotal;
@@ -206,6 +227,18 @@ export function ProductsSection({
 
   // Get the displayed values - use DB values if available, otherwise calculate
   const getDisplayTotals = () => {
+    if (mode === "create" && draftTotals) {
+      return {
+        itemsSubtotal: draftTotals.subtotal,
+        discount: form.getValues("discount") || 0,
+        discountType: form.getValues("discountType") || "NONE",
+        totalTax: draftTotals.totalTax,
+        total: draftTotals.total,
+        taxName: form.getValues("taxName") || null,
+        taxPercentage: form.getValues("taxPercentage") || null,
+      };
+    }
+
     if (estimateTotals) {
       // Use values from DB
       // Note: estimateTotals.subtotal is AFTER estimate discount (per backend logic)
@@ -242,24 +275,24 @@ export function ProductsSection({
     if (itemsSubtotal > 0) {
       const ratio = subtotalAfterDiscount / itemsSubtotal;
       const itemTotals = items.map((item) => {
-        let itemSubtotal = item.quantity * item.unitPrice;
-        if (item.discountType === "PERCENTAGE") {
-          itemSubtotal = itemSubtotal * (1 - item.discount / 100);
-        } else if (item.discountType === "FIXED") {
-          itemSubtotal = itemSubtotal - item.discount;
+        let itemSubtotal = item.data.quantity * item.data.unitPrice;
+        if (item.data.discountType === "PERCENTAGE") {
+          itemSubtotal = itemSubtotal * (1 - item.data.discount / 100);
+        } else if (item.data.discountType === "FIXED") {
+          itemSubtotal = itemSubtotal - item.data.discount;
         }
         return itemSubtotal;
       });
       if (taxData.taxMode === "BY_PRODUCT") {
         totalTax = items.reduce(
           (sum, item, index) =>
-            sum + ((itemTotals[index] ?? 0) * ratio * (item.tax || 0)) / 100,
+            sum + ((itemTotals[index] ?? 0) * ratio * (item.data.tax || 0)) / 100,
           0,
         );
       } else if (taxData.taxMode === "BY_TOTAL" && formTaxPercentage) {
         const taxableSubtotal = items.reduce(
           (sum, item, index) =>
-            item.vatEnabled ? sum + (itemTotals[index] ?? 0) : sum,
+            item.data.vatEnabled ? sum + (itemTotals[index] ?? 0) : sum,
           0,
         );
         const taxableAfterDiscount = taxableSubtotal * ratio;
@@ -328,17 +361,17 @@ export function ProductsSection({
               <div className="space-y-3">
                 {items.map((item) => (
                   <div
-                    key={item.id}
+                    key={item.uiKey}
                     className="p-4 rounded-lg bg-secondary/50 border border-border"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 space-y-2">
                         <div>
                           <h4 className="font-semibold text-foreground">
-                            {item.name}
+                            {item.data.name}
                           </h4>
                           <p className="text-sm text-muted-foreground">
-                            {item.description}
+                            {item.data.description}
                           </p>
                         </div>
                         <div className="grid gap-2 md:grid-cols-4 text-sm">
@@ -347,7 +380,7 @@ export function ProductsSection({
                               Quantity:
                             </span>{" "}
                             <span className="font-medium">
-                              {item.quantity} {item.quantityUnit}
+                              {item.data.quantity} {item.data.quantityUnit}
                             </span>
                           </div>
                           <div>
@@ -355,27 +388,27 @@ export function ProductsSection({
                               Unit Price:
                             </span>{" "}
                             <span className="font-medium">
-                              {formatCurrency(item.unitPrice)}
+                              {formatCurrency(item.data.unitPrice)}
                             </span>
                           </div>
-                          {taxData.taxMode === "BY_PRODUCT" && item.tax && (
+                          {taxData.taxMode === "BY_PRODUCT" && item.data.tax && (
                             <div>
                               <span className="text-muted-foreground">
                                 Tax:
                               </span>{" "}
-                              <span className="font-medium">{item.tax}%</span>
+                              <span className="font-medium">{item.data.tax}%</span>
                             </div>
                           )}
-                          {item.discountType !== "NONE" &&
-                            item.discount > 0 && (
+                          {item.data.discountType !== "NONE" &&
+                            item.data.discount > 0 && (
                               <div>
                                 <span className="text-muted-foreground">
                                   Discount:
                                 </span>{" "}
                                 <span className="font-medium">
-                                  {item.discountType === "PERCENTAGE"
-                                    ? `${item.discount}%`
-                                    : formatCurrency(item.discount)}
+                                  {item.data.discountType === "PERCENTAGE"
+                                    ? `${item.data.discount}%`
+                                    : formatCurrency(item.data.discount)}
                                 </span>
                               </div>
                             )}
@@ -383,7 +416,7 @@ export function ProductsSection({
                         <div>
                           <span className="text-muted-foreground">Total:</span>{" "}
                           <span className="font-semibold text-foreground">
-                            {formatCurrency(item.total)}
+                            {formatCurrency(getItemDisplayTotal(item))}
                           </span>
                         </div>
                       </div>
@@ -399,7 +432,7 @@ export function ProductsSection({
                         </Button>
                         <Button
                           type="button"
-                          onClick={() => handleDeleteProduct(item.id)}
+                          onClick={() => handleDeleteProduct(item)}
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
@@ -419,7 +452,7 @@ export function ProductsSection({
                   <span className="text-muted-foreground">Items Subtotal:</span>
                   <span className="font-semibold text-foreground">
                     {/* {formatCurrency(totals.itemsSubtotal)} */}
-                    {formatCurrency(estimateTotals?.subtotal || 0)}
+                    {formatCurrency(totals.itemsSubtotal || 0)}
                   </span>
                 </div>
 
@@ -445,11 +478,11 @@ export function ProductsSection({
                 )}
 
                 {/* Tax - BY_PRODUCT mode */}
-                {estimateTotals && estimateTotals.totalTax > 0 && (
+                {totals.totalTax > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Total Tax:</span>
                     <span className="font-semibold text-foreground">
-                      {formatCurrency(estimateTotals.totalTax)}
+                      {formatCurrency(totals.totalTax)}
                     </span>
                   </div>
                 )}
@@ -475,7 +508,8 @@ export function ProductsSection({
           taxData={taxData}
           item={editingItem}
           mode={mode}
-          onEnsureEstimateExists={onEnsureEstimateExists}
+          onDraftCreate={mode === "create" ? onDraftCreateItem : undefined}
+          onDraftUpdate={mode === "create" ? onDraftUpdateItem : undefined}
           onSuccess={() => {
             setShowProductDialog(false);
             setEditingItem(null);
@@ -492,7 +526,7 @@ export function ProductsSection({
           existingItems={items}
           taxData={taxData}
           mode={mode}
-          onEnsureEstimateExists={onEnsureEstimateExists}
+          onDraftCreateItem={mode === "create" ? onDraftCreateItem : undefined}
           onSuccess={handleCatalogSuccess}
         />
       )}

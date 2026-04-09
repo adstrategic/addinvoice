@@ -30,7 +30,6 @@ export default function EditEstimatePage() {
         onCancel={() => router.push("/estimates")}
         existingEstimate={estimateManager.estimate}
         createdClient={estimateManager.createdClient}
-        ensureEstimateExists={estimateManager.ensureEstimateExists}
         isLoading={estimateManager.isMutating}
         isLoadingEstimate={estimateManager.isLoadingEstimate}
         isLoadingNumber={estimateManager.isLoadingNextNumber}
@@ -39,6 +38,11 @@ export default function EditEstimatePage() {
         saveBeforeOpenSubform={estimateManager.saveBeforeOpenSubform}
         onConvertToInvoice={estimateManager.onConvertToInvoice}
         isConvertingToInvoice={estimateManager.isConvertingToInvoice}
+        draftItems={estimateManager.draftItems}
+        draftTotals={estimateManager.draftTotals}
+        onDraftCreateItem={estimateManager.addDraftItem}
+        onDraftUpdateItem={estimateManager.updateDraftItem}
+        onDraftDeleteItem={estimateManager.removeDraftItem}
       />
     );
   }

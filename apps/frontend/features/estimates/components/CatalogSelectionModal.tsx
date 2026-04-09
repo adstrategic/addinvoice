@@ -17,27 +17,27 @@ import { useCatalogs } from "@/features/catalog";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCreateEstimateItem } from "../hooks/useEstimateItems";
 import type {
-  EstimateItemResponse,
   CreateEstimateItemDTO,
 } from "@addinvoice/schemas";
 import type { CatalogResponse } from "@/features/catalog";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import type { EstimateEditorItem } from "../types/editor";
 
 interface CatalogSelectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   businessId: number | null; // Required to filter catalog items
   estimateId: number | null; // For adding items
-  existingItems: EstimateItemResponse[]; // To exclude already added items
+  existingItems: EstimateEditorItem[]; // To exclude already added items
   taxData: {
     taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
     taxName: string | null;
     taxPercentage: number | null;
   };
   mode: "create" | "edit";
-  onEnsureEstimateExists?: (data: CreateEstimateItemDTO) => Promise<number>;
+  onDraftCreateItem?: (data: CreateEstimateItemDTO) => void;
   onSuccess: () => void; // Called after item is added
 }
 
@@ -49,14 +49,13 @@ export function CatalogSelectionModal({
   existingItems,
   taxData,
   mode,
-  onEnsureEstimateExists,
+  onDraftCreateItem,
   onSuccess,
 }: CatalogSelectionModalProps) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebouncedValue(searchTerm, 300);
   const createItem = useCreateEstimateItem();
-  const [isCreatingEstimate, setIsCreatingEstimate] = useState(false);
 
   // Fetch catalogs with search, pagination, and business filter (backend filters by businessId)
   const {
@@ -73,7 +72,7 @@ export function CatalogSelectionModal({
     if (!catalogsData?.data) return [];
 
     const existingCatalogIds = existingItems
-      .map((item) => item.catalogId)
+      .map((item) => item.data.catalogId)
       .filter((id): id is number => id !== null && id !== undefined);
 
     return catalogsData.data.filter(
@@ -113,25 +112,21 @@ export function CatalogSelectionModal({
     let currentEstimateId = estimateId;
     const itemData = catalogItemToEstimateItem(catalog);
 
-    // If no estimate exists and we're in create mode, create estimate first
-    if (!currentEstimateId && mode === "create" && onEnsureEstimateExists) {
-      setIsCreatingEstimate(true);
-      try {
-        currentEstimateId = await onEnsureEstimateExists(itemData);
-        // Navigation will happen in ensureEstimateExists, so we don't need to do anything else
-        return;
-      } catch (error) {
-        setIsCreatingEstimate(false);
+    if (mode === "create" && onDraftCreateItem) {
+      onDraftCreateItem(itemData);
+      toast.success("Item added", {
+        description: `${catalog.name} has been added to the estimate.`,
+      });
+      onSuccess();
+      onOpenChange(false);
+      return;
+    }
 
-        // If validation failed, close the modal so user can see estimate form errors
-        if (error instanceof Error && error.message === "VALIDATION_FAILED") {
-          onOpenChange(false);
-          return;
-        }
-
-        // For other errors, re-throw
-        throw error;
-      }
+    if (mode === "create") {
+      toast.error("Cannot add catalog item", {
+        description: "Draft mode callback is missing. Please reopen the form.",
+      });
+      return;
     }
 
     // Validate that we have an estimate ID
@@ -154,9 +149,13 @@ export function CatalogSelectionModal({
 
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to add item to estimate";
       toast.error("Failed to add item to estimate", {
-        description: error.message || "Failed to add item to estimate",
+        description: message,
       });
       throw error;
     }

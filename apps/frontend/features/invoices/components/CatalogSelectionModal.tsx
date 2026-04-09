@@ -15,12 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Search, Package, Loader2 } from "lucide-react";
 import { useCatalogs } from "@/features/catalog";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { TablePagination } from "@/components/TablePagination";
 import { useCreateInvoiceItem } from "../hooks/useInvoiceItems";
-import type {
-  InvoiceItemResponse,
-  InvoiceItemCreateInput,
-} from "../schemas/invoice.schema";
+import type { InvoiceItemCreateInput } from "../schemas/invoice.schema";
+import type { InvoiceEditorItem } from "../types/editor";
 import type { CatalogResponse } from "@/features/catalog";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -29,17 +26,17 @@ import { toast } from "sonner";
 interface CatalogSelectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  businessId: number | null; // Required to filter catalog items
-  invoiceId: number | null; // For adding items
-  existingItems: InvoiceItemResponse[]; // To exclude already added items
+  businessId: number | null;
+  invoiceId: number | null;
+  existingItems: InvoiceEditorItem[];
   taxData: {
     taxMode: "BY_PRODUCT" | "BY_TOTAL" | "NONE";
     taxName: string | null;
     taxPercentage: number | null;
   };
   mode: "create" | "edit";
-  onEnsureInvoiceExists?: (data: InvoiceItemCreateInput) => Promise<number>;
-  onSuccess: () => void; // Called after item is added
+  onDraftCreateItem?: (data: InvoiceItemCreateInput) => void;
+  onSuccess: () => void;
 }
 
 export function CatalogSelectionModal({
@@ -50,14 +47,13 @@ export function CatalogSelectionModal({
   existingItems,
   taxData,
   mode,
-  onEnsureInvoiceExists,
+  onDraftCreateItem,
   onSuccess,
 }: CatalogSelectionModalProps) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebouncedValue(searchTerm, 300);
   const createItem = useCreateInvoiceItem();
-  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
 
   // Fetch catalogs with search, pagination, and business filter (backend filters by businessId)
   const {
@@ -74,7 +70,7 @@ export function CatalogSelectionModal({
     if (!catalogsData?.data) return [];
 
     const existingCatalogIds = existingItems
-      .map((item) => item.catalogId)
+      .map((item) => item.data.catalogId)
       .filter((id): id is number => id !== null && id !== undefined);
 
     return catalogsData.data.filter(
@@ -102,7 +98,6 @@ export function CatalogSelectionModal({
     };
   };
 
-  // Handle catalog item selection
   const handleSelectCatalogItem = async (catalog: CatalogResponse) => {
     if (!businessId) {
       toast.error("Business required", {
@@ -111,31 +106,26 @@ export function CatalogSelectionModal({
       return;
     }
 
-    let currentInvoiceId = invoiceId;
+    const currentInvoiceId = invoiceId;
     const itemData = catalogItemToInvoiceItem(catalog);
 
-    // If no invoice exists and we're in create mode, create invoice first
-    if (!currentInvoiceId && mode === "create" && onEnsureInvoiceExists) {
-      setIsCreatingInvoice(true);
-      try {
-        currentInvoiceId = await onEnsureInvoiceExists(itemData);
-        // Navigation will happen in ensureInvoiceExists, so we don't need to do anything else
-        return;
-      } catch (error) {
-        setIsCreatingInvoice(false);
-
-        // If validation failed, close the modal so user can see invoice form errors
-        if (error instanceof Error && error.message === "VALIDATION_FAILED") {
-          onOpenChange(false);
-          return;
-        }
-
-        // For other errors, re-throw
-        throw error;
-      }
+    if (mode === "create" && onDraftCreateItem) {
+      onDraftCreateItem(itemData);
+      toast.success("Item added", {
+        description: `${catalog.name} has been added to the invoice.`,
+      });
+      onSuccess();
+      onOpenChange(false);
+      return;
     }
 
-    // Validate that we have an invoice ID
+    if (mode === "create") {
+      toast.error("Cannot add catalog item", {
+        description: "Draft mode callback is missing. Please reopen the form.",
+      });
+      return;
+    }
+
     if (!currentInvoiceId) {
       toast.error("Invoice ID required", {
         description: "Invoice ID is required to add a product",

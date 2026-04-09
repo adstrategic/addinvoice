@@ -10,10 +10,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import type { UseFormReturn } from "react-hook-form";
-import type { InvoiceCreateInput } from "../../schemas/invoice.schema";
+import type { CreateInvoiceDTO } from "../../schemas/invoice.schema";
 
 interface NotesSectionProps {
-  form: UseFormReturn<InvoiceCreateInput>;
+  form: UseFormReturn<CreateInvoiceDTO>;
 }
 
 export function NotesSection({ form }: NotesSectionProps) {

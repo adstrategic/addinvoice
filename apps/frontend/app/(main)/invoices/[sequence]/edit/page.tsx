@@ -26,12 +26,17 @@ export default function EditInvoicePage() {
         onSubmit={invoiceManager.onSubmit}
         onCancel={() => router.push("/invoices")}
         existingInvoice={invoiceManager.invoice}
-        ensureInvoiceExists={invoiceManager.ensureInvoiceExists}
         isLoading={invoiceManager.isMutating}
         isLoadingInvoice={invoiceManager.isLoadingInvoice}
         isLoadingNumber={invoiceManager.isLoadingNextNumber}
         invoiceError={invoiceManager.invoiceError}
         saveBeforeSend={invoiceManager.saveBeforeSend}
+        saveBeforeOpenSubform={invoiceManager.saveBeforeOpenSubform}
+        draftItems={invoiceManager.draftItems}
+        draftTotals={invoiceManager.draftTotals}
+        onDraftCreateItem={invoiceManager.addDraftItem}
+        onDraftUpdateItem={invoiceManager.updateDraftItem}
+        onDraftDeleteItem={invoiceManager.removeDraftItem}
       />
     );
   }
