@@ -122,11 +122,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="text-center">
           <p className="text-xs text-sidebar-foreground/50">Powered by</p>
           <Image
-            src="/images/addstrategic-banner.png"
+            src="/images/addstrategic-blanco.png"
             alt="ADSTRATEGIC"
             width={120}
             height={24}
-            className="mx-auto mt-1 h-5 w-auto opacity-70"
+            className="mx-auto mt-1 h-7 w-auto opacity-70"
           />
         </div>
       </div>
