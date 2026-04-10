@@ -5,6 +5,7 @@ import asyncHandler from "../../core/async-handler.js";
 import {
   acceptEstimateByToken,
   getEstimateByToken,
+  getEstimatePdfByToken,
   rejectEstimateByToken,
 } from "./estimates-public.controller.js";
 import {
@@ -24,6 +25,13 @@ estimatesPublicRoutes.get(
   "/estimates/accept/:token",
   processRequest({ params: getEstimateByTokenParamsSchema }),
   asyncHandler(getEstimateByToken),
+);
+
+// GET /api/v1/public/estimates/accept/:token/pdf
+estimatesPublicRoutes.get(
+  "/estimates/accept/:token/pdf",
+  processRequest({ params: getEstimateByTokenParamsSchema }),
+  asyncHandler(getEstimatePdfByToken),
 );
 
 // POST /api/v1/public/estimates/accept/:token

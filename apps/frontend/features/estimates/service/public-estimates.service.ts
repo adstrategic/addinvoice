@@ -27,6 +27,24 @@ export async function getEstimateByAcceptToken(
   }
 }
 
+/**
+ * Fetch estimate PDF by accept token (public, no auth).
+ */
+export async function getEstimatePdfByAcceptToken(
+  token: string,
+): Promise<Uint8Array> {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/public/estimates/accept/${encodeURIComponent(token)}/pdf`,
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to load PDF preview");
+  }
+
+  const buffer = await response.arrayBuffer();
+  return new Uint8Array(buffer);
+}
+
 /** Payload for accepting a estimate by token */
 export type AcceptEstimateByTokenBody = {
   fullName: string;

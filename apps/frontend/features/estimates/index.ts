@@ -39,6 +39,7 @@ export {
 
 export {
   useEstimateForAccept,
+  useEstimatePdfForAccept,
   useAcceptEstimateByToken,
   useRejectEstimateByToken,
   publicEstimateKeys,

@@ -1,18 +1,18 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
+import * as pdfjsLib from "pdfjs-dist";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-// import { format } from "date-fns";
-// import { enUS } from "date-fns/locale";
-import { formatCurrency, formatDateOnly } from "@/lib/utils";
 import {
   useEstimateForAccept,
+  useEstimatePdfForAccept,
   useAcceptEstimateByToken,
   useRejectEstimateByToken,
   PublicEstimateError,
@@ -43,20 +43,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Loader2 } from "lucide-react";
 
-function getItemFixedDiscount(item: {
-  quantity: number;
-  unitPrice: number;
-  discount: number;
-  discountType?: string | null;
-}): number {
-  if (!item.discount || item.discountType === "NONE" || !item.discountType)
-    return 0;
-  const base = item.quantity * item.unitPrice;
-  if (item.discountType === "PERCENTAGE") return (base * item.discount) / 100;
-  if (item.discountType === "FIXED") return item.discount;
-  return 0;
-}
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.mjs",
+  import.meta.url,
+).toString();
 
 const makeAcceptFormSchema = (requireSignature: boolean) =>
   z
@@ -76,6 +68,61 @@ const makeAcceptFormSchema = (requireSignature: boolean) =>
 
 type AcceptFormValues = z.infer<ReturnType<typeof makeAcceptFormSchema>>;
 
+interface PdfPageProps {
+  pdf: PDFDocumentProxy;
+  pageNumber: number;
+  containerWidth: number;
+}
+
+function PdfPage({ pdf, pageNumber, containerWidth }: PdfPageProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || containerWidth <= 0) return;
+
+    let cancelled = false;
+    let renderTask: ReturnType<PDFPageProxy["render"]> | null = null;
+    let page: PDFPageProxy | null = null;
+
+    (async () => {
+      try {
+        page = await pdf.getPage(pageNumber);
+        if (cancelled) return;
+
+        const dpr = window.devicePixelRatio || 1;
+        const baseViewport = page.getViewport({ scale: 1 });
+        const scale = (containerWidth / baseViewport.width) * dpr;
+        const viewport = page.getViewport({ scale });
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
+        canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx || cancelled) return;
+
+        renderTask = page.render({ canvas, canvasContext: ctx, viewport });
+        await renderTask.promise;
+      } catch (err) {
+        if ((err as { name?: string }).name !== "RenderingCancelledException") {
+          console.error(`PDF page ${pageNumber} render error:`, err);
+        }
+      } finally {
+        page?.cleanup();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      renderTask?.cancel();
+    };
+  }, [pdf, pageNumber, containerWidth]);
+
+  return <canvas ref={canvasRef} className="shrink-0 bg-white shadow-sm" />;
+}
+
 export default function EstimateAcceptPage() {
   const params = useParams();
   const token = params?.token as string | undefined;
@@ -89,9 +136,18 @@ export default function EstimateAcceptPage() {
   const signatureRef = useRef<SignatureCanvas | null>(null);
 
   const { data: estimate, isLoading, error } = useEstimateForAccept(token);
+  const {
+    data: pdfBytes,
+    isPending: isPdfPending,
+    isError: isPdfError,
+    error: pdfError,
+    refetch: refetchPdf,
+  } = useEstimatePdfForAccept(token);
   const acceptMutation = useAcceptEstimateByToken(token);
   const rejectMutation = useRejectEstimateByToken(token);
   const requireSignature = !!estimate?.requireSignature;
+  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   const form = useForm<AcceptFormValues>({
     resolver: zodResolver(makeAcceptFormSchema(requireSignature)),
@@ -101,6 +157,37 @@ export default function EstimateAcceptPage() {
     },
     mode: "onChange",
   });
+
+  useEffect(() => {
+    if (!pdfBytes) {
+      setPdfDoc(null);
+      return;
+    }
+
+    let doc: PDFDocumentProxy | null = null;
+    const task = pdfjsLib.getDocument({ data: pdfBytes });
+
+    task.promise.then((loaded) => {
+      doc = loaded;
+      setPdfDoc(loaded);
+    });
+
+    return () => {
+      task.destroy();
+      doc?.destroy();
+      setPdfDoc(null);
+    };
+  }, [pdfBytes]);
+
+  const previewContainerRef = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    setContainerWidth(el.getBoundingClientRect().width);
+
+    const ro = new ResizeObserver(([entry]) => {
+      setContainerWidth(entry?.contentRect.width ?? 0);
+    });
+    ro.observe(el);
+  }, []);
 
   const handleAcceptSubmit = useCallback(
     async (values: AcceptFormValues) => {
@@ -320,9 +407,6 @@ export default function EstimateAcceptPage() {
     return null;
   }
 
-  const companyData = estimate.business;
-  const client = estimate.client;
-  const items = estimate.items ?? [];
   const canAccept =
     !acceptMutation.isPending &&
     form.formState.isValid &&
@@ -332,278 +416,62 @@ export default function EstimateAcceptPage() {
   return (
     <>
       <div className="min-h-screen flex flex-col items-center p-4 bg-muted/30">
-        <div className="w-full max-w-2xl space-y-6">
+        <div className="w-full max-w-5xl space-y-6">
           <Card className="bg-card border-border overflow-hidden">
             <CardHeader className="p-4 sm:p-6">
-              <header className="flex justify-between items-start">
-                <div>
-                  <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
-                    ESTIMATE
-                  </h1>
-
-                  <p className="text-sm font-semibold text-gray-400 mt-1">
-                    # {estimate.estimateNumber}
-                  </p>
-                </div>
-                {/* 
-              { max-height: 100%; width: auto; max-width: 100%; object-fit: contain; object-position: left center; display: block; }
-                */}
-                <div className="flex flex-1 items-center gap-6 justify-end">
-                  {companyData.logo && (
-                    <div className="max-w-[320px] h-[120px] flex items-center shrink-0">
-                      <img
-                        src={companyData.logo}
-                        alt="Company Logo"
-                        className="object-contain max-w-full max-h-full block"
-                      />
-                    </div>
-                  )}
-                </div>
+              <header>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                  Estimate #{estimate.estimateNumber}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Preview generated from the estimate PDF
+                </p>
               </header>
             </CardHeader>
 
             <CardContent className="pt-4 sm:pt-6 space-y-6 p-4 sm:p-6">
-              {/* Bill To */}
-              {client && (
-                <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                  <div className="min-w-0">
-                    <h4 className="text-sm font-semibold text-muted-foreground mb-2">
-                      BILL TO:
-                    </h4>
-                    <p className="font-semibold text-foreground">
-                      {client.name}
-                    </p>
-                    {client.businessName && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {client.businessName}
-                      </p>
-                    )}
-                    {estimate.clientAddress && (
-                      <p className="text-sm text-muted-foreground mt-1 wrap-break-word">
-                        {estimate.clientAddress}
-                      </p>
-                    )}
-                    {estimate.clientPhone && (
-                      <p className="text-sm text-muted-foreground">
-                        {estimate.clientPhone}
-                      </p>
-                    )}
-                    {estimate.clientEmail && (
-                      <p className="text-sm text-muted-foreground break-all">
-                        {estimate.clientEmail}
-                      </p>
-                    )}
-                    {client.nit && (
-                      <p className="text-sm text-muted-foreground">
-                        NIT: {client.nit}
-                      </p>
-                    )}
-                  </div>
-                  <div className="min-w-0 md:text-right">
-                    <h4 className="text-sm font-semibold text-muted-foreground mb-2">
-                      FROM:
-                    </h4>
-                    <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-                      {companyData.name}
-                    </h2>
-                    {companyData.address && (
-                      <p className="text-sm text-muted-foreground mt-1 wrap-break-word">
-                        {companyData.address}
-                      </p>
-                    )}
-                    {companyData.nit && (
-                      <p className="text-sm text-muted-foreground">
-                        NIT: {companyData.nit}
-                      </p>
-                    )}
-                    {companyData.email && (
-                      <p className="text-sm text-muted-foreground break-all">
-                        {companyData.email}
-                      </p>
-                    )}
-                    {companyData.phone && (
-                      <p className="text-sm text-muted-foreground">
-                        {companyData.phone}
-                      </p>
-                    )}
+              {isPdfPending || (pdfBytes && !pdfDoc) ? (
+                <div className="h-[70vh] rounded-lg border border-border bg-card flex items-center justify-center">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Loading PDF preview...</span>
                   </div>
                 </div>
-              )}
+              ) : null}
 
-              {/* summary */}
-              {estimate.summary && (
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <div className="p-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground mb-2">
-                      Project Summary:
-                    </h4>
+              {!isPdfPending && (isPdfError || !pdfBytes) ? (
+                <div className="h-[70vh] rounded-lg border border-border bg-card flex items-center justify-center px-4">
+                  <div className="text-center space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      {estimate.summary}
+                      {pdfError instanceof Error
+                        ? pdfError.message
+                        : "Could not load PDF preview."}
                     </p>
+                    <Button variant="outline" onClick={() => void refetchPdf()}>
+                      Retry
+                    </Button>
                   </div>
                 </div>
-              )}
+              ) : null}
 
-              {/* timeline */}
-              {(estimate.timelineStartDate || estimate.timelineEndDate) && (
-                <div className="overflow-hidden">
-                  <div className="p-4">
-                    <h4 className="text-sm font-semibold text-muted-foreground mb-2">
-                      Timeline:
-                    </h4>
-                    <div className="flex flex-col items-center w-full">
-                      <div className="w-full border-l border-t border-r border-border h-2" />
-                      <div className="flex justify-between w-full mt-2 text-sm text-muted-foreground">
-                        {estimate.timelineStartDate && (
-                          <span>
-                            {/* {format(estimate.timelineStartDate, "PPP", {
-                            locale: enUS,
-                          })} */}
-                            {formatDateOnly(estimate.timelineStartDate)}
-                          </span>
-                        )}
-                        {estimate.timelineEndDate && (
-                          <span>
-                            {/* {format(estimate.timelineEndDate, "PPP", {
-                            locale: enUS,
-                          })} */}
-                            {formatDateOnly(estimate.timelineEndDate)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+              {pdfDoc && !isPdfPending && !isPdfError ? (
+                <div
+                  ref={previewContainerRef}
+                  className="h-[80vh] overflow-auto p-4 flex flex-col items-center gap-4 border border-border rounded-lg"
+                  style={{ touchAction: "pan-x pan-y pinch-zoom" }}
+                >
+                  {containerWidth > 0 &&
+                    Array.from({ length: pdfDoc.numPages }, (_, i) => (
+                      <PdfPage
+                        key={i}
+                        pdf={pdfDoc}
+                        pageNumber={i + 1}
+                        containerWidth={containerWidth}
+                      />
+                    ))}
                 </div>
-              )}
+              ) : null}
 
-              {/* Items Table: horizontal scroll on small screens */}
-              <div className="border border-border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[600px]">
-                    <thead className="bg-secondary/50">
-                      <tr>
-                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground">
-                          Description
-                        </th>
-                        <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                          Qty
-                        </th>
-                        <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                          Unit Price
-                        </th>
-                        <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                          Tax
-                        </th>
-                        <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                          Discount
-                        </th>
-                        <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                          Amount
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((item) => {
-                        const itemDiscount = getItemFixedDiscount(item);
-                        return (
-                          <tr key={item.id} className="border-t border-border">
-                            <td className="p-2 sm:p-3 text-xs sm:text-sm text-foreground max-w-[180px] sm:max-w-none">
-                              <div>
-                                <div
-                                  className="font-medium truncate"
-                                  title={item.name}
-                                >
-                                  {item.name}
-                                </div>
-                                {item.description && (
-                                  <div className="text-muted-foreground text-xs mt-1 line-clamp-2">
-                                    {item.description}
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
-                              {item.quantity} {item.quantityUnit}
-                            </td>
-                            <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
-                              {estimate.currency} {item.unitPrice.toFixed(2)}
-                            </td>
-                            <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
-                              {item.tax}%
-                            </td>
-                            <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
-                              {formatCurrency(itemDiscount)}
-                            </td>
-                            <td className="p-2 sm:p-3 text-xs sm:text-sm text-right font-semibold text-foreground whitespace-nowrap">
-                              {formatCurrency(item.total)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Totals */}
-              <div className="flex justify-end">
-                <div className="w-full sm:w-64 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal:</span>
-                    <span className="font-semibold text-foreground">
-                      {formatCurrency(estimate.subtotal)}
-                    </span>
-                  </div>
-                  {estimate.discount > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Discount:</span>
-                      <span className="font-semibold text-foreground">
-                        -
-                        {estimate.discountType === "PERCENTAGE"
-                          ? formatCurrency(
-                              (estimate.discount * estimate.subtotal) / 100,
-                            )
-                          : formatCurrency(estimate.discount)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Tax:</span>
-                    <span className="font-semibold text-foreground">
-                      {formatCurrency(estimate.totalTax)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-lg pt-2 border-t border-border">
-                    <span className="font-bold text-foreground">Total:</span>
-                    <span className="font-bold text-primary">
-                      {formatCurrency(estimate.total)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes and Terms */}
-              {estimate.notes && (
-                <div className="pt-4 border-t border-border">
-                  <h4 className="text-sm font-semibold text-foreground mb-2">
-                    Notes:
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    {estimate.notes}
-                  </p>
-                </div>
-              )}
-
-              {estimate.terms && (
-                <div className="pt-4 border-t border-border">
-                  <h4 className="text-sm font-semibold text-foreground mb-2">
-                    Terms & Conditions:
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    {estimate.terms}
-                  </p>
-                </div>
-              )}
               <Separator />
 
               <p className="text-sm text-muted-foreground">

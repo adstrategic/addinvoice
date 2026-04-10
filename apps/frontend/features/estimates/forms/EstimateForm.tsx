@@ -43,6 +43,7 @@ import LoadingComponent from "@/components/loading-component";
 import { toast } from "sonner";
 import type { EstimateMutationCallbacks } from "../hooks/useEstimateActions";
 import { useDownloadEstimatePdf } from "../hooks/useDownloadEstimatePDF";
+import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 
 interface EstimateFormProps {
   selectedBusiness: BusinessResponse;
@@ -108,6 +109,13 @@ export function EstimateForm({
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
     number | null
   >(null);
+  const { confirmNavigation } = useUnsavedChangesWarning({
+    enabled:
+      isDirty &&
+      !isLoading &&
+      !form.formState.isSubmitting &&
+      !isSavingBeforeSend,
+  });
 
   const handleSendClick = async () => {
     if (saveBeforeSend && isDirty) {
@@ -188,7 +196,15 @@ export function EstimateForm({
       <div className="container mx-auto px-6 py-8 max-w-7xl">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={onCancel}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                if (confirmNavigation()) {
+                  onCancel();
+                }
+              }}
+            >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -207,7 +223,15 @@ export function EstimateForm({
               {estimateError?.message ||
                 "Failed to load estimate. Please try again."}
             </p>
-            <Button onClick={onCancel} variant="outline" className="mt-4">
+            <Button
+              onClick={() => {
+                if (confirmNavigation()) {
+                  onCancel();
+                }
+              }}
+              variant="outline"
+              className="mt-4"
+            >
               Go Back
             </Button>
           </CardContent>
@@ -225,7 +249,11 @@ export function EstimateForm({
             className="hidden sm:block"
             variant="ghost"
             size="icon"
-            onClick={onCancel}
+            onClick={() => {
+              if (confirmNavigation()) {
+                onCancel();
+              }
+            }}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -515,9 +543,11 @@ export function EstimateForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() =>
-                  router.push(`/estimates/${existingEstimate.sequence}`)
-                }
+                onClick={() => {
+                  if (confirmNavigation()) {
+                    router.push(`/estimates/${existingEstimate.sequence}`);
+                  }
+                }}
                 className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
               >
                 <FileText className="h-4 w-4" />

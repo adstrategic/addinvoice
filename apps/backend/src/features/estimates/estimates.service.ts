@@ -20,7 +20,11 @@ import {
   FieldValidationError,
   GoneError,
 } from "../../errors/EntityErrors.js";
-import { createInvoiceFromEstimate } from "../invoices/invoices.service.js";
+import { sendInvoiceQueue } from "../../queue/queues.js";
+import {
+  createInvoiceFromEstimate,
+  markInvoiceAsSent,
+} from "../invoices/invoices.service.js";
 
 // ===== HELPER FUNCTIONS =====
 
@@ -245,7 +249,7 @@ export async function convertEstimateToInvoice(
   workspaceId: number,
   sequence: number,
 ): Promise<{ id: number; invoiceNumber: string; sequence: number }> {
-  return await prisma.$transaction(async (tx) => {
+  const conversion = await prisma.$transaction(async (tx) => {
     const estimate = await tx.estimate.findUnique({
       where: {
         workspaceId_sequence: {
@@ -281,6 +285,8 @@ export async function convertEstimateToInvoice(
       );
     }
 
+    const recipientEmail = estimate.clientEmail;
+
     const invoice = await createInvoiceFromEstimate(workspaceId, estimate, tx);
 
     await tx.estimate.update({
@@ -292,11 +298,28 @@ export async function convertEstimateToInvoice(
     });
 
     return {
+      clientEmail: recipientEmail,
+      businessName: estimate.business.name,
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
       sequence: invoice.sequence,
     };
   });
+
+  await sendInvoiceQueue.add("send-invoice", {
+    email: conversion.clientEmail,
+    invoiceId: conversion.id,
+    message: `Your accepted estimate has been converted to an invoice. Please find the invoice ${conversion.invoiceNumber} attached.`,
+    sequence: conversion.sequence,
+    subject: `Invoice ${conversion.invoiceNumber} from ${conversion.businessName}`,
+    workspaceId,
+  });
+
+  return {
+    id: conversion.id,
+    invoiceNumber: conversion.invoiceNumber,
+    sequence: conversion.sequence,
+  };
 }
 
 /**

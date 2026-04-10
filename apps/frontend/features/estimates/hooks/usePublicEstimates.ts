@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import {
   getEstimateByAcceptToken,
+  getEstimatePdfByAcceptToken,
   acceptEstimateByToken,
   rejectEstimateByToken,
   PublicEstimateError,
@@ -19,6 +20,7 @@ import { toast } from "sonner";
 export const publicEstimateKeys = {
   accept: (token: string) =>
     [...estimateKeys.all, "public-accept", token] as const,
+  pdf: (token: string) => [...estimateKeys.all, "public-accept-pdf", token] as const,
 };
 
 /**
@@ -31,6 +33,16 @@ export function useEstimateForAccept(token: string | undefined) {
     queryFn: () => getEstimateByAcceptToken(token!),
     enabled: !!token,
     staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
+export function useEstimatePdfForAccept(token: string | undefined) {
+  return useQuery({
+    queryKey: publicEstimateKeys.pdf(token!),
+    queryFn: () => getEstimatePdfByAcceptToken(token!),
+    enabled: !!token,
+    staleTime: 60 * 1000,
+    retry: 1,
   });
 }
 
