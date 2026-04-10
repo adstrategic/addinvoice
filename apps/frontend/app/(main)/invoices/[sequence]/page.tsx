@@ -18,11 +18,9 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useDownloadInvoicePdf } from "@/features/invoices/hooks/useDownloadInvoicePDF";
+import { InvoicePdfPreview } from "@/features/invoices/components/InvoicePdfPreview";
 
 const statusConfig = {
   paid: { label: "Paid", className: "bg-primary/20 text-primary" },
@@ -30,20 +28,6 @@ const statusConfig = {
   issued: { label: "Issued", className: "bg-chart-3/20 text-chart-3" },
   draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
 };
-
-function getItemFixedDiscount(item: {
-  quantity: number;
-  unitPrice: number;
-  discount: number;
-  discountType?: string | null;
-}): number {
-  if (!item.discount || item.discountType === "NONE" || !item.discountType)
-    return 0;
-  const base = item.quantity * item.unitPrice;
-  if (item.discountType === "PERCENTAGE") return (base * item.discount) / 100;
-  if (item.discountType === "FIXED") return item.discount;
-  return 0;
-}
 
 export default function InvoiceDetailPage() {
   const params = useParams();
@@ -89,19 +73,20 @@ export default function InvoiceDetailPage() {
     );
   }
 
-  const companyData = invoice.business!;
   const client = invoice.client;
-  const items = invoice.items || [];
   const uiStatus = mapStatusToUI(invoice.status);
 
   const handleDownloadPDF = async () => {
     try {
+      setDownloading(true);
       await downloadPdf(invoice);
       toast.success("PDF downloaded");
     } catch (error) {
       toast.error("Failed to download PDF", {
         description: error instanceof Error ? error.message : "Unknown error",
       });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -132,7 +117,7 @@ export default function InvoiceDetailPage() {
                 </Badge>
               </div>
               <p className="text-muted-foreground mt-1 text-sm">
-                Invoice details and information
+                PDF preview
               </p>
             </div>
           </div>
@@ -247,246 +232,12 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
 
-        {/* Invoice Preview */}
-        <Card className="bg-card border-border overflow-hidden">
-          <CardHeader className="border-b border-border p-4 sm:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex justify-center sm:justify-start">
-                {companyData.logo && (
-                  <img
-                    src={companyData.logo}
-                    alt="Company Logo"
-                    className="h-48 w-48 md:h-64 md:w-64 object-contain"
-                  />
-                )}
-              </div>
-              <div className="text-left sm:text-right">
-                <h3 className="text-2xl sm:text-3xl font-bold text-primary">
-                  INVOICE
-                </h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  <span className="font-semibold">Invoice #:</span>{" "}
-                  {invoice.invoiceNumber}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-semibold">Issue Date:</span>{" "}
-                  {new Date(invoice.issueDate).toLocaleDateString()}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-semibold">Due Date:</span>{" "}
-                  {new Date(invoice.dueDate).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-4 sm:pt-6 space-y-6 p-4 sm:p-6">
-            {/* Bill To */}
-            {client && (
-              <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                <div className="min-w-0">
-                  <h4 className="text-sm font-semibold text-muted-foreground mb-2">
-                    BILL TO:
-                  </h4>
-                  <p className="font-semibold text-foreground">{client.name}</p>
-                  {client.businessName && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {client.businessName}
-                    </p>
-                  )}
-                  {invoice.clientAddress && (
-                    <p className="text-sm text-muted-foreground mt-1 wrap-break-word">
-                      {invoice.clientAddress}
-                    </p>
-                  )}
-                  {invoice.clientPhone && (
-                    <p className="text-sm text-muted-foreground">
-                      {invoice.clientPhone}
-                    </p>
-                  )}
-                  {invoice.clientEmail && (
-                    <p className="text-sm text-muted-foreground break-all">
-                      {invoice.clientEmail}
-                    </p>
-                  )}
-                  {client.nit && (
-                    <p className="text-sm text-muted-foreground">
-                      NIT: {client.nit}
-                    </p>
-                  )}
-                </div>
-                <div className="min-w-0 md:text-right">
-                  <h4 className="text-sm font-semibold text-muted-foreground mb-2">
-                    FROM:
-                  </h4>
-                  <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-                    {companyData.name}
-                  </h2>
-                  {companyData.address && (
-                    <p className="text-sm text-muted-foreground mt-1 wrap-break-word">
-                      {companyData.address}
-                    </p>
-                  )}
-                  {companyData.nit && (
-                    <p className="text-sm text-muted-foreground">
-                      NIT: {companyData.nit}
-                    </p>
-                  )}
-                  {companyData.email && (
-                    <p className="text-sm text-muted-foreground break-all">
-                      {companyData.email}
-                    </p>
-                  )}
-                  {companyData.phone && (
-                    <p className="text-sm text-muted-foreground">
-                      {companyData.phone}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Items Table: horizontal scroll on small screens */}
-            <div className="border border-border rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[600px]">
-                  <thead className="bg-secondary/50">
-                    <tr>
-                      <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground">
-                        Description
-                      </th>
-                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                        Qty
-                      </th>
-                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                        Unit Price
-                      </th>
-                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                        Tax
-                      </th>
-                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                        Discount
-                      </th>
-                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">
-                        Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item) => {
-                      const itemDiscount = getItemFixedDiscount(item);
-                      return (
-                        <tr key={item.id} className="border-t border-border">
-                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-foreground max-w-[180px] sm:max-w-none">
-                            <div>
-                              <div
-                                className="font-medium truncate"
-                                title={item.name}
-                              >
-                                {item.name}
-                              </div>
-                              {item.description && (
-                                <div className="text-muted-foreground text-xs mt-1 line-clamp-2">
-                                  {item.description}
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
-                            {item.quantity} {item.quantityUnit}
-                          </td>
-                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
-                            {invoice.currency} {item.unitPrice.toFixed(2)}
-                          </td>
-                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
-                            {item.tax}%
-                          </td>
-                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-right text-foreground whitespace-nowrap">
-                            {formatCurrency(itemDiscount)}
-                          </td>
-                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-right font-semibold text-foreground whitespace-nowrap">
-                            {formatCurrency(item.total)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Totals */}
-            <div className="flex justify-end">
-              <div className="w-full sm:w-64 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal:</span>
-                  <span className="font-semibold text-foreground">
-                    {formatCurrency(invoice.subtotal)}
-                  </span>
-                </div>
-                {invoice.discount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Discount:</span>
-                    <span className="font-semibold text-foreground">
-                      -
-                      {invoice.discountType === "PERCENTAGE"
-                        ? formatCurrency(
-                            (invoice.discount * invoice.subtotal) / 100,
-                          )
-                        : formatCurrency(invoice.discount)}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax:</span>
-                  <span className="font-semibold text-foreground">
-                    {formatCurrency(invoice.totalTax)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-lg pt-2 border-t border-border">
-                  <span className="font-bold text-foreground">Total:</span>
-                  <span className="font-bold text-primary">
-                    {formatCurrency(invoice.total)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Payment method (same as PDF) */}
-            {invoice.selectedPaymentMethod &&
-              invoice.selectedPaymentMethod.isEnabled &&
-              invoice.selectedPaymentMethod.handle?.trim() && (
-                <div className="pt-4 border border-primary rounded-md p-3">
-                  <span className="text-sm font-semibold text-muted-foreground">
-                    Payment method:{" "}
-                  </span>
-                  <span className="text-sm text-foreground">
-                    {invoice.selectedPaymentMethod.type}{" "}
-                    {invoice.selectedPaymentMethod.handle.trim()}
-                  </span>
-                </div>
-              )}
-
-            {/* Notes and Terms */}
-            {invoice.notes && (
-              <div className="pt-4 border-t border-border">
-                <h4 className="text-sm font-semibold text-foreground mb-2">
-                  Notes:
-                </h4>
-                <p className="text-sm text-muted-foreground">{invoice.notes}</p>
-              </div>
-            )}
-
-            {invoice.terms && (
-              <div className="pt-4 border-t border-border">
-                <h4 className="text-sm font-semibold text-foreground mb-2">
-                  Terms & Conditions:
-                </h4>
-                <p className="text-sm text-muted-foreground">{invoice.terms}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {sequence !== null ? (
+          <InvoicePdfPreview
+            sequence={sequence}
+            invoiceNumber={invoice.invoiceNumber}
+          />
+        ) : null}
 
         <div className="mt-6">
           <PaymentsSection
@@ -510,7 +261,7 @@ export default function InvoiceDetailPage() {
         onOpenChange={setSendDialogOpen}
         invoiceSequence={sequence!}
         invoiceNumber={invoice.invoiceNumber}
-        clientName={client.name || "Client"}
+        clientName={client?.name || "Client"}
         clientEmail={invoice.clientEmail}
       />
 

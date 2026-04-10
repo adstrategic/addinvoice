@@ -1,4 +1,5 @@
 import type { UseFormSetError } from "react-hook-form";
+import { useAuth } from "@clerk/nextjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ListInvoicesParams, invoicesService } from "@/features/invoices";
 import type {
@@ -22,6 +23,7 @@ export const invoiceKeys = {
   detail: (id: number) => [...invoiceKeys.details(), id] as const,
   nextNumber: (businessId: number | null) =>
     [...invoiceKeys.all, "next-number", businessId] as const,
+  pdf: (sequence: number) => [...invoiceKeys.detail(sequence), "pdf"] as const,
 };
 
 /**
@@ -50,6 +52,36 @@ export function useInvoiceBySequence(
     enabled: enabled && sequence !== null,
     staleTime: 5 * 60 * 1000, // 5 minutes
     placeholderData: (previousData) => previousData, // Keep previous data while loading
+  });
+}
+
+/**
+ * Raw PDF bytes for inline preview (pdf.js). Authenticated fetch with deduplication via TanStack Query.
+ */
+export function useInvoicePdfBytes(sequence: number | null, enabled: boolean) {
+  const { getToken } = useAuth();
+
+  return useQuery({
+    queryKey: invoiceKeys.pdf(sequence!),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/invoices/${sequence}/pdf`;
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load PDF preview");
+      }
+
+      const buffer = await response.arrayBuffer();
+      return new Uint8Array(buffer);
+    },
+    enabled: enabled && sequence !== null,
+    staleTime: 60 * 1000,
+    retry: 1,
   });
 }
 
@@ -113,6 +145,9 @@ export function useUpdateInvoice(
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       queryClient.invalidateQueries({
         queryKey: invoiceKeys.detail(updatedInvoice.sequence),
+      });
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.pdf(updatedInvoice.sequence),
       });
       queryClient.invalidateQueries({
         queryKey: invoiceKeys.nextNumber(updatedInvoice.business.id),

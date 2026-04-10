@@ -31,7 +31,11 @@ export function PaymentsSection({
 
   const handleDeletePayment = async (paymentId: number) => {
     if (confirm("Are you sure you want to delete this payment?")) {
-      await deletePayment.mutateAsync({ invoiceId, paymentId });
+      await deletePayment.mutateAsync({
+        invoiceId,
+        invoiceSequence,
+        paymentId,
+      });
     }
   };
 

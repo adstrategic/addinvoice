@@ -79,16 +79,19 @@ export async function createInvoiceFromEstimate(
       currency: estimate.currency,
       notes: estimate.notes ?? null,
       terms: estimate.terms ?? null,
-      status: "DRAFT",
+      status: "SENT",
       // issue/due dates are required for invoices in some flows; set to today by default.
       issueDate: new Date(),
       dueDate: new Date(),
-      discount: 0,
-      discountType: "NONE",
-      subtotal: 0,
-      totalTax: 0,
-      total: 0,
-      balance: 0,
+      discount: estimate.discount,
+      discountType: estimate.discountType,
+      subtotal: estimate.subtotal,
+      taxMode: estimate.taxMode,
+      taxName: estimate.taxName,
+      taxPercentage: estimate.taxPercentage,
+      totalTax: estimate.totalTax,
+      total: estimate.total,
+      balance: estimate.total,
       items: {
         create: estimate.items.map((item) => ({
           name: item.name,
@@ -404,14 +407,14 @@ export async function addPayment(
 ): Promise<PaymentEntity> {
   const { sendReceipt, ...paymentData } = data;
 
-  const payment = await prisma.$transaction(async (tx) => {
+  const { payment, receiptJobData } = await prisma.$transaction(async (tx) => {
     // Verify invoice exists and belongs to workspace
     const invoice = await tx.invoice.findUnique({
       include: { _count: { select: { items: true } } },
       where: { id: invoiceId },
     });
 
-    if (!invoice || invoice.workspaceId !== workspaceId) {
+    if (invoice?.workspaceId !== workspaceId) {
       throw new EntityNotFoundError("Invoice not found");
     }
 
@@ -443,22 +446,43 @@ export async function addPayment(
       },
     });
 
+    let receiptJobData: null | {
+      email: string;
+      invoiceId: number;
+      message: string;
+      paymentId: number;
+      subject: string;
+      workspaceId: number;
+    } = null;
+    if (sendReceipt) {
+      const email = invoice.clientEmail.trim();
+      if (email.length > 0) {
+        receiptJobData = {
+          email,
+          invoiceId,
+          message: "Please find your payment receipt attached.",
+          paymentId: created.id,
+          subject: `Payment receipt - ${invoice.invoiceNumber}`,
+          workspaceId,
+        };
+      }
+    }
+
     // Update invoice balance and status
     await updateInvoiceBalanceAndStatus(tx, invoiceId, Number(invoice.total));
 
     return {
-      ...created,
-      amount: Number(created.amount),
-    } as PaymentEntity;
+      payment: {
+        ...created,
+        amount: Number(created.amount),
+      } as PaymentEntity,
+      receiptJobData,
+    };
   });
 
-  if (sendReceipt) {
+  if (receiptJobData !== null) {
     const { sendReceiptQueue } = await import("../../queue/queues.js");
-    await sendReceiptQueue.add("send-receipt", {
-      invoiceId,
-      paymentId: payment.id,
-      workspaceId,
-    });
+    await sendReceiptQueue.add("send-receipt", receiptJobData);
   }
 
   return payment;
@@ -984,7 +1008,7 @@ export async function deleteInvoice(
       where: { id },
     });
 
-    if (!existingInvoice || existingInvoice.workspaceId !== workspaceId) {
+    if (existingInvoice?.workspaceId !== workspaceId) {
       throw new EntityNotFoundError("Invoice not found");
     }
 
@@ -1204,7 +1228,7 @@ export async function getInvoiceBySequence(
     },
   });
 
-  if (!invoice || invoice.workspaceId !== workspaceId) {
+  if (invoice?.workspaceId !== workspaceId) {
     throw new EntityNotFoundError("Invoice not found");
   }
 
@@ -1385,7 +1409,7 @@ export async function markInvoiceAsSent(
     },
   });
 
-  if (!invoice || invoice.workspaceId !== workspaceId) {
+  if (invoice?.workspaceId !== workspaceId) {
     throw new EntityNotFoundError("Invoice not found");
   }
 

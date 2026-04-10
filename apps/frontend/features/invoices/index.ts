@@ -30,6 +30,7 @@ export type { ListInvoicesParams } from "./service/invoices.service";
 export {
   useInvoices,
   useInvoiceBySequence,
+  useInvoicePdfBytes,
   useCreateInvoice,
   useUpdateInvoice,
   useDeleteInvoice,

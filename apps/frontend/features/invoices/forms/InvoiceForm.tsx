@@ -36,6 +36,7 @@ import LoadingComponent from "@/components/loading-component";
 import { toast } from "sonner";
 import type { InvoiceMutationCallbacks } from "../hooks/useInvoiceActions";
 import { useDownloadInvoicePdf } from "../hooks/useDownloadInvoicePDF";
+import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 
 interface InvoiceFormProps {
   selectedBusiness: BusinessResponse;
@@ -86,6 +87,13 @@ export function InvoiceForm({
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isSavingBeforeSend, setIsSavingBeforeSend] = useState(false);
+  const { confirmNavigation } = useUnsavedChangesWarning({
+    enabled:
+      isDirty &&
+      !isLoading &&
+      !form.formState.isSubmitting &&
+      !isSavingBeforeSend,
+  });
 
   const downloadPdf = useDownloadInvoicePdf();
 
@@ -145,7 +153,15 @@ export function InvoiceForm({
       <div className="container mx-auto px-6 py-8 max-w-7xl">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={onCancel}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                if (confirmNavigation()) {
+                  onCancel();
+                }
+              }}
+            >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -164,7 +180,15 @@ export function InvoiceForm({
               {invoiceError?.message ||
                 "Failed to load invoice. Please try again."}
             </p>
-            <Button onClick={onCancel} variant="outline" className="mt-4">
+            <Button
+              onClick={() => {
+                if (confirmNavigation()) {
+                  onCancel();
+                }
+              }}
+              variant="outline"
+              className="mt-4"
+            >
               Go Back
             </Button>
           </CardContent>
@@ -182,7 +206,11 @@ export function InvoiceForm({
             className="hidden sm:block"
             variant="ghost"
             size="icon"
-            onClick={onCancel}
+            onClick={() => {
+              if (confirmNavigation()) {
+                onCancel();
+              }
+            }}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -498,9 +526,11 @@ export function InvoiceForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() =>
-                  router.push(`/invoices/${existingInvoice.sequence}`)
-                }
+                onClick={() => {
+                  if (confirmNavigation()) {
+                    router.push(`/invoices/${existingInvoice.sequence}`);
+                  }
+                }}
                 className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
               >
                 <FileText className="h-4 w-4" />
@@ -526,7 +556,11 @@ export function InvoiceForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={onCancel}
+                onClick={() => {
+                  if (confirmNavigation()) {
+                    onCancel();
+                  }
+                }}
                 className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
               >
                 <ArrowLeft className="h-4 w-4" />

@@ -30,6 +30,9 @@ export function useCreatePayment(setError?: UseFormSetError<CreatePaymentDto>) {
       queryClient.invalidateQueries({
         queryKey: invoiceKeys.detail(invoiceSequence),
       });
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.pdf(invoiceSequence),
+      });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast.success("Payment added", {
         description: "The payment has been added successfully.",
@@ -49,15 +52,20 @@ export function useUpdatePayment(setError?: UseFormSetError<UpdatePaymentDto>) {
   return useMutation({
     mutationFn: ({
       invoiceId,
+      invoiceSequence,
       paymentId,
       data,
     }: {
       invoiceId: number;
+      invoiceSequence: number;
       paymentId: number;
       data: UpdatePaymentDto;
     }) => invoicesService.updatePayment(invoiceId, paymentId, data),
-    onSuccess: () => {
+    onSuccess: (_, { invoiceSequence }) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.pdf(invoiceSequence),
+      });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast.success("Payment updated", {
         description: "The payment has been updated successfully.",
@@ -76,13 +84,18 @@ export function useDeletePayment() {
   return useMutation({
     mutationFn: ({
       invoiceId,
+      invoiceSequence,
       paymentId,
     }: {
       invoiceId: number;
+      invoiceSequence: number;
       paymentId: number;
     }) => invoicesService.deletePayment(invoiceId, paymentId),
-    onSuccess: () => {
+    onSuccess: (_, { invoiceSequence }) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.details() });
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.pdf(invoiceSequence),
+      });
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast.success("Payment deleted", {
         description: "The payment has been removed.",
