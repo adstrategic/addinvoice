@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import { processRequest } from "zod-express-middleware";
 
 import asyncHandler from "../../core/async-handler.js";
@@ -10,6 +11,8 @@ import {
   addInvoiceItem,
   addPayment,
   createInvoice,
+  createInvoiceFromVoiceAudio,
+  createInvoiceFromVoiceTranscript,
   deleteInvoice,
   deleteInvoiceItem,
   deletePayment,
@@ -26,6 +29,7 @@ import {
 import {
   createInvoiceItemSchema,
   createInvoiceSchema,
+  fromVoiceTranscriptBodySchema,
   getInvoiceByIdSchema,
   getInvoiceBySequenceSchema,
   getInvoiceItemByIdSchema,
@@ -43,6 +47,22 @@ import {
  * (applied in routes/index.ts)
  */
 export const invoicesRoutes: Router = Router();
+
+const audioUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (_req, file, cb) => {
+    const base = file.mimetype.split(";")[0]?.trim() ?? "";
+    cb(null, base.startsWith("audio/"));
+  },
+});
+
+// POST /api/v1/invoices/from-voice-audio — audio blob → Whisper → Claude → draft invoice
+invoicesRoutes.post(
+  "/from-voice-audio",
+  audioUpload.single("audio") as never,
+  asyncHandler(createInvoiceFromVoiceAudio),
+);
 
 // GET /api/v1/invoices/next-number - Get next suggested invoice number
 invoicesRoutes.get(
@@ -87,6 +107,13 @@ invoicesRoutes.post(
   "/",
   processRequest({ body: createInvoiceSchema }),
   asyncHandler(createInvoice),
+);
+
+// POST /api/v1/invoices/from-voice-transcript — transcript + Claude → draft invoice
+invoicesRoutes.post(
+  "/from-voice-transcript",
+  processRequest({ body: fromVoiceTranscriptBodySchema }),
+  asyncHandler(createInvoiceFromVoiceTranscript),
 );
 
 // PATCH /api/v1/invoices/:sequence/send - Mark invoice as sent
