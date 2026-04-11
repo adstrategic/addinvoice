@@ -42,7 +42,6 @@ export async function scanReceipt(
     return;
   }
   const result = await scanReceiptImage(file);
-  console.log(result);
   if (result === null) {
     throw new InternalError("Receipt scanning failed. Try again.");
   }

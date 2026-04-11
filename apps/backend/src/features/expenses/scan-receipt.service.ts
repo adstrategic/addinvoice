@@ -50,8 +50,6 @@ export async function scanReceiptImage(
   file: Express.Multer.File,
 ): Promise<null | ReceiptScanResult> {
   const client = new Anthropic();
-  console.log("API KEY");
-  console.log(process.env.ANTHROPIC_API_KEY);
 
   const imageBuffer = file.buffer;
   const base64Image = imageBuffer.toString("base64");
