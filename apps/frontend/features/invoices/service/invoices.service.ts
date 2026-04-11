@@ -96,6 +96,34 @@ async function getInvoiceBySequence(
   }
 }
 
+export type FromVoiceTranscriptResult = {
+  invoiceNumber: string;
+  sequence: number;
+};
+
+/**
+ * Create a draft invoice from a Web Speech transcript (backend: Claude + tools).
+ */
+async function createFromVoiceTranscript(params: {
+  businessId: number;
+  clientId: number;
+  transcript: string;
+}): Promise<FromVoiceTranscriptResult> {
+  try {
+    const { data } = await apiClient.post<
+      ApiSuccessResponse<FromVoiceTranscriptResult>
+    >(`${BASE_URL}/from-voice-transcript`, params);
+
+    if (!data?.data?.sequence || !data?.data?.invoiceNumber) {
+      throw new Error("Invalid response from voice invoice API");
+    }
+
+    return data.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 /**
  * Create a new invoice
  */
@@ -254,6 +282,37 @@ async function deletePayment(
 }
 
 /**
+ * Create a draft invoice from a recorded audio blob (backend: Whisper → Claude + tools).
+ */
+async function createFromVoiceAudio(params: {
+  businessId: number
+  clientId: number
+  audio: Blob
+  mimeType: string
+}): Promise<FromVoiceTranscriptResult> {
+  const ext = params.mimeType.includes('mp4') ? 'mp4' : 'webm'
+  const formData = new FormData()
+  formData.append('audio', params.audio, `recording.${ext}`)
+  formData.append('businessId', String(params.businessId))
+  formData.append('clientId', String(params.clientId))
+
+  try {
+    const { data } = await apiClient.post<ApiSuccessResponse<FromVoiceTranscriptResult>>(
+      `${BASE_URL}/from-voice-audio`,
+      formData,
+    )
+
+    if (!data?.data?.sequence || !data?.data?.invoiceNumber) {
+      throw new Error('Invalid response from voice invoice API')
+    }
+
+    return data.data
+  } catch (error) {
+    handleApiError(error)
+  }
+}
+
+/**
  * Service object for backward compatibility
  * for use in hooks and components
  */
@@ -261,6 +320,8 @@ export const invoicesService = {
   list: listInvoices,
   getNextInvoiceNumber: getNextInvoiceNumber,
   getBySequence: getInvoiceBySequence,
+  createFromVoiceTranscript,
+  createFromVoiceAudio,
   create: createInvoice,
   update: updateInvoice,
   delete: deleteInvoice,
