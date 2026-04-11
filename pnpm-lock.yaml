@@ -150,6 +150,9 @@ importers:
       multer:
         specifier: ^2.0.2
         version: 2.1.1
+      openai:
+        specifier: ^6.34.0
+        version: 6.34.0(ws@8.20.0)(zod@3.25.76)
       resend:
         specifier: ^6.9.2
         version: 6.10.0
