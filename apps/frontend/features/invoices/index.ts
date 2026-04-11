@@ -24,7 +24,10 @@ export { mapStatusToUI, mapUIToStatus } from "./types/api";
 
 // Service
 export { invoicesService } from "./service/invoices.service";
-export type { ListInvoicesParams } from "./service/invoices.service";
+export type {
+  FromVoiceTranscriptResult,
+  ListInvoicesParams,
+} from "./service/invoices.service";
 
 // Hooks
 export {
@@ -32,6 +35,8 @@ export {
   useInvoiceBySequence,
   useInvoicePdfBytes,
   useCreateInvoice,
+  useCreateInvoiceFromVoice,
+  useCreateInvoiceFromVoiceAudio,
   useUpdateInvoice,
   useDeleteInvoice,
   invoiceKeys,
@@ -57,6 +62,7 @@ export { InvoiceFilters } from "./components/InvoiceFilters";
 export { InvoiceList } from "./components/InvoiceList";
 export { InvoiceCard } from "./components/InvoiceCard";
 export { InvoiceActions } from "./components/InvoiceActions";
+export { VoiceInvoicePromptDialog } from "./components/VoiceInvoicePromptDialog";
 export { InvoiceForm } from "./forms/InvoiceForm";
 export { ProductFormDialog } from "./components/ProductFormDialog";
 

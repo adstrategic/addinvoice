@@ -1,5 +1,6 @@
 import type { UseFormSetError } from "react-hook-form";
 import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ListInvoicesParams, invoicesService } from "@/features/invoices";
 import type {
@@ -127,6 +128,60 @@ export function useCreateInvoice(
     },
     onError: (err) => handleMutationError(err, setError),
   });
+}
+
+/**
+ * Create a draft invoice from a voice transcript (prompt-based flow, not LiveKit).
+ */
+export function useCreateInvoiceFromVoice() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: (params: {
+      businessId: number;
+      clientId: number;
+      transcript: string;
+    }) => invoicesService.createFromVoiceTranscript(params),
+    onError: (err) => handleMutationError(err),
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.nextNumber(variables.businessId),
+      });
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
+      toast.success("Invoice created from voice", {
+        description: `Draft ${result.invoiceNumber} is ready to edit.`,
+      });
+      router.push(`/invoices/${result.sequence}/edit`);
+    },
+  });
+}
+
+export function useCreateInvoiceFromVoiceAudio() {
+  const queryClient = useQueryClient()
+  const router = useRouter()
+
+  return useMutation({
+    mutationFn: (params: {
+      businessId: number
+      clientId: number
+      audio: Blob
+      mimeType: string
+    }) => invoicesService.createFromVoiceAudio(params),
+    onError: (err) => handleMutationError(err),
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() })
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.nextNumber(variables.businessId),
+      })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      toast.success('Invoice created from voice', {
+        description: `Draft ${result.invoiceNumber} is ready to edit.`,
+      })
+      router.push(`/invoices/${result.sequence}/edit`)
+    },
+  })
 }
 
 /**
