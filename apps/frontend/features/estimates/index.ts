@@ -21,7 +21,7 @@ export { estimatesService } from "./service/estimates.service";
 export type {
   ListEstimatesParams,
   ConvertEstimateToInvoiceResponse,
-  ConvertEstimateToInvoiceRequest,
+  FromVoiceEstimateResult,
 } from "./service/estimates.service";
 
 // Hooks
@@ -30,6 +30,7 @@ export {
   useEstimateBySequence,
   useEstimatePdfBytes,
   useCreateEstimate,
+  useCreateEstimateFromVoiceAudio,
   useUpdateEstimate,
   useMarkEstimateAsAccepted,
   useDeleteEstimate,
@@ -62,6 +63,7 @@ export { EstimateFilters } from "./components/EstimateFilters";
 export { EstimateList } from "./components/EstimatesList";
 export { EstimateCard } from "./components/EstimateCard";
 export { EstimateActions } from "./components/EstimateActions";
+export { VoiceEstimatePromptDialog } from "./components/VoiceEstimatePromptDialog";
 export { EstimateForm } from "./forms/EstimateForm";
 export { ProductFormDialog } from "./components/ProductFormDialog";
 

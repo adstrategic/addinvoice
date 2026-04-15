@@ -26,6 +26,8 @@ interface ClientSelectorProps {
   onValueChange: (value: number) => void;
   initialClient: ClientResponse | null;
   mode: "create" | "edit";
+  /** When false, hides “Create New Client” (e.g. voice invoice flow). Default true. */
+  showCreateNew?: boolean;
   onSelect?: (client: ClientResponse) => void;
   onCreateNew?: () => void;
 }
@@ -35,6 +37,7 @@ export const ClientSelector = ({
   onValueChange,
   initialClient,
   mode,
+  showCreateNew = true,
   onSelect,
   onCreateNew,
 }: ClientSelectorProps) => {
@@ -90,15 +93,16 @@ export const ClientSelector = ({
               onValueChange={handleClientSearch}
             />
             <CommandGroup className="max-h-64 overflow-auto">
-              {/* Create New Client option - always first */}
-              <CommandItem
-                value="create-new-client"
-                onSelect={handleCreateNew}
-                className="font-medium"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                <span>Create New Client</span>
-              </CommandItem>
+              {showCreateNew ? (
+                <CommandItem
+                  value="create-new-client"
+                  onSelect={handleCreateNew}
+                  className="font-medium"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span>Create New Client</span>
+                </CommandItem>
+              ) : null}
               {loadingClients && (
                 <CommandItem disabled>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

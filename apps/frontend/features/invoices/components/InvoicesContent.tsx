@@ -18,6 +18,7 @@ import LoadingComponent from "@/components/loading-component";
 import { motion } from "framer-motion";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { BusinessSelectionDialog } from "@/components/business-selection-dialog";
+import { VoiceInvoicePromptDialog } from "./VoiceInvoicePromptDialog";
 import { InvoiceForm } from "../forms/InvoiceForm";
 import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { statusFilterToApiParam } from "../types/api";
@@ -26,6 +27,8 @@ import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useDownloadInvoicePdf } from "../hooks/useDownloadInvoicePDF";
+import { Button } from "@/components/ui/button";
+import { Mic } from "lucide-react";
 
 const VALID_STATUSES = ["all", "paid", "overdue", "issued", "draft"] as const;
 
@@ -171,6 +174,7 @@ export default function InvoicesContent() {
           </div>
           <InvoiceActions
             onCreateInvoice={invoiceManager.handleCreateInvoice}
+            onCreateByVoice={invoiceManager.handleCreateInvoiceByVoice}
           />
         </motion.div>
 
@@ -241,9 +245,29 @@ export default function InvoicesContent() {
       <BusinessSelectionDialog
         open={invoiceManager.showBusinessDialog}
         businesses={invoiceManager.businesses}
-        onSelect={invoiceManager.selectBusiness}
+        onSelect={invoiceManager.handleBusinessSelected}
         onOpenChange={invoiceManager.setShowBusinessDialog}
       />
+
+      <VoiceInvoicePromptDialog
+        open={invoiceManager.voicePromptOpen}
+        business={invoiceManager.voiceBusiness}
+        onOpenChange={(open) => {
+          if (!open) {
+            invoiceManager.closeVoicePrompt();
+          }
+        }}
+      />
+
+      <Button
+        type="button"
+        size="icon"
+        className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full shadow-lg hover:shadow-xl"
+        onClick={invoiceManager.handleCreateInvoiceByVoice}
+        aria-label="Create invoice by voice"
+      >
+        <Mic className="h-6 w-6" />
+      </Button>
     </>
   );
 }

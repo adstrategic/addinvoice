@@ -181,7 +181,7 @@ export function VoiceAssistantContent(_props: VoiceAssistantUIProps) {
         </Link>
       </Button>
       <Image
-        src="/images/adstrategic-icon.png"
+        src="/images/addstrategic-icon.png"
         alt="AddStrategic"
         width={100}
         height={100}

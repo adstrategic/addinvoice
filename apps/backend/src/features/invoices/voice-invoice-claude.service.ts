@@ -1,18 +1,17 @@
-import type {
-  MessageParam,
-  Tool,
-  ToolResultBlockParam,
-} from "@anthropic-ai/sdk/resources/messages/messages";
+import type { Tool } from "@anthropic-ai/sdk/resources/messages/messages";
 
 import { prisma } from "@addinvoice/db";
-import Anthropic from "@anthropic-ai/sdk";
-import OpenAI, { toFile } from "openai";
 
+import { runAgenticToolLoop } from "../../lib/agentic-runner.js";
+import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js";
 import { createInvoiceSchema } from "./invoices.schemas.js";
 import * as invoicesService from "./invoices.service.js";
 
-const VOICE_INVOICE_MODEL = "claude-haiku-4-5";
-const MAX_TOOL_ROUNDS = 12;
+// Re-export so the controller keeps its existing import path.
+export { transcribeAudio } from "../../lib/transcribe.js";
+
+// Invoice creation is a single tool call; 4 rounds is generous.
+const MAX_TOOL_ROUNDS = 4;
 
 /** Single tool: line items and totals from transcript; client is fixed by the app. */
 const CREATE_INVOICE_TOOL: Tool = {
@@ -41,19 +40,13 @@ const CREATE_INVOICE_TOOL: Tool = {
       issueDate: { type: "string", description: "YYYY-MM-DD" },
       dueDate: { type: "string", description: "YYYY-MM-DD" },
       currency: { type: "string" },
-      taxMode: {
-        type: "string",
-        enum: ["NONE", "BY_PRODUCT", "BY_TOTAL"],
-      },
+      taxMode: { type: "string", enum: ["NONE", "BY_PRODUCT", "BY_TOTAL"] },
       taxName: { type: ["string", "null"] },
       taxPercentage: { type: ["number", "null"] },
       notes: { type: ["string", "null"] },
       terms: { type: ["string", "null"] },
       discount: { type: "number" },
-      discountType: {
-        type: "string",
-        enum: ["NONE", "PERCENTAGE", "FIXED"],
-      },
+      discountType: { type: "string", enum: ["NONE", "PERCENTAGE", "FIXED"] },
       clientAddress: { type: ["string", "null"] },
       clientPhone: { type: ["string", "null"] },
       items: {
@@ -65,10 +58,7 @@ const CREATE_INVOICE_TOOL: Tool = {
             description: { type: "string" },
             quantity: { type: "number" },
             unitPrice: { type: "number" },
-            quantityUnit: {
-              type: "string",
-              enum: ["DAYS", "HOURS", "UNITS"],
-            },
+            quantityUnit: { type: "string", enum: ["DAYS", "HOURS", "UNITS"] },
             discount: { type: "number" },
             discountType: {
               type: "string",
@@ -97,12 +87,16 @@ const CREATE_INVOICE_TOOL: Tool = {
   },
 };
 
-const VOICE_INVOICE_TOOLS: Tool[] = [CREATE_INVOICE_TOOL];
+interface LockedClient {
+  email: string;
+  id: number;
+  name: string;
+}
 
 function buildSystemPrompt(params: {
   businessId: number;
   businessName: string;
-  lockedClient: { email: string; id: number; name: string };
+  lockedClient: LockedClient;
   suggestedNextInvoiceNumber: string;
   todayIso: string;
 }): string {
@@ -131,28 +125,15 @@ Rules:
 Extract line items and amounts from the transcript only — ignore any other customer names they mention; the customer is fixed above.`;
 }
 
-export type VoiceInvoiceResult =
-  | { error: "anthropic_unconfigured" }
-  | { error: "creation_failed"; message: string }
-  | {
-      invoiceNumber: string;
-      sequence: number;
-    };
-
-interface LockedClient {
-  email: string;
-  id: number;
-  name: string;
-}
-
-async function executeCreateInvoiceTool(
+async function executeCreateInvoice(
   workspaceId: number,
   businessId: number,
-  input: unknown,
   lockedClient: LockedClient,
+  input: unknown,
 ): Promise<unknown> {
   const body: Record<string, unknown> = {
     ...(input as Record<string, unknown>),
+    // Server always overrides these — never trust what the model sent.
     businessId,
     clientEmail: lockedClient.email,
     clientId: lockedClient.id,
@@ -161,49 +142,54 @@ async function executeCreateInvoiceTool(
 
   const parsed = createInvoiceSchema.safeParse(body);
   if (!parsed.success) {
+    console.error("[voice-invoice] schema validation failed:", JSON.stringify(parsed.error.flatten()))
+    console.error("[voice-invoice] body that failed validation:", JSON.stringify(body))
     return {
       fieldErrors: parsed.error.format(),
       ok: false,
       validationErrors: parsed.error.flatten(),
     };
   }
+
   try {
-    const invoice = await invoicesService.createInvoice(
-      workspaceId,
-      parsed.data,
-    );
+    const invoice = await invoicesService.createInvoice(workspaceId, parsed.data);
+    console.info("[voice-invoice] invoice created:", { id: invoice.id, invoiceNumber: invoice.invoiceNumber })
     return {
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
       ok: true,
       sequence: invoice.sequence,
     };
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    return { error: message, ok: false };
+  } catch (err) {
+    console.error("[voice-invoice] createInvoice service threw:", err)
+    return { error: (err instanceof Error ? err.message : String(err)), ok: false }
   }
 }
 
-/**
- * Transcribe audio buffer via OpenAI Whisper (auto-detects language).
- * Accepts audio/webm or audio/mp4 — both produced natively by MediaRecorder.
- */
-export async function transcribeAudio(
-  buffer: Buffer,
-  mimeType: string,
-): Promise<string> {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const ext = mimeType.includes("mp4") ? "mp4" : "webm";
-  const file = await toFile(buffer, `recording.${ext}`, { type: mimeType });
-  const response = await openai.audio.transcriptions.create({
-    model: "whisper-1",
-    file,
-  });
-  return response.text;
+function extractInvoiceSuccess(
+  result: unknown,
+): null | { invoiceNumber: string; sequence: number } {
+  if (
+    typeof result === "object" &&
+    result !== null &&
+    "ok" in result &&
+    (result as { ok: unknown }).ok === true &&
+    "invoiceNumber" in result &&
+    "sequence" in result
+  ) {
+    const r = result as { invoiceNumber: string; sequence: number };
+    return { invoiceNumber: r.invoiceNumber, sequence: r.sequence };
+  }
+  return null;
 }
 
+export type VoiceInvoiceResult =
+  | { error: "anthropic_unconfigured" }
+  | { error: "creation_failed"; message: string }
+  | { invoiceNumber: string; sequence: number };
+
 /**
- * Parse transcript with Claude (tool use) and create one draft invoice for a fixed client.
+ * Parse a transcript with Claude (tool use) and create one draft invoice for a fixed client.
  */
 export async function createInvoiceFromVoiceTranscript(
   workspaceId: number,
@@ -215,16 +201,16 @@ export async function createInvoiceFromVoiceTranscript(
     return { error: "anthropic_unconfigured" };
   }
 
-  const business = await prisma.business.findFirst({
-    select: {
-      id: true,
-      name: true,
-    },
-    where: {
-      id: businessId,
-      workspaceId,
-    },
-  });
+  const [business, clientRow] = await Promise.all([
+    prisma.business.findFirst({
+      select: { id: true, name: true },
+      where: { id: businessId, workspaceId },
+    }),
+    prisma.client.findFirst({
+      select: { email: true, id: true, name: true },
+      where: { id: clientId, workspaceId },
+    }),
+  ]);
 
   if (!business) {
     return {
@@ -232,18 +218,6 @@ export async function createInvoiceFromVoiceTranscript(
       message: "Business not found or does not belong to your workspace",
     };
   }
-
-  const clientRow = await prisma.client.findFirst({
-    select: {
-      email: true,
-      id: true,
-      name: true,
-    },
-    where: {
-      id: clientId,
-      workspaceId,
-    },
-  });
 
   if (!clientRow) {
     return {
@@ -273,95 +247,51 @@ export async function createInvoiceFromVoiceTranscript(
     todayIso,
   });
 
-  console.info("[voice-invoice] transcript length", transcript.length);
+  console.info("[voice-invoice] starting", {
+    businessId,
+    businessName: business.name,
+    clientId,
+    clientEmail: lockedClient.email,
+    suggestedNextInvoiceNumber,
+    todayIso,
+    transcriptLength: transcript.length,
+    transcript,
+  });
 
-  const anthropic = new Anthropic();
-  const messages: MessageParam[] = [
+  const results = await runAgenticToolLoop(
     {
-      role: "user",
-      content: transcript,
-    },
-  ];
-
-  let lastInvoiceSuccess: null | { invoiceNumber: string; sequence: number } =
-    null;
-
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const response = await anthropic.messages.create({
-      max_tokens: 8192,
-      messages,
-      model: VOICE_INVOICE_MODEL,
+      maxRounds: MAX_TOOL_ROUNDS,
+      model: VOICE_EXTRACTION_MODEL,
       system,
-      tools: VOICE_INVOICE_TOOLS,
-    });
-
-    if (response.stop_reason === "end_turn") {
-      break;
-    }
-
-    if (response.stop_reason !== "tool_use") {
-      break;
-    }
-
-    messages.push({
-      role: "assistant",
-      content: response.content as MessageParam["content"],
-    });
-
-    const toolResults: ToolResultBlockParam[] = [];
-    for (const block of response.content) {
-      if (block.type !== "tool_use") {
-        continue;
+      tools: [CREATE_INVOICE_TOOL],
+      userMessage: transcript,
+    },
+    (name, input) => {
+      if (name === "create_invoice") {
+        return executeCreateInvoice(
+          workspaceId,
+          businessId,
+          lockedClient,
+          input,
+        );
       }
-      const result =
-        block.name === "create_invoice"
-          ? await executeCreateInvoiceTool(
-              workspaceId,
-              businessId,
-              block.input,
-              lockedClient,
-            )
-          : { error: `Unknown tool: ${block.name}`, ok: false };
+      return Promise.resolve({ error: `Unknown tool: ${name}`, ok: false });
+    },
+  );
 
-      if (
-        block.name === "create_invoice" &&
-        result &&
-        typeof result === "object" &&
-        "ok" in result &&
-        (result as { ok: boolean }).ok &&
-        "sequence" in result &&
-        "invoiceNumber" in result
-      ) {
-        const r = result as unknown as {
-          invoiceNumber: string;
-          sequence: number;
-        };
-        lastInvoiceSuccess = {
-          invoiceNumber: r.invoiceNumber,
-          sequence: r.sequence,
-        };
-      }
-      toolResults.push({
-        content: JSON.stringify(result),
-        tool_use_id: block.id,
-        type: "tool_result",
-      });
-    }
+  console.info("[voice-invoice] runner results:", JSON.stringify(results))
 
-    if (toolResults.length === 0) {
-      break;
-    }
+  const successResult = results
+    .filter((r) => r.name === "create_invoice")
+    .map((r) => extractInvoiceSuccess(r.result))
+    .find((r) => r !== null);
 
-    messages.push({
-      role: "user",
-      content: toolResults,
-    });
+  if (successResult) {
+    console.info("[voice-invoice] success:", successResult)
+    return successResult;
   }
 
-  if (lastInvoiceSuccess) {
-    return lastInvoiceSuccess;
-  }
-
+  console.warn("[voice-invoice] no successful invoice creation found in runner results")
   return {
     error: "creation_failed",
     message:

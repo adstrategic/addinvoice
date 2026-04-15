@@ -50,6 +50,7 @@ import { useBusinesses, useCreateBusiness } from "@/features/businesses";
 import {
   useWorkspacePaymentMethods,
   useUpsertPaymentMethod,
+  useSetDefaultPaymentMethod,
   useWorkspaceLanguage,
   useUpsertWorkspaceLanguage,
   type AgentLanguage,
@@ -62,6 +63,13 @@ import { SignOutButton, UserProfile } from "@clerk/nextjs";
 import { Separator } from "@/components/ui/separator";
 import { SubscriptionManager } from "@/components/subscription/subscription-manager";
 import Image from "next/image";
+
+const ACCOUNT_IDENTIFIER_REGEX = /^[A-Za-z0-9@._\-\s]+$/;
+const MANUAL_PAYMENT_METHOD_TYPES: Array<"PAYPAL" | "ZELLE" | "NEQUI"> = [
+  "PAYPAL",
+  "ZELLE",
+  "NEQUI",
+];
 
 type InvoiceConfig = {
   prefix: string;
@@ -125,6 +133,9 @@ export default function ConfigurationPage() {
 
   const { data: paymentMethodsList } = useWorkspacePaymentMethods();
   const upsertPaymentMethod = useUpsertPaymentMethod();
+  const setDefaultPaymentMethod = useSetDefaultPaymentMethod();
+  const defaultPaymentMethodId =
+    paymentMethodsList?.find((method) => method.isDefault)?.id ?? null;
 
   const { data: workspaceLanguageData, isLoading: isLoadingWorkspaceLanguage } =
     useWorkspaceLanguage();
@@ -132,29 +143,29 @@ export default function ConfigurationPage() {
   const selectedWorkspaceLanguage: AgentLanguage =
     workspaceLanguageData?.language ?? "es";
 
-  const PAYMENT_METHOD_TYPES: PaymentMethodType[] = [
-    "PAYPAL",
-    "VENMO",
-    "ZELLE",
-    "STRIPE",
-  ];
   const [localPaymentState, setLocalPaymentState] = useState<
     Record<
-      "PAYPAL" | "VENMO" | "ZELLE" | "STRIPE",
+      "PAYPAL" | "ZELLE" | "NEQUI",
       { isEnabled: boolean; handle: string | null }
     >
   >({
     PAYPAL: { isEnabled: false, handle: null },
-    VENMO: { isEnabled: false, handle: null },
     ZELLE: { isEnabled: false, handle: null },
-    STRIPE: { isEnabled: false, handle: null },
+    NEQUI: { isEnabled: false, handle: null },
+  });
+  const [manualPaymentErrors, setManualPaymentErrors] = useState<
+    Record<"PAYPAL" | "ZELLE" | "NEQUI", null | string>
+  >({
+    PAYPAL: null,
+    ZELLE: null,
+    NEQUI: null,
   });
 
   useEffect(() => {
     if (!paymentMethodsList) return;
     setLocalPaymentState((prev) => {
       const next = { ...prev };
-      for (const type of PAYMENT_METHOD_TYPES) {
+      for (const type of MANUAL_PAYMENT_METHOD_TYPES) {
         const m = paymentMethodsList.find((x) => x.type === type);
         next[type] = {
           isEnabled: m?.isEnabled ?? false,
@@ -205,36 +216,117 @@ export default function ConfigurationPage() {
     // If enabling for the first time (not connected), the key input section appears
   };
 
-  const handlePaymentToggle = (type: PaymentMethodType, isEnabled: boolean) => {
+  const handlePaymentToggle = (
+    type: Exclude<PaymentMethodType, "STRIPE" | "VENMO">,
+    isEnabled: boolean,
+  ) => {
     const current = localPaymentState[type];
+
+    if (isEnabled) {
+      const normalizedHandle = current.handle?.trim() ?? "";
+      if (!normalizedHandle) {
+        setManualPaymentErrors((prev) => ({
+          ...prev,
+          [type]: "Account identifier is required",
+        }));
+        toast({
+          title: "Account identifier is required",
+          description: `Add the ${type.toLowerCase()} account identifier before enabling it.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!ACCOUNT_IDENTIFIER_REGEX.test(normalizedHandle)) {
+        setManualPaymentErrors((prev) => ({
+          ...prev,
+          [type]: "Only letters, numbers, spaces, and @._- are allowed",
+        }));
+        toast({
+          title: "Invalid account identifier",
+          description: "Only letters, numbers, spaces, and @._- are allowed.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    setManualPaymentErrors((prev) => ({
+      ...prev,
+      [type]: null,
+    }));
     setLocalPaymentState((prev) => ({
       ...prev,
       [type]: { ...prev[type], isEnabled },
     }));
     upsertPaymentMethod.mutate({
       type,
-      dto: { isEnabled, handle: current.handle },
+      dto: { isEnabled, handle: current.handle?.trim() || null },
     });
   };
 
   const handlePaymentHandleChange = (
-    type: PaymentMethodType,
+    type: Exclude<PaymentMethodType, "STRIPE" | "VENMO">,
     handle: string | null,
   ) => {
+    const normalizedHandle = handle?.trim() ?? "";
     setLocalPaymentState((prev) => ({
       ...prev,
       [type]: { ...prev[type], handle },
     }));
+    setManualPaymentErrors((prev) => {
+      if (!normalizedHandle) {
+        return { ...prev, [type]: "Account identifier is required" };
+      }
+      if (!ACCOUNT_IDENTIFIER_REGEX.test(normalizedHandle)) {
+        return {
+          ...prev,
+          [type]: "Only letters, numbers, spaces, and @._- are allowed",
+        };
+      }
+      return { ...prev, [type]: null };
+    });
   };
 
   const handleSavePaymentSettings = () => {
-    for (const type of PAYMENT_METHOD_TYPES) {
+    for (const type of MANUAL_PAYMENT_METHOD_TYPES) {
       const state = localPaymentState[type];
+      const normalizedHandle = state.handle?.trim() ?? "";
+
+      if (state.isEnabled && !normalizedHandle) {
+        setManualPaymentErrors((prev) => ({
+          ...prev,
+          [type]: "Account identifier is required",
+        }));
+        toast({
+          title: "Account identifier is required",
+          description: `Please enter the ${type.toLowerCase()} account identifier.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (normalizedHandle && !ACCOUNT_IDENTIFIER_REGEX.test(normalizedHandle)) {
+        setManualPaymentErrors((prev) => ({
+          ...prev,
+          [type]: "Only letters, numbers, spaces, and @._- are allowed",
+        }));
+        toast({
+          title: "Invalid account identifier",
+          description: "Only letters, numbers, spaces, and @._- are allowed.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       upsertPaymentMethod.mutate({
         type,
-        dto: { isEnabled: state.isEnabled, handle: state.handle },
+        dto: { isEnabled: state.isEnabled, handle: normalizedHandle || null },
       });
     }
+  };
+
+  const handleSetDefaultPaymentMethod = (paymentMethodId: null | number) => {
+    setDefaultPaymentMethod.mutate({ paymentMethodId });
   };
 
   const handleAddCompany = () => {
@@ -466,33 +558,29 @@ export default function ConfigurationPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* {PAYMENT_METHOD_TYPES.map((type) => {
-                  const state =
-                    localPaymentState[
-                      type as "PAYPAL" | "VENMO" | "ZELLE" | "STRIPE"
-                    ];
+                {MANUAL_PAYMENT_METHOD_TYPES.map((type) => {
+                  const state = localPaymentState[type];
                   const labels: Record<
-                    "PAYPAL" | "VENMO" | "ZELLE" | "STRIPE",
+                    "PAYPAL" | "ZELLE" | "NEQUI",
                     { name: string; placeholder: string; label: string }
                   > = {
                     PAYPAL: {
                       name: "PayPal",
                       placeholder: "e.g., paypal.me/you or email@example.com",
-                      label: "PayPal account (email or PayPal.me link)",
-                    },
-                    VENMO: {
-                      name: "Venmo",
-                      placeholder: "e.g., @username",
-                      label: "Venmo username",
+                      label: "PayPal account identifier",
                     },
                     ZELLE: {
                       name: "Zelle",
                       placeholder: "e.g., email@example.com or phone number",
-                      label: "Zelle (email or phone)",
+                      label: "Zelle account identifier",
+                    },
+                    NEQUI: {
+                      name: "Nequi",
+                      placeholder: "e.g., 3001234567 or your Nequi handle",
+                      label: "Nequi account identifier",
                     },
                   };
-                  const { name, placeholder, label } =
-                    labels[type as "PAYPAL" | "VENMO" | "ZELLE"];
+                  const { name, placeholder, label } = labels[type];
                   return (
                     <div
                       key={type}
@@ -511,17 +599,6 @@ export default function ConfigurationPage() {
                               />
                             </div>
                           )}
-                          {type === "VENMO" && (
-                            <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center border border-border overflow-hidden p-2">
-                              <Image
-                                src="/images/venmo-icon.png"
-                                alt="Zelle"
-                                width={24}
-                                height={24}
-                                className="h-full w-full object-contain"
-                              />
-                            </div>
-                          )}
                           {type === "ZELLE" && (
                             <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center border border-border overflow-hidden p-2">
                               <Image
@@ -533,21 +610,25 @@ export default function ConfigurationPage() {
                               />
                             </div>
                           )}
-                          {type === "STRIPE" && (
+                          {type === "NEQUI" && (
                             <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center border border-border overflow-hidden p-2">
-                              <Image
-                                src="/images/stripe-icon.webp"
-                                alt="Stripe"
-                                width={24}
-                                height={24}
-                                className="h-full w-full object-contain"
-                              />
+                              <span className="text-xs font-semibold text-foreground">
+                                NQ
+                              </span>
                             </div>
                           )}
                           <div>
-                            <p className="font-semibold text-foreground">
-                              {name}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-foreground">
+                                {name}
+                              </p>
+                              {paymentMethodsList?.find((m) => m.type === type)
+                                ?.isDefault && (
+                                <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                  Default
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm text-muted-foreground">
                               Accept {name} payments on your invoices
                             </p>
@@ -558,31 +639,58 @@ export default function ConfigurationPage() {
                           onCheckedChange={(v) => handlePaymentToggle(type, v)}
                         />
                       </div>
-                      {state.isEnabled && (
-                        <div className="pl-14">
-                          <Label
-                            htmlFor={`${type}-handle`}
-                            className="text-muted-foreground"
-                          >
-                            {label}
-                          </Label>
-                          <Input
-                            id={`${type}-handle`}
-                            value={state.handle ?? ""}
-                            onChange={(e) =>
-                              handlePaymentHandleChange(
-                                type,
-                                e.target.value || null,
+                      <div className="pl-14">
+                        <Label
+                          htmlFor={`${type}-handle`}
+                          className="text-muted-foreground"
+                        >
+                          {label}
+                        </Label>
+                        <Input
+                          id={`${type}-handle`}
+                          value={state.handle ?? ""}
+                          onChange={(e) =>
+                            handlePaymentHandleChange(
+                              type,
+                              e.target.value || null,
+                            )
+                          }
+                          placeholder={placeholder}
+                          className={`mt-1 ${manualPaymentErrors[type] ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
+                        />
+                        {manualPaymentErrors[type] && (
+                          <p className="mt-1 text-xs text-destructive">
+                            {manualPaymentErrors[type]}
+                          </p>
+                        )}
+                        {state.isEnabled && (
+                          <Button
+                            variant={
+                              defaultPaymentMethodId ===
+                              paymentMethodsList?.find((m) => m.type === type)?.id
+                                ? "secondary"
+                                : "outline"
+                            }
+                            size="sm"
+                            className="mt-2"
+                            disabled={setDefaultPaymentMethod.isPending}
+                            onClick={() =>
+                              handleSetDefaultPaymentMethod(
+                                paymentMethodsList?.find((m) => m.type === type)
+                                  ?.id ?? null,
                               )
                             }
-                            placeholder={placeholder}
-                            className="mt-1"
-                          />
-                        </div>
-                      )}
+                          >
+                            {defaultPaymentMethodId ===
+                            paymentMethodsList?.find((m) => m.type === type)?.id
+                              ? "Default method"
+                              : "Set as default"}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   );
-                })} */}
+                })}
 
                 {/* Stripe Integration */}
                 <div className="space-y-3 p-4 rounded-lg bg-secondary/50 border border-border">
@@ -602,6 +710,11 @@ export default function ConfigurationPage() {
                           <p className="font-semibold text-foreground">
                             Stripe
                           </p>
+                          {stripeMethod?.isDefault && (
+                            <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                              Default
+                            </span>
+                          )}
                           {stripeConnected && (
                             <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
                               <CheckCircle2 className="h-3.5 w-3.5" />
@@ -762,7 +875,39 @@ export default function ConfigurationPage() {
                           >
                             Update API Key
                           </Button>
+                          {stripeMethod?.isEnabled && (
+                            <Button
+                              variant={
+                                stripeMethod.isDefault ? "secondary" : "outline"
+                              }
+                              size="sm"
+                              disabled={setDefaultPaymentMethod.isPending}
+                              onClick={() =>
+                                handleSetDefaultPaymentMethod(
+                                  stripeMethod.id ?? null,
+                                )
+                              }
+                            >
+                              {stripeMethod.isDefault
+                                ? "Default method"
+                                : "Set as default"}
+                            </Button>
+                          )}
                         </div>
+                      )}
+                      {!stripeConnected && stripeMethod?.isEnabled && (
+                        <Button
+                          variant={stripeMethod.isDefault ? "secondary" : "outline"}
+                          size="sm"
+                          disabled={setDefaultPaymentMethod.isPending}
+                          onClick={() =>
+                            handleSetDefaultPaymentMethod(stripeMethod.id ?? null)
+                          }
+                        >
+                          {stripeMethod.isDefault
+                            ? "Default method"
+                            : "Set as default"}
+                        </Button>
                       )}
                     </div>
                   )}

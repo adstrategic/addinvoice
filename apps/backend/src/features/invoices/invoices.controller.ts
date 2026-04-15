@@ -163,18 +163,18 @@ export async function createInvoiceFromVoiceAudio(
   }
 
   if (!process.env.OPENAI_API_KEY?.trim()) {
-    res
-      .status(503)
-      .json({ error: "Voice invoice requires OPENAI_API_KEY to be configured." });
+    res.status(503).json({
+      error: "Voice invoice requires OPENAI_API_KEY to be configured.",
+    });
     return;
   }
 
   const transcript = await transcribeAudio(req.file.buffer, req.file.mimetype);
 
   if (!transcript || transcript.trim().length < 8) {
-    res
-      .status(400)
-      .json({ error: "Could not transcribe audio, or the recording was too short." });
+    res.status(400).json({
+      error: "Could not transcribe audio, or the recording was too short.",
+    });
     return;
   }
 
@@ -187,9 +187,9 @@ export async function createInvoiceFromVoiceAudio(
 
   if ("error" in result) {
     if (result.error === "anthropic_unconfigured") {
-      res
-        .status(503)
-        .json({ error: "Voice invoice requires ANTHROPIC_API_KEY to be configured." });
+      res.status(503).json({
+        error: "Voice invoice requires ANTHROPIC_API_KEY to be configured.",
+      });
       return;
     }
     res.status(400).json({ error: result.message });
