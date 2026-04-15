@@ -18,6 +18,7 @@ import { motion } from "framer-motion";
 import { SendEstimateDialog } from "@/components/send-estimate-dialog";
 import { BusinessSelectionDialog } from "@/components/business-selection-dialog";
 import { EstimateForm } from "../forms/EstimateForm";
+import { VoiceEstimatePromptDialog } from "./VoiceEstimatePromptDialog";
 import type { EstimateDashboardResponse } from "@addinvoice/schemas";
 import { statusFilterToApiParam } from "../types/api";
 import { useEstimateManager } from "../hooks/useEstimateFormManager";
@@ -180,6 +181,7 @@ export default function EstimatesContent() {
           </div>
           <EstimateActions
             onCreateEstimate={estimateManager.handleCreateEstimate}
+            onCreateByVoice={estimateManager.handleCreateEstimateByVoice}
           />
         </motion.div>
 
@@ -246,6 +248,16 @@ export default function EstimatesContent() {
         businesses={estimateManager.businesses}
         onSelect={estimateManager.selectBusiness}
         onOpenChange={estimateManager.setShowBusinessDialog}
+      />
+
+      <VoiceEstimatePromptDialog
+        open={estimateManager.voicePromptOpen}
+        business={estimateManager.voiceBusiness}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            estimateManager.closeVoicePrompt();
+          }
+        }}
       />
     </>
   );

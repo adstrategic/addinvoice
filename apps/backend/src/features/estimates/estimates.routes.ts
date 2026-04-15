@@ -5,6 +5,7 @@ import {
   updateEstimateSchema,
 } from "@addinvoice/schemas";
 import { Router } from "express";
+import multer from "multer";
 import { processRequest } from "zod-express-middleware";
 
 import asyncHandler from "../../core/async-handler.js";
@@ -12,6 +13,7 @@ import {
   addEstimateItem,
   convertEstimateToInvoice,
   createEstimate,
+  createEstimateFromVoiceAudio,
   deleteEstimate,
   deleteEstimateItem,
   enqueueSendEstimate,
@@ -25,6 +27,7 @@ import {
   updateEstimateItem,
 } from "./estimates.controller.js";
 import {
+  fromVoiceAudioBodySchema,
   getEstimateByIdSchema,
   getEstimateBySequenceSchema,
   getEstimateItemByIdSchema,
@@ -39,6 +42,23 @@ import {
  * (applied in routes/index.ts)
  */
 export const estimatesRoutes: Router = Router();
+
+const audioUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const base = file.mimetype.split(";")[0]?.trim() ?? "";
+    cb(null, base.startsWith("audio/"));
+  },
+});
+
+// POST /api/v1/estimates/from-voice-audio — audio blob → Whisper → Claude → draft estimate
+estimatesRoutes.post(
+  "/from-voice-audio",
+  audioUpload.single("audio") as never,
+  processRequest({ body: fromVoiceAudioBodySchema }),
+  asyncHandler(createEstimateFromVoiceAudio),
+);
 
 // GET /api/v1/estimates/next-number - Get next suggested estimate number
 estimatesRoutes.get(

@@ -65,7 +65,6 @@ interface EstimateFormProps {
   /** When provided (edit mode), convert accepted estimate to invoice. */
   onConvertToInvoice?: (estimate: {
     sequence: number;
-    selectedPaymentMethodId?: number | null;
   }) => void;
   isConvertingToInvoice?: boolean;
   draftItems?: EstimateEditorItem[];
@@ -106,9 +105,7 @@ export function EstimateForm({
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isSavingBeforeSend, setIsSavingBeforeSend] = useState(false);
-  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
-    number | null
-  >(null);
+  const [isSavingBeforeConvert, setIsSavingBeforeConvert] = useState(false);
   const { confirmNavigation } = useUnsavedChangesWarning({
     enabled:
       isDirty &&
@@ -129,6 +126,27 @@ export function EstimateForm({
     } else {
       setSendDialogOpen(true);
     }
+  };
+
+  const handleConvertClick = async () => {
+    if (!existingEstimate || !onConvertToInvoice) return;
+
+    if (saveBeforeSend && isDirty) {
+      setIsSavingBeforeConvert(true);
+      await saveBeforeSend({
+        onSuccess: () => {
+          onConvertToInvoice({
+            sequence: existingEstimate.sequence,
+          });
+          setIsSavingBeforeConvert(false);
+        },
+      });
+      return;
+    }
+
+    onConvertToInvoice({
+      sequence: existingEstimate.sequence,
+    });
   };
 
   const downloadPdf = useDownloadEstimatePdf();
@@ -157,14 +175,17 @@ export function EstimateForm({
   };
   const { data: paymentMethods } = useWorkspacePaymentMethods();
   const enabledPaymentMethods =
-    paymentMethods?.filter((method) => method.isEnabled) ?? [];
+    paymentMethods?.filter(
+      (method) => method.isEnabled && method.type !== "VENMO",
+    ) ?? [];
   const paymentMethodLabels: Record<
     PaymentMethodType,
-    { name: string; icon: "paypal" | "venmo" | "zelle" | "stripe" }
+    { name: string; icon: "paypal" | "zelle" | "nequi" | "stripe" }
   > = {
     PAYPAL: { name: "PayPal", icon: "paypal" },
-    VENMO: { name: "Venmo", icon: "venmo" },
+    VENMO: { name: "Venmo", icon: "paypal" },
     ZELLE: { name: "Zelle", icon: "zelle" },
+    NEQUI: { name: "Nequi", icon: "nequi" },
     STRIPE: { name: "Stripe", icon: "stripe" },
   };
 
@@ -173,17 +194,18 @@ export function EstimateForm({
 
   useEffect(() => {
     if (!existingEstimate) {
-      setSelectedPaymentMethodId(null);
+      form.setValue("selectedPaymentMethodId", null, {
+        shouldDirty: false,
+      });
       return;
     }
 
-    const estimateWithPayment = existingEstimate as EstimateResponse & {
-      selectedPaymentMethodId?: number | null;
-    };
-    setSelectedPaymentMethodId(
-      estimateWithPayment.selectedPaymentMethodId ?? null,
+    form.setValue(
+      "selectedPaymentMethodId",
+      existingEstimate.selectedPaymentMethodId ?? null,
+      { shouldDirty: false },
     );
-  }, [existingEstimate]);
+  }, [existingEstimate, form]);
 
   // Show loading state in edit mode while estimate is loading
   if (mode === "edit" && isLoadingEstimate) {
@@ -424,8 +446,12 @@ export function EstimateForm({
                     <CardContent className="space-y-4">
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div
-                          className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${selectedPaymentMethodId == null ? "border-primary bg-secondary/50" : "border-border"}`}
-                          onClick={() => setSelectedPaymentMethodId(null)}
+                          className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${form.watch("selectedPaymentMethodId") == null ? "border-primary bg-secondary/50" : "border-border"}`}
+                          onClick={() =>
+                            form.setValue("selectedPaymentMethodId", null, {
+                              shouldDirty: true,
+                            })
+                          }
                         >
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
@@ -439,13 +465,17 @@ export function EstimateForm({
                         {enabledPaymentMethods.map((method) => {
                           const label = paymentMethodLabels[method.type];
                           const isSelected =
-                            selectedPaymentMethodId === method.id;
+                            form.watch("selectedPaymentMethodId") === method.id;
                           return (
                             <div
                               key={method.id}
                               className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${isSelected ? "border-primary bg-secondary/50" : "border-border"}`}
                               onClick={() =>
-                                setSelectedPaymentMethodId(method.id)
+                                form.setValue(
+                                  "selectedPaymentMethodId",
+                                  method.id,
+                                  { shouldDirty: true },
+                                )
                               }
                             >
                               <div className="flex items-center gap-3">
@@ -453,15 +483,6 @@ export function EstimateForm({
                                   <Image
                                     src="/images/PayPal-icon.png"
                                     alt="PayPal"
-                                    width={32}
-                                    height={32}
-                                    className="h-8 w-8 object-contain"
-                                  />
-                                )}
-                                {label?.icon === "venmo" && (
-                                  <Image
-                                    src="/images/venmo-icon.png"
-                                    alt="Venmo"
                                     width={32}
                                     height={32}
                                     className="h-8 w-8 object-contain"
@@ -484,6 +505,11 @@ export function EstimateForm({
                                     height={32}
                                     className="h-8 w-8 object-contain"
                                   />
+                                )}
+                                {label?.icon === "nequi" && (
+                                  <div className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-xs font-semibold">
+                                    NQ
+                                  </div>
                                 )}
                                 <span className="font-medium text-foreground">
                                   {label?.name ?? method.type}
@@ -572,16 +598,11 @@ export function EstimateForm({
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() =>
-                    onConvertToInvoice({
-                      sequence: existingEstimate.sequence,
-                      selectedPaymentMethodId,
-                    })
-                  }
-                  disabled={isConvertingToInvoice}
+                  onClick={handleConvertClick}
+                  disabled={isConvertingToInvoice || isSavingBeforeConvert}
                   className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
                 >
-                  {isConvertingToInvoice ? (
+                  {isConvertingToInvoice || isSavingBeforeConvert ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Receipt className="h-4 w-4" />
