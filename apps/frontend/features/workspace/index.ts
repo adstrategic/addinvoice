@@ -13,6 +13,10 @@ export {
   type PaymentMethod,
   type PaymentMethodType,
   type UpsertPaymentMethodDto,
+  setDefaultPaymentMethodSchema,
+  setDefaultPaymentMethodResponseSchema,
+  type SetDefaultPaymentMethodDto,
+  type SetDefaultPaymentMethodResponse,
 } from "./schema/workspace.schema";
 
 export { workspaceService } from "./service/workspace.service";
@@ -20,6 +24,7 @@ export { workspaceService } from "./service/workspace.service";
 export {
   useWorkspacePaymentMethods,
   useUpsertPaymentMethod,
+  useSetDefaultPaymentMethod,
   useWorkspaceLanguage,
   useUpsertWorkspaceLanguage,
   workspaceKeys,

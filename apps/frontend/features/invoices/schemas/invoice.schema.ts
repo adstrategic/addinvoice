@@ -329,7 +329,7 @@ export const invoiceItemResponseSchema = z.object({
  */
 export const invoiceSelectedPaymentMethodSchema = z.object({
   id: z.number().int().positive(),
-  type: z.enum(["PAYPAL", "VENMO", "ZELLE", "STRIPE"]),
+  type: z.enum(["PAYPAL", "VENMO", "ZELLE", "NEQUI", "STRIPE"]),
   handle: z.string().nullable(),
   isEnabled: z.boolean(),
 });

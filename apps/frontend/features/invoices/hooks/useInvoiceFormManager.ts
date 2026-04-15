@@ -20,7 +20,6 @@ import {
   useCreateInvoice,
   useUpdateInvoice,
   useNextInvoiceNumber,
-  invoiceKeys,
 } from "./useInvoices";
 import { handleMutationError } from "@/lib/errors/handle-error";
 import { useDirtyFields } from "@/hooks/useDirtyValues";
@@ -28,6 +27,7 @@ import { useFormScroll } from "@/hooks/useFormScroll";
 import { type BusinessResponse } from "@addinvoice/schemas";
 import { useBusinesses } from "@/features/businesses";
 import { startOfDay } from "date-fns";
+import { useWorkspacePaymentMethods } from "@/features/workspace";
 
 interface UseInvoiceManagerOptions {
   onAfterSubmit?: () => void;
@@ -52,10 +52,20 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
   const { data: businessesData, isLoading: isLoadingBusinesses } =
     useBusinesses();
   const businesses = businessesData?.data || [];
+  const { data: paymentMethods } = useWorkspacePaymentMethods();
+  const defaultPaymentMethodId =
+    paymentMethods?.find((method) => method.isDefault)?.id ?? null;
 
   const [selectedBusiness, setSelectedBusiness] =
     useState<BusinessResponse | null>(null);
   const [showBusinessDialog, setShowBusinessDialog] = useState(false);
+  const [businessPickIntent, setBusinessPickIntent] = useState<
+    "form" | "voice" | null
+  >(null);
+  const [voicePromptOpen, setVoicePromptOpen] = useState(false);
+  const [voiceBusiness, setVoiceBusiness] = useState<BusinessResponse | null>(
+    null,
+  );
 
   // === DATA FETCHING ===
   const {
@@ -96,7 +106,7 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       clientId: 0,
       businessId: business?.id ?? 0,
       invoiceNumber: "",
-      selectedPaymentMethodId: null,
+      selectedPaymentMethodId: defaultPaymentMethodId,
       items: [],
     };
     if (!business) return base;
@@ -187,8 +197,17 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       form.reset(getDefaultValues(business ?? selectedBusiness));
       setIsFormOpen(true);
     },
-    [form, selectedBusiness],
+    [defaultPaymentMethodId, form, selectedBusiness],
   );
+
+  useEffect(() => {
+    if (mode !== "create" || !isFormOpen || form.formState.isDirty) return;
+    if (form.getValues("selectedPaymentMethodId") != null) return;
+    form.setValue("selectedPaymentMethodId", defaultPaymentMethodId, {
+      shouldDirty: false,
+      shouldValidate: false,
+    });
+  }, [defaultPaymentMethodId, form, isFormOpen, mode]);
 
   const selectBusiness = useCallback(
     (business: BusinessResponse) => {
@@ -199,14 +218,53 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     [openCreate],
   );
 
+  const handleBusinessSelected = useCallback(
+    (business: BusinessResponse) => {
+      setShowBusinessDialog(false);
+      const intent = businessPickIntent;
+      setBusinessPickIntent(null);
+      if (intent === "voice") {
+        setVoiceBusiness(business);
+        setVoicePromptOpen(true);
+        return;
+      }
+      selectBusiness(business);
+    },
+    [businessPickIntent, selectBusiness],
+  );
+
+  const setShowBusinessDialogWrapper = useCallback((open: boolean) => {
+    setShowBusinessDialog(open);
+    if (!open) {
+      setBusinessPickIntent(null);
+    }
+  }, []);
+
   const handleCreateInvoice = () => {
     if (businesses.length === 1 && businesses[0]) {
       selectBusiness(businesses[0]);
       return;
     }
 
+    setBusinessPickIntent("form");
     setShowBusinessDialog(true);
   };
+
+  const handleCreateInvoiceByVoice = () => {
+    if (businesses.length === 1 && businesses[0]) {
+      setVoiceBusiness(businesses[0]);
+      setVoicePromptOpen(true);
+      return;
+    }
+
+    setBusinessPickIntent("voice");
+    setShowBusinessDialog(true);
+  };
+
+  const closeVoicePrompt = useCallback(() => {
+    setVoicePromptOpen(false);
+    setVoiceBusiness(null);
+  }, []);
 
   // Abrir modal en modo Editar
   const openEdit = (sequence: number) => {
@@ -408,9 +466,16 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
     businesses,
     isLoadingBusinesses,
     selectBusiness,
-    setShowBusinessDialog,
+    handleBusinessSelected,
+    setShowBusinessDialog: setShowBusinessDialogWrapper,
     handleCreateInvoice,
+    handleCreateInvoiceByVoice,
     hasSelectedBusiness: selectedBusiness !== null,
+
+    // Voice prompt (transcript → API)
+    voicePromptOpen,
+    voiceBusiness,
+    closeVoicePrompt,
 
     // Save before send / before open subform
     saveBeforeSend,

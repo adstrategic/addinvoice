@@ -106,9 +106,7 @@ export function useNextInvoiceNumber(
  * Hook to create a new invoice.
  * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useCreateInvoice(
-  setError?: UseFormSetError<CreateInvoiceDTO>,
-) {
+export function useCreateInvoice(setError?: UseFormSetError<CreateInvoiceDTO>) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -159,38 +157,36 @@ export function useCreateInvoiceFromVoice() {
 }
 
 export function useCreateInvoiceFromVoiceAudio() {
-  const queryClient = useQueryClient()
-  const router = useRouter()
+  const queryClient = useQueryClient();
+  const router = useRouter();
 
   return useMutation({
     mutationFn: (params: {
-      businessId: number
-      clientId: number
-      audio: Blob
-      mimeType: string
+      businessId: number;
+      clientId: number;
+      audio: Blob;
+      mimeType: string;
     }) => invoicesService.createFromVoiceAudio(params),
     onError: (err) => handleMutationError(err),
     onSuccess: (result, variables) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       queryClient.invalidateQueries({
         queryKey: invoiceKeys.nextNumber(variables.businessId),
-      })
-      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
-      toast.success('Invoice created from voice', {
+      });
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
+      toast.success("Invoice created from voice", {
         description: `Draft ${result.invoiceNumber} is ready to edit.`,
-      })
-      router.push(`/invoices/${result.sequence}/edit`)
+      });
+      router.push(`/invoices/${result.sequence}`);
     },
-  })
+  });
 }
 
 /**
  * Hook to update an existing invoice.
  * Pass setError when used with a form so validation/field errors are set on the form.
  */
-export function useUpdateInvoice(
-  setError?: UseFormSetError<CreateInvoiceDTO>,
-) {
+export function useUpdateInvoice(setError?: UseFormSetError<CreateInvoiceDTO>) {
   const queryClient = useQueryClient();
 
   return useMutation({

@@ -56,7 +56,9 @@ model Workspace {
     payments       Payment[]
     catalogs       Catalog[]
     businesses     Business[]
+    defaultPaymentMethodId Int?
     paymentMethods WorkspacePaymentMethod[]
+    defaultPaymentMethod WorkspacePaymentMethod? @relation("WorkspaceDefaultPaymentMethod", fields: [defaultPaymentMethodId], references: [id], onDelete: SetNull)
     merchants      Merchant[]
     workCategories WorkCategory[]
     expenses       Expense[]
@@ -74,6 +76,7 @@ model Workspace {
     @@index([stripeCustomerId])
     @@index([stripeSubscriptionId])
     @@index([subscriptionStatus])
+    @@index([defaultPaymentMethodId])
     @@map("workspaces")
 }
 
@@ -156,6 +159,7 @@ enum PaymentMethodType {
     PAYPAL
     VENMO
     ZELLE
+    NEQUI
     STRIPE
 }
 
@@ -175,6 +179,8 @@ model WorkspacePaymentMethod {
 
     workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     invoices  Invoice[]
+    estimates Estimate[]
+    defaultForWorkspaces Workspace[] @relation("WorkspaceDefaultPaymentMethod")
 
     @@unique([workspaceId, type])
     @@index([workspaceId])
@@ -212,7 +218,7 @@ model Invoice {
     notes                   String?
     terms                   String?
     paymentLink             String?
-    paymentProvider         String? // "stripe" or "paypal"
+    paymentProvider         String? // e.g. "stripe"
     sentAt                  DateTime?
     viewedAt                DateTime?
     paidAt                  DateTime?
@@ -341,6 +347,7 @@ model Estimate {
     signingTokenExpiresAt DateTime?
     signatureData         Json? // fullName, IP, timestamp, optional signature image URL
     convertedToInvoiceId  Int?           @unique
+    selectedPaymentMethodId Int?
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -351,6 +358,7 @@ model Estimate {
     items              EstimateItem[]
     attachments        EstimateAttachment[]
     convertedToInvoice Invoice?             @relation(fields: [convertedToInvoiceId], references: [id], onDelete: SetNull)
+    selectedPaymentMethod WorkspacePaymentMethod? @relation(fields: [selectedPaymentMethodId], references: [id], onDelete: SetNull)
 
     @@unique([workspaceId, businessId, estimateNumber])
     @@unique([workspaceId, sequence])

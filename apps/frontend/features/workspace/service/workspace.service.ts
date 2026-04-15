@@ -6,11 +6,14 @@ import type {
   PaymentMethod,
   UpsertPaymentMethodDto,
   PaymentMethodType,
+  SetDefaultPaymentMethodDto,
+  SetDefaultPaymentMethodResponse,
   UpsertWorkspaceLanguageDto,
   WorkspaceLanguageResponse,
 } from "../schema/workspace.schema";
 import {
   paymentMethodSchema,
+  setDefaultPaymentMethodResponseSchema,
   workspaceLanguageResponseSchema,
 } from "../schema/workspace.schema";
 import { z } from "zod";
@@ -49,6 +52,19 @@ async function upsertPaymentMethod(
   }
 }
 
+async function setDefaultPaymentMethod(
+  dto: SetDefaultPaymentMethodDto,
+): Promise<SetDefaultPaymentMethodResponse> {
+  try {
+    const { data } = await apiClient.put<
+      ApiSuccessResponse<SetDefaultPaymentMethodResponse>
+    >(`${BASE_URL}/payment-methods/default`, dto);
+    return setDefaultPaymentMethodResponseSchema.parse(data.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 async function getWorkspaceLanguage(): Promise<WorkspaceLanguageResponse> {
   try {
     const { data } = await apiClient.get<ApiSuccessResponse<WorkspaceLanguageResponse>>(
@@ -77,6 +93,7 @@ async function updateWorkspaceLanguage(
 export const workspaceService = {
   listPaymentMethods,
   upsertPaymentMethod,
+  setDefaultPaymentMethod,
   getWorkspaceLanguage,
   updateWorkspaceLanguage,
 };

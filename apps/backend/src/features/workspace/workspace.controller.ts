@@ -2,14 +2,15 @@ import type { Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
 import type {
+  setDefaultPaymentMethodSchema,
+  upsertOnboardingSchema,
   upsertPaymentMethodParamsSchema,
   upsertPaymentMethodSchema,
-  upsertOnboardingSchema,
   upsertWorkspaceLanguageSchema,
 } from "./workspace.schemas.js";
 
-import { ConflictError } from "../../errors/EntityErrors.js";
 import { getWorkspaceId } from "../../core/auth.js";
+import { ConflictError } from "../../errors/EntityErrors.js";
 import * as workspaceService from "./workspace.service.js";
 
 /**
@@ -44,6 +45,22 @@ export async function upsertPaymentMethod(
     body,
   );
   res.json({ data: method });
+}
+
+/**
+ * PUT /workspace/payment-methods/default - Set or clear default payment method
+ */
+export async function setDefaultPaymentMethod(
+  req: TypedRequest<never, never, typeof setDefaultPaymentMethodSchema>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { paymentMethodId } = req.body;
+  const result = await workspaceService.setDefaultPaymentMethod(
+    workspaceId,
+    paymentMethodId,
+  );
+  res.json({ data: result });
 }
 
 /**
@@ -86,7 +103,10 @@ export async function completeOnboarding(
       },
     });
   } catch (error) {
-    if (error instanceof Error && error.message === "Onboarding already completed") {
+    if (
+      error instanceof Error &&
+      error.message === "Onboarding already completed"
+    ) {
       throw new ConflictError("Onboarding already completed");
     }
     throw error;
@@ -112,11 +132,7 @@ export async function getWorkspaceLanguage(
  * PUT /workspace/language
  */
 export async function updateWorkspaceLanguage(
-  req: TypedRequest<
-    never,
-    never,
-    typeof upsertWorkspaceLanguageSchema
-  >,
+  req: TypedRequest<never, never, typeof upsertWorkspaceLanguageSchema>,
   res: Response,
 ): Promise<void> {
   const workspaceId = getWorkspaceId(req);

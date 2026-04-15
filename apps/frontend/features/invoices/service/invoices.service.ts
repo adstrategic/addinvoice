@@ -285,30 +285,35 @@ async function deletePayment(
  * Create a draft invoice from a recorded audio blob (backend: Whisper → Claude + tools).
  */
 async function createFromVoiceAudio(params: {
-  businessId: number
-  clientId: number
-  audio: Blob
-  mimeType: string
+  businessId: number;
+  clientId: number;
+  audio: Blob;
+  mimeType: string;
 }): Promise<FromVoiceTranscriptResult> {
-  const ext = params.mimeType.includes('mp4') ? 'mp4' : 'webm'
-  const formData = new FormData()
-  formData.append('audio', params.audio, `recording.${ext}`)
-  formData.append('businessId', String(params.businessId))
-  formData.append('clientId', String(params.clientId))
+  const ext = params.mimeType.includes("mp4") ? "mp4" : "webm";
+  const formData = new FormData();
+  formData.append("audio", params.audio, `recording.${ext}`);
+  formData.append("businessId", String(params.businessId));
+  formData.append("clientId", String(params.clientId));
 
   try {
-    const { data } = await apiClient.post<ApiSuccessResponse<FromVoiceTranscriptResult>>(
-      `${BASE_URL}/from-voice-audio`,
-      formData,
-    )
+    const { data } = await apiClient.post<
+      ApiSuccessResponse<FromVoiceTranscriptResult>
+    >(`${BASE_URL}/from-voice-audio`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
     if (!data?.data?.sequence || !data?.data?.invoiceNumber) {
-      throw new Error('Invalid response from voice invoice API')
+      throw new Error(
+        "There was an error creating the invoice, please try again.",
+      );
     }
 
-    return data.data
+    return data.data;
   } catch (error) {
-    handleApiError(error)
+    handleApiError(error);
   }
 }
 

@@ -25,6 +25,7 @@ import {
   createInvoiceFromEstimate,
   markInvoiceAsSent,
 } from "../invoices/invoices.service.js";
+import { resolveSelectedPaymentMethodId } from "../workspace/payment-method-resolver.service.js";
 
 // ===== HELPER FUNCTIONS =====
 
@@ -287,7 +288,19 @@ export async function convertEstimateToInvoice(
 
     const recipientEmail = estimate.clientEmail;
 
-    const invoice = await createInvoiceFromEstimate(workspaceId, estimate, tx);
+    const validatedPaymentMethodId = await resolveSelectedPaymentMethodId(
+      tx,
+      workspaceId,
+      estimate.selectedPaymentMethodId ?? null,
+      { useWorkspaceDefaultWhenNull: false },
+    );
+
+    const invoice = await createInvoiceFromEstimate(
+      workspaceId,
+      estimate,
+      tx,
+      validatedPaymentMethodId,
+    );
 
     await tx.estimate.update({
       data: {
@@ -932,6 +945,11 @@ export async function createEstimate(
     const clientEmail = client.email;
     const clientPhone = client.phone;
     const clientAddress = client.address;
+    const selectedPaymentMethodId = await resolveSelectedPaymentMethodId(
+      tx,
+      workspaceId,
+      data.selectedPaymentMethodId ?? null,
+    );
 
     // Create estimate
     const estimate = await tx.estimate.create({
@@ -953,6 +971,7 @@ export async function createEstimate(
         },
         notes: data.notes,
         purchaseOrder: data.purchaseOrder,
+        selectedPaymentMethodId,
         sequence,
         status: "DRAFT",
         subtotal: totals.subtotal,
@@ -1494,6 +1513,7 @@ export async function updateEstimate(
       clientId,
       clientPhone,
       items: _items,
+      selectedPaymentMethodId,
       ...estimateData
     } = data;
     const updateData: Prisma.EstimateUpdateInput = { ...estimateData };
@@ -1582,6 +1602,14 @@ export async function updateEstimate(
     }
     if (clientAddress !== undefined) {
       updateData.clientAddress = clientAddress;
+    }
+
+    if (selectedPaymentMethodId !== undefined) {
+      updateData.selectedPaymentMethod = await getSelectedPaymentMethodRelationInput(
+        tx,
+        workspaceId,
+        selectedPaymentMethodId,
+      );
     }
 
     // Just update estimate fields, recalculate if tax/discount changed
@@ -2233,4 +2261,25 @@ async function handleCatalogIntegration(
   });
 
   return newCatalog.id;
+}
+
+async function getSelectedPaymentMethodRelationInput(
+  tx: Prisma.TransactionClient,
+  workspaceId: number,
+  selectedPaymentMethodId: null | number,
+): Promise<
+  | { connect: { id: number } }
+  | { disconnect: true }
+> {
+  const validatedPaymentMethodId = await resolveSelectedPaymentMethodId(
+    tx,
+    workspaceId,
+    selectedPaymentMethodId,
+  );
+
+  if (validatedPaymentMethodId == null) {
+    return { disconnect: true };
+  }
+
+  return { connect: { id: validatedPaymentMethodId } };
 }

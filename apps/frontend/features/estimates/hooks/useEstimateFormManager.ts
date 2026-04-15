@@ -1,10 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  type DefaultValues,
-  useForm,
-} from "react-hook-form";
+import { type DefaultValues, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import {
@@ -32,6 +29,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCreateClient } from "@/features/clients";
 import { clientKeys } from "@/features/clients";
 import { useEstimateDraftFormState } from "./useEstimateDraftFormState";
+import { useWorkspacePaymentMethods } from "@/features/workspace";
 interface UseEstimateManagerOptions {
   onAfterSubmit?: () => void;
   mode?: "create" | "edit";
@@ -55,10 +53,20 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
   const { data: businessesData, isLoading: isLoadingBusinesses } =
     useBusinesses();
   const businesses = businessesData?.data || [];
+  const { data: paymentMethods } = useWorkspacePaymentMethods();
+  const defaultPaymentMethodId =
+    paymentMethods?.find((method) => method.isDefault)?.id ?? null;
 
   const [selectedBusiness, setSelectedBusiness] =
     useState<BusinessResponse | null>(null);
   const [showBusinessDialog, setShowBusinessDialog] = useState(false);
+  const [businessPickIntent, setBusinessPickIntent] = useState<
+    "form" | "voice" | null
+  >(null);
+  const [voicePromptOpen, setVoicePromptOpen] = useState(false);
+  const [voiceBusiness, setVoiceBusiness] = useState<BusinessResponse | null>(
+    null,
+  );
 
   // === DATA FETCHING ===
   const {
@@ -81,43 +89,45 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
     );
 
   // === CONFIGURACIÓN DEL FORMULARIO ===
-  function getDefaultValues(
-    business?: BusinessResponse | null,
-  ): DefaultValues<CreateEstimateDTO> {
-    const base: DefaultValues<CreateEstimateDTO> = {
-      taxPercentage: null,
-      taxName: null,
-      discountType: "NONE",
-      taxMode: "NONE",
-      currency: "USD",
-      notes: "",
-      terms: "",
-      discount: 0,
-      clientId: 0,
-      businessId: business?.id ?? 0,
-      estimateNumber: "",
-      createClient: false,
-      items: [],
-    };
-    if (!business) return base;
-    return {
-      ...base,
-      businessId: business.id,
-      taxMode:
-        business.defaultTaxMode === "NONE" ||
-        business.defaultTaxMode === "BY_PRODUCT" ||
-        business.defaultTaxMode === "BY_TOTAL"
-          ? business.defaultTaxMode
-          : "NONE",
-      taxName: business.defaultTaxName ?? null,
-      taxPercentage:
-        business.defaultTaxPercentage != null
-          ? Number(business.defaultTaxPercentage)
-          : null,
-      notes: business.defaultNotes ?? "",
-      terms: business.defaultTerms ?? "",
-    };
-  }
+  const getDefaultValues = useCallback(
+    (business?: BusinessResponse | null): DefaultValues<CreateEstimateDTO> => {
+      const base: DefaultValues<CreateEstimateDTO> = {
+        taxPercentage: null,
+        taxName: null,
+        discountType: "NONE",
+        taxMode: "NONE",
+        currency: "USD",
+        notes: "",
+        terms: "",
+        discount: 0,
+        clientId: 0,
+        businessId: business?.id ?? 0,
+        estimateNumber: "",
+        createClient: false,
+        selectedPaymentMethodId: defaultPaymentMethodId,
+        items: [],
+      };
+      if (!business) return base;
+      return {
+        ...base,
+        businessId: business.id,
+        taxMode:
+          business.defaultTaxMode === "NONE" ||
+          business.defaultTaxMode === "BY_PRODUCT" ||
+          business.defaultTaxMode === "BY_TOTAL"
+            ? business.defaultTaxMode
+            : "NONE",
+        taxName: business.defaultTaxName ?? null,
+        taxPercentage:
+          business.defaultTaxPercentage != null
+            ? Number(business.defaultTaxPercentage)
+            : null,
+        notes: business.defaultNotes ?? "",
+        terms: business.defaultTerms ?? "",
+      };
+    },
+    [defaultPaymentMethodId],
+  );
 
   const form = useForm<CreateEstimateDTO>({
     resolver: zodResolver(createEstimateSchema),
@@ -192,24 +202,51 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
       form.reset(getDefaultValues(business ?? selectedBusiness));
       setIsFormOpen(true);
     },
-    [form, selectedBusiness],
+    [form, getDefaultValues, selectedBusiness],
   );
 
+  useEffect(() => {
+    if (mode !== "create" || !isFormOpen || form.formState.isDirty) return;
+    if (form.getValues("selectedPaymentMethodId") != null) return;
+    form.setValue("selectedPaymentMethodId", defaultPaymentMethodId, {
+      shouldDirty: false,
+      shouldValidate: false,
+    });
+  }, [defaultPaymentMethodId, form, isFormOpen, mode]);
+
   const selectBusiness = useCallback(
-    (business: BusinessResponse) => {
+    (business: BusinessResponse, intentOverride?: "form" | "voice") => {
       setSelectedBusiness(business);
       setShowBusinessDialog(false);
+      const intent = intentOverride ?? businessPickIntent;
+      if (intent === "voice") {
+        setBusinessPickIntent(null);
+        setVoiceBusiness(business);
+        setVoicePromptOpen(true);
+        return;
+      }
+      setBusinessPickIntent(null);
       openCreate(business);
     },
-    [openCreate],
+    [businessPickIntent, openCreate],
   );
 
   const handleCreateEstimate = () => {
+    setBusinessPickIntent("form");
     if (businesses.length === 1 && businesses[0]) {
-      selectBusiness(businesses[0]);
+      selectBusiness(businesses[0], "form");
       return;
     }
 
+    setShowBusinessDialog(true);
+  };
+
+  const handleCreateEstimateByVoice = () => {
+    setBusinessPickIntent("voice");
+    if (businesses.length === 1 && businesses[0]) {
+      selectBusiness(businesses[0], "voice");
+      return;
+    }
     setShowBusinessDialog(true);
   };
 
@@ -226,6 +263,18 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
     setEstimateSequence(null);
     setSelectedBusiness(null);
     setCreatedClient(null);
+  };
+
+  const closeVoicePrompt = () => {
+    setVoicePromptOpen(false);
+    setVoiceBusiness(null);
+  };
+
+  const handleBusinessDialogOpenChange = (open: boolean) => {
+    setShowBusinessDialog(open);
+    if (!open) {
+      setBusinessPickIntent(null);
+    }
   };
 
   // Onsubmit: two-step client creation (create client first, then estimate/update).
@@ -438,11 +487,15 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
     // Business Selection
     selectedBusiness,
     showBusinessDialog,
+    voicePromptOpen,
+    voiceBusiness,
     businesses,
     isLoadingBusinesses,
     selectBusiness,
-    setShowBusinessDialog,
+    setShowBusinessDialog: handleBusinessDialogOpenChange,
     handleCreateEstimate,
+    handleCreateEstimateByVoice,
+    closeVoicePrompt,
     hasSelectedBusiness: selectedBusiness !== null,
 
     // Save before send / before open subform

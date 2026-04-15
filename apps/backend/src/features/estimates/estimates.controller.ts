@@ -1,4 +1,4 @@
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
 import {
@@ -18,10 +18,15 @@ import type {
 import { getWorkspaceId } from "../../core/auth.js";
 import { sendEstimateQueue } from "../../queue/queues.js";
 import {
+  fromVoiceAudioBodySchema,
   getNextEstimateNumberQuerySchema,
   listEstimatesSchema,
 } from "./estimates.schemas.js";
 import * as estimatesService from "./estimates.service.js";
+import {
+  createEstimateFromVoiceTranscript as createEstimateFromVoiceTranscriptFlow,
+  transcribeAudio,
+} from "./voice-estimate-claude.service.js";
 
 /**
  * POST /estimates/:estimateId/items - Add an estimate item
@@ -65,6 +70,69 @@ export async function createEstimate(
 
   res.status(201).json({
     data: estimate,
+  });
+}
+
+/**
+ * POST /estimates/from-voice-audio — audio blob → Whisper transcript → Claude tools → draft estimate
+ */
+export async function createEstimateFromVoiceAudio(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+
+  const parsed = fromVoiceAudioBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+  const { businessId, clientId } = parsed.data;
+
+  if (!req.file) {
+    res.status(400).json({ error: "Audio file is required" });
+    return;
+  }
+
+  if (!process.env.OPENAI_API_KEY?.trim()) {
+    res.status(503).json({
+      error: "Voice estimate requires OPENAI_API_KEY to be configured.",
+    });
+    return;
+  }
+
+  const transcript = await transcribeAudio(req.file.buffer, req.file.mimetype);
+
+  if (!transcript || transcript.trim().length < 8) {
+    res.status(400).json({
+      error: "Could not transcribe audio, or the recording was too short.",
+    });
+    return;
+  }
+
+  const result = await createEstimateFromVoiceTranscriptFlow(
+    workspaceId,
+    businessId,
+    clientId,
+    transcript,
+  );
+
+  if ("error" in result) {
+    if (result.error === "anthropic_unconfigured") {
+      res.status(503).json({
+        error: "Voice estimate requires ANTHROPIC_API_KEY to be configured.",
+      });
+      return;
+    }
+    res.status(400).json({ error: result.message });
+    return;
+  }
+
+  res.status(201).json({
+    data: {
+      estimateNumber: result.estimateNumber,
+      sequence: result.sequence,
+    },
   });
 }
 

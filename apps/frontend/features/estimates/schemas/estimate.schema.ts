@@ -31,7 +31,7 @@ export type EstimateListStatsResponse = z.infer<typeof estimateListStatsSchema>;
  */
 export const estimateSelectedPaymentMethodSchema = z.object({
   id: z.number().int().positive(),
-  type: z.enum(["PAYPAL", "VENMO", "ZELLE"]),
+  type: z.enum(["PAYPAL", "VENMO", "ZELLE", "NEQUI", "STRIPE"]),
   handle: z.string().nullable(),
   isEnabled: z.boolean(),
 });

@@ -30,6 +30,11 @@ export type ListEstimatesParams = {
   businessId?: number;
 };
 
+export type FromVoiceEstimateResult = {
+  estimateNumber: string;
+  sequence: number;
+};
+
 /**
  * Estimates Service
  * Handles all API calls for estimates feature
@@ -148,21 +153,16 @@ export type ConvertEstimateToInvoiceResponse = {
   invoiceNumber: string;
 };
 
-export type ConvertEstimateToInvoiceRequest = {
-  selectedPaymentMethodId: number | null;
-};
-
 /**
  * Convert an accepted estimate to an invoice
  */
 async function convertEstimateToInvoice(
   sequence: number,
-  payload: ConvertEstimateToInvoiceRequest,
 ): Promise<ConvertEstimateToInvoiceResponse> {
   try {
     const { data } = await apiClient.post<
       ApiSuccessResponse<ConvertEstimateToInvoiceResponse>
-    >(`${BASE_URL}/${sequence}/convert-to-invoice`, payload);
+    >(`${BASE_URL}/${sequence}/convert-to-invoice`);
 
     return data.data;
   } catch (error) {
@@ -233,6 +233,42 @@ async function deleteEstimateItem(
 }
 
 /**
+ * Create a draft estimate from a recorded audio blob (backend: Whisper → Claude + tools).
+ */
+async function createFromVoiceAudio(params: {
+  businessId: number;
+  clientId: number;
+  audio: Blob;
+  mimeType: string;
+}): Promise<FromVoiceEstimateResult> {
+  const ext = params.mimeType.includes("mp4") ? "mp4" : "webm";
+  const formData = new FormData();
+  formData.append("audio", params.audio, `recording.${ext}`);
+  formData.append("businessId", String(params.businessId));
+  formData.append("clientId", String(params.clientId));
+
+  try {
+    const { data } = await apiClient.post<
+      ApiSuccessResponse<FromVoiceEstimateResult>
+    >(`${BASE_URL}/from-voice-audio`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    if (!data?.data?.sequence || !data?.data?.estimateNumber) {
+      throw new Error(
+        "There was an error creating the estimate, please try again.",
+      );
+    }
+
+    return data.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+/**
  * Service object for backward compatibility
  * for use in hooks and components
  */
@@ -244,6 +280,7 @@ export const estimatesService = {
   update: updateEstimate,
   markAsAccepted,
   convertToInvoice: convertEstimateToInvoice,
+  createFromVoiceAudio,
   delete: deleteEstimate,
   createItem: createEstimateItem,
   updateItem: updateEstimateItem,

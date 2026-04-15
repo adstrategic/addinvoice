@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-const paymentMethodTypeEnum = z.enum(["PAYPAL", "VENMO", "ZELLE", "STRIPE"]);
+const paymentMethodTypeEnum = z.enum([
+  "PAYPAL",
+  "VENMO",
+  "ZELLE",
+  "NEQUI",
+  "STRIPE",
+]);
 
 /**
  * Onboarding schemas
@@ -33,10 +39,15 @@ export const upsertPaymentMethodSchema = z.object({
 export const paymentMethodResponseSchema = z.object({
   handle: z.string().nullable(),
   id: z.number(),
+  isDefault: z.boolean().default(false),
   isEnabled: z.boolean(),
   stripeConnected: z.boolean(),
   stripeWebhookPending: z.boolean().optional(),
   type: paymentMethodTypeEnum,
+});
+
+export const setDefaultPaymentMethodSchema = z.object({
+  paymentMethodId: z.coerce.number().int().positive().nullable(),
 });
 
 /**
@@ -53,6 +64,9 @@ export type UpsertPaymentMethodParams = z.infer<
   typeof upsertPaymentMethodParamsSchema
 >;
 export type UpsertOnboardingDto = z.infer<typeof upsertOnboardingSchema>;
+export type SetDefaultPaymentMethodDto = z.infer<
+  typeof setDefaultPaymentMethodSchema
+>;
 
 /**
  * Agent language preferences for the voice assistant

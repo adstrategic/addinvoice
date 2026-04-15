@@ -65,12 +65,10 @@ export function useEstimateActions(
 
   const handleConvertToInvoice = (estimate: {
     sequence: number;
-    selectedPaymentMethodId?: number | null;
   }) => {
     convertToInvoiceMutation.mutate(
       {
         sequence: estimate.sequence,
-        selectedPaymentMethodId: estimate.selectedPaymentMethodId ?? null,
       },
       {
       onSuccess: (invoice) => {

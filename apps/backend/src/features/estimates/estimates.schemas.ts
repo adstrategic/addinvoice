@@ -53,6 +53,15 @@ export const sendEstimateBodySchema = z.object({
 });
 
 /**
+ * Body for POST /estimates/from-voice-audio (multipart/form-data).
+ * Audio file is handled by multer; only text fields are validated here.
+ */
+export const fromVoiceAudioBodySchema = z.object({
+  businessId: z.coerce.number().int().positive("Business is required"),
+  clientId: z.coerce.number().int().positive("Client is required"),
+});
+
+/**
  * Schema for getting estimate item by ID
  */
 export const getEstimateItemByIdSchema = z.object({

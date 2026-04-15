@@ -1,10 +1,12 @@
 import type { UseFormSetError } from "react-hook-form";
 import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   type ListEstimatesParams,
   estimatesService,
 } from "@/features/estimates";
+import { clientKeys } from "@/features/clients";
 import type { CreateEstimateDTO, UpdateEstimateDTO } from "@addinvoice/schemas";
 import { handleMutationError } from "@/lib/errors/handle-error";
 import { toast } from "sonner";
@@ -57,10 +59,7 @@ export function useEstimateBySequence(
 /**
  * Raw PDF bytes for inline preview (pdf.js). Authenticated fetch with deduplication via TanStack Query.
  */
-export function useEstimatePdfBytes(
-  sequence: number | null,
-  enabled: boolean,
-) {
+export function useEstimatePdfBytes(sequence: number | null, enabled: boolean) {
   const { getToken } = useAuth();
 
   return useQuery({
@@ -124,6 +123,32 @@ export function useCreateEstimate(
       });
     },
     onError: (err) => handleMutationError(err, setError),
+  });
+}
+
+export function useCreateEstimateFromVoiceAudio() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: (params: {
+      businessId: number;
+      clientId: number;
+      audio: Blob;
+      mimeType: string;
+    }) => estimatesService.createFromVoiceAudio(params),
+    onError: (err) => handleMutationError(err),
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries({ queryKey: estimateKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: estimateKeys.nextNumber(variables.businessId),
+      });
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
+      toast.success("Estimate created from voice", {
+        description: `Draft ${result.estimateNumber} is ready to edit.`,
+      });
+      router.push(`/estimates/${result.sequence}`);
+    },
   });
 }
 
@@ -215,16 +240,8 @@ export function useConvertEstimateToInvoice() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      sequence,
-      selectedPaymentMethodId,
-    }: {
-      sequence: number;
-      selectedPaymentMethodId: number | null;
-    }) =>
-      estimatesService.convertToInvoice(sequence, {
-        selectedPaymentMethodId,
-      }),
+    mutationFn: ({ sequence }: { sequence: number }) =>
+      estimatesService.convertToInvoice(sequence),
     onSuccess: (invoice) => {
       queryClient.invalidateQueries({ queryKey: estimateKeys.all });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });

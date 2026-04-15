@@ -4,6 +4,7 @@ import type {
   AgentLanguage,
   UpsertPaymentMethodDto,
   PaymentMethodType,
+  SetDefaultPaymentMethodDto,
   UpsertWorkspaceLanguageDto,
 } from "../schema/workspace.schema";
 import { toast } from "sonner";
@@ -50,6 +51,26 @@ export function useUpsertPaymentMethod() {
     onError: (error: Error) => {
       toast.error("Failed to save payment settings", {
         description: error.message || "Failed to save payment settings",
+      });
+    },
+  });
+}
+
+export function useSetDefaultPaymentMethod() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (dto: SetDefaultPaymentMethodDto) =>
+      workspaceService.setDefaultPaymentMethod(dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.paymentMethods(),
+      });
+      toast.success("Default payment method updated");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to update default method", {
+        description: error.message || "Failed to update default method",
       });
     },
   });

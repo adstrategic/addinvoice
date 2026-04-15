@@ -4,13 +4,15 @@ import { processRequest } from "zod-express-middleware";
 import asyncHandler from "../../core/async-handler.js";
 import {
   completeOnboarding,
-  getWorkspaceLanguage,
   getOnboarding,
+  getWorkspaceLanguage,
   listPaymentMethods,
-  upsertPaymentMethod,
+  setDefaultPaymentMethod,
   updateWorkspaceLanguage,
+  upsertPaymentMethod,
 } from "./workspace.controller.js";
 import {
+  setDefaultPaymentMethodSchema,
   upsertOnboardingSchema,
   upsertPaymentMethodParamsSchema,
   upsertPaymentMethodSchema,
@@ -47,6 +49,14 @@ workspaceRoutes.put(
     body: upsertWorkspaceLanguageSchema,
   }),
   asyncHandler(updateWorkspaceLanguage),
+);
+
+workspaceRoutes.put(
+  "/payment-methods/default",
+  processRequest({
+    body: setDefaultPaymentMethodSchema,
+  }),
+  asyncHandler(setDefaultPaymentMethod),
 );
 
 // PUT /api/v1/workspace/payment-methods/:type - Upsert a payment method

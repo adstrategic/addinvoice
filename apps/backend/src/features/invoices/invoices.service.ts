@@ -25,6 +25,7 @@ import {
   EntityValidationError,
   FieldValidationError,
 } from "../../errors/EntityErrors.js";
+import { resolveSelectedPaymentMethodId } from "../workspace/payment-method-resolver.service.js";
 import { type BusinessEntity } from "../businesses/businesses.schemas.js";
 import { type ClientEntity } from "../clients/clients.schemas.js";
 
@@ -40,6 +41,7 @@ export async function createInvoiceFromEstimate(
   workspaceId: number,
   estimate: Estimate & { items: EstimateItem[] },
   tx?: Prisma.TransactionClient,
+  selectedPaymentMethodId?: null | number,
 ): Promise<InvoiceEntityWithRelations> {
   const client = tx ?? prisma;
 
@@ -86,6 +88,7 @@ export async function createInvoiceFromEstimate(
       discount: estimate.discount,
       discountType: estimate.discountType,
       subtotal: estimate.subtotal,
+      selectedPaymentMethodId: selectedPaymentMethodId ?? null,
       taxMode: estimate.taxMode,
       taxName: estimate.taxName,
       taxPercentage: estimate.taxPercentage,
@@ -924,6 +927,11 @@ export async function createInvoice(
     const clientAddress = client.address;
 
     // Create invoice
+    const selectedPaymentMethodId = await resolveSelectedPaymentMethodId(
+      tx,
+      workspaceId,
+      data.selectedPaymentMethodId ?? null,
+    );
     const invoice = await tx.invoice.create({
       data: {
         balance: totals.total,
@@ -944,7 +952,7 @@ export async function createInvoice(
         },
         notes: data.notes,
         purchaseOrder: data.purchaseOrder,
-        selectedPaymentMethodId: data.selectedPaymentMethodId ?? null,
+        selectedPaymentMethodId,
         sequence,
         status: "DRAFT",
         subtotal: totals.subtotal,
@@ -1543,6 +1551,17 @@ export async function updateInvoice(
       ...invoiceData
     } = data;
     const updateData: Prisma.InvoiceUpdateInput = { ...invoiceData };
+    if (selectedPaymentMethodId !== undefined) {
+      const resolvedPaymentMethodId = await resolveSelectedPaymentMethodId(
+        tx,
+        workspaceId,
+        selectedPaymentMethodId,
+      );
+      updateData.selectedPaymentMethod =
+        resolvedPaymentMethodId != null
+          ? { connect: { id: resolvedPaymentMethodId } }
+          : { disconnect: true };
+    }
 
     // Handle client creation or selection
     let newClientId: number | undefined;
@@ -1749,12 +1768,6 @@ export async function updateInvoice(
                 ? { id: clientId }
                 : undefined,
         },
-        ...(selectedPaymentMethodId !== undefined && {
-          selectedPaymentMethod:
-            selectedPaymentMethodId != null
-              ? { connect: { id: selectedPaymentMethodId } }
-              : { disconnect: true },
-        }),
       },
       include: {
         business: true,

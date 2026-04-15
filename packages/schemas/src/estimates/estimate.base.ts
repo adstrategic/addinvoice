@@ -71,6 +71,12 @@ export const baseEstimateSchema = z.object({
   items: z.array(baseEstimateItemSchema).optional(),
   notes: z.string().trim().max(2000).nullish(),
   purchaseOrder: z.string().trim().max(100).nullish(),
+  selectedPaymentMethodId: z.coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .optional(),
   taxMode: TaxModeEnum.default("NONE"),
   taxName: z.string().trim().max(100).nullish(),
   taxPercentage: nullableOptional(

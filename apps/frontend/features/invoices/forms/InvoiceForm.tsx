@@ -139,7 +139,7 @@ export function InvoiceForm({
 
   const { data: paymentMethods } = useWorkspacePaymentMethods();
   const enabledPaymentMethods =
-    paymentMethods?.filter((m) => m.isEnabled) ?? [];
+    paymentMethods?.filter((m) => m.isEnabled && m.type !== "VENMO") ?? [];
   const hasItems = draftItems.length > 0;
 
   // Show loading state in edit mode while invoice is loading
@@ -401,12 +401,12 @@ export function InvoiceForm({
                             string,
                             {
                               name: string;
-                              icon: "paypal" | "venmo" | "zelle" | "stripe";
+                              icon: "paypal" | "zelle" | "nequi" | "stripe";
                             }
                           > = {
                             PAYPAL: { name: "PayPal", icon: "paypal" },
-                            VENMO: { name: "Venmo", icon: "venmo" },
                             ZELLE: { name: "Zelle", icon: "zelle" },
+                            NEQUI: { name: "Nequi", icon: "nequi" },
                             STRIPE: { name: "Stripe", icon: "stripe" },
                           };
                           const label = labels[method.type];
@@ -434,15 +434,6 @@ export function InvoiceForm({
                                     className="h-8 w-8 object-contain"
                                   />
                                 )}
-                                {label?.icon === "venmo" && (
-                                  <Image
-                                    src="/images/venmo-icon.png"
-                                    alt="PayPal"
-                                    width={32}
-                                    height={32}
-                                    className="h-8 w-8 object-contain"
-                                  />
-                                )}
                                 {label?.icon === "zelle" && (
                                   <Image
                                     src="/images/zelle-icon.png"
@@ -460,6 +451,11 @@ export function InvoiceForm({
                                     height={32}
                                     className="h-8 w-8 object-contain"
                                   />
+                                )}
+                                {label?.icon === "nequi" && (
+                                  <div className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-xs font-semibold">
+                                    NQ
+                                  </div>
                                 )}
                                 <span className="font-medium text-foreground">
                                   {label?.name ?? method.type}
