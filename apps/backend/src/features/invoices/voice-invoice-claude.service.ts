@@ -142,8 +142,6 @@ async function executeCreateInvoice(
 
   const parsed = createInvoiceSchema.safeParse(body);
   if (!parsed.success) {
-    console.error("[voice-invoice] schema validation failed:", JSON.stringify(parsed.error.flatten()))
-    console.error("[voice-invoice] body that failed validation:", JSON.stringify(body))
     return {
       fieldErrors: parsed.error.format(),
       ok: false,
@@ -151,19 +149,13 @@ async function executeCreateInvoice(
     };
   }
 
-  try {
-    const invoice = await invoicesService.createInvoice(workspaceId, parsed.data);
-    console.info("[voice-invoice] invoice created:", { id: invoice.id, invoiceNumber: invoice.invoiceNumber })
-    return {
-      id: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      ok: true,
-      sequence: invoice.sequence,
-    };
-  } catch (err) {
-    console.error("[voice-invoice] createInvoice service threw:", err)
-    return { error: (err instanceof Error ? err.message : String(err)), ok: false }
-  }
+  const invoice = await invoicesService.createInvoice(workspaceId, parsed.data);
+  return {
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    ok: true,
+    sequence: invoice.sequence,
+  };
 }
 
 function extractInvoiceSuccess(
@@ -247,17 +239,6 @@ export async function createInvoiceFromVoiceTranscript(
     todayIso,
   });
 
-  console.info("[voice-invoice] starting", {
-    businessId,
-    businessName: business.name,
-    clientId,
-    clientEmail: lockedClient.email,
-    suggestedNextInvoiceNumber,
-    todayIso,
-    transcriptLength: transcript.length,
-    transcript,
-  });
-
   const results = await runAgenticToolLoop(
     {
       maxRounds: MAX_TOOL_ROUNDS,
@@ -279,19 +260,13 @@ export async function createInvoiceFromVoiceTranscript(
     },
   );
 
-  console.info("[voice-invoice] runner results:", JSON.stringify(results))
-
   const successResult = results
     .filter((r) => r.name === "create_invoice")
     .map((r) => extractInvoiceSuccess(r.result))
     .find((r) => r !== null);
 
-  if (successResult) {
-    console.info("[voice-invoice] success:", successResult)
-    return successResult;
-  }
+  if (successResult) return successResult;
 
-  console.warn("[voice-invoice] no successful invoice creation found in runner results")
   return {
     error: "creation_failed",
     message:
