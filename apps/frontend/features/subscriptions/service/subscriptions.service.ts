@@ -94,10 +94,11 @@ async function createCheckout(
 /**
  * Create Stripe Customer Portal session
  */
-async function createPortalSession(): Promise<string> {
+async function createPortalSession(returnUrl?: string): Promise<string> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<PortalResponse>>(
       `${BASE_URL}/portal`,
+      returnUrl ? { returnUrl } : undefined,
     );
 
     return data.data.url;

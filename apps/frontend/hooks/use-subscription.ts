@@ -1,8 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   subscriptionsService,
   type SubscriptionPlan,
-  type SubscriptionStatusResponse,
 } from "@/features/subscriptions/service/subscriptions.service";
 
 export interface CreateCheckoutParams {
@@ -64,7 +63,8 @@ export function useCreateCheckout() {
  */
 export function useCreatePortalSession() {
   return useMutation({
-    mutationFn: () => subscriptionsService.createPortalSession(),
+    mutationFn: (returnUrl?: string) =>
+      subscriptionsService.createPortalSession(returnUrl),
     onSuccess: (url) => {
       // Redirect to Stripe Customer Portal
       if (typeof window !== "undefined") {

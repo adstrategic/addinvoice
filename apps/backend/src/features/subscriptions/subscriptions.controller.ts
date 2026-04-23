@@ -73,11 +73,30 @@ export async function createPortalSession(
   res: Response,
 ): Promise<void> {
   const workspaceId = getWorkspaceId(req);
+  const body = req.body as { returnUrl?: unknown } | undefined;
+  const returnUrl = body?.returnUrl;
 
-  const portalUrl =
-    await subscriptionService.createCustomerPortalSession(workspaceId);
+  if (returnUrl !== undefined && !isSafeRelativeReturnUrl(returnUrl)) {
+    res.status(400).json({
+      error: "INVALID_RETURN_URL",
+      message: "returnUrl must be a relative path starting with /",
+    });
+    return;
+  }
+
+  const portalUrl = await subscriptionService.createCustomerPortalSession(
+    workspaceId,
+    returnUrl,
+  );
 
   res.json({ data: { url: portalUrl } });
+}
+
+function isSafeRelativeReturnUrl(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  if (!value.startsWith("/")) return false;
+  if (value.startsWith("//")) return false;
+  return true;
 }
 
 /**

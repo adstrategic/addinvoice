@@ -61,17 +61,9 @@ export async function handleStripeWebhook(
         await handleSubscriptionDeleted(event.data.object);
         break;
 
-      // case "customer.subscription.created":
-      //   await handleSubscriptionCreated(
-      //     event.data.object as Stripe.Subscription,
-      //   );
-      //   break;
-
-      // case "customer.subscription.updated":
-      //   await handleSubscriptionUpdated(
-      //     event.data.object as Stripe.Subscription,
-      //   );
-      //   break;
+      case "customer.subscription.updated":
+        await handleSubscriptionUpdated(event.data.object);
+        break;
 
       // case "invoice.payment_succeeded":
       //   await handleInvoicePaymentSucceeded(
@@ -167,8 +159,8 @@ async function handleSubscriptionDeleted(
 /**
  * Handle subscription updated
  */
-// async function handleSubscriptionUpdated(
-//   subscription: Stripe.Subscription,
-// ): Promise<void> {
-//   await subscriptionService.handleSubscriptionUpdated(subscription);
-// }
+async function handleSubscriptionUpdated(
+  subscription: Stripe.Subscription,
+): Promise<void> {
+  await subscriptionService.handleSubscriptionUpdated(subscription);
+}

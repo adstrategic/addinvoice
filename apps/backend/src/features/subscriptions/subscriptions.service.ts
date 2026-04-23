@@ -109,6 +109,7 @@ export async function createCheckoutSession(
  */
 export async function createCustomerPortalSession(
   workspaceId: number,
+  returnPath = "/configuration",
 ): Promise<string> {
   const workspace = await prisma.workspace.findUnique({
     select: { stripeCustomerId: true },
@@ -127,7 +128,7 @@ export async function createCustomerPortalSession(
 
   const session = await stripe.billingPortal.sessions.create({
     customer: workspace.stripeCustomerId,
-    return_url: `${frontendUrl}/configuration`,
+    return_url: `${frontendUrl}${returnPath}`,
   });
 
   return session.url;

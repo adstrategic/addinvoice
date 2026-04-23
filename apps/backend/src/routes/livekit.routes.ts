@@ -7,6 +7,10 @@ import {
 import { z } from "zod";
 import { validateRequest } from "zod-express-middleware";
 import { prisma } from "@addinvoice/db";
+import {
+  hasVoiceAccess,
+  isSubscriptionActive,
+} from "../features/subscriptions/subscription-access.js";
 
 export const livekitRouter: Router = Router();
 
@@ -89,12 +93,24 @@ livekitRouter.post(
       }
 
       const workspace = await prisma.workspace.findUnique({
-        select: { language: true },
+        select: {
+          language: true,
+          subscriptionPlan: true,
+          subscriptionStatus: true,
+        },
         where: { id: workspace_id },
       });
 
       if (!workspace) {
         return res.status(404).json({ error: "Workspace not found" });
+      }
+
+      if (!isSubscriptionActive(workspace.subscriptionStatus)) {
+        return res.status(403).json({ error: "SUBSCRIPTION_INACTIVE" });
+      }
+
+      if (!hasVoiceAccess(workspace.subscriptionPlan)) {
+        return res.status(403).json({ error: "VOICE_PLAN_REQUIRED" });
       }
 
       const language = workspace.language;
