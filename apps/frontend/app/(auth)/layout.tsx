@@ -16,7 +16,7 @@ export default function AuthLayout({
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <Card className="border-0 bg-transparent shadow-none p-6 md:border md:border-border/50 md:shadow-2xl md:bg-card/95 md:backdrop-blur">
+        <Card className="border-0 bg-white! shadow-none p-6 md:border md:border-border/50 md:shadow-2xl md:bg-card/95 md:backdrop-blur">
           <div className="flex justify-center mb-6">
             <Image
               src="/images/addstrategic-banner.png"

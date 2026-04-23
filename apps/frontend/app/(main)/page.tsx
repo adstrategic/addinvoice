@@ -18,7 +18,9 @@ import {
 } from "lucide-react";
 import { DashboardBusinessFilter } from "@/components/dashboard-business-filter";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useDashboardStats } from "@/features/dashboard";
 import { useExpenseDashboardStats } from "@/features/expenses";
@@ -32,6 +34,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn, formatCurrency } from "@/lib/utils";
+import {
+  dismissRootShortcuts,
+  hasDismissedRootShortcuts,
+} from "@/lib/root-shortcuts";
+import { ShortcutInterface } from "@/components/shortcut-interface";
 
 const CHART_PERIODS = [
   { value: "7d" as const, label: "Last 7 days" },
@@ -113,7 +120,71 @@ function StatCard({
   );
 }
 
-export default function Dashboard() {
+function DashboardEntryFallback() {
+  return (
+    <div className="container mx-auto mt-16 sm:mt-0 px-4 sm:px-6 py-6 sm:py-8">
+      <div className="mb-8 space-y-2">
+        <div className="h-8 w-48 animate-pulse rounded-md bg-muted" />
+        <div className="h-4 w-72 animate-pulse rounded-md bg-muted/80" />
+      </div>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <Card key={i} className="shadow-sm">
+            <CardHeader>
+              <Skeleton className="h-4 w-24" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-16" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type RootSurface = "hydrating" | "shortcuts" | "dashboard";
+
+function DashboardRoot() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [surface, setSurface] = useState<RootSurface>("hydrating");
+
+  const goToDashboard = useCallback(() => {
+    setSurface("dashboard");
+  }, []);
+
+  useEffect(() => {
+    const view = searchParams.get("view");
+    const shortcuts = searchParams.get("shortcuts");
+
+    if (view === "dashboard" || shortcuts === "0") {
+      dismissRootShortcuts();
+      router.replace("/", { scroll: false });
+      setSurface("dashboard");
+      return;
+    }
+
+    if (shortcuts === "1") {
+      setSurface("shortcuts");
+      return;
+    }
+
+    setSurface(hasDismissedRootShortcuts() ? "dashboard" : "shortcuts");
+  }, [router, searchParams]);
+
+  if (surface === "hydrating") {
+    return <DashboardEntryFallback />;
+  }
+
+  if (surface === "shortcuts") {
+    return <ShortcutInterface onRequestDashboard={goToDashboard} />;
+  }
+
+  return <DashboardHome />;
+}
+
+function DashboardHome() {
   const [periodFilter, setPeriodFilter] = useState<"7d" | "30d" | "6m" | "12m">(
     "30d",
   );
@@ -499,5 +570,13 @@ export default function Dashboard() {
       {/* </div>{" "} */}
       {/* gradient wrapper */}
     </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardEntryFallback />}>
+      <DashboardRoot />
+    </Suspense>
   );
 }

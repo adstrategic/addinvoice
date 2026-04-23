@@ -1,38 +1,38 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import Image from "next/image"
-import { motion } from "framer-motion"
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { motion } from "framer-motion";
 
 interface SplashScreenProps {
-  onComplete: () => void
+  onComplete: () => void;
 }
 
 export function SplashScreen({ onComplete }: SplashScreenProps) {
-  const [progress, setProgress] = useState(0)
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     // Simulate loading progress
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          clearInterval(interval)
-          return 100
+          clearInterval(interval);
+          return 100;
         }
-        return prev + 2
-      })
-    }, 100)
+        return prev + 2;
+      });
+    }, 100);
 
     // Complete after 6 seconds
     const timeout = setTimeout(() => {
-      onComplete()
-    }, 6000)
+      onComplete();
+    }, 6000);
 
     return () => {
-      clearInterval(interval)
-      clearTimeout(timeout)
-    }
-  }, [onComplete])
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [onComplete]);
 
   return (
     <motion.div
@@ -46,11 +46,15 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         {/* Animated Logo */}
         <motion.div
           animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+          transition={{
+            duration: 2,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "linear",
+          }}
           className="relative"
         >
           <Image
-            src="/images/adstrategic-icon.png"
+            src="/images/addstrategic-icon.png"
             alt="ADSTRATEGIC"
             width={120}
             height={120}
@@ -84,5 +88,5 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         </motion.div>
       </div>
     </motion.div>
-  )
+  );
 }

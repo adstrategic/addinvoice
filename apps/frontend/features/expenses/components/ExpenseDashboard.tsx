@@ -1,33 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import {
   Bar,
   BarChart,
-  ResponsiveContainer,
   XAxis,
   YAxis,
-  Tooltip,
   CartesianGrid,
   Cell,
 } from "recharts";
-import {
-  Receipt,
-  DollarSign,
-  Calendar,
-  CalendarDays,
-  TrendingUp,
-  Calculator,
-} from "lucide-react";
+import { Receipt, DollarSign, CalendarDays, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useExpenseDashboardStats } from "../hooks/useExpenseDashboardStats";
-import { ExpenseCard } from "./ExpenseCard";
-import type { ExpenseResponse } from "../schema/expenses.schema";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -46,14 +39,18 @@ const cardVariants = {
   },
 };
 
-const barColor = "#007587";
+const expenseChartConfig = {
+  amount: {
+    label: "Amount",
+    color: "var(--chart-1)",
+  },
+} satisfies ChartConfig;
 
 interface ExpenseDashboardProps {
   workCategoryId: string;
 }
 
 export function ExpenseDashboard({ workCategoryId }: ExpenseDashboardProps) {
-  const router = useRouter();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const workCategoryIdNum =
@@ -66,17 +63,12 @@ export function ExpenseDashboard({ workCategoryId }: ExpenseDashboardProps) {
     workCategoryId: workCategoryIdNum,
   });
 
-  const avgPerExpense =
-    stats && stats.totalExpenses > 0
-      ? stats.totalAmount / stats.totalExpenses
-      : 0;
-
   if (isLoading) {
     return (
       <div className="space-y-6 mb-6 sm:mb-8">
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {[...Array(5)].map((_, i) => (
-            <Card key={i}>
+            <Card key={i} className="bg-card border-border">
               <CardHeader>
                 <Skeleton className="h-4 w-24" />
               </CardHeader>
@@ -86,7 +78,7 @@ export function ExpenseDashboard({ workCategoryId }: ExpenseDashboardProps) {
             </Card>
           ))}
         </div>
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader>
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-4 w-64 mt-2" />
@@ -101,7 +93,7 @@ export function ExpenseDashboard({ workCategoryId }: ExpenseDashboardProps) {
 
   if (error || !stats) {
     return (
-      <Card className="mb-6 sm:mb-8 p-6">
+      <Card className="mb-6 sm:mb-8 p-6 bg-card border-border">
         <p className="text-destructive">
           Failed to load expense dashboard data. Please try again later.
         </p>
@@ -195,52 +187,52 @@ export function ExpenseDashboard({ workCategoryId }: ExpenseDashboardProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300} minHeight={250}>
-              <BarChart data={stats.monthlyExpenses}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="hsl(var(--border))"
-                  opacity={0.3}
-                />
+            <ChartContainer
+              config={expenseChartConfig}
+              className="min-h-[300px] w-full"
+            >
+              <BarChart
+                accessibilityLayer
+                data={stats.monthlyExpenses}
+                margin={{ left: 12, right: 12 }}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis
                   dataKey="month"
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
                   tickLine={false}
                   axisLine={false}
+                  tickMargin={8}
+                  fontSize={12}
                 />
                 <YAxis
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
                   tickLine={false}
                   axisLine={false}
+                  tickMargin={8}
+                  fontSize={12}
                   tickFormatter={(value) => `$${value / 1000}K`}
                 />
-                <Tooltip
+                <ChartTooltip
                   cursor={false}
-                  position={{ y: 0 }}
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--popover))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "var(--radius)",
-                    color: "hsl(var(--popover-foreground))",
-                    boxShadow:
-                      "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-                    zIndex: 1000,
-                    padding: "12px",
-                  }}
-                  labelStyle={{
-                    color: "hsl(var(--popover-foreground))",
-                    fontWeight: 600,
-                    marginBottom: "4px",
-                  }}
-                  formatter={(value: number | undefined) => [
-                    formatCurrency(value ?? 0),
-                    "Amount",
-                  ]}
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value, name) => (
+                        <div className="flex w-full items-center justify-between gap-4">
+                          <span className="text-muted-foreground">
+                            {name === "amount"
+                              ? expenseChartConfig.amount.label
+                              : String(name)}
+                          </span>
+                          <span className="font-mono font-medium tabular-nums text-foreground">
+                            {formatCurrency(Number(value))}
+                          </span>
+                        </div>
+                      )}
+                    />
+                  }
                 />
                 <Bar
                   dataKey="amount"
+                  name="amount"
                   radius={[8, 8, 0, 0]}
                   barSize={35}
                   onMouseEnter={(_, index) => setHoveredIndex(index)}
@@ -249,7 +241,7 @@ export function ExpenseDashboard({ workCategoryId }: ExpenseDashboardProps) {
                   {stats.monthlyExpenses.map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={barColor}
+                      fill="var(--color-amount)"
                       opacity={
                         hoveredIndex === null || hoveredIndex === index
                           ? 1
@@ -260,7 +252,7 @@ export function ExpenseDashboard({ workCategoryId }: ExpenseDashboardProps) {
                   ))}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
       </motion.div>

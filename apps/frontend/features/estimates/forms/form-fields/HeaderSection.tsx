@@ -51,26 +51,6 @@ export function HeaderSection({ form, isLoadingNumber }: HeaderSectionProps) {
         <CardTitle className="text-lg font-bold text-foreground">
           Estimate Details
         </CardTitle>
-        <FormField
-          control={form.control}
-          name="requireSignature"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-              <FormControl>
-                <Checkbox
-                  checked={field.value ?? false}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel className="font-normal cursor-pointer">
-                  Ask for signature
-                </FormLabel>
-                <FormMessage />
-              </div>
-            </FormItem>
-          )}
-        />
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
@@ -88,6 +68,26 @@ export function HeaderSection({ form, isLoadingNumber }: HeaderSectionProps) {
                   />
                 </FormControl>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="requireSignature"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value ?? false}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="font-normal cursor-pointer">
+                    Ask for signature
+                  </FormLabel>
+                  <FormMessage />
+                </div>
               </FormItem>
             )}
           />

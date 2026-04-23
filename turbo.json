@@ -14,6 +14,7 @@
       "persistent": true,
       "env": [
         "ANTHROPIC_API_KEY",
+        "OPENAI_API_KEY",
         "PORT",
         "FRONTEND_URL",
         "APP_BASE_URL",

@@ -5,22 +5,32 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  SidebarContent as ShadcnSidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  Sidebar as SidebarRoot,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
   FileText,
   Users,
   Settings,
-  Menu,
   FileCheck,
   CreditCard,
   Receipt,
   Package,
   Mic,
   HelpCircle,
+  Moon,
+  Sun,
 } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -36,15 +46,20 @@ const navigation = [
   { name: "Configuration", href: "/configuration", icon: Settings },
 ];
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+export function Sidebar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  // const { logout } = useAuth();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const handleNavigate = React.useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [isMobile, setOpenMobile]);
 
   return (
-    <div className="flex h-full flex-col bg-sidebar border-r border-sidebar-border">
-      {/* Logo Section */}
-      <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
+    <SidebarRoot side="left" variant="sidebar" collapsible="offcanvas">
+      <SidebarHeader className="flex h-16 shrink-0 flex-row items-center gap-3 border-b border-sidebar-border px-6 py-0">
         <Image
           src="/images/addinvoices-icon.png"
           alt="ADDINVOICES"
@@ -52,73 +67,66 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           height={32}
           className="h-16 w-16 -rotate-45"
         />
-        <span className="text-sm sm:text-lg font-semibold text-sidebar-foreground">
+        <span className="text-sm font-semibold text-sidebar-foreground sm:text-lg">
           ADDINVOICES
         </span>
-      </div>
+      </SidebarHeader>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 space-y-0.5 px-3 py-4">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href;
-          const tourId =
-            item.href === "/"
-              ? "dashboard"
-              : item.href.slice(1).replace(/\//g, "-");
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              onClick={onNavigate}
-              data-tour-id={`sidebar-nav-${tourId}`}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-foreground border-l-2 border-sidebar-primary"
-                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground border-l-2 border-transparent",
-              )}
-            >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {item.name}
-            </Link>
-          );
-        })}
-      </nav>
+      <ShadcnSidebarContent className="px-3 py-4">
+        <SidebarMenu className="gap-0.5">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            const tourId =
+              item.href === "/"
+                ? "dashboard"
+                : item.href.slice(1).replace(/\//g, "-");
+            return (
+              <SidebarMenuItem key={item.name}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  className={cn(
+                    "h-auto min-h-0 gap-3 rounded-md border-l-2 border-transparent px-3 py-2.5 text-sm font-medium transition-colors",
+                    "data-[active=true]:border-sidebar-primary data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground",
+                    !isActive &&
+                      "text-sidebar-foreground/60 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                  )}
+                >
+                  <Link
+                    href={item.href}
+                    onClick={handleNavigate}
+                    data-tour-id={`sidebar-nav-${tourId}`}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    <span>{item.name}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </ShadcnSidebarContent>
 
-      {/* Bottom Section */}
-      <div className="border-t border-sidebar-border p-4 space-y-4">
-        {/* Theme Toggle */}
-        {/* <Button
+      <SidebarFooter className="space-y-4 border-t border-sidebar-border p-4">
+        <Button
+          type="button"
           variant="outline"
           size="sm"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="w-full justify-start gap-3"
+          className="w-full justify-start gap-3 border-sidebar-border bg-transparent text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
           {theme === "dark" ? (
             <>
-              <Sun className="h-4 w-4" />
-              Light Mode
+              <Sun className="h-4 w-4 shrink-0" />
+              Light mode
             </>
           ) : (
             <>
-              <Moon className="h-4 w-4" />
-              Dark Mode
+              <Moon className="h-4 w-4 shrink-0" />
+              Dark mode
             </>
           )}
-        </Button> */}
-
-        {/* Logout Button */}
-        {/* <Button
-          variant="outline"
-          size="sm"
-          // onClick={logout}
-          className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10 bg-transparent"
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </Button> */}
-
-        {/* Branding */}
+        </Button>
         <div className="text-center">
           <p className="text-xs text-sidebar-foreground/50">Powered by</p>
           <Image
@@ -129,44 +137,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             className="mx-auto mt-1 h-7 w-auto opacity-70"
           />
         </div>
-      </div>
-    </div>
-  );
-}
-
-export function Sidebar() {
-  const [open, setOpen] = React.useState(false);
-
-  return (
-    <>
-      {/* Mobile Sidebar */}
-      <div className="h-16 md:hidden w-full bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 fixed top-0 left-0 z-40 border-b border-border flex items-center px-4">
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              // className="md:hidden fixed top-4 left-4 z-50"
-            >
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0">
-            <SidebarContent onNavigate={() => setOpen(false)} />
-          </SheetContent>
-        </Sheet>
-
-        {/* The sidebar trigger will be positioned here by the Sidebar component */}
-        <span className="ml-2 font-semibold text-lg md:hidden">
-          ADDINVOICES
-        </span>
-      </div>
-
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        <SidebarContent />
-      </aside>
-    </>
+      </SidebarFooter>
+    </SidebarRoot>
   );
 }
