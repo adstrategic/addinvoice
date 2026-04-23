@@ -16,6 +16,7 @@ import { AgentChatTranscript } from "../agents-ui/agent-chat-transcript";
 import { AgentControlBar } from "../agents-ui/agent-control-bar";
 import { TokenSource } from "livekit-client";
 import { AgentSessionProvider } from "../agents-ui/agent-session-provider";
+import { useCreatePortalSession } from "@/hooks/use-subscription";
 
 const token_endpoint_url = `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/v1/livekit/token`;
 
@@ -31,7 +32,9 @@ export function VoiceContent({
   participant_name,
 }: VoiceContentProps) {
   const [connectionError, setConnectionError] = useState<Error | null>(null);
+  const [isVoicePlanRequired, setIsVoicePlanRequired] = useState(false);
   const retry_after_token_ref = useRef(false);
+  const openPortal = useCreatePortalSession();
 
   // useSession expects camelCase; we use snake_case internally and map at the SDK boundary
   const sessionOptions = useMemo(() => {
@@ -57,8 +60,10 @@ export function VoiceContent({
     const startSession = async () => {
       try {
         setConnectionError(null);
+        setIsVoicePlanRequired(false);
         await session.start();
       } catch (err) {
+        setIsVoicePlanRequired(hasVoicePlanError(err));
         setConnectionError(
           err instanceof Error
             ? err
@@ -80,6 +85,7 @@ export function VoiceContent({
     retry_after_token_ref.current = false;
     session.start().catch((err) => {
       console.error("Failed to start session on retry:", err);
+      setIsVoicePlanRequired(hasVoicePlanError(err));
       setConnectionError(
         err instanceof Error
           ? err
@@ -115,12 +121,25 @@ export function VoiceContent({
           <CardContent className="space-y-4">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Failed to Connect</AlertTitle>
+              <AlertTitle>
+                {isVoicePlanRequired ? "Voice plan required" : "Failed to Connect"}
+              </AlertTitle>
               <AlertDescription>
-                {connectionError.message ||
-                  "Failed to connect to voice assistant. Please try again."}
+                {isVoicePlanRequired
+                  ? "Your current plan does not include voice access. Upgrade to AI Pro to unlock this page."
+                  : connectionError.message ||
+                    "Failed to connect to voice assistant. Please try again."}
               </AlertDescription>
             </Alert>
+            {isVoicePlanRequired && (
+              <Button
+                onClick={() => openPortal.mutate("/voice")}
+                disabled={openPortal.isPending}
+                className="w-full"
+              >
+                {openPortal.isPending ? "Redirecting to billing..." : "Upgrade plan"}
+              </Button>
+            )}
             <Button onClick={handleRetry} className="w-full">
               Retry Connection
             </Button>
@@ -135,6 +154,15 @@ export function VoiceContent({
       <VoiceAssistantContent />
     </AgentSessionProvider>
   );
+}
+
+function hasVoicePlanError(error: unknown): boolean {
+  if (error instanceof Error && error.message.includes("VOICE_PLAN_REQUIRED")) {
+    return true;
+  }
+
+  const serializedError = JSON.stringify(error);
+  return serializedError.includes("VOICE_PLAN_REQUIRED");
 }
 
 interface VoiceAssistantUIProps {}

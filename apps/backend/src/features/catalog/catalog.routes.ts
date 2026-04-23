@@ -1,9 +1,11 @@
 import { Router } from "express";
+import multer from "multer";
 import { processRequest } from "zod-express-middleware";
 
 import asyncHandler from "../../core/async-handler.js";
 import {
   createCatalog,
+  createCatalogFromVoiceAudio,
   deleteCatalog,
   getCatalogBySequence,
   listCatalogs,
@@ -11,6 +13,7 @@ import {
 } from "./catalog.controller.js";
 import {
   createCatalogSchema,
+  fromVoiceAudioBodySchema,
   getCatalogByIdSchema,
   getCatalogBySequenceSchema,
   listCatalogsSchema,
@@ -23,6 +26,23 @@ import {
  * (applied in routes/index.ts)
  */
 export const catalogRoutes: Router = Router();
+
+const audioUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const base = file.mimetype.split(";")[0]?.trim() ?? "";
+    cb(null, base.startsWith("audio/"));
+  },
+});
+
+// POST /api/v1/catalog/from-voice-audio — audio blob → Whisper → Claude → catalog item
+catalogRoutes.post(
+  "/from-voice-audio",
+  audioUpload.single("audio") as never,
+  processRequest({ body: fromVoiceAudioBodySchema }),
+  asyncHandler(createCatalogFromVoiceAudio),
+);
 
 // GET /api/v1/catalog - List all catalogs
 catalogRoutes.get(

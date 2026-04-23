@@ -1,4 +1,4 @@
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
 import type {
@@ -9,8 +9,15 @@ import type {
 } from "./catalog.schemas.js";
 
 import { getWorkspaceId } from "../../core/auth.js";
-import { listCatalogsSchema } from "./catalog.schemas.js";
+import {
+  fromVoiceAudioBodySchema as fromVoiceAudioBodySchemaValue,
+  listCatalogsSchema,
+} from "./catalog.schemas.js";
 import * as catalogService from "./catalog.service.js";
+import {
+  createCatalogFromVoiceTranscript as createCatalogFromVoiceTranscriptFlow,
+  transcribeAudio,
+} from "./voice-catalog-claude.service.js";
 
 /**
  * POST /catalog - Create a new catalog
@@ -27,6 +34,67 @@ export async function createCatalog(
 
   res.status(201).json({
     data: catalog,
+  });
+}
+
+/**
+ * POST /catalog/from-voice-audio — audio blob → Whisper transcript → Claude tools → catalog item
+ */
+export async function createCatalogFromVoiceAudio(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+
+  const parsed = fromVoiceAudioBodySchemaValue.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+  const { businessId } = parsed.data;
+
+  if (!req.file) {
+    res.status(400).json({ error: "Audio file is required" });
+    return;
+  }
+
+  if (!process.env.OPENAI_API_KEY?.trim()) {
+    res.status(503).json({
+      error: "Voice catalog requires OPENAI_API_KEY to be configured.",
+    });
+    return;
+  }
+
+  const transcript = await transcribeAudio(req.file.buffer, req.file.mimetype);
+  if (!transcript || transcript.trim().length < 8) {
+    res.status(400).json({
+      error: "Could not transcribe audio, or the recording was too short.",
+    });
+    return;
+  }
+
+  const result = await createCatalogFromVoiceTranscriptFlow(
+    workspaceId,
+    businessId,
+    transcript,
+  );
+
+  if ("error" in result) {
+    if (result.error === "anthropic_unconfigured") {
+      res.status(503).json({
+        error: "Voice catalog requires ANTHROPIC_API_KEY to be configured.",
+      });
+      return;
+    }
+    res.status(400).json({ error: result.message });
+    return;
+  }
+
+  res.status(201).json({
+    data: {
+      name: result.name,
+      sequence: result.sequence,
+    },
   });
 }
 

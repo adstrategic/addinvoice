@@ -1,23 +1,26 @@
 import { Button } from "@/components/ui/button";
 import { Plus, Mic } from "lucide-react";
-import Link from "next/link";
 
 interface CatalogActionsProps {
   onOpenCreateModal: () => void;
+  onCreateByVoice: () => void;
 }
 
-export function CatalogActions({ onOpenCreateModal }: CatalogActionsProps) {
+export function CatalogActions({
+  onCreateByVoice,
+  onOpenCreateModal,
+}: CatalogActionsProps) {
   return (
     <div className="flex gap-3 w-full md:w-auto">
-      <Link href="/voice">
-        <Button
-          variant="outline"
-          className="gap-2 flex-1 md:flex-none cursor-pointer"
-        >
-          <Mic className="h-4 w-4" />
-          Add by voice
-        </Button>
-      </Link>
+      <Button
+        type="button"
+        variant="outline"
+        className="gap-2 flex-1 md:flex-none cursor-pointer"
+        onClick={onCreateByVoice}
+      >
+        <Mic className="h-4 w-4" />
+        Add by voice
+      </Button>
       <div data-tour-id="catalog-create-btn">
         <Button
           className="gap-2 flex-1 md:flex-none"

@@ -1,5 +1,6 @@
 import type { UseFormSetError } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import {
   type CreateCatalogDto,
   type UpdateCatalogDto,
@@ -77,6 +78,29 @@ export function useCreateCatalog(setError?: UseFormSetError<CreateCatalogDto>) {
     },
     onError: (err) => {
       handleMutationError(err, setError);
+    },
+  });
+}
+
+export function useCreateCatalogFromVoiceAudio() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: (params: {
+      businessId: number;
+      audio: Blob;
+      mimeType: string;
+    }) => catalogService.createFromVoiceAudio(params),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: catalogKeys.lists() });
+      toast.success("Catalog item created from voice", {
+        description: `${result.name} is ready in your catalog.`,
+      });
+      router.push("/catalog");
+    },
+    onError: (err) => {
+      handleMutationError(err);
     },
   });
 }

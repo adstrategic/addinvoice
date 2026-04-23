@@ -10,13 +10,18 @@ import {
   catalogResponseSchema,
   catalogResponseListSchema,
   type CatalogResponse,
-  CatalogResponseList,
+  type CatalogResponseList,
 } from "../schema/catalog.schema";
 
 /**
  * Base URL for catalog API endpoints
  */
 const BASE_URL = "/catalog";
+
+export type FromVoiceCatalogResult = {
+  name: string;
+  sequence: number;
+};
 
 /**
  * Catalog Service
@@ -119,6 +124,40 @@ async function deleteCatalog(id: number): Promise<void> {
 }
 
 /**
+ * Create one catalog item from recorded audio (backend: Whisper → Claude + tools).
+ */
+async function createFromVoiceAudio(params: {
+  businessId: number;
+  audio: Blob;
+  mimeType: string;
+}): Promise<FromVoiceCatalogResult> {
+  const ext = params.mimeType.includes("mp4") ? "mp4" : "webm";
+  const formData = new FormData();
+  formData.append("audio", params.audio, `recording.${ext}`);
+  formData.append("businessId", String(params.businessId));
+
+  try {
+    const { data } = await apiClient.post<
+      ApiSuccessResponse<FromVoiceCatalogResult>
+    >(`${BASE_URL}/from-voice-audio`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    if (!data?.data?.sequence || !data?.data?.name) {
+      throw new Error(
+        "There was an error creating the catalog item, please try again.",
+      );
+    }
+
+    return data.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
  * Service object for backward compatibility
  * for use in hooks and components
  */
@@ -126,6 +165,7 @@ export const catalogService = {
   list: listCatalogs,
   getBySequence: getCatalogBySequence,
   create: createCatalog,
+  createFromVoiceAudio,
   update: updateCatalog,
   delete: deleteCatalog,
 };

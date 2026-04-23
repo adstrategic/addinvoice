@@ -53,6 +53,13 @@ export const createCatalogSchema = z.object({
 });
 
 /**
+ * Body for POST /catalog/from-voice-audio (multipart/form-data).
+ */
+export const fromVoiceAudioBodySchema = z.object({
+  businessId: z.coerce.number().int().positive("Business is required"),
+});
+
+/**
  * Schema for catalog entity
  */
 export const catalogEntitySchema = createCatalogSchema.extend({

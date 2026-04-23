@@ -15,8 +15,10 @@ import { useDebouncedTableParams } from "@/hooks/useDebouncedTableParams";
 import { Card, CardContent } from "@/components/ui/card";
 import LoadingComponent from "@/components/loading-component";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
+import { BusinessSelectionDialog } from "@/components/business-selection-dialog";
 import { Package } from "lucide-react";
 import type { CatalogSortBy } from "./CatalogFilters";
+import { VoiceCatalogPromptDialog } from "./VoiceCatalogPromptDialog";
 
 /**
  * Catalog page component
@@ -111,7 +113,10 @@ export default function CatalogContent() {
               company.
             </p>
           </div>
-          <CatalogActions onOpenCreateModal={catalogManager.openCreate} />
+          <CatalogActions
+            onOpenCreateModal={catalogManager.openCreate}
+            onCreateByVoice={catalogManager.handleCreateCatalogByVoice}
+          />
         </div>
 
         <CatalogFilters
@@ -167,6 +172,23 @@ export default function CatalogContent() {
         entity="catalog item"
         entityName={catalogDelete.catalogToDelete?.description || ""}
         isDeleting={catalogDelete.isDeleting}
+      />
+
+      <BusinessSelectionDialog
+        open={catalogManager.showBusinessDialog}
+        businesses={catalogManager.businesses}
+        onSelect={catalogManager.selectBusiness}
+        onOpenChange={catalogManager.setShowBusinessDialog}
+      />
+
+      <VoiceCatalogPromptDialog
+        open={catalogManager.voicePromptOpen}
+        business={catalogManager.voiceBusiness}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            catalogManager.closeVoicePrompt();
+          }
+        }}
       />
     </>
   );

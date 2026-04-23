@@ -13,6 +13,7 @@ import { useCatalogBySequence } from "./useCatalogs";
 import { useDirtyFields } from "@/hooks/useDirtyValues";
 import { useFormScroll } from "@/hooks/useFormScroll";
 import { handleMutationError } from "@/lib/errors/handle-error";
+import { useBusinesses, type BusinessResponse } from "@/features/businesses";
 
 interface UseCatalogManagerOptions {
   onAfterSubmit?: () => void;
@@ -23,6 +24,17 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<"create" | "edit">("create");
   const [catalogSequence, setCatalogSequence] = useState<number | null>(null);
+  const [showBusinessDialog, setShowBusinessDialog] = useState(false);
+  const [businessPickIntent, setBusinessPickIntent] = useState<
+    "form" | "voice" | null
+  >(null);
+  const [voicePromptOpen, setVoicePromptOpen] = useState(false);
+  const [voiceBusiness, setVoiceBusiness] = useState<BusinessResponse | null>(
+    null,
+  );
+  const { data: businessesData, isLoading: isLoadingBusinesses } =
+    useBusinesses();
+  const businesses = businessesData?.data || [];
 
   // === DATA FETCHING ===
   const {
@@ -80,9 +92,21 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
 
   // Abrir modal en modo Crear
   const openCreate = () => {
+    setBusinessPickIntent("form");
+    if (businesses.length === 1 && businesses[0]) {
+      selectBusiness(businesses[0], "form");
+      return;
+    }
+    setShowBusinessDialog(true);
+  };
+
+  const openCreateWithBusiness = (business?: BusinessResponse | null) => {
     setMode("create");
     setCatalogSequence(null);
-    form.reset(defaultValues);
+    form.reset({
+      ...defaultValues,
+      businessId: business?.id ?? defaultValues.businessId,
+    });
     setIsOpen(true);
   };
 
@@ -96,6 +120,44 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
   const close = () => {
     setIsOpen(false);
     setCatalogSequence(null);
+  };
+
+  const selectBusiness = (
+    business: BusinessResponse,
+    intentOverride?: "form" | "voice",
+  ) => {
+    const intent = intentOverride ?? businessPickIntent;
+    setShowBusinessDialog(false);
+    setBusinessPickIntent(null);
+
+    if (intent === "voice") {
+      setVoiceBusiness(business);
+      setVoicePromptOpen(true);
+      return;
+    }
+
+    openCreateWithBusiness(business);
+  };
+
+  const handleCreateCatalogByVoice = () => {
+    setBusinessPickIntent("voice");
+    if (businesses.length === 1 && businesses[0]) {
+      selectBusiness(businesses[0], "voice");
+      return;
+    }
+    setShowBusinessDialog(true);
+  };
+
+  const closeVoicePrompt = () => {
+    setVoicePromptOpen(false);
+    setVoiceBusiness(null);
+  };
+
+  const handleBusinessDialogOpenChange = (open: boolean) => {
+    setShowBusinessDialog(open);
+    if (!open) {
+      setBusinessPickIntent(null);
+    }
   };
 
   // Envío del formulario
@@ -140,8 +202,17 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
     isOpen,
     mode,
     openCreate,
+    handleCreateCatalogByVoice,
+    closeVoicePrompt,
     openEdit,
     close,
+    showBusinessDialog,
+    setShowBusinessDialog: handleBusinessDialogOpenChange,
+    voicePromptOpen,
+    voiceBusiness,
+    businesses,
+    isLoadingBusinesses,
+    selectBusiness,
 
     // Datos del catalog
     catalog: existingCatalog,
