@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import {
   ClientStats,
   ClientList,
@@ -10,6 +11,7 @@ import {
   useClientDelete,
   ClientActions,
 } from "@/features/clients";
+import { VoiceClientPromptDialog } from "./VoiceClientPromptDialog";
 import { TablePagination } from "@/components/TablePagination";
 import { useDebouncedTableParams } from "@/hooks/useDebouncedTableParams";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +29,10 @@ export default function ClientsPage() {
     useDebouncedTableParams();
 
   const clientManager = useClientManager();
+  const [voicePromptOpen, setVoicePromptOpen] = useState(false);
+  const openVoicePrompt = useCallback(() => {
+    setVoicePromptOpen(true);
+  }, []);
 
   // Fetch clients with pagination and search
   const {
@@ -85,7 +91,10 @@ export default function ClientsPage() {
               Manage your client relationships
             </p>
           </div>
-          <ClientActions onOpenCreateModal={clientManager.openCreate} />
+          <ClientActions
+            onCreateByVoice={openVoicePrompt}
+            onOpenCreateModal={clientManager.openCreate}
+          />
         </div>
 
         <div className="mb-6 sm:mb-8">
@@ -138,6 +147,11 @@ export default function ClientsPage() {
         entity="client"
         entityName={clientDelete.clientToDelete?.description || ""}
         isDeleting={clientDelete.isDeleting}
+      />
+
+      <VoiceClientPromptDialog
+        open={voicePromptOpen}
+        onOpenChange={setVoicePromptOpen}
       />
     </>
   );

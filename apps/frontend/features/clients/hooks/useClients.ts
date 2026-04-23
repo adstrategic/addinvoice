@@ -5,6 +5,7 @@ import {
   useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import {
   type CreateClientDTO,
   type UpdateClientDTO,
@@ -69,6 +70,27 @@ export function useClientBySequence(sequence: number | null, enabled: boolean) {
  * Hook to create a new client.
  * Pass setError when used with a form so validation/field errors are set on the form.
  */
+export function useCreateClientFromVoiceAudio() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: (params: { audio: Blob; mimeType: string }) =>
+      clientsService.createFromVoiceAudio(params),
+    onError: (err) => handleMutationError(err),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.bySequence(result.sequence),
+      });
+      toast.success("Client created from voice", {
+        description: `${result.name} is ready to view.`,
+      });
+      router.push(`/clients/${result.sequence}`);
+    },
+  });
+}
+
 export function useCreateClient(setError?: UseFormSetError<CreateClientDTO>) {
   const queryClient = useQueryClient();
 

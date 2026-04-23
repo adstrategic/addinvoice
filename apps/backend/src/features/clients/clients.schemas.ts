@@ -16,6 +16,12 @@ export const listClientsSchema = z.object({
 });
 
 /**
+ * Body for POST /clients/from-voice-audio (multipart/form-data).
+ * No text fields; audio is handled by multer.
+ */
+export const fromVoiceAudioBodySchema = z.object({});
+
+/**
  * Schema for getting client by sequence
  */
 export const getClientBySequenceSchema = z.object({

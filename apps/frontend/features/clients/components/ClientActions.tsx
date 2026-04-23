@@ -1,12 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Plus, Mic } from "lucide-react";
-import Link from "next/link";
 
 interface ClientActionsProps {
+  onCreateByVoice: () => void;
   onOpenCreateModal: () => void;
 }
 
-export function ClientActions({ onOpenCreateModal }: ClientActionsProps) {
+export function ClientActions({
+  onCreateByVoice,
+  onOpenCreateModal,
+}: ClientActionsProps) {
   const handleExport = () => {
     // TODO: Implement export functionality
   };
@@ -18,15 +21,15 @@ export function ClientActions({ onOpenCreateModal }: ClientActionsProps) {
   return (
     <div className="flex gap-3 w-full md:w-auto">
       {/* Primary Action - Create Client */}
-      <Link href="/voice">
-        <Button
-          variant="outline"
-          className="gap-2 flex-1 md:flex-none cursor-pointer"
-        >
-          <Mic className="h-4 w-4" />
-          Add by voice
-        </Button>
-      </Link>
+      <Button
+        type="button"
+        variant="outline"
+        className="gap-2 flex-1 md:flex-none cursor-pointer"
+        onClick={onCreateByVoice}
+      >
+        <Mic className="h-4 w-4" />
+        Add by voice
+      </Button>
       <div data-tour-id="clients-create-btn">
         <Button onClick={onOpenCreateModal} className="gap-2">
           <Plus className="h-4 w-4" />

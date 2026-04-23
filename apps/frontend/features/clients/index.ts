@@ -17,6 +17,7 @@ export {
   useClients,
   useClientBySequence,
   useCreateClient,
+  useCreateClientFromVoiceAudio,
   useUpdateClient,
   useDeleteClient,
   clientKeys,
@@ -29,7 +30,10 @@ export { useClientManager } from "./hooks/useClientFormManager";
 export { useClientDelete } from "./hooks/useClientDelete";
 
 // Service
-export { clientsService } from "./service/clients.service";
+export {
+  clientsService,
+  type FromVoiceClientResult,
+} from "./service/clients.service";
 
 // Components
 export { ClientCard } from "./components/ClientCard";
@@ -37,6 +41,7 @@ export { ClientStats } from "./components/ClientStats";
 export { ClientFilters } from "./components/ClientFilters";
 export { ClientList } from "./components/ClientList";
 export { ClientActions } from "./components/ClientActions";
+export { VoiceClientPromptDialog } from "./components/VoiceClientPromptDialog";
 
 // Forms
 export { ClientForm } from "./forms/ClientForm";

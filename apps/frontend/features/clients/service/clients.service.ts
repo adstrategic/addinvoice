@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api/client";
-import { handleApiError, ApiError } from "@/lib/errors/handler";
+import { handleApiError } from "@/lib/errors/handler";
 import type { ApiSuccessResponse } from "@/lib/api/types";
 import {
   clientResponseSchema,
@@ -113,6 +113,43 @@ async function deleteClient(id: number): Promise<void> {
   }
 }
 
+export type FromVoiceClientResult = {
+  name: string;
+  sequence: number;
+};
+
+/**
+ * Create one client from recorded audio (backend: Whisper → Claude + tools).
+ */
+async function createFromVoiceAudio(params: {
+  audio: Blob;
+  mimeType: string;
+}): Promise<FromVoiceClientResult> {
+  const ext = params.mimeType.includes("mp4") ? "mp4" : "webm";
+  const formData = new FormData();
+  formData.append("audio", params.audio, `recording.${ext}`);
+
+  try {
+    const { data } = await apiClient.post<
+      ApiSuccessResponse<FromVoiceClientResult>
+    >(`${BASE_URL}/from-voice-audio`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    if (!data?.data?.sequence || !data?.data?.name) {
+      throw new Error(
+        "There was an error creating the client, please try again.",
+      );
+    }
+
+    return data.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
 /**
  * Service object for backward compatibility
  * for use in hooks and components
@@ -121,6 +158,7 @@ export const clientsService = {
   list: listClients,
   getBySequence: getClientBySequence,
   create: createClient,
+  createFromVoiceAudio,
   update: updateClient,
   delete: deleteClient,
 };

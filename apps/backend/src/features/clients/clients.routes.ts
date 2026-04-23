@@ -1,9 +1,11 @@
 import { Router } from "express";
+import multer from "multer";
 import { processRequest } from "zod-express-middleware";
 
 import asyncHandler from "../../core/async-handler.js";
 import {
   createClient,
+  createClientFromVoiceAudio,
   deleteClient,
   getClientBySequence,
   listClients,
@@ -11,6 +13,7 @@ import {
 } from "./clients.controller.js";
 import {
   createClientSchema,
+  fromVoiceAudioBodySchema,
   getClientByIdSchema,
   getClientBySequenceSchema,
   listClientsSchema,
@@ -23,6 +26,23 @@ import {
  * (applied in routes/index.ts)
  */
 export const clientsRoutes: Router = Router();
+
+const audioUpload = multer({
+  limits: { fileSize: 10 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  fileFilter: (_req, file, cb) => {
+    const base = file.mimetype.split(";")[0]?.trim() ?? "";
+    cb(null, base.startsWith("audio/"));
+  },
+});
+
+// POST /api/v1/clients/from-voice-audio — audio blob → Whisper → Claude → client
+clientsRoutes.post(
+  "/from-voice-audio",
+  audioUpload.single("audio") as never,
+  processRequest({ body: fromVoiceAudioBodySchema }),
+  asyncHandler(createClientFromVoiceAudio),
+);
 
 // GET /api/v1/clients - List all clients
 clientsRoutes.get(

@@ -1,4 +1,4 @@
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
 import type {
@@ -9,8 +9,15 @@ import type {
 } from "./clients.schemas.js";
 
 import { getWorkspaceId } from "../../core/auth.js";
-import { listClientsSchema } from "./clients.schemas.js";
+import {
+  fromVoiceAudioBodySchema,
+  listClientsSchema,
+} from "./clients.schemas.js";
 import * as clientsService from "./clients.service.js";
+import {
+  createClientFromVoiceTranscript as createClientFromVoiceTranscriptFlow,
+  transcribeAudio,
+} from "./voice-clients-claude.service.js";
 
 /**
  * POST /clients - Create a new client
@@ -27,6 +34,65 @@ export async function createClient(
 
   res.status(201).json({
     data: client,
+  });
+}
+
+/**
+ * POST /clients/from-voice-audio — audio blob → Whisper transcript → Claude tools → client
+ */
+export async function createClientFromVoiceAudio(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+
+  const parsed = fromVoiceAudioBodySchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  if (!req.file) {
+    res.status(400).json({ error: "Audio file is required" });
+    return;
+  }
+
+  if (!process.env.OPENAI_API_KEY?.trim()) {
+    res.status(503).json({
+      error: "Voice client requires OPENAI_API_KEY to be configured.",
+    });
+    return;
+  }
+
+  const transcript = await transcribeAudio(req.file.buffer, req.file.mimetype);
+  if (!transcript || transcript.trim().length < 8) {
+    res.status(400).json({
+      error: "Could not transcribe audio, or the recording was too short.",
+    });
+    return;
+  }
+
+  const result = await createClientFromVoiceTranscriptFlow(
+    workspaceId,
+    transcript,
+  );
+
+  if ("error" in result) {
+    if (result.error === "anthropic_unconfigured") {
+      res.status(503).json({
+        error: "Voice client requires ANTHROPIC_API_KEY to be configured.",
+      });
+      return;
+    }
+    res.status(400).json({ error: result.message });
+    return;
+  }
+
+  res.status(201).json({
+    data: {
+      name: result.name,
+      sequence: result.sequence,
+    },
   });
 }
 
