@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { constructEvent, handleSubscriptionUpdatedMock } = vi.hoisted(() => ({
@@ -47,7 +48,7 @@ describe("stripe-webhook.handler", () => {
       headers: {
         "stripe-signature": "sig_test",
       },
-    } as Request;
+    } as unknown as Request;
 
     const json = vi.fn();
     const status = vi.fn().mockReturnValue({ json });
@@ -55,7 +56,9 @@ describe("stripe-webhook.handler", () => {
 
     await handleStripeWebhook(req, res);
 
-    expect(handleSubscriptionUpdatedMock).toHaveBeenCalledWith(subscriptionObject);
+    expect(handleSubscriptionUpdatedMock).toHaveBeenCalledWith(
+      subscriptionObject,
+    );
     expect(json).toHaveBeenCalledWith({ received: true });
   });
 });
