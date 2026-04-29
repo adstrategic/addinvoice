@@ -1,8 +1,10 @@
+import { listPendingAdvancesByClientSchema } from "@addinvoice/schemas";
 import { Router } from "express";
 import multer from "multer";
 import { processRequest } from "zod-express-middleware";
 
 import asyncHandler from "../../core/async-handler.js";
+import { listPendingAdvancesByClient } from "../advances/advances.controller.js";
 import {
   createClient,
   createClientFromVoiceAudio,
@@ -49,6 +51,13 @@ clientsRoutes.get(
   "/",
   processRequest({ query: listClientsSchema }),
   asyncHandler(listClients),
+);
+
+// GET /api/v1/clients/:clientId/pending-advances
+clientsRoutes.get(
+  "/:clientId/pending-advances",
+  processRequest({ params: listPendingAdvancesByClientSchema }),
+  asyncHandler(listPendingAdvancesByClient),
 );
 
 // GET /api/v1/clients/:sequence - Get client by sequence

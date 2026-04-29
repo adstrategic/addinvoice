@@ -357,3 +357,89 @@ export async function uploadEstimateAttachment(
     );
   }
 }
+
+/**
+ * Delete advance attachment from Cloudinary by public ID.
+ */
+export async function deleteAdvanceAttachmentByPublicId(
+  publicId: string,
+): Promise<{ result: string }> {
+  try {
+    const result = (await cloudinary.uploader.destroy(publicId, {
+      invalidate: true,
+    })) as DestroyApiResponse;
+
+    if (result.result !== "ok") {
+      throw new Error(`Failed to delete advance attachment: ${result.result}`);
+    }
+
+    return result;
+  } catch (error) {
+    const err = error as Error;
+    throw new Error(`Cloudinary delete failed: ${err.message}`);
+  }
+}
+
+/**
+ * Generate public ID for advance attachment.
+ */
+export function generateAdvanceAttachmentPublicId(
+  workspaceId: number,
+  advanceId: number,
+): string {
+  return `workspaces/${String(workspaceId)}/advances/${String(
+    advanceId,
+  )}/attachments/${randomUUID()}`;
+}
+
+/**
+ * Validate advance attachment file (images only).
+ */
+export function validateAdvanceAttachmentFile(file: Express.Multer.File): {
+  error?: string;
+  valid: boolean;
+} {
+  return validateImageFile(file);
+}
+
+/**
+ * Upload advance attachment image to Cloudinary.
+ */
+export async function uploadAdvanceAttachment(
+  file: Express.Multer.File,
+  workspaceId: number,
+  advanceId: number,
+): Promise<UploadApiResponse> {
+  const folder = `workspaces/${String(workspaceId)}/advances/${String(
+    advanceId,
+  )}/attachments`;
+  const publicId = generateAdvanceAttachmentPublicId(workspaceId, advanceId);
+
+  try {
+    const uploadOptions = {
+      folder,
+      invalidate: true,
+      public_id: publicId,
+      resource_type: "image" as const,
+      transformation: [
+        {
+          crop: "limit" as const,
+          fetch_format: "auto" as const,
+          height: MAX_DIMENSIONS.height,
+          quality: "auto" as const,
+          width: MAX_DIMENSIONS.width,
+        },
+        { strip_metadata: true },
+      ],
+    };
+
+    const base64 = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+    const result = await cloudinary.uploader.upload(base64, uploadOptions);
+    return result;
+  } catch (error) {
+    const uploadError = error as UploadApiErrorResponse;
+    throw new Error(
+      `Cloudinary upload failed: ${uploadError.message || "Unknown error"}`,
+    );
+  }
+}

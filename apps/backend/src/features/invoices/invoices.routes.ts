@@ -1,3 +1,4 @@
+import { bulkLinkAdvancesToInvoiceBodySchema } from "@addinvoice/schemas";
 import { Router } from "express";
 import multer from "multer";
 import { processRequest } from "zod-express-middleware";
@@ -10,6 +11,7 @@ import {
 import {
   addInvoiceItem,
   addPayment,
+  bulkLinkAdvancesToInvoice,
   createInvoice,
   createInvoiceFromVoiceAudio,
   createInvoiceFromVoiceTranscript,
@@ -20,6 +22,7 @@ import {
   getInvoiceBySequence,
   getInvoicePdf,
   getNextInvoiceNumber,
+  getPendingAdvancesForInvoice,
   listInvoices,
   sendInvoice,
   updateInvoice,
@@ -122,6 +125,23 @@ invoicesRoutes.patch(
   "/:invoiceId/send",
   processRequest({ params: getInvoiceByIdSchema }),
   asyncHandler(sendInvoice),
+);
+
+// GET /api/v1/invoices/:invoiceId/pending-advances - Client-only pending advances
+invoicesRoutes.get(
+  "/:invoiceId/pending-advances",
+  processRequest({ params: getInvoiceByIdSchema }),
+  asyncHandler(getPendingAdvancesForInvoice),
+);
+
+// POST /api/v1/invoices/:invoiceId/link-advances - Bulk link advances to invoice
+invoicesRoutes.post(
+  "/:invoiceId/link-advances",
+  processRequest({
+    body: bulkLinkAdvancesToInvoiceBodySchema,
+    params: getInvoiceByIdSchema,
+  }),
+  asyncHandler(bulkLinkAdvancesToInvoice),
 );
 
 // PATCH /api/v1/invoices/:id - Update an invoice

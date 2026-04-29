@@ -4,6 +4,7 @@ import { Router } from "express";
 import { verifyWorkspaceAccess } from "../core/auth.js";
 import { requireBusiness } from "../core/business-required.js";
 import { requireSubscription } from "../core/subscription-guard.js";
+import { advancesRoutes } from "../features/advances/advances.routes.js";
 import { businessesRoutes } from "../features/businesses/businesses.routes.js";
 import { catalogRoutes } from "../features/catalog/catalog.routes.js";
 import { clientsRoutes } from "../features/clients/clients.routes.js";
@@ -58,6 +59,7 @@ apiRouter.use((req, res, next) => {
 
 // Feature routes
 apiRouter.use("/clients", clientsRoutes);
+apiRouter.use("/advances", advancesRoutes);
 apiRouter.use("/invoices", invoicesRoutes);
 apiRouter.use("/estimates", estimatesRoutes);
 apiRouter.use("/businesses", businessesRoutes);
