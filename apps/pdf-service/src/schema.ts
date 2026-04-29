@@ -147,3 +147,33 @@ export const estimatePdfPayloadSchema = z.object({
 });
 
 export type EstimatePdfPayload = z.infer<typeof estimatePdfPayloadSchema>;
+
+export const advancePdfPayloadSchema = z.object({
+  advance: z.object({
+    advanceDate: z.union([z.string(), z.date()]),
+    location: z.string().nullish(),
+    projectName: z.string(),
+    sequence: z.number(),
+    workCompleted: z.string().nullish(),
+  }),
+  attachments: z.array(
+    z.object({
+      fileName: z.string().nullish(),
+      mimeType: z.string().nullish(),
+      url: z.string().url(),
+    }),
+  ),
+  client: z.object({
+    email: z.string().nullish(),
+    name: z.string(),
+    phone: z.string().nullish(),
+  }),
+  company: z.object({
+    address: z.string().nullish(),
+    logo: z.string().nullish(),
+    name: z.string(),
+    phone: z.string().nullish(),
+  }),
+});
+
+export type AdvancePdfPayload = z.infer<typeof advancePdfPayloadSchema>;
