@@ -63,9 +63,7 @@ interface EstimateFormProps {
   /** When provided (edit mode), save dirty header before opening item/catalog modals. Rejects on validation or mutation failure. */
   saveBeforeOpenSubform?: () => Promise<void>;
   /** When provided (edit mode), convert accepted estimate to invoice. */
-  onConvertToInvoice?: (estimate: {
-    sequence: number;
-  }) => void;
+  onConvertToInvoice?: (estimate: { sequence: number }) => void;
   isConvertingToInvoice?: boolean;
   draftItems?: EstimateEditorItem[];
   draftTotals?: {
@@ -428,107 +426,105 @@ export function EstimateForm({
               onDraftDeleteItem={onDraftDeleteItem}
             />
 
-            <Form {...form}>
-              <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-                {/* Discounts & VAT Section */}
-                <DiscountsVATSection form={form} />
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+              {/* Discounts & VAT Section */}
+              <DiscountsVATSection form={form} />
 
-                <Card className="bg-card border-border">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-                        <CreditCard className="h-5 w-5" />
-                        Payment Method
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Optional. Choose how the client can pay this estimate.
-                      </p>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid gap-4 sm:grid-cols-2">
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Payment Method
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Optional. Choose how the client can pay this estimate.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div
+                      className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${form.watch("selectedPaymentMethodId") == null ? "border-primary bg-secondary/50" : "border-border"}`}
+                      onClick={() =>
+                        form.setValue("selectedPaymentMethodId", null, {
+                          shouldDirty: true,
+                        })
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                          <CreditCard className="h-4 w-4 text-foreground" />
+                        </div>
+                        <span className="font-medium text-foreground">
+                          Manual
+                        </span>
+                      </div>
+                    </div>
+                    {enabledPaymentMethods.map((method) => {
+                      const label = paymentMethodLabels[method.type];
+                      const isSelected =
+                        form.watch("selectedPaymentMethodId") === method.id;
+                      return (
                         <div
-                          className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${form.watch("selectedPaymentMethodId") == null ? "border-primary bg-secondary/50" : "border-border"}`}
+                          key={method.id}
+                          className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${isSelected ? "border-primary bg-secondary/50" : "border-border"}`}
                           onClick={() =>
-                            form.setValue("selectedPaymentMethodId", null, {
-                              shouldDirty: true,
-                            })
+                            form.setValue(
+                              "selectedPaymentMethodId",
+                              method.id,
+                              { shouldDirty: true },
+                            )
                           }
                         >
                           <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                              <CreditCard className="h-4 w-4 text-foreground" />
-                            </div>
+                            {label?.icon === "paypal" && (
+                              <Image
+                                src="/images/PayPal-icon.png"
+                                alt="PayPal"
+                                width={32}
+                                height={32}
+                                className="h-8 w-8 object-contain"
+                              />
+                            )}
+                            {label?.icon === "zelle" && (
+                              <Image
+                                src="/images/zelle-icon.png"
+                                alt="Zelle"
+                                width={32}
+                                height={32}
+                                className="h-8 w-8 object-contain"
+                              />
+                            )}
+                            {label?.icon === "stripe" && (
+                              <Image
+                                src="/images/stripe-icon.webp"
+                                alt="Stripe"
+                                width={32}
+                                height={32}
+                                className="h-8 w-8 object-contain"
+                              />
+                            )}
+                            {label?.icon === "nequi" && (
+                              <div className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-xs font-semibold">
+                                NQ
+                              </div>
+                            )}
                             <span className="font-medium text-foreground">
-                              Manual
+                              {label?.name ?? method.type}
                             </span>
                           </div>
                         </div>
-                        {enabledPaymentMethods.map((method) => {
-                          const label = paymentMethodLabels[method.type];
-                          const isSelected =
-                            form.watch("selectedPaymentMethodId") === method.id;
-                          return (
-                            <div
-                              key={method.id}
-                              className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${isSelected ? "border-primary bg-secondary/50" : "border-border"}`}
-                              onClick={() =>
-                                form.setValue(
-                                  "selectedPaymentMethodId",
-                                  method.id,
-                                  { shouldDirty: true },
-                                )
-                              }
-                            >
-                              <div className="flex items-center gap-3">
-                                {label?.icon === "paypal" && (
-                                  <Image
-                                    src="/images/PayPal-icon.png"
-                                    alt="PayPal"
-                                    width={32}
-                                    height={32}
-                                    className="h-8 w-8 object-contain"
-                                  />
-                                )}
-                                {label?.icon === "zelle" && (
-                                  <Image
-                                    src="/images/zelle-icon.png"
-                                    alt="Zelle"
-                                    width={32}
-                                    height={32}
-                                    className="h-8 w-8 object-contain"
-                                  />
-                                )}
-                                {label?.icon === "stripe" && (
-                                  <Image
-                                    src="/images/stripe-icon.webp"
-                                    alt="Stripe"
-                                    width={32}
-                                    height={32}
-                                    className="h-8 w-8 object-contain"
-                                  />
-                                )}
-                                {label?.icon === "nequi" && (
-                                  <div className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-xs font-semibold">
-                                    NQ
-                                  </div>
-                                )}
-                                <span className="font-medium text-foreground">
-                                  {label?.name ?? method.type}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                </Card>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Notes Section */}
-                <NotesSection form={form} />
+              {/* Notes Section */}
+              <NotesSection form={form} />
 
-                {/* Terms Section */}
-                <TermsSection form={form} />
-              </form>
-            </Form>
+              {/* Terms Section */}
+              <TermsSection form={form} />
+            </form>
           </>
         </div>
       </div>

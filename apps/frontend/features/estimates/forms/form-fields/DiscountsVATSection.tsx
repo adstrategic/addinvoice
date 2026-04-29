@@ -9,17 +9,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import type { UseFormReturn } from "react-hook-form";
+
+import { Controller, type UseFormReturn } from "react-hook-form";
 import type { CreateEstimateDTO } from "@addinvoice/schemas";
 import { NumericFormat } from "react-number-format";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 
 interface DiscountsVATSectionProps {
   form: UseFormReturn<CreateEstimateDTO>;
@@ -29,7 +28,6 @@ export function DiscountsVATSection({ form }: DiscountsVATSectionProps) {
   const taxMode = form.watch("taxMode");
   const discountType = form.watch("discountType");
 
-  // Handle taxMode change - clear tax fields when switching away from BY_TOTAL
   const handleTaxModeChange = (newValue: string) => {
     if (!newValue) return;
 
@@ -37,14 +35,12 @@ export function DiscountsVATSection({ form }: DiscountsVATSectionProps) {
       shouldDirty: true,
     });
 
-    // Clear taxName and taxPercentage when switching to non-BY_TOTAL modes
     if (newValue !== "BY_TOTAL") {
       form.setValue("taxName", null, { shouldDirty: true });
       form.setValue("taxPercentage", null, { shouldDirty: true });
     }
   };
 
-  // Handle discountType change - clear discount when switching to NONE
   const handleDiscountTypeChange = (newValue: string) => {
     if (!newValue) return;
 
@@ -52,7 +48,6 @@ export function DiscountsVATSection({ form }: DiscountsVATSectionProps) {
       shouldDirty: true,
     });
 
-    // Clear discount when switching to NONE
     if (newValue === "NONE") {
       form.setValue("discount", 0, { shouldDirty: true });
     }
@@ -68,59 +63,57 @@ export function DiscountsVATSection({ form }: DiscountsVATSectionProps) {
       <CardContent className="space-y-4">
         {/* Estimate-Level Discount */}
         <div className="space-y-4">
-          <FormField
+          <Controller
             control={form.control}
             name="discountType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Discount Type</FormLabel>
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor={field.name}>Discount Type</FieldLabel>
                 <Select
                   onValueChange={handleDiscountTypeChange}
                   value={field.value.toString()}
                 >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select discount type" />
-                    </SelectTrigger>
-                  </FormControl>
+                  <SelectTrigger id={field.name} aria-invalid={fieldState.invalid}>
+                    <SelectValue placeholder="Select discount type" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="NONE">No Discount</SelectItem>
                     <SelectItem value="PERCENTAGE">Percentage</SelectItem>
                     <SelectItem value="FIXED">Fixed Amount</SelectItem>
                   </SelectContent>
                 </Select>
-                <FormMessage />
-              </FormItem>
+                {fieldState.error && <FieldError errors={[fieldState.error]} />}
+              </Field>
             )}
           />
 
           {discountType && discountType !== "NONE" && (
-            <FormField
+            <Controller
               control={form.control}
               name="discount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>
                     Discount{" "}
                     {discountType === "PERCENTAGE" ? "(%)" : "(Amount)"}
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min="0"
-                      step={discountType === "PERCENTAGE" ? "0.01" : "0.01"}
-                      placeholder={
-                        discountType === "PERCENTAGE" ? "10" : "50.00"
-                      }
-                      {...field}
-                      value={field.value || ""}
-                      onChange={(e) =>
-                        field.onChange(parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                  </FieldLabel>
+                  <Input
+                    id={field.name}
+                    aria-invalid={fieldState.invalid}
+                    type="number"
+                    min="0"
+                    step={discountType === "PERCENTAGE" ? "0.01" : "0.01"}
+                    placeholder={discountType === "PERCENTAGE" ? "10" : "50.00"}
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) =>
+                      field.onChange(parseFloat(e.target.value) || 0)
+                    }
+                  />
+                  {fieldState.error && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
           )}
@@ -128,80 +121,81 @@ export function DiscountsVATSection({ form }: DiscountsVATSectionProps) {
 
         {/* Tax Configuration */}
         <div className="space-y-4 pt-4 border-t border-border">
-          <FormField
+          <Controller
             control={form.control}
             name="taxMode"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tax Mode</FormLabel>
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor={field.name}>Tax Mode</FieldLabel>
                 <Select
                   onValueChange={handleTaxModeChange}
                   value={field.value.toString()}
                 >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select tax mode" />
-                    </SelectTrigger>
-                  </FormControl>
+                  <SelectTrigger id={field.name} aria-invalid={fieldState.invalid}>
+                    <SelectValue placeholder="Select tax mode" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="NONE">No Tax</SelectItem>
                     <SelectItem value="BY_PRODUCT">By Product</SelectItem>
                     <SelectItem value="BY_TOTAL">By Total (VAT)</SelectItem>
                   </SelectContent>
                 </Select>
-                <FormDescription>
+                <FieldDescription>
                   {taxMode === "BY_PRODUCT"
                     ? "Fill the tax data on each item above"
                     : taxMode === "BY_TOTAL"
                       ? "Fill the tax data for the estimate below"
                       : "No tax data needed"}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
+                </FieldDescription>
+                {fieldState.error && <FieldError errors={[fieldState.error]} />}
+              </Field>
             )}
           />
 
           {taxMode === "BY_TOTAL" && (
             <>
-              <FormField
+              <Controller
                 control={form.control}
                 name="taxName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tax Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., VAT, Sales Tax"
-                        {...field}
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>Tax Name</FieldLabel>
+                    <Input
+                      id={field.name}
+                      aria-invalid={fieldState.invalid}
+                      placeholder="e.g., VAT, Sales Tax"
+                      {...field}
+                      value={field.value || ""}
+                    />
+                    {fieldState.error && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
-              <FormField
+              <Controller
                 control={form.control}
                 name="taxPercentage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tax Percentage (%)</FormLabel>
-                    <FormControl>
-                      <NumericFormat
-                        id="taxPercentage"
-                        value={field.value ?? ""}
-                        onValueChange={(values) => {
-                          field.onChange(values.floatValue ?? null);
-                        }}
-                        placeholder="0,00"
-                        thousandSeparator="."
-                        decimalSeparator=","
-                        decimalScale={2}
-                        customInput={Input}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>Tax Percentage (%)</FieldLabel>
+                    <NumericFormat
+                      id={field.name}
+                      aria-invalid={fieldState.invalid}
+                      value={field.value ?? ""}
+                      onValueChange={(values) => {
+                        field.onChange(values.floatValue ?? null);
+                      }}
+                      placeholder="0,00"
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      decimalScale={2}
+                      customInput={Input}
+                    />
+                    {fieldState.error && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
             </>

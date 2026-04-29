@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import { FormProvider, useForm } from "react-hook-form"
-import type { BusinessResponse } from "@addinvoice/schemas"
+import { useEffect } from "react";
+import { Controller, FormProvider, useForm } from "react-hook-form";
+import type { BusinessResponse } from "@addinvoice/schemas";
 
-import { ClientSelector } from "@/components/shared/ClientSelector"
-import { VoiceAudioRecorder } from "@/components/voice-agent/VoiceAudioRecorder"
-import { Button } from "@/components/ui/button"
+import { ClientSelector } from "@/components/shared/ClientSelector";
+import { VoiceAudioRecorder } from "@/components/voice-agent/VoiceAudioRecorder";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,39 +14,39 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { FormField } from "@/components/ui/form"
-import { useCreateEstimateFromVoiceAudio } from "../hooks/useEstimates"
+} from "@/components/ui/dialog";
+import { FormField } from "@/components/ui/form";
+import { useCreateEstimateFromVoiceAudio } from "../hooks/useEstimates";
 
 type VoiceClientForm = {
-  clientId: number
-}
+  clientId: number;
+};
 
 export type VoiceEstimatePromptDialogProps = {
-  business: BusinessResponse | null
-  onOpenChange: (open: boolean) => void
-  open: boolean
-}
+  business: BusinessResponse | null;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+};
 
 export function VoiceEstimatePromptDialog({
   business,
   onOpenChange,
   open,
 }: VoiceEstimatePromptDialogProps) {
-  const voiceMutation = useCreateEstimateFromVoiceAudio()
+  const voiceMutation = useCreateEstimateFromVoiceAudio();
   const form = useForm<VoiceClientForm>({
     defaultValues: { clientId: 0 },
-  })
-  const clientId = form.watch("clientId")
+  });
+  const clientId = form.watch("clientId");
 
   useEffect(() => {
     if (!open) {
-      form.reset({ clientId: 0 })
+      form.reset({ clientId: 0 });
     }
-  }, [form, open])
+  }, [form, open]);
 
-  const isCreatingEstimate = voiceMutation.isPending
-  const canRecord = Boolean(business) && clientId > 0 && !isCreatingEstimate
+  const isCreatingEstimate = voiceMutation.isPending;
+  const canRecord = Boolean(business) && clientId > 0 && !isCreatingEstimate;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -54,17 +54,18 @@ export function VoiceEstimatePromptDialog({
         <DialogHeader>
           <DialogTitle>Estimate by voice</DialogTitle>
           <DialogDescription>
-            Choose the customer, then click the recording button and describe the
-            estimate.
+            Choose the customer, then click the recording button and describe
+            the estimate.
           </DialogDescription>
         </DialogHeader>
 
-        <FormProvider {...form}>
-          <FormField
+        <form>
+          <Controller
             control={form.control}
             name="clientId"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <ClientSelector
+                fieldState={fieldState}
                 initialClient={null}
                 mode="create"
                 showCreateNew={false}
@@ -73,7 +74,7 @@ export function VoiceEstimatePromptDialog({
               />
             )}
           />
-        </FormProvider>
+        </form>
 
         <VoiceAudioRecorder
           open={open}
@@ -82,14 +83,14 @@ export function VoiceEstimatePromptDialog({
           creatingLabel="Creating estimate..."
           stopLabel="Stop & create estimate"
           onSubmitAudio={({ audio, mimeType }) => {
-            const selectedClientId = form.getValues("clientId")
-            if (!business || !selectedClientId) return
+            const selectedClientId = form.getValues("clientId");
+            if (!business || !selectedClientId) return;
             voiceMutation.mutate({
               businessId: business.id,
               clientId: selectedClientId,
               audio,
               mimeType,
-            })
+            });
           }}
         />
 
@@ -105,5 +106,5 @@ export function VoiceEstimatePromptDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

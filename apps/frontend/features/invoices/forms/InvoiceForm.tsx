@@ -17,7 +17,10 @@ import { useWorkspacePaymentMethods } from "@/features/workspace";
 import Image from "next/image";
 import type { BusinessResponse } from "@addinvoice/schemas";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
-import type { CreateInvoiceDTO, InvoiceItemCreateInput } from "../schemas/invoice.schema";
+import type {
+  CreateInvoiceDTO,
+  InvoiceItemCreateInput,
+} from "../schemas/invoice.schema";
 import type { InvoiceEditorItem } from "../types/editor";
 import { HeaderSection } from "./form-fields/HeaderSection";
 import { ClientSection } from "./form-fields/ClientSection";
@@ -313,20 +316,18 @@ export function InvoiceForm({
           }`}
           aria-disabled={isLoading}
         >
-          <Form {...form}>
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-              {/* Header Section */}
-              <HeaderSection isLoadingNumber={isLoadingNumber} form={form} />
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+            {/* Header Section */}
+            <HeaderSection isLoadingNumber={isLoadingNumber} form={form} />
 
-              {/* Client Section */}
-              <ClientSection
-                form={form}
-                invoice={existingInvoice || null}
-                initialClient={existingInvoice?.client || null}
-                mode={mode}
-              />
-            </form>
-          </Form>
+            {/* Client Section */}
+            <ClientSection
+              form={form}
+              invoice={existingInvoice || null}
+              initialClient={existingInvoice?.client || null}
+              mode={mode}
+            />
+          </form>
 
           <>
             <ProductsSection
@@ -361,112 +362,109 @@ export function InvoiceForm({
             />
 
             <Form {...form}>
-              <form
-                onSubmit={(e) => e.preventDefault()}
-                className="space-y-6"
-              >
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
                 <DiscountsVATSection form={form} />
 
                 <Card className="bg-card border-border">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-                        <CreditCard className="h-5 w-5" />
-                        Payment Method
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Optional. Choose how the client can pay this invoice.
-                      </p>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div
-                          className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${form.watch("selectedPaymentMethodId") == null ? "border-primary bg-secondary/50" : "border-border"}`}
-                          onClick={() =>
-                            form.setValue("selectedPaymentMethodId", null, {
-                              shouldDirty: true,
-                            })
-                          }
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                              <CreditCard className="h-4 w-4 text-foreground" />
-                            </div>
-                            <span className="font-medium text-foreground">
-                              Manual
-                            </span>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" />
+                      Payment Method
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Optional. Choose how the client can pay this invoice.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div
+                        className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${form.watch("selectedPaymentMethodId") == null ? "border-primary bg-secondary/50" : "border-border"}`}
+                        onClick={() =>
+                          form.setValue("selectedPaymentMethodId", null, {
+                            shouldDirty: true,
+                          })
+                        }
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                            <CreditCard className="h-4 w-4 text-foreground" />
                           </div>
+                          <span className="font-medium text-foreground">
+                            Manual
+                          </span>
                         </div>
-                        {enabledPaymentMethods.map((method) => {
-                          const labels: Record<
-                            string,
-                            {
-                              name: string;
-                              icon: "paypal" | "zelle" | "nequi" | "stripe";
-                            }
-                          > = {
-                            PAYPAL: { name: "PayPal", icon: "paypal" },
-                            ZELLE: { name: "Zelle", icon: "zelle" },
-                            NEQUI: { name: "Nequi", icon: "nequi" },
-                            STRIPE: { name: "Stripe", icon: "stripe" },
-                          };
-                          const label = labels[method.type];
-                          const isSelected =
-                            form.watch("selectedPaymentMethodId") === method.id;
-                          return (
-                            <div
-                              key={method.id}
-                              className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${isSelected ? "border-primary bg-secondary/50" : "border-border"}`}
-                              onClick={() =>
-                                form.setValue(
-                                  "selectedPaymentMethodId",
-                                  method.id,
-                                  { shouldDirty: true },
-                                )
-                              }
-                            >
-                              <div className="flex items-center gap-3">
-                                {label?.icon === "paypal" && (
-                                  <Image
-                                    src="/images/PayPal-icon.png"
-                                    alt="PayPal"
-                                    width={32}
-                                    height={32}
-                                    className="h-8 w-8 object-contain"
-                                  />
-                                )}
-                                {label?.icon === "zelle" && (
-                                  <Image
-                                    src="/images/zelle-icon.png"
-                                    alt="Zelle"
-                                    width={32}
-                                    height={32}
-                                    className="h-8 w-8 object-contain"
-                                  />
-                                )}
-                                {label?.icon === "stripe" && (
-                                  <Image
-                                    src="/images/stripe-icon.webp"
-                                    alt="Stripe"
-                                    width={32}
-                                    height={32}
-                                    className="h-8 w-8 object-contain"
-                                  />
-                                )}
-                                {label?.icon === "nequi" && (
-                                  <div className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-xs font-semibold">
-                                    NQ
-                                  </div>
-                                )}
-                                <span className="font-medium text-foreground">
-                                  {label?.name ?? method.type}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
                       </div>
-                    </CardContent>
-                  </Card>
+                      {enabledPaymentMethods.map((method) => {
+                        const labels: Record<
+                          string,
+                          {
+                            name: string;
+                            icon: "paypal" | "zelle" | "nequi" | "stripe";
+                          }
+                        > = {
+                          PAYPAL: { name: "PayPal", icon: "paypal" },
+                          ZELLE: { name: "Zelle", icon: "zelle" },
+                          NEQUI: { name: "Nequi", icon: "nequi" },
+                          STRIPE: { name: "Stripe", icon: "stripe" },
+                        };
+                        const label = labels[method.type];
+                        const isSelected =
+                          form.watch("selectedPaymentMethodId") === method.id;
+                        return (
+                          <div
+                            key={method.id}
+                            className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${isSelected ? "border-primary bg-secondary/50" : "border-border"}`}
+                            onClick={() =>
+                              form.setValue(
+                                "selectedPaymentMethodId",
+                                method.id,
+                                { shouldDirty: true },
+                              )
+                            }
+                          >
+                            <div className="flex items-center gap-3">
+                              {label?.icon === "paypal" && (
+                                <Image
+                                  src="/images/PayPal-icon.png"
+                                  alt="PayPal"
+                                  width={32}
+                                  height={32}
+                                  className="h-8 w-8 object-contain"
+                                />
+                              )}
+                              {label?.icon === "zelle" && (
+                                <Image
+                                  src="/images/zelle-icon.png"
+                                  alt="Zelle"
+                                  width={32}
+                                  height={32}
+                                  className="h-8 w-8 object-contain"
+                                />
+                              )}
+                              {label?.icon === "stripe" && (
+                                <Image
+                                  src="/images/stripe-icon.webp"
+                                  alt="Stripe"
+                                  width={32}
+                                  height={32}
+                                  className="h-8 w-8 object-contain"
+                                />
+                              )}
+                              {label?.icon === "nequi" && (
+                                <div className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-xs font-semibold">
+                                  NQ
+                                </div>
+                              )}
+                              <span className="font-medium text-foreground">
+                                {label?.name ?? method.type}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
 
                 <NotesSection form={form} />
                 <TermsSection form={form} />
