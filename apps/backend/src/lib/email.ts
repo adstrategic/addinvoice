@@ -15,6 +15,10 @@ export interface NotifySendFailureParams {
 }
 
 export interface SendEmailWithPdfParams {
+  attachments?: Array<{
+    content: Buffer;
+    filename: string;
+  }>;
   filename: string;
   fromEmail?: string;
   html: string;
@@ -87,6 +91,7 @@ export async function notifySendFailure(
  * Throws Error for 5xx/network (retry with backoff).
  */
 export async function sendEmailWithPdf({
+  attachments = [],
   filename,
   fromEmail = DEFAULT_FROM,
   html,
@@ -102,6 +107,7 @@ export async function sendEmailWithPdf({
 
   await resend.emails.send({
     attachments: [
+      ...attachments,
       {
         content: pdfBuffer,
         filename,

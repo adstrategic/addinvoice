@@ -50,18 +50,19 @@ model Workspace {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    clients        Client[]
-    invoices       Invoice[]
-    estimates      Estimate[]
-    payments       Payment[]
-    catalogs       Catalog[]
-    businesses     Business[]
+    clients                Client[]
+    invoices               Invoice[]
+    estimates              Estimate[]
+    payments               Payment[]
+    catalogs               Catalog[]
+    businesses             Business[]
     defaultPaymentMethodId Int?
-    paymentMethods WorkspacePaymentMethod[]
-    defaultPaymentMethod WorkspacePaymentMethod? @relation("WorkspaceDefaultPaymentMethod", fields: [defaultPaymentMethodId], references: [id], onDelete: SetNull)
-    merchants      Merchant[]
-    workCategories WorkCategory[]
-    expenses       Expense[]
+    paymentMethods         WorkspacePaymentMethod[]
+    defaultPaymentMethod   WorkspacePaymentMethod?  @relation("WorkspaceDefaultPaymentMethod", fields: [defaultPaymentMethodId], references: [id], onDelete: SetNull)
+    merchants              Merchant[]
+    workCategories         WorkCategory[]
+    expenses               Expense[]
+    advances               Advance[]
 
     // Subscription fields (cached from Stripe - Stripe is source of truth)
     stripeCustomerId     String?             @unique
@@ -99,6 +100,7 @@ model Client {
     workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     invoices  Invoice[]
     estimates Estimate[]
+    advances  Advance[]
 
     @@unique([workspaceId, sequence])
     @@index([workspaceId])
@@ -177,9 +179,9 @@ model WorkspacePaymentMethod {
     stripeWebhookSecret String? // AES-256-GCM encrypted webhook signing secret
     stripeWebhookId     String? // Stripe webhook endpoint ID (for deregistration)
 
-    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-    invoices  Invoice[]
-    estimates Estimate[]
+    workspace            Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    invoices             Invoice[]
+    estimates            Estimate[]
     defaultForWorkspaces Workspace[] @relation("WorkspaceDefaultPaymentMethod")
 
     @@unique([workspaceId, type])
@@ -235,6 +237,7 @@ model Invoice {
 
     items    InvoiceItem[]
     payments Payment[]
+    advances Advance[]
 
     @@unique([workspaceId, businessId, invoiceNumber])
     @@unique([workspaceId, sequence])
@@ -323,41 +326,41 @@ model Estimate {
     timelineStartDate DateTime? @db.Date
     timelineEndDate   DateTime? @db.Date
 
-    sequence              Int
-    estimateNumber        String
-    purchaseOrder         String?
-    status                EstimateStatus @default(DRAFT)
-    currency              String         @default("USD")
-    subtotal              Decimal        @default(0) @db.Decimal(10, 2)
-    totalTax              Decimal        @default(0) @db.Decimal(10, 2)
-    discount              Decimal        @default(0) @db.Decimal(10, 2)
-    discountType          DiscountType   @default(NONE)
-    taxMode               TaxMode        @default(NONE)
-    taxName               String?
-    taxPercentage         Decimal?       @db.Decimal(10, 2)
-    total                 Decimal        @default(0) @db.Decimal(10, 2)
-    notes                 String?
-    terms                 String?
-    requireSignature      Boolean        @default(false)
-    rejectionReason       String?
-    sentAt                DateTime?
-    acceptedAt            DateTime?
-    acceptedBy            AcceptedBy?
-    signingToken          String?        @unique // UUID for public accept link
-    signingTokenExpiresAt DateTime?
-    signatureData         Json? // fullName, IP, timestamp, optional signature image URL
-    convertedToInvoiceId  Int?           @unique
+    sequence                Int
+    estimateNumber          String
+    purchaseOrder           String?
+    status                  EstimateStatus @default(DRAFT)
+    currency                String         @default("USD")
+    subtotal                Decimal        @default(0) @db.Decimal(10, 2)
+    totalTax                Decimal        @default(0) @db.Decimal(10, 2)
+    discount                Decimal        @default(0) @db.Decimal(10, 2)
+    discountType            DiscountType   @default(NONE)
+    taxMode                 TaxMode        @default(NONE)
+    taxName                 String?
+    taxPercentage           Decimal?       @db.Decimal(10, 2)
+    total                   Decimal        @default(0) @db.Decimal(10, 2)
+    notes                   String?
+    terms                   String?
+    requireSignature        Boolean        @default(false)
+    rejectionReason         String?
+    sentAt                  DateTime?
+    acceptedAt              DateTime?
+    acceptedBy              AcceptedBy?
+    signingToken            String?        @unique // UUID for public accept link
+    signingTokenExpiresAt   DateTime?
+    signatureData           Json? // fullName, IP, timestamp, optional signature image URL
+    convertedToInvoiceId    Int?           @unique
     selectedPaymentMethodId Int?
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    workspace          Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-    client             Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
-    business           Business             @relation(fields: [businessId], references: [id], onDelete: Restrict)
-    items              EstimateItem[]
-    attachments        EstimateAttachment[]
-    convertedToInvoice Invoice?             @relation(fields: [convertedToInvoiceId], references: [id], onDelete: SetNull)
+    workspace             Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    client                Client                  @relation(fields: [clientId], references: [id], onDelete: Restrict)
+    business              Business                @relation(fields: [businessId], references: [id], onDelete: Restrict)
+    items                 EstimateItem[]
+    attachments           EstimateAttachment[]
+    convertedToInvoice    Invoice?                @relation(fields: [convertedToInvoiceId], references: [id], onDelete: SetNull)
     selectedPaymentMethod WorkspacePaymentMethod? @relation(fields: [selectedPaymentMethodId], references: [id], onDelete: SetNull)
 
     @@unique([workspaceId, businessId, estimateNumber])
@@ -437,11 +440,64 @@ model Business {
     invoices  Invoice[]
     estimates Estimate[]
     catalog   Catalog[]
+    advances  Advance[]
 
     @@unique([workspaceId, sequence])
     @@index([workspaceId])
     @@index([isDefault])
     @@map("businesses")
+}
+
+enum AdvanceStatus {
+    DRAFT
+    ISSUED
+    INVOICED
+}
+
+model Advance {
+    id          Int  @id @default(autoincrement())
+    workspaceId Int
+    clientId    Int
+    businessId  Int?
+    invoiceId   Int?
+
+    sequence      Int
+    projectName   String
+    advanceDate   DateTime      @db.Date
+    location      String?
+    workCompleted String?
+    status        AdvanceStatus @default(DRAFT)
+    sentAt        DateTime?
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
+
+    workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    client      Client              @relation(fields: [clientId], references: [id], onDelete: Restrict)
+    business    Business?           @relation(fields: [businessId], references: [id], onDelete: SetNull)
+    invoice     Invoice?            @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+    attachments AdvanceAttachment[]
+
+    @@unique([workspaceId, sequence])
+    @@index([workspaceId, clientId])
+    @@index([workspaceId, invoiceId])
+    @@index([workspaceId, status, createdAt])
+    @@index([clientId, createdAt])
+    @@map("advances")
+}
+
+model AdvanceAttachment {
+    id        Int      @id @default(autoincrement())
+    advanceId Int
+    url       String
+    fileName  String?
+    mimeType  String?
+    sequence  Int
+    createdAt DateTime @default(now())
+
+    advance Advance @relation(fields: [advanceId], references: [id], onDelete: Cascade)
+
+    @@index([advanceId])
+    @@map("advance_attachments")
 }
 
 model Merchant {

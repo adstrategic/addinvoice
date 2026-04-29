@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, Controller } from "react-hook-form";
 import {
   Dialog,
   DialogContent,
@@ -63,12 +63,13 @@ export function VoiceInvoicePromptDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <FormProvider {...form}>
-          <FormField
+        <form>
+          <Controller
             control={form.control}
             name="clientId"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <ClientSelector
+                fieldState={fieldState}
                 initialClient={null}
                 mode="create"
                 showCreateNew={false}
@@ -77,7 +78,7 @@ export function VoiceInvoicePromptDialog({
               />
             )}
           />
-        </FormProvider>
+        </form>
 
         <VoiceAudioRecorder
           open={open}

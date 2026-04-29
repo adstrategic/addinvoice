@@ -23,6 +23,11 @@ export const sendEstimateQueue = new Queue("email-estimate", {
   defaultJobOptions,
 });
 
+export const sendAdvanceQueue = new Queue("email-advance", {
+  connection,
+  defaultJobOptions,
+});
+
 export const sendReceiptQueue = new Queue("email-receipt", {
   connection,
   defaultJobOptions,
@@ -51,6 +56,14 @@ export interface SendEstimateJobData {
   estimateId: number;
   message: string;
   sequence: number;
+  subject: string;
+  workspaceId: number;
+}
+
+export interface SendAdvanceJobData {
+  advanceId: number;
+  email: string;
+  message: string;
   subject: string;
   workspaceId: number;
 }

@@ -1,3 +1,4 @@
+import type { bulkLinkAdvancesToInvoiceBodySchema } from "@addinvoice/schemas";
 import type { Request, Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
@@ -529,4 +530,39 @@ export async function updatePayment(
   res.json({
     data: payment,
   });
+}
+
+export async function getPendingAdvancesForInvoice(
+  req: TypedRequest<typeof getInvoiceByIdSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { invoiceId } = req.params;
+
+  const advances = await invoicesService.getPendingAdvancesForInvoiceClient(
+    workspaceId,
+    invoiceId,
+  );
+
+  res.json({ data: advances });
+}
+
+export async function bulkLinkAdvancesToInvoice(
+  req: TypedRequest<
+    typeof getInvoiceByIdSchema,
+    never,
+    typeof bulkLinkAdvancesToInvoiceBodySchema
+  >,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { invoiceId } = req.params;
+
+  const advances = await invoicesService.bulkLinkAdvancesToInvoice(
+    workspaceId,
+    invoiceId,
+    req.body,
+  );
+
+  res.json({ data: advances });
 }
