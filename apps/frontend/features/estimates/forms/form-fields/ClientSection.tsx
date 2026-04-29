@@ -3,23 +3,18 @@
 import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from "lucide-react";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PhoneInputField } from "@/components/phone-input/phone-input";
 import { PhoneHelp } from "@/components/phone-input/phone-help";
 import { ClientSelector } from "@/components/shared/ClientSelector";
-import type { UseFormReturn } from "react-hook-form";
+import { Controller, type UseFormReturn } from "react-hook-form";
 import type { CreateEstimateDTO, EstimateResponse } from "@addinvoice/schemas";
 import type { ClientResponse } from "@addinvoice/schemas";
 import { useEstimateAutofill } from "../../hooks/useEstimateAutofill";
 import { NumericFormat } from "react-number-format";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 
 interface ClientSectionProps {
   form: UseFormReturn<CreateEstimateDTO>;
@@ -40,7 +35,6 @@ export const ClientSection = ({
     setValue: form.setValue,
   });
 
-  // Set createClient flag based on mode
   useEffect(() => {
     if (isCreateNewMode) {
       form.setValue("clientEmail", undefined, {
@@ -72,11 +66,12 @@ export const ClientSection = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <FormField
+        <Controller
           control={form.control}
           name="clientId"
-          render={({ field }) => (
+          render={({ field, fieldState }) => (
             <ClientSelector
+              fieldState={fieldState}
               value={field.value || 0}
               onValueChange={(value) => {
                 field.onChange(value);
@@ -117,172 +112,186 @@ export const ClientSection = ({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* NIT/ID */}
-              <FormField
+              <Controller
                 control={form.control}
                 name="clientData.nit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>NIT/ID</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Enter NIT or ID number..."
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>NIT/ID</FieldLabel>
+                    <Input
+                      id={field.name}
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                      placeholder="Enter NIT or ID number..."
+                      value={field.value ?? ""}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
 
               {/* Business Name */}
-              <FormField
+              <Controller
                 control={form.control}
                 name="clientData.businessName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Business Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Enter business name..."
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>Business Name</FieldLabel>
+                    <Input
+                      id={field.name}
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                      placeholder="Enter business name..."
+                      value={field.value ?? ""}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
 
               {/* Client Name */}
-              <FormField
+              <Controller
                 control={form.control}
                 name="clientData.name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>
                       Client Name <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Enter client name..."
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldLabel>
+                    <Input
+                      id={field.name}
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                      placeholder="Enter client name..."
+                      value={field.value ?? ""}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
 
               {/* Email */}
-              <FormField
+              <Controller
                 control={form.control}
                 name="clientData.email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>
                       Email <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        {...field}
-                        placeholder="Enter email..."
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldLabel>
+                    <Input
+                      id={field.name}
+                      aria-invalid={fieldState.invalid}
+                      type="email"
+                      {...field}
+                      placeholder="Enter email..."
+                      value={field.value ?? ""}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
 
               {/* Phone */}
-              <FormField
+              <Controller
                 control={form.control}
                 name="clientData.phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <PhoneInputField
-                        value={field.value || ""}
-                        onChange={field.onChange}
-                        placeholder="Enter phone..."
-                      />
-                    </FormControl>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>Phone</FieldLabel>
+                    <PhoneInputField
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="Enter phone..."
+                    />
                     <PhoneHelp />
-                    <FormMessage />
-                  </FormItem>
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
 
               {/* Address */}
-              <FormField
+              <Controller
                 control={form.control}
                 name="clientData.address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Enter address..."
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>Address</FieldLabel>
+                    <Input
+                      id={field.name}
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                      placeholder="Enter address..."
+                      value={field.value ?? ""}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
 
               {/* Reminder before due (days) - optional */}
-              <FormField
+              <Controller
                 control={form.control}
                 name="clientData.reminderBeforeDueIntervalDays"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reminder before due (days)</FormLabel>
-                    <FormControl>
-                      <NumericFormat
-                        value={field.value}
-                        onValueChange={(values) => {
-                          field.onChange(values.floatValue);
-                        }}
-                        placeholder="e.g. 3 (every 3 days)"
-                        thousandSeparator="."
-                        decimalSeparator=","
-                        decimalScale={0}
-                        customInput={Input}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>Reminder before due (days)</FieldLabel>
+                    <NumericFormat
+                      id={field.name}
+                      aria-invalid={fieldState.invalid}
+                      value={field.value}
+                      onValueChange={(values) => {
+                        field.onChange(values.floatValue);
+                      }}
+                      placeholder="e.g. 3 (every 3 days)"
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      decimalScale={0}
+                      customInput={Input}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
 
               {/* Reminder after due (days) - optional */}
-              <FormField
+              <Controller
                 control={form.control}
                 name="clientData.reminderAfterDueIntervalDays"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reminder after due (days)</FormLabel>
-                    <FormControl>
-                      <NumericFormat
-                        value={field.value}
-                        onValueChange={(values) => {
-                          field.onChange(values.floatValue);
-                        }}
-                        placeholder="e.g. 3 (every 3 days)"
-                        thousandSeparator="."
-                        decimalSeparator=","
-                        decimalScale={0}
-                        customInput={Input}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>Reminder after due (days)</FieldLabel>
+                    <NumericFormat
+                      id={field.name}
+                      aria-invalid={fieldState.invalid}
+                      value={field.value}
+                      onValueChange={(values) => {
+                        field.onChange(values.floatValue);
+                      }}
+                      placeholder="e.g. 3 (every 3 days)"
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      decimalScale={0}
+                      customInput={Input}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
             </div>
@@ -302,64 +311,66 @@ export const ClientSection = ({
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
+              <Controller
                 control={form.control}
                 name="clientEmail"
-                render={({ field }) => (
-                  <div>
-                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>
                       Email <span className="text-red-500">*</span>
-                    </label>
+                    </FieldLabel>
                     <Input
+                      id={field.name}
+                      aria-invalid={fieldState.invalid}
                       type="email"
                       placeholder="Enter email..."
-                      className="mt-2"
                       {...field}
                     />
-                    <FormMessage />
-                  </div>
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
-              <FormField
+              <Controller
                 control={form.control}
                 name="clientPhone"
-                render={({ field }) => (
-                  <div>
-                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      Phone
-                    </label>
-                    <div className="mt-2">
-                      <PhoneInputField
-                        value={field.value || ""}
-                        onChange={field.onChange}
-                        placeholder="Enter phone..."
-                      />
-                    </div>
-                    <PhoneHelp />
-                    <FormMessage />
-                  </div>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="clientAddress"
-                render={({ field }) => (
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      Address
-                    </label>
-                    <Textarea
-                      placeholder="Enter address..."
-                      className="mt-2"
-                      rows={2}
-                      {...field}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>Phone</FieldLabel>
+                    <PhoneInputField
                       value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="Enter phone..."
                     />
-                    <FormMessage />
-                  </div>
+                    <PhoneHelp />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
                 )}
               />
             </div>
+            <Controller
+              control={form.control}
+              name="clientAddress"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Address</FieldLabel>
+                  <Textarea
+                    id={field.name}
+                    aria-invalid={fieldState.invalid}
+                    placeholder="Enter address..."
+                    rows={2}
+                    {...field}
+                    value={field.value || ""}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
           </div>
         )}
       </CardContent>

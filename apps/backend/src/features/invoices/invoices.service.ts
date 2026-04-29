@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Estimate, EstimateItem, Prisma } from "@addinvoice/db";
 import type { EstimateResponse } from "@addinvoice/schemas";
+import type {
+  AdvanceListItemResponse,
+  BulkLinkAdvancesToInvoiceDTO,
+} from "@addinvoice/schemas";
 
 import { prisma } from "@addinvoice/db";
 
@@ -25,9 +29,13 @@ import {
   EntityValidationError,
   FieldValidationError,
 } from "../../errors/EntityErrors.js";
-import { resolveSelectedPaymentMethodId } from "../workspace/payment-method-resolver.service.js";
+import {
+  bulkLinkAdvancesToInvoice as bulkLinkAdvancesToInvoiceService,
+  listPendingAdvancesByClient,
+} from "../advances/advances.service.js";
 import { type BusinessEntity } from "../businesses/businesses.schemas.js";
 import { type ClientEntity } from "../clients/clients.schemas.js";
+import { resolveSelectedPaymentMethodId } from "../workspace/payment-method-resolver.service.js";
 
 // ===== HELPER FUNCTIONS =====
 
@@ -2490,4 +2498,26 @@ async function updateInvoiceBalanceAndStatus(
     data: updateData,
     where: { id: invoiceId },
   });
+}
+
+export async function getPendingAdvancesForInvoiceClient(
+  workspaceId: number,
+  invoiceId: number,
+): Promise<AdvanceListItemResponse[]> {
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, workspaceId },
+  });
+  if (!invoice) {
+    throw new EntityNotFoundError("Invoice not found");
+  }
+
+  return await listPendingAdvancesByClient(workspaceId, invoice.clientId);
+}
+
+export async function bulkLinkAdvancesToInvoice(
+  workspaceId: number,
+  invoiceId: number,
+  body: BulkLinkAdvancesToInvoiceDTO,
+): Promise<AdvanceListItemResponse[]> {
+  return await bulkLinkAdvancesToInvoiceService(workspaceId, invoiceId, body);
 }

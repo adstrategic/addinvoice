@@ -36,6 +36,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Voice Assistant", href: "/voice", icon: Mic },
   { name: "Invoices", href: "/invoices", icon: FileText },
+  { name: "Advances", href: "/advances", icon: FileCheck },
   { name: "Payments", href: "/payments", icon: CreditCard },
   // { name: "Reminders", href: "/reminders", icon: Bell },
   { name: "Clients", href: "/clients", icon: Users },

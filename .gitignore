@@ -1,5 +1,6 @@
 docs/*.md
 .cursor/*
+.claude/*
 node_modules/
 
 dist/

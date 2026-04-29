@@ -2,11 +2,13 @@ import { Worker } from "bullmq";
 import { PaymentMethodType, prisma } from "@addinvoice/db";
 
 import type {
+  SendAdvanceJobData,
   SendEstimateJobData,
   SendInvoiceJobData,
   SendReceiptJobData,
 } from "./queues.js";
 
+import * as advancesService from "../features/advances/advances.service.js";
 import * as estimatesService from "../features/estimates/estimates.service.js";
 import * as invoicesService from "../features/invoices/invoices.service.js";
 import * as paymentsService from "../features/payments/payments.service.js";
@@ -172,6 +174,85 @@ export function startSendEstimateWorker(): Worker<SendEstimateJobData> {
   return worker;
 }
 
+export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
+  const worker = new Worker<SendAdvanceJobData>(
+    "email-advance",
+    async (job) => {
+      const { advanceId, email, message, subject, workspaceId } = job.data;
+      const advance = await advancesService.getAdvanceById(workspaceId, advanceId);
+      const payload = advancesService.buildAdvancePdfPayload(advance);
+      const pdfBuffer = await fetchAdvancePdfFromService(payload);
+
+      const attachmentFiles = await Promise.all(
+        (advance.attachments ?? []).map(async (attachment, index) => {
+          try {
+            const response = await fetch(attachment.url);
+            if (!response.ok) {
+              return null;
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            const mimeType =
+              attachment.mimeType?.trim() || response.headers.get("content-type") || "image/jpeg";
+            const extension = mimeType.includes("png")
+              ? "png"
+              : mimeType.includes("webp")
+                ? "webp"
+                : "jpg";
+
+            return {
+              content: Buffer.from(arrayBuffer),
+              filename:
+                attachment.fileName?.trim() || `advance-photo-${String(index + 1)}.${extension}`,
+            };
+          } catch (error) {
+            console.error("[queue] Failed to fetch advance attachment:", error);
+            return null;
+          }
+        }),
+      );
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Work advance - ${advance.projectName}</h2>
+          <div style="margin: 20px 0; line-height: 1.6; color: #666;">
+            ${message
+              .split("\n")
+              .filter((line) => line.trim().length > 0)
+              .map((line) => `<p>${line}</p>`)
+              .join("")}
+          </div>
+          <h3 style="color: #333; margin-top: 20px;">Work Completed</h3>
+          <p style="line-height: 1.6; color: #666;">
+            ${(advance.workCompleted ?? "No work notes provided.").replace(/\n/g, "<br/>")}
+          </p>
+          <p style="margin-top: 20px; color: #999; font-size: 12px;">
+            Attached files include the PDF report and site images.
+          </p>
+        </div>
+      `;
+
+      await sendEmailWithPdf({
+        filename: `advance-${String(advance.sequence)}.pdf`,
+        html,
+        pdfBuffer,
+        subject: subject.trim(),
+        to: email,
+        attachments: attachmentFiles.filter((item): item is { content: Buffer; filename: string } => item != null),
+      });
+    },
+    { connection },
+  );
+
+  worker.on("failed", (job, err) => {
+    console.error(
+      `[queue] send-advance job ${String(job?.id)} failed:`,
+      err instanceof Error ? err.message : err,
+    );
+  });
+
+  return worker;
+}
+
 export function startSendReceiptWorker(): Worker<SendReceiptJobData> {
   const worker = new Worker<SendReceiptJobData>(
     "email-receipt",
@@ -244,6 +325,7 @@ export function startSendReceiptWorker(): Worker<SendReceiptJobData> {
 }
 
 export function startWorkers(): {
+  advanceWorker: Worker<SendAdvanceJobData>;
   estimateWorker: Worker<SendEstimateJobData>;
   invoiceWorker: Worker<SendInvoiceJobData>;
   receiptWorker: Worker<SendReceiptJobData>;
@@ -251,10 +333,11 @@ export function startWorkers(): {
   const invoiceWorker = startSendInvoiceWorker();
   const receiptWorker = startSendReceiptWorker();
   const estimateWorker = startSendEstimateWorker();
+  const advanceWorker = startSendAdvanceWorker();
   console.log(
-    "[queue] Workers started: email-invoice, email-receipt, email-estimate",
+    "[queue] Workers started: email-invoice, email-receipt, email-estimate, email-advance",
   );
-  return { invoiceWorker, receiptWorker, estimateWorker };
+  return { advanceWorker, invoiceWorker, receiptWorker, estimateWorker };
 }
 
 async function fetchInvoicePdfFromService(
@@ -312,6 +395,29 @@ async function fetchReceiptPdfFromService(
     throw new Error("PDF_SERVICE_URL or PDF_SERVICE_SECRET not configured");
   }
   const res = await fetch(`${url.replace(/\/$/, "")}/generate-receipt`, {
+    body: JSON.stringify(payload),
+    headers: {
+      "Content-Type": "application/json",
+      "X-PDF-Service-Key": secret,
+    },
+    method: "POST",
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`PDF service error: ${String(res.status)} ${text}`);
+  }
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function fetchAdvancePdfFromService(
+  payload: advancesService.AdvancePdfPayload,
+): Promise<Buffer> {
+  const url = pdfServiceUrl;
+  const secret = pdfServiceSecret;
+  if (!url || !secret) {
+    throw new Error("PDF_SERVICE_URL or PDF_SERVICE_SECRET not configured");
+  }
+  const res = await fetch(`${url.replace(/\/$/, "")}/generate-advance`, {
     body: JSON.stringify(payload),
     headers: {
       "Content-Type": "application/json",

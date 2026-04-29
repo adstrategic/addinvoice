@@ -11,22 +11,20 @@ import {
   CommandInput,
   CommandItem,
 } from "@/components/ui/command";
-import {
-  FormControl,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+
 import { cn } from "@/lib/utils";
 import { useClientSelector } from "./hooks/useClientSelector";
 import type { ClientResponse } from "@addinvoice/schemas";
+import { Field, FieldError, FieldLabel } from "../ui/field";
+import type { ControllerFieldState } from "react-hook-form";
 
 interface ClientSelectorProps {
   value: number;
   onValueChange: (value: number) => void;
+  fieldState: ControllerFieldState;
   initialClient: ClientResponse | null;
   mode: "create" | "edit";
-  /** When false, hides “Create New Client” (e.g. voice invoice flow). Default true. */
+  /** When false, hides "Create New Client" (e.g. voice invoice flow). Default true. */
   showCreateNew?: boolean;
   onSelect?: (client: ClientResponse) => void;
   onCreateNew?: () => void;
@@ -35,6 +33,7 @@ interface ClientSelectorProps {
 export const ClientSelector = ({
   value,
   onValueChange,
+  fieldState,
   initialClient,
   mode,
   showCreateNew = true,
@@ -65,25 +64,24 @@ export const ClientSelector = ({
   };
 
   return (
-    <FormItem>
-      <FormLabel>Customer *</FormLabel>
+    <Field data-invalid={fieldState.invalid}>
+      <FieldLabel>Customer *</FieldLabel>
       <Popover open={openClients} onOpenChange={toggleClientPopover}>
         <PopoverTrigger asChild>
-          <FormControl>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={openClients}
-              className={cn(
-                "w-full justify-between text-left font-normal",
-                !selectedClient && value <= 0 && "text-muted-foreground",
-              )}
-              type="button"
-            >
-              {selectedClient ? selectedClient.name : "Select customer..."}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </FormControl>
+          <Button
+            aria-invalid={fieldState.invalid}
+            variant="outline"
+            role="combobox"
+            aria-expanded={openClients}
+            className={cn(
+              "w-full justify-between text-left font-normal",
+              !selectedClient && value <= 0 && "text-muted-foreground",
+            )}
+            type="button"
+          >
+            {selectedClient ? selectedClient.name : "Select customer..."}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full p-0" align="start">
           <Command>
@@ -132,7 +130,7 @@ export const ClientSelector = ({
           </Command>
         </PopoverContent>
       </Popover>
-      <FormMessage />
-    </FormItem>
+      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+    </Field>
   );
 };
