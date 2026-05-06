@@ -5,6 +5,7 @@ import { createEstimateSchema } from "@addinvoice/schemas"
 
 import { runAgenticToolLoop } from "../../lib/agentic-runner.js"
 import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js"
+import { languageDisplayName } from "../../lib/voice-language.js"
 import * as estimatesService from "./estimates.service.js"
 
 // Re-export so the controller keeps a feature-local import path.
@@ -90,6 +91,7 @@ function buildSystemPrompt(params: {
   lockedClient: LockedClient
   suggestedNextEstimateNumber: string
   todayIso: string
+  workspaceLanguage: string
 }): string {
   return `You are an estimate extraction assistant for a B2B estimate app. The user provided one transcript with estimate details. The customer is already selected in the app and must not be changed.
 
@@ -114,7 +116,9 @@ Rules:
 5. Every line item must include name, description, quantity > 0, unitPrice > 0; quantityUnit defaults to UNITS.
 6. If transcript is vague, infer one reasonable item so the user can edit later.
 
-Extract item and amount details from transcript only.`
+Extract item and amount details from transcript only.
+
+Language rule: All text you generate (item names, descriptions, notes, terms, summary, etc.) MUST be written in ${params.workspaceLanguage}. The transcript may be in any language — your output must always be in ${params.workspaceLanguage}.`
 }
 
 async function executeCreateEstimate(
@@ -189,7 +193,7 @@ export async function createEstimateFromVoiceTranscript(
     return { error: "anthropic_unconfigured" }
   }
 
-  const [business, clientRow] = await Promise.all([
+  const [business, clientRow, workspace] = await Promise.all([
     prisma.business.findFirst({
       select: { id: true, name: true },
       where: { id: businessId, workspaceId },
@@ -197,6 +201,10 @@ export async function createEstimateFromVoiceTranscript(
     prisma.client.findFirst({
       select: { email: true, id: true, name: true },
       where: { id: clientId, workspaceId },
+    }),
+    prisma.workspace.findFirst({
+      select: { language: true },
+      where: { id: workspaceId },
     }),
   ])
 
@@ -214,6 +222,13 @@ export async function createEstimateFromVoiceTranscript(
     }
   }
 
+  if (!workspace) {
+    return {
+      error: "creation_failed",
+      message: "Workspace not found",
+    }
+  }
+
   const suggestedNextEstimateNumber =
     await estimatesService.getNextEstimateNumberForWorkspace(workspaceId, businessId)
   const todayIso = new Date().toISOString().slice(0, 10)
@@ -228,6 +243,7 @@ export async function createEstimateFromVoiceTranscript(
     lockedClient,
     suggestedNextEstimateNumber,
     todayIso,
+    workspaceLanguage: languageDisplayName(workspace.language),
   })
 
   console.info("[voice-estimate] starting", {

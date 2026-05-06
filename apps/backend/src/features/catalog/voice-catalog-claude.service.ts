@@ -1,16 +1,17 @@
-import type { Tool } from "@anthropic-ai/sdk/resources/messages/messages"
+import type { Tool } from "@anthropic-ai/sdk/resources/messages/messages";
 
-import { prisma } from "@addinvoice/db"
+import { prisma } from "@addinvoice/db";
 
-import { runAgenticToolLoop } from "../../lib/agentic-runner.js"
-import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js"
-import * as catalogService from "./catalog.service.js"
-import { createCatalogSchema } from "./catalog.schemas.js"
+import { runAgenticToolLoop } from "../../lib/agentic-runner.js";
+import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js";
+import { languageDisplayName } from "../../lib/voice-language.js";
+import { createCatalogSchema } from "./catalog.schemas.js";
+import * as catalogService from "./catalog.service.js";
 
 // Re-export so the controller can import from feature-local path.
-export { transcribeAudio } from "../../lib/transcribe.js"
+export { transcribeAudio } from "../../lib/transcribe.js";
 
-const MAX_TOOL_ROUNDS = 4
+const MAX_TOOL_ROUNDS = 4;
 
 const CREATE_CATALOG_TOOL: Tool = {
   name: "create_catalog",
@@ -27,11 +28,12 @@ const CREATE_CATALOG_TOOL: Tool = {
     },
     required: ["businessId", "description", "name", "price", "quantityUnit"],
   },
-}
+};
 
 function buildSystemPrompt(params: {
-  businessId: number
-  businessName: string
+  businessId: number;
+  businessName: string;
+  workspaceLanguage: string;
 }): string {
   return `You are a catalog extraction assistant for a B2B invoicing app.
 The user provided one transcript to create ONE catalog item.
@@ -48,7 +50,9 @@ Rules:
 3. description should be clear and useful for invoices/estimates.
 4. price must be > 0.
 5. quantityUnit should be UNITS by default unless user clearly says hours/days.
-6. If transcript is vague, infer one sensible catalog item the user can edit later.`
+6. If transcript is vague, infer one sensible catalog item the user can edit later.
+
+Language rule: All text you generate (name, description, etc.) MUST be written in ${params.workspaceLanguage}. The transcript may be in any language — your output must always be in ${params.workspaceLanguage}.`;
 }
 
 async function executeCreateCatalog(
@@ -59,22 +63,33 @@ async function executeCreateCatalog(
   const body: Record<string, unknown> = {
     ...(input as Record<string, unknown>),
     businessId,
-  }
+  };
 
-  const parsed = createCatalogSchema.safeParse(body)
+  const parsed = createCatalogSchema.safeParse(body);
   if (!parsed.success) {
     return {
       fieldErrors: parsed.error.format(),
       ok: false,
       validationErrors: parsed.error.flatten(),
-    }
+    };
   }
 
   try {
-    const catalog = await catalogService.createCatalog(workspaceId, parsed.data)
-    return { id: catalog.id, name: catalog.name, ok: true, sequence: catalog.sequence }
+    const catalog = await catalogService.createCatalog(
+      workspaceId,
+      parsed.data,
+    );
+    return {
+      id: catalog.id,
+      name: catalog.name,
+      ok: true,
+      sequence: catalog.sequence,
+    };
   } catch (err) {
-    return { error: err instanceof Error ? err.message : String(err), ok: false }
+    return {
+      error: err instanceof Error ? err.message : String(err),
+      ok: false,
+    };
   }
 }
 
@@ -89,16 +104,16 @@ function extractCatalogSuccess(
     "name" in result &&
     "sequence" in result
   ) {
-    const cast = result as { name: string; sequence: number }
-    return { name: cast.name, sequence: cast.sequence }
+    const cast = result as { name: string; sequence: number };
+    return { name: cast.name, sequence: cast.sequence };
   }
-  return null
+  return null;
 }
 
 export type VoiceCatalogResult =
   | { error: "anthropic_unconfigured" }
   | { error: "creation_failed"; message: string }
-  | { name: string; sequence: number }
+  | { name: string; sequence: number };
 
 export async function createCatalogFromVoiceTranscript(
   workspaceId: number,
@@ -106,25 +121,39 @@ export async function createCatalogFromVoiceTranscript(
   transcript: string,
 ): Promise<VoiceCatalogResult> {
   if (!process.env.ANTHROPIC_API_KEY?.trim()) {
-    return { error: "anthropic_unconfigured" }
+    return { error: "anthropic_unconfigured" };
   }
 
-  const business = await prisma.business.findFirst({
-    select: { id: true, name: true },
-    where: { id: businessId, workspaceId },
-  })
+  const [business, workspace] = await Promise.all([
+    prisma.business.findFirst({
+      select: { id: true, name: true },
+      where: { id: businessId, workspaceId },
+    }),
+    prisma.workspace.findFirst({
+      select: { language: true },
+      where: { id: workspaceId },
+    }),
+  ]);
 
   if (!business) {
     return {
       error: "creation_failed",
       message: "Business not found or does not belong to your workspace",
-    }
+    };
+  }
+
+  if (!workspace) {
+    return {
+      error: "creation_failed",
+      message: "Workspace not found",
+    };
   }
 
   const system = buildSystemPrompt({
     businessId,
     businessName: business.name,
-  })
+    workspaceLanguage: languageDisplayName(workspace.language),
+  });
 
   const results = await runAgenticToolLoop(
     {
@@ -136,22 +165,22 @@ export async function createCatalogFromVoiceTranscript(
     },
     (name, input) => {
       if (name === "create_catalog") {
-        return executeCreateCatalog(workspaceId, businessId, input)
+        return executeCreateCatalog(workspaceId, businessId, input);
       }
-      return Promise.resolve({ error: `Unknown tool: ${name}`, ok: false })
+      return Promise.resolve({ error: `Unknown tool: ${name}`, ok: false });
     },
-  )
+  );
 
   const success = results
     .filter((r) => r.name === "create_catalog")
     .map((r) => extractCatalogSuccess(r.result))
-    .find((r) => r !== null)
+    .find((r) => r !== null);
 
-  if (success) return success
+  if (success) return success;
 
   return {
     error: "creation_failed",
     message:
       "Could not create a catalog item from the transcript. Try describing the item name, description, and price more clearly.",
-  }
+  };
 }

@@ -4,6 +4,7 @@ import { prisma } from "@addinvoice/db";
 
 import { runAgenticToolLoop } from "../../lib/agentic-runner.js";
 import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js";
+import { languageDisplayName } from "../../lib/voice-language.js";
 import { createInvoiceSchema } from "./invoices.schemas.js";
 import * as invoicesService from "./invoices.service.js";
 
@@ -99,6 +100,7 @@ function buildSystemPrompt(params: {
   lockedClient: LockedClient;
   suggestedNextInvoiceNumber: string;
   todayIso: string;
+  workspaceLanguage: string;
 }): string {
   return `You are an invoice extraction assistant for a B2B invoicing app. The user spoke (or pasted) a description of line items, quantities, prices, and optional dates or notes for ONE invoice. The customer is already selected in the UI — you must not change or guess the customer.
 
@@ -122,7 +124,9 @@ Rules:
 4. Every line item: name, description, quantity > 0, unitPrice > 0; quantityUnit defaults to UNITS.
 5. If the transcript is vague, infer one reasonable line item from what they said (user can edit the draft later).
 
-Extract line items and amounts from the transcript only — ignore any other customer names they mention; the customer is fixed above.`;
+Extract line items and amounts from the transcript only — ignore any other customer names they mention; the customer is fixed above.
+
+Language rule: All text you generate (item names, descriptions, notes, terms, etc.) MUST be written in ${params.workspaceLanguage}. The transcript may be in any language — your output must always be in ${params.workspaceLanguage}.`;
 }
 
 async function executeCreateInvoice(
@@ -193,7 +197,7 @@ export async function createInvoiceFromVoiceTranscript(
     return { error: "anthropic_unconfigured" };
   }
 
-  const [business, clientRow] = await Promise.all([
+  const [business, clientRow, workspace] = await Promise.all([
     prisma.business.findFirst({
       select: { id: true, name: true },
       where: { id: businessId, workspaceId },
@@ -201,6 +205,10 @@ export async function createInvoiceFromVoiceTranscript(
     prisma.client.findFirst({
       select: { email: true, id: true, name: true },
       where: { id: clientId, workspaceId },
+    }),
+    prisma.workspace.findFirst({
+      select: { language: true },
+      where: { id: workspaceId },
     }),
   ]);
 
@@ -215,6 +223,13 @@ export async function createInvoiceFromVoiceTranscript(
     return {
       error: "creation_failed",
       message: "Client not found or does not belong to your workspace",
+    };
+  }
+
+  if (!workspace) {
+    return {
+      error: "creation_failed",
+      message: "Workspace not found",
     };
   }
 
@@ -237,6 +252,7 @@ export async function createInvoiceFromVoiceTranscript(
     lockedClient,
     suggestedNextInvoiceNumber,
     todayIso,
+    workspaceLanguage: languageDisplayName(workspace.language),
   });
 
   const results = await runAgenticToolLoop(
