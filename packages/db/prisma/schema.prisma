@@ -583,8 +583,8 @@ model Expense {
 }
 
 enum SubscriptionPlan {
-    CORE
-    AI_PRO
+    MINIMUM
+    ESSENTIAL
     LIFETIME
 }
 

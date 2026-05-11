@@ -1,18 +1,23 @@
-import type { Tool } from "@anthropic-ai/sdk/resources/messages/messages"
+import type { Tool } from "@anthropic-ai/sdk/resources/messages/messages";
 
-import { prisma } from "@addinvoice/db"
-import { createEstimateSchema } from "@addinvoice/schemas"
+import { prisma } from "@addinvoice/db";
+import { createEstimateSchema } from "@addinvoice/schemas";
 
-import { runAgenticToolLoop } from "../../lib/agentic-runner.js"
-import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js"
-import { languageDisplayName } from "../../lib/voice-language.js"
-import { normalizeTipTapField, TIPTAP_DOC_JSON_SCHEMA_NULLABLE, TIPTAP_DOC_JSON_SCHEMA_REQUIRED, TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS } from "../../lib/tiptap.js"
-import * as estimatesService from "./estimates.service.js"
+import { runAgenticToolLoop } from "../../lib/agentic-runner.js";
+import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js";
+import {
+  normalizeTipTapField,
+  TIPTAP_DOC_JSON_SCHEMA_NULLABLE,
+  TIPTAP_DOC_JSON_SCHEMA_REQUIRED,
+  TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS,
+} from "../../lib/tiptap.js";
+import { languageDisplayName } from "../../lib/voice-language.js";
+import * as estimatesService from "./estimates.service.js";
 
 // Re-export so the controller keeps a feature-local import path.
-export { transcribeAudio } from "../../lib/transcribe.js"
+export { transcribeAudio } from "../../lib/transcribe.js";
 
-const MAX_TOOL_ROUNDS = 4
+const MAX_TOOL_ROUNDS = 4;
 
 const CREATE_ESTIMATE_TOOL: Tool = {
   name: "create_estimate",
@@ -65,6 +70,17 @@ const CREATE_ESTIMATE_TOOL: Tool = {
           required: ["name", "description", "quantity", "unitPrice"],
         },
       },
+      descriptiveItems: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            description: TIPTAP_DOC_JSON_SCHEMA_REQUIRED,
+          },
+          required: ["title", "description"],
+        },
+      },
     },
     required: [
       "createClient",
@@ -78,21 +94,21 @@ const CREATE_ESTIMATE_TOOL: Tool = {
       "items",
     ],
   },
-}
+};
 
 interface LockedClient {
-  email: string
-  id: number
-  name: string
+  email: string;
+  id: number;
+  name: string;
 }
 
 function buildSystemPrompt(params: {
-  businessId: number
-  businessName: string
-  lockedClient: LockedClient
-  suggestedNextEstimateNumber: string
-  todayIso: string
-  workspaceLanguage: string
+  businessId: number;
+  businessName: string;
+  lockedClient: LockedClient;
+  suggestedNextEstimateNumber: string;
+  todayIso: string;
+  workspaceLanguage: string;
 }): string {
   return `You are an estimate extraction assistant for a B2B estimate app. The user provided one transcript with estimate details. The customer is already selected in the app and must not be changed.
 
@@ -116,12 +132,13 @@ Rules:
 4. timelineStartDate and timelineEndDate are optional. If omitted, keep them null.
 5. Every line item must include name, description, quantity > 0, unitPrice > 0; quantityUnit defaults to UNITS.
 6. If transcript is vague, infer one reasonable item so the user can edit later.
+7. Descriptive items (no price) are for narrative/scope sections (e.g. "Scope of Work", "Payment Terms breakdown"). Use them when the user describes sections without amounts. Regular items must always have a unitPrice > 0.
 
 Extract item and amount details from transcript only.
 
 Language rule: All text you generate (item names, descriptions, notes, terms, summary, etc.) MUST be written in ${params.workspaceLanguage}. The transcript may be in any language — your output must always be in ${params.workspaceLanguage}.
 
-${TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS}`
+${TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS}`;
 }
 
 async function executeCreateEstimate(
@@ -130,15 +147,28 @@ async function executeCreateEstimate(
   lockedClient: LockedClient,
   input: unknown,
 ): Promise<unknown> {
-  const raw = (input ?? {}) as Record<string, unknown>
-  const rawItems = Array.isArray(raw.items) ? raw.items : []
+  const raw = (input ?? {}) as Record<string, unknown>;
+  const rawItems = Array.isArray(raw.items) ? raw.items : [];
   const normalizedItems = rawItems.map((item: unknown) => {
     const obj =
       typeof item === "object" && item !== null && !Array.isArray(item)
         ? (item as Record<string, unknown>)
-        : {}
-    return { ...obj, description: normalizeTipTapField(obj.description) }
-  })
+        : {};
+    return { ...obj, description: normalizeTipTapField(obj.description) };
+  });
+  const rawDescriptiveItems = Array.isArray(raw.descriptiveItems)
+    ? raw.descriptiveItems
+    : [];
+  const normalizedDescriptiveItems = rawDescriptiveItems.map(
+    (item: unknown) => {
+      const obj =
+        typeof item === "object" && item !== null && !Array.isArray(item)
+          ? (item as Record<string, unknown>)
+          : {};
+      return { ...obj, description: normalizeTipTapField(obj.description) };
+    },
+  );
+
   const body: Record<string, unknown> = {
     ...raw,
     businessId,
@@ -149,31 +179,38 @@ async function executeCreateEstimate(
     notes: raw.notes != null ? normalizeTipTapField(raw.notes) : null,
     terms: raw.terms != null ? normalizeTipTapField(raw.terms) : null,
     items: normalizedItems,
-  }
+    descriptiveItems: normalizedDescriptiveItems,
+  };
 
-  const parsed = createEstimateSchema.safeParse(body)
+  const parsed = createEstimateSchema.safeParse(body);
   if (!parsed.success) {
     console.error(
       "[voice-estimate] schema validation failed:",
       JSON.stringify(parsed.error.flatten()),
-    )
+    );
     return {
       fieldErrors: parsed.error.format(),
       ok: false,
       validationErrors: parsed.error.flatten(),
-    }
+    };
   }
 
   try {
-    const estimate = await estimatesService.createEstimate(workspaceId, parsed.data)
+    const estimate = await estimatesService.createEstimate(
+      workspaceId,
+      parsed.data,
+    );
     return {
       estimateNumber: estimate.estimateNumber,
       id: estimate.id,
       ok: true,
       sequence: estimate.sequence,
-    }
+    };
   } catch (err) {
-    return { error: err instanceof Error ? err.message : String(err), ok: false }
+    return {
+      error: err instanceof Error ? err.message : String(err),
+      ok: false,
+    };
   }
 }
 
@@ -188,16 +225,16 @@ function extractEstimateSuccess(
     "estimateNumber" in result &&
     "sequence" in result
   ) {
-    const cast = result as { estimateNumber: string; sequence: number }
-    return { estimateNumber: cast.estimateNumber, sequence: cast.sequence }
+    const cast = result as { estimateNumber: string; sequence: number };
+    return { estimateNumber: cast.estimateNumber, sequence: cast.sequence };
   }
-  return null
+  return null;
 }
 
 export type VoiceEstimateResult =
   | { error: "anthropic_unconfigured" }
   | { error: "creation_failed"; message: string }
-  | { estimateNumber: string; sequence: number }
+  | { estimateNumber: string; sequence: number };
 
 export async function createEstimateFromVoiceTranscript(
   workspaceId: number,
@@ -206,7 +243,7 @@ export async function createEstimateFromVoiceTranscript(
   transcript: string,
 ): Promise<VoiceEstimateResult> {
   if (!process.env.ANTHROPIC_API_KEY?.trim()) {
-    return { error: "anthropic_unconfigured" }
+    return { error: "anthropic_unconfigured" };
   }
 
   const [business, clientRow, workspace] = await Promise.all([
@@ -222,37 +259,40 @@ export async function createEstimateFromVoiceTranscript(
       select: { language: true },
       where: { id: workspaceId },
     }),
-  ])
+  ]);
 
   if (!business) {
     return {
       error: "creation_failed",
       message: "Business not found or does not belong to your workspace",
-    }
+    };
   }
 
   if (!clientRow) {
     return {
       error: "creation_failed",
       message: "Client not found or does not belong to your workspace",
-    }
+    };
   }
 
   if (!workspace) {
     return {
       error: "creation_failed",
       message: "Workspace not found",
-    }
+    };
   }
 
   const suggestedNextEstimateNumber =
-    await estimatesService.getNextEstimateNumberForWorkspace(workspaceId, businessId)
-  const todayIso = new Date().toISOString().slice(0, 10)
+    await estimatesService.getNextEstimateNumberForWorkspace(
+      workspaceId,
+      businessId,
+    );
+  const todayIso = new Date().toISOString().slice(0, 10);
   const lockedClient: LockedClient = {
     email: clientRow.email,
     id: clientRow.id,
     name: clientRow.name,
-  }
+  };
   const system = buildSystemPrompt({
     businessId,
     businessName: business.name,
@@ -260,13 +300,13 @@ export async function createEstimateFromVoiceTranscript(
     suggestedNextEstimateNumber,
     todayIso,
     workspaceLanguage: languageDisplayName(workspace.language),
-  })
+  });
 
   console.info("[voice-estimate] starting", {
     businessId,
     clientId,
     transcriptLength: transcript.length,
-  })
+  });
 
   const results = await runAgenticToolLoop(
     {
@@ -278,24 +318,29 @@ export async function createEstimateFromVoiceTranscript(
     },
     (name, input) => {
       if (name === "create_estimate") {
-        return executeCreateEstimate(workspaceId, businessId, lockedClient, input)
+        return executeCreateEstimate(
+          workspaceId,
+          businessId,
+          lockedClient,
+          input,
+        );
       }
-      return Promise.resolve({ error: `Unknown tool: ${name}`, ok: false })
+      return Promise.resolve({ error: `Unknown tool: ${name}`, ok: false });
     },
-  )
+  );
 
   const successResult = results
     .filter((r) => r.name === "create_estimate")
     .map((r) => extractEstimateSuccess(r.result))
-    .find((r) => r !== null)
+    .find((r) => r !== null);
 
   if (successResult) {
-    return successResult
+    return successResult;
   }
 
   return {
     error: "creation_failed",
     message:
       "Could not create an estimate from the transcript. Try describing items, quantities, and amounts more clearly.",
-  }
+  };
 }
