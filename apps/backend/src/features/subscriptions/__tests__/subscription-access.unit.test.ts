@@ -6,10 +6,10 @@ import {
 } from "../subscription-access.js";
 
 describe("subscription-access", () => {
-  it("allows voice access only for AI_PRO and LIFETIME plans", () => {
-    expect(hasVoiceAccess("AI_PRO")).toBe(true);
+  it("allows voice access for MINIMUM, ESSENTIAL, and LIFETIME plans", () => {
+    expect(hasVoiceAccess("MINIMUM")).toBe(true);
+    expect(hasVoiceAccess("ESSENTIAL")).toBe(true);
     expect(hasVoiceAccess("LIFETIME")).toBe(true);
-    expect(hasVoiceAccess("CORE")).toBe(false);
     expect(hasVoiceAccess(null)).toBe(false);
   });
 

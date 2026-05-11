@@ -133,8 +133,8 @@ async function handleCheckoutSessionCompleted(
 
 //   // TODO: AI CREDITS - Handle subscription renewal
 //   // When invoice payment succeeds, allocate new AI credits for the period
-//   // CORE: $3 worth of credits
-//   // AI_PRO: $8 worth of credits
+//   // MINIMUM: $3 worth of credits
+//   // ESSENTIAL: $8 worth of credits
 //   // LIFETIME: Monthly credit allocation (if applicable)
 // }
 

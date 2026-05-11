@@ -18,7 +18,7 @@ export interface PlanPricesRecurring {
   yearly: PlanPriceInfo;
 }
 
-export type SubscriptionPlan = "AI_PRO" | "CORE" | "LIFETIME";
+export type SubscriptionPlan = "ESSENTIAL" | "LIFETIME" | "MINIMUM";
 
 export type SubscriptionStatus =
   | "ACTIVE"
@@ -139,11 +139,13 @@ export async function createCustomerPortalSession(
  * Fetches all active prices per product and groups by recurring interval (month/year)
  */
 export async function getAvailablePlans() {
-  const [coreProduct, aiProProduct, lifetimeProduct] = await Promise.all([
-    stripe.products.retrieve(PLAN_PRODUCT_IDS.CORE),
-    stripe.products.retrieve(PLAN_PRODUCT_IDS.AI_PRO),
-    stripe.products.retrieve(PLAN_PRODUCT_IDS.LIFETIME),
-  ]);
+  const [minimumProduct, essentialProduct, lifetimeProduct] = await Promise.all(
+    [
+      stripe.products.retrieve(PLAN_PRODUCT_IDS.MINIMUM),
+      stripe.products.retrieve(PLAN_PRODUCT_IDS.ESSENTIAL),
+      stripe.products.retrieve(PLAN_PRODUCT_IDS.LIFETIME),
+    ],
+  );
 
   const buildPricesForProduct = async (
     productId: string,
@@ -187,33 +189,33 @@ export async function getAvailablePlans() {
     };
   };
 
-  const [corePrices, aiProPrices, lifetimePrices] = await Promise.all([
-    buildPricesForProduct(PLAN_PRODUCT_IDS.CORE),
-    buildPricesForProduct(PLAN_PRODUCT_IDS.AI_PRO),
+  const [minimumPrices, essentialPrices, lifetimePrices] = await Promise.all([
+    buildPricesForProduct(PLAN_PRODUCT_IDS.MINIMUM),
+    buildPricesForProduct(PLAN_PRODUCT_IDS.ESSENTIAL),
     buildPricesForProduct(PLAN_PRODUCT_IDS.LIFETIME),
   ]);
 
   return [
     {
       description:
-        coreProduct.description ??
-        "$12/month, $3 for AI credits" /* fallback */,
-      id: "CORE" as const,
-      name: coreProduct.name,
-      prices: corePrices as PlanPricesRecurring,
+        minimumProduct.description ??
+        "Manual & voice invoicing (25 voice sessions/month)" /* fallback */,
+      id: "MINIMUM" as const,
+      name: minimumProduct.name,
+      prices: minimumPrices as PlanPricesRecurring,
     },
     {
       description:
-        aiProProduct.description ??
-        "$20/month, $8 for AI credits" /* fallback */,
-      id: "AI_PRO" as const,
-      name: aiProProduct.name,
-      prices: aiProPrices as PlanPricesRecurring,
+        essentialProduct.description ??
+        "Unlimited voice + AI bookkeeper assistant" /* fallback */,
+      id: "ESSENTIAL" as const,
+      name: essentialProduct.name,
+      prices: essentialPrices as PlanPricesRecurring,
     },
     {
       description:
         lifetimeProduct.description ??
-        "$100 one-time payment, free tier AI credits" /* fallback */,
+        "One-time payment, lifetime access" /* fallback */,
       id: "LIFETIME" as const,
       name: lifetimeProduct.name,
       prices: lifetimePrices as PlanPricesLifetime,
@@ -295,8 +297,8 @@ export async function handleCheckoutCompleted(
   });
 
   // TODO: AI CREDITS - Purchase AI credits here based on plan
-  // CORE: $3 worth of credits
-  // AI_PRO: $8 worth of credits
+  // MINIMUM: $3 worth of credits
+  // ESSENTIAL: $8 worth of credits
   // LIFETIME: Monthly credit allocation
   // This should be implemented using your AI credits management tool
 }
@@ -424,9 +426,10 @@ async function updateSubscriptionFromStripe(
     if (price?.product) {
       const productId =
         typeof price.product === "string" ? price.product : price.product.id;
-      if (productId === process.env.STRIPE_PRODUCT_ID_CORE) planType = "CORE";
-      else if (productId === process.env.STRIPE_PRODUCT_ID_AI_PRO)
-        planType = "AI_PRO";
+      if (productId === process.env.STRIPE_PRODUCT_ID_MINIMUM)
+        planType = "MINIMUM";
+      else if (productId === process.env.STRIPE_PRODUCT_ID_ESSENTIAL)
+        planType = "ESSENTIAL";
       else if (productId === process.env.STRIPE_PRODUCT_ID_LIFETIME)
         planType = "LIFETIME";
     }
@@ -443,7 +446,7 @@ async function updateSubscriptionFromStripe(
 
   // TODO: AI CREDITS - Handle subscription renewal
   // When subscription renews (status becomes ACTIVE again), allocate new AI credits
-  // CORE: $3 worth of credits
-  // AI_PRO: $8 worth of credits
+  // MINIMUM: $3 worth of credits
+  // ESSENTIAL: $8 worth of credits
   // LIFETIME: Monthly credit allocation (if applicable)
 }

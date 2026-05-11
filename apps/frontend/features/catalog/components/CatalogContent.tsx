@@ -16,9 +16,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import LoadingComponent from "@/components/loading-component";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { BusinessSelectionDialog } from "@/components/business-selection-dialog";
-import { Package } from "lucide-react";
+import { Mic, Package } from "lucide-react";
 import type { CatalogSortBy } from "./CatalogFilters";
 import { VoiceCatalogPromptDialog } from "./VoiceCatalogPromptDialog";
+import { Button } from "@/components/ui/button";
 
 /**
  * Catalog page component
@@ -190,6 +191,16 @@ export default function CatalogContent() {
           }
         }}
       />
+
+      <Button
+        type="button"
+        size="icon-lg"
+        className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
+        onClick={catalogManager.handleCreateCatalogByVoice}
+        aria-label="Create product by voice"
+      >
+        <Mic className="size-8" />
+      </Button>
     </>
   );
 }

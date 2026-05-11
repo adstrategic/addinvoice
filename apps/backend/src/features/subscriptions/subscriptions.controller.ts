@@ -5,7 +5,7 @@ import { getAuth } from "@clerk/express";
 import { getWorkspaceId } from "../../core/auth.js";
 import * as subscriptionService from "./subscriptions.service.js";
 
-const VALID_PLAN_TYPES = ["AI_PRO", "CORE", "LIFETIME"] as const;
+const VALID_PLAN_TYPES = ["ESSENTIAL", "MINIMUM", "LIFETIME"] as const;
 type PlanType = (typeof VALID_PLAN_TYPES)[number];
 
 /**
@@ -34,7 +34,7 @@ export async function createCheckout(
   ) {
     res.status(400).json({
       error: "INVALID_PLAN",
-      message: "Invalid plan type. Must be CORE, AI_PRO, or LIFETIME",
+      message: "Invalid plan type. Must be MINIMUM, ESSENTIAL, or LIFETIME",
     });
     return;
   }

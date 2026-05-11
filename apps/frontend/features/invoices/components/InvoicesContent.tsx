@@ -261,12 +261,12 @@ export default function InvoicesContent() {
 
       <Button
         type="button"
-        size="icon"
-        className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full shadow-lg hover:shadow-xl"
+        size="icon-lg"
+        className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
         onClick={invoiceManager.handleCreateInvoiceByVoice}
         aria-label="Create invoice by voice"
       >
-        <Mic className="h-6 w-6" />
+        <Mic className="size-8" />
       </Button>
     </>
   );

@@ -25,6 +25,11 @@ import type {
 } from "./invoices.schemas.js";
 
 import {
+  toJsonInput,
+  toJsonRecord,
+  toNullableJsonInput,
+} from "../../core/prisma-json.js";
+import {
   EntityNotFoundError,
   EntityValidationError,
   FieldValidationError,
@@ -33,9 +38,14 @@ import {
   bulkLinkAdvancesToInvoice as bulkLinkAdvancesToInvoiceService,
   listPendingAdvancesByClient,
 } from "../advances/advances.service.js";
+import { toBusinessEntity } from "../businesses/businesses.mapper.js";
 import { type BusinessEntity } from "../businesses/businesses.schemas.js";
 import { type ClientEntity } from "../clients/clients.schemas.js";
 import { resolveSelectedPaymentMethodId } from "../workspace/payment-method-resolver.service.js";
+import {
+  toInvoiceEntityWithRelations,
+  toInvoiceItemEntity,
+} from "./invoices.mapper.js";
 
 // ===== HELPER FUNCTIONS =====
 
@@ -87,8 +97,8 @@ export async function createInvoiceFromEstimate(
       invoiceNumber,
       sequence,
       currency: estimate.currency,
-      notes: estimate.notes ?? null,
-      terms: estimate.terms ?? null,
+      notes: toNullableJsonInput(estimate.notes),
+      terms: toNullableJsonInput(estimate.terms),
       status: "SENT",
       // issue/due dates are required for invoices in some flows; set to today by default.
       issueDate: new Date(),
@@ -104,19 +114,23 @@ export async function createInvoiceFromEstimate(
       total: estimate.total,
       balance: estimate.total,
       items: {
-        create: estimate.items.map((item) => ({
-          name: item.name,
-          description: item.description,
-          quantity: item.quantity,
-          quantityUnit: item.quantityUnit,
-          unitPrice: item.unitPrice,
-          discount: item.discount,
-          discountType: item.discountType,
-          tax: item.tax,
-          vatEnabled: item.vatEnabled,
-          total: item.total,
-          catalogId: item.catalogId ?? null,
-        })),
+        create: estimate.items.map((item) => {
+          const itemInput: Prisma.InvoiceItemUncheckedCreateWithoutInvoiceInput =
+            {
+              name: item.name,
+              description: toJsonInput(item.description),
+              quantity: item.quantity,
+              quantityUnit: item.quantityUnit,
+              unitPrice: item.unitPrice,
+              discount: item.discount,
+              discountType: item.discountType,
+              tax: item.tax,
+              vatEnabled: item.vatEnabled,
+              total: item.total,
+              catalogId: item.catalogId ?? null,
+            };
+          return itemInput;
+        }),
       },
     },
     include: {
@@ -124,44 +138,11 @@ export async function createInvoiceFromEstimate(
       client: true,
       items: true,
       payments: true,
+      selectedPaymentMethod: true,
     },
   });
 
-  return {
-    ...invoiceCreated,
-    balance: Number(invoiceCreated.balance),
-    business: {
-      ...invoiceCreated.business,
-      defaultTaxMode: invoiceCreated.business.defaultTaxMode as
-        | "BY_PRODUCT"
-        | "BY_TOTAL"
-        | "NONE"
-        | null
-        | undefined,
-      defaultTaxPercentage: invoiceCreated.business.defaultTaxPercentage
-        ? Number(invoiceCreated.business.defaultTaxPercentage)
-        : null,
-    },
-    discount: Number(invoiceCreated.discount),
-    items: invoiceCreated.items.map((item) => ({
-      ...item,
-      discount: Number(item.discount),
-      quantity: Number(item.quantity),
-      tax: Number(item.tax),
-      total: Number(item.total),
-      unitPrice: Number(item.unitPrice),
-    })),
-    payments: invoiceCreated.payments.map((payment) => ({
-      ...payment,
-      amount: Number(payment.amount),
-    })),
-    subtotal: Number(invoiceCreated.subtotal),
-    taxPercentage: invoiceCreated.taxPercentage
-      ? Number(invoiceCreated.taxPercentage)
-      : null,
-    total: Number(invoiceCreated.total),
-    totalTax: Number(invoiceCreated.totalTax),
-  };
+  return toInvoiceEntityWithRelations(invoiceCreated);
 }
 
 /**
@@ -317,7 +298,7 @@ export async function addInvoiceItem(
     const item = await tx.invoiceItem.create({
       data: {
         catalogId,
-        description: data.description,
+        description: toJsonInput(data.description),
         discount: data.discount,
         discountType: data.discountType,
         invoiceId,
@@ -396,14 +377,7 @@ export async function addInvoiceItem(
 
     await updateInvoiceBalanceAndStatus(tx, invoiceId, totals.total);
 
-    return {
-      ...item,
-      discount: Number(item.discount),
-      quantity: Number(item.quantity),
-      tax: Number(item.tax),
-      total: Number(item.total),
-      unitPrice: Number(item.unitPrice),
-    };
+    return toInvoiceItemEntity(item);
   });
 }
 
@@ -817,9 +791,9 @@ export async function createInvoice(
               vatEnabled: itemVatEnabled,
             });
 
-            return {
+            const itemInput = {
               catalogId,
-              description: item.description,
+              description: toJsonInput(item.description),
               discount: item.discount,
               discountType: item.discountType,
               name: item.name,
@@ -830,6 +804,7 @@ export async function createInvoice(
               unitPrice: item.unitPrice,
               vatEnabled: itemVatEnabled,
             };
+            return itemInput;
           }),
         )
       : [];
@@ -958,7 +933,7 @@ export async function createInvoice(
         items: {
           create: itemsToCreate,
         },
-        notes: data.notes,
+        notes: toNullableJsonInput(data.notes),
         purchaseOrder: data.purchaseOrder,
         selectedPaymentMethodId,
         sequence,
@@ -967,7 +942,7 @@ export async function createInvoice(
         taxMode: data.taxMode,
         taxName: data.taxName ?? null,
         taxPercentage: data.taxPercentage ?? null,
-        terms: data.terms,
+        terms: toNullableJsonInput(data.terms),
         total: totals.total,
         totalTax: totals.totalTax,
         workspaceId,
@@ -976,36 +951,12 @@ export async function createInvoice(
         business: true,
         client: true,
         items: true,
+        payments: true,
+        selectedPaymentMethod: true,
       },
     });
 
-    return {
-      ...invoice,
-      balance: Number(invoice.balance),
-      business: {
-        ...invoice.business,
-        defaultTaxMode: invoice.business.defaultTaxMode,
-        defaultTaxPercentage: invoice.business.defaultTaxPercentage
-          ? Number(invoice.business.defaultTaxPercentage)
-          : null,
-      },
-      discount: Number(invoice.discount),
-      items: invoice.items.map((item) => ({
-        ...item,
-        discount: Number(item.discount),
-        quantity: Number(item.quantity),
-        tax: Number(item.tax),
-        total: Number(item.total),
-        unitPrice: Number(item.unitPrice),
-      })),
-      sequence: invoice.sequence,
-      subtotal: Number(invoice.subtotal),
-      taxPercentage: invoice.taxPercentage
-        ? Number(invoice.taxPercentage)
-        : null,
-      total: Number(invoice.total),
-      totalTax: Number(invoice.totalTax),
-    };
+    return toInvoiceEntityWithRelations(invoice);
   });
 }
 
@@ -1181,40 +1132,7 @@ export async function getInvoiceById(
     throw new EntityNotFoundError("Invoice not found");
   }
 
-  return {
-    ...invoice,
-    balance: Number(invoice.balance),
-    business: {
-      ...invoice.business,
-      defaultTaxMode: invoice.business.defaultTaxMode as
-        | "BY_PRODUCT"
-        | "BY_TOTAL"
-        | "NONE"
-        | null
-        | undefined,
-      defaultTaxPercentage: invoice.business.defaultTaxPercentage
-        ? Number(invoice.business.defaultTaxPercentage)
-        : null,
-    },
-    discount: Number(invoice.discount),
-    items: invoice.items.map((item) => ({
-      ...item,
-      discount: Number(item.discount),
-      quantity: Number(item.quantity),
-      tax: Number(item.tax),
-      total: Number(item.total),
-      unitPrice: Number(item.unitPrice),
-    })),
-    payments: invoice.payments.map((payment) => ({
-      ...payment,
-      amount: Number(payment.amount),
-    })),
-    selectedPaymentMethod: invoice.selectedPaymentMethod,
-    subtotal: Number(invoice.subtotal),
-    taxPercentage: invoice.taxPercentage ? Number(invoice.taxPercentage) : null,
-    total: Number(invoice.total),
-    totalTax: Number(invoice.totalTax),
-  };
+  return toInvoiceEntityWithRelations(invoice);
 }
 
 /**
@@ -1248,40 +1166,7 @@ export async function getInvoiceBySequence(
     throw new EntityNotFoundError("Invoice not found");
   }
 
-  return {
-    ...invoice,
-    balance: Number(invoice.balance),
-    business: {
-      ...invoice.business,
-      defaultTaxMode: invoice.business.defaultTaxMode as
-        | "BY_PRODUCT"
-        | "BY_TOTAL"
-        | "NONE"
-        | null
-        | undefined,
-      defaultTaxPercentage: invoice.business.defaultTaxPercentage
-        ? Number(invoice.business.defaultTaxPercentage)
-        : null,
-    },
-    discount: Number(invoice.discount),
-    items: invoice.items.map((item) => ({
-      ...item,
-      discount: Number(item.discount),
-      quantity: Number(item.quantity),
-      tax: Number(item.tax),
-      total: Number(item.total),
-      unitPrice: Number(item.unitPrice),
-    })),
-    payments: invoice.payments.map((payment) => ({
-      ...payment,
-      amount: Number(payment.amount),
-    })),
-    selectedPaymentMethod: invoice.selectedPaymentMethod,
-    subtotal: Number(invoice.subtotal),
-    taxPercentage: invoice.taxPercentage ? Number(invoice.taxPercentage) : null,
-    total: Number(invoice.total),
-    totalTax: Number(invoice.totalTax),
-  };
+  return toInvoiceEntityWithRelations(invoice);
 }
 
 /**
@@ -1360,6 +1245,9 @@ export async function listInvoices(
       include: {
         business: true,
         client: true,
+        items: true,
+        payments: true,
+        selectedPaymentMethod: true,
       },
       orderBy: { createdAt: "desc" },
       skip,
@@ -1378,24 +1266,7 @@ export async function listInvoices(
   ]);
 
   return {
-    invoices: invoices.map((inv) => {
-      return {
-        ...inv,
-        balance: Number(inv.balance),
-        business: {
-          ...inv.business,
-          defaultTaxMode: inv.business.defaultTaxMode,
-          defaultTaxPercentage: inv.business.defaultTaxPercentage
-            ? Number(inv.business.defaultTaxPercentage)
-            : null,
-        },
-        discount: Number(inv.discount),
-        subtotal: Number(inv.subtotal),
-        taxPercentage: inv.taxPercentage ? Number(inv.taxPercentage) : null,
-        total: Number(inv.total),
-        totalTax: Number(inv.totalTax),
-      };
-    }),
+    invoices: invoices.map(toInvoiceEntityWithRelations),
     limit,
     page,
     stats: {
@@ -1436,28 +1307,17 @@ export async function markInvoiceAsSent(
   // Idempotent: if already sent (SENT, VIEWED, or PAID), don't overwrite status—return current state
   if (["PAID", "SENT", "VIEWED"].includes(invoice.status) && invoice.sentAt) {
     const existing = await prisma.invoice.findUnique({
-      include: { business: true, client: true },
+      include: {
+        business: true,
+        client: true,
+        items: true,
+        payments: true,
+        selectedPaymentMethod: true,
+      },
       where: { id: invoiceId },
     });
     if (!existing) throw new EntityNotFoundError("Invoice not found");
-    return {
-      ...existing,
-      balance: Number(existing.balance),
-      business: {
-        ...existing.business,
-        defaultTaxMode: existing.business.defaultTaxMode,
-        defaultTaxPercentage: existing.business.defaultTaxPercentage
-          ? Number(existing.business.defaultTaxPercentage)
-          : null,
-      },
-      discount: Number(existing.discount),
-      subtotal: Number(existing.subtotal),
-      taxPercentage: existing.taxPercentage
-        ? Number(existing.taxPercentage)
-        : null,
-      total: Number(existing.total),
-      totalTax: Number(existing.totalTax),
-    };
+    return toInvoiceEntityWithRelations(existing);
   }
 
   const updatedInvoice = await prisma.invoice.update({
@@ -1468,6 +1328,9 @@ export async function markInvoiceAsSent(
     include: {
       business: true,
       client: true,
+      items: true,
+      payments: true,
+      selectedPaymentMethod: true,
     },
 
     where: {
@@ -1475,24 +1338,7 @@ export async function markInvoiceAsSent(
     },
   });
 
-  return {
-    ...updatedInvoice,
-    balance: Number(updatedInvoice.balance),
-    business: {
-      ...updatedInvoice.business,
-      defaultTaxMode: updatedInvoice.business.defaultTaxMode,
-      defaultTaxPercentage: updatedInvoice.business.defaultTaxPercentage
-        ? Number(updatedInvoice.business.defaultTaxPercentage)
-        : null,
-    },
-    discount: Number(updatedInvoice.discount),
-    subtotal: Number(updatedInvoice.subtotal),
-    taxPercentage: updatedInvoice.taxPercentage
-      ? Number(updatedInvoice.taxPercentage)
-      : null,
-    total: Number(updatedInvoice.total),
-    totalTax: Number(updatedInvoice.totalTax),
-  };
+  return toInvoiceEntityWithRelations(updatedInvoice);
 }
 
 /**
@@ -1556,9 +1402,15 @@ export async function updateInvoice(
       createClient,
       items: _items,
       selectedPaymentMethodId,
+      notes,
+      terms,
       ...invoiceData
     } = data;
-    const updateData: Prisma.InvoiceUpdateInput = { ...invoiceData };
+    const updateData: Prisma.InvoiceUpdateInput = {
+      ...invoiceData,
+      ...(notes !== undefined ? { notes: toNullableJsonInput(notes) } : {}),
+      ...(terms !== undefined ? { terms: toNullableJsonInput(terms) } : {}),
+    };
     if (selectedPaymentMethodId !== undefined) {
       const resolvedPaymentMethodId = await resolveSelectedPaymentMethodId(
         tx,
@@ -1781,6 +1633,7 @@ export async function updateInvoice(
         business: true,
         client: true,
         items: true,
+        payments: true,
         selectedPaymentMethod: true,
       },
       where: { id, workspaceId },
@@ -1793,32 +1646,10 @@ export async function updateInvoice(
       where: { id, workspaceId },
     });
 
+    const mapped = toInvoiceEntityWithRelations(updatedInvoice);
     return {
-      ...updatedInvoice,
+      ...mapped,
       balance: Number(withBalance?.balance ?? updatedInvoice.balance),
-      business: {
-        ...updatedInvoice.business,
-        defaultTaxMode: updatedInvoice.business.defaultTaxMode,
-        defaultTaxPercentage: updatedInvoice.business.defaultTaxPercentage
-          ? Number(updatedInvoice.business.defaultTaxPercentage)
-          : null,
-      },
-      discount: Number(updatedInvoice.discount),
-      items: updatedInvoice.items.map((item) => ({
-        ...item,
-        discount: Number(item.discount),
-        quantity: Number(item.quantity),
-        tax: Number(item.tax),
-        total: Number(item.total),
-        unitPrice: Number(item.unitPrice),
-      })),
-      selectedPaymentMethod: updatedInvoice.selectedPaymentMethod ?? undefined,
-      subtotal: Number(updatedInvoice.subtotal),
-      taxPercentage: updatedInvoice.taxPercentage
-        ? Number(updatedInvoice.taxPercentage)
-        : null,
-      total: Number(updatedInvoice.total),
-      totalTax: Number(updatedInvoice.totalTax),
     };
   });
 }
@@ -1890,7 +1721,8 @@ export async function updateInvoiceItem(
         workspaceId,
         invoice.businessId,
         {
-          description: data.description ?? existingItem.description,
+          description:
+            data.description ?? toJsonRecord(existingItem.description) ?? {},
           name: data.name ?? existingItem.name,
           price: data.unitPrice ?? Number(existingItem.unitPrice),
           quantityUnit: data.quantityUnit ?? existingItem.quantityUnit,
@@ -1948,7 +1780,7 @@ export async function updateInvoiceItem(
     // Only include fields that are provided in the update
     if (itemData.name !== undefined) updateData.name = itemData.name;
     if (itemData.description !== undefined)
-      updateData.description = itemData.description;
+      updateData.description = toJsonInput(itemData.description ?? {});
     if (itemData.quantity !== undefined)
       updateData.quantity = itemData.quantity;
     if (itemData.quantityUnit !== undefined)
@@ -2092,14 +1924,7 @@ export async function updateInvoiceItem(
 
     await updateInvoiceBalanceAndStatus(tx, invoiceId, totals.total);
 
-    return {
-      ...item,
-      discount: Number(item.discount),
-      quantity: Number(item.quantity),
-      tax: Number(item.tax),
-      total: Number(item.total),
-      unitPrice: Number(item.unitPrice),
-    };
+    return toInvoiceItemEntity(item);
   });
 }
 
@@ -2366,7 +2191,7 @@ async function handleCatalogIntegration(
   workspaceId: number,
   businessId: number,
   itemData: {
-    description: string;
+    description: Record<string, unknown>;
     name: string;
     price: number;
     quantityUnit: "DAYS" | "HOURS" | "UNITS";
@@ -2408,7 +2233,7 @@ async function handleCatalogIntegration(
   const newCatalog = await tx.catalog.create({
     data: {
       businessId,
-      description: itemData.description,
+      description: toJsonInput(itemData.description),
       name: itemData.name,
       price: itemData.price,
       quantityUnit: itemData.quantityUnit,

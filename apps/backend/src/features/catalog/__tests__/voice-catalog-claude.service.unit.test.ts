@@ -4,6 +4,7 @@ const { prismaMock, anthropicCreate } = vi.hoisted(() => ({
   anthropicCreate: vi.fn(),
   prismaMock: {
     business: { findFirst: vi.fn() },
+    workspace: { findFirst: vi.fn() },
   },
 }))
 
@@ -40,11 +41,14 @@ describe("voice-catalog-claude.service", () => {
       id: 1,
       name: "Test Business",
     })
+    prismaMock.workspace.findFirst.mockResolvedValue({
+      language: "EN",
+    })
     vi.spyOn(catalogService, "createCatalog").mockResolvedValue({
       business: {} as never,
       businessId: 1,
       createdAt: new Date(),
-      description: "Monthly website management and updates",
+      description: { text: "Monthly website management and updates" },
       id: 10,
       name: "Website Management",
       price: 250,

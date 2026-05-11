@@ -26,10 +26,9 @@ export const createCatalogSchema = z.object({
     .min(1, "Catalog name is required")
     .max(255, "Catalog name is too long"),
   description: z
-    .string()
-    .trim()
-    .min(1, "Description is required")
-    .max(1000, "Description is too long"),
+    .record(z.string(), z.unknown())
+    .nullable()
+    .refine((v) => v !== null, { message: "Description is required" }),
   price: z.coerce.number().positive("Price must be a positive number"),
   quantityUnit: z.enum(["DAYS", "HOURS", "UNITS"]),
   businessId: z.number().int().positive("Business is required"),

@@ -1,3 +1,6 @@
+import { generateHTML } from "@tiptap/html";
+import StarterKit from "@tiptap/starter-kit";
+
 /**
  * Builds the full HTML document for the invoice PDF.
  */
@@ -21,7 +24,7 @@ export interface InvoicePdfClient {
 }
 
 export interface InvoicePdfItem {
-  description?: null | string;
+  description?: null | Record<string, unknown>;
   discountAmount?: number;
   name: string;
   quantity: number;
@@ -41,10 +44,10 @@ export interface InvoicePdfPayload {
     dueDate: Date | string;
     invoiceNumber: string;
     issueDate: Date | string;
-    notes?: null | string;
+    notes?: null | Record<string, unknown>;
     purchaseOrder?: null | string;
     subtotal: number;
-    terms?: null | string;
+    terms?: null | Record<string, unknown>;
     total: number;
     totalPaid?: number;
     totalTax: number;
@@ -68,7 +71,7 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
     <tr>
       <td class="cell-desc">
         <div class="item-name">${escapeHtml(item.name)}</div>
-        ${item.description ? `<div class="item-desc">${escapeHtml(item.description)}</div>` : ""}
+        ${item.description ? `<div class="item-desc">${generateHTML(item.description as Record<string, unknown>, [StarterKit])}</div>` : ""}
       </td>
       <td class="cell-num">${escapeHtml(String(item.quantity))} ${escapeHtml(item.quantityUnit)}</td>
       <td class="cell-num">${usdFormatter.format(item.unitPrice)}</td>
@@ -87,9 +90,9 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
     * { box-sizing: border-box; }
     body { margin: 0; padding: 40px; font-size: 12px; font-family: Helvetica, Arial, sans-serif; }
     .page { position: relative; min-height: 85vh; }
-    .watermark { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; display: flex; justify-content: center; align-items: center; pointer-events: none; }
+    .watermark { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; display: flex; justify-content: center; align-items: center; pointer-events: none; }
     .watermark-inner { transform: rotate(-45deg); transform-origin: center center; }
-    .watermark-text { font-size: 100px; font-weight: bold; color: #000; opacity: 0.05; text-align: center; letter-spacing: 2px; }
+    .watermark-text { font-size: 100px; font-weight: bold; color: #000; opacity: 0.03; text-align: center; letter-spacing: 2px; }
     .content { position: relative; z-index: 1; }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .company-header { display: flex; align-items: center; gap: 25px; flex: 1; min-width: 0; }
@@ -119,6 +122,11 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
     .cell-num { }
     .item-name { font-weight: bold; margin-bottom: 2px; }
     .item-desc { font-size: 9px; color: #666; }
+    .item-desc p { margin: 0; }
+    .item-desc ul { list-style: disc; padding-left: 12px; margin: 2px 0; }
+    .item-desc ol { list-style: decimal; padding-left: 12px; margin: 2px 0; }
+    .item-desc strong { font-weight: 700; }
+    .item-desc em { font-style: italic; }
     .totals { margin-top: 20px; text-align: right; }
     .total-row { display: flex; justify-content: space-between; width: 200px; margin-bottom: 5px; font-size: 11px; margin-left: auto; }
     .total-label { color: #666; }
@@ -127,6 +135,14 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
     .total-final-value { color: #00aaab; }
     .notes-section { margin-top: 30px; padding-top: 10px; border-top: 1px solid #000; font-size: 11px; }
     .notes-title { font-weight: bold; margin-bottom: 4px; }
+    .notes-section p { margin: 0 0 4px; }
+    .notes-section ul { list-style: disc; padding-left: 16px; margin: 4px 0; }
+    .notes-section ol { list-style: decimal; padding-left: 16px; margin: 4px 0; }
+    .notes-section li { margin-bottom: 2px; }
+    .notes-section strong { font-weight: 700; }
+    .notes-section em { font-style: italic; }
+    .notes-section h2 { font-size: 14px; font-weight: 700; margin: 8px 0 4px; color: #111; }
+    .notes-section h3 { font-size: 12px; font-weight: 700; margin: 6px 0 4px; color: #111; }
     .payment-method-section { margin-top: 16px; font-size: 11px; border: 1px solid #00aaab; padding: 8px; }
     .payment-method-label { font-weight: bold; }
     .payment-method-value { margin-left: 4px; }
@@ -241,8 +257,8 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
         invoice.notes || invoice.terms
           ? `
       <div class="notes-section">
-        ${invoice.notes ? `<div class="notes-title">REMARKS:</div><div style="margin-bottom: 8px">${escapeHtml(invoice.notes)}</div>` : ""}
-        ${invoice.terms ? `<div>${escapeHtml(invoice.terms)}</div>` : ""}
+        ${invoice.notes ? `<div class="notes-title">REMARKS:</div><div style="margin-bottom: 8px">${generateHTML(invoice.notes as Record<string, unknown>, [StarterKit])}</div>` : ""}
+        ${invoice.terms ? `<div>${generateHTML(invoice.terms as Record<string, unknown>, [StarterKit])}</div>` : ""}
       </div>`
           : ""
       }

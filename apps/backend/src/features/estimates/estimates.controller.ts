@@ -2,14 +2,17 @@ import type { Request, Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
 import {
+  createEstimateDescriptiveItemSchema,
   createEstimateItemSchema,
   createEstimateSchema,
+  updateEstimateDescriptiveItemSchema,
   updateEstimateItemSchema,
   updateEstimateSchema,
 } from "@addinvoice/schemas";
 
 import type {
   getEstimateByIdSchema,
+  getEstimateDescriptiveItemByIdSchema,
   getEstimateBySequenceSchema,
   getEstimateItemByIdSchema,
   sendEstimateBodySchema,
@@ -45,6 +48,29 @@ export async function addEstimateItem(
   const body = req.body;
 
   const item = await estimatesService.addEstimateItem(
+    workspaceId,
+    estimateId,
+    body,
+  );
+
+  res.status(201).json({
+    data: item,
+  });
+}
+
+export async function addEstimateDescriptiveItem(
+  req: TypedRequest<
+    typeof getEstimateByIdSchema,
+    never,
+    typeof createEstimateDescriptiveItemSchema
+  >,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { estimateId } = req.params;
+  const body = req.body;
+
+  const item = await estimatesService.addEstimateDescriptiveItem(
     workspaceId,
     estimateId,
     body,
@@ -169,6 +195,24 @@ export async function deleteEstimateItem(
 
   res.json({
     message: "Estimate item deleted successfully",
+  });
+}
+
+export async function deleteEstimateDescriptiveItem(
+  req: TypedRequest<typeof getEstimateDescriptiveItemByIdSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { estimateId, descriptiveItemId } = req.params;
+
+  await estimatesService.deleteEstimateDescriptiveItem(
+    workspaceId,
+    estimateId,
+    descriptiveItemId,
+  );
+
+  res.json({
+    message: "Estimate descriptive item deleted successfully",
   });
 }
 
@@ -452,6 +496,30 @@ export async function updateEstimateItem(
     workspaceId,
     estimateId,
     itemId,
+    body,
+  );
+
+  res.json({
+    data: item,
+  });
+}
+
+export async function updateEstimateDescriptiveItem(
+  req: TypedRequest<
+    typeof getEstimateDescriptiveItemByIdSchema,
+    never,
+    typeof updateEstimateDescriptiveItemSchema
+  >,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { estimateId, descriptiveItemId } = req.params;
+  const body = req.body;
+
+  const item = await estimatesService.updateEstimateDescriptiveItem(
+    workspaceId,
+    estimateId,
+    descriptiveItemId,
     body,
   );
 

@@ -72,6 +72,14 @@ export const getEstimateItemByIdSchema = z.object({
     .positive("The item ID must be a positive number"),
 });
 
+export const getEstimateDescriptiveItemByIdSchema = z.object({
+  estimateId: z.coerce.number().int().positive(),
+  descriptiveItemId: z.coerce
+    .number()
+    .int()
+    .positive("The descriptive item ID must be a positive number"),
+});
+
 // ===== DTOs (for the service) =====
 
 export type GetEstimateByIdParams = z.infer<typeof getEstimateByIdSchema>;
@@ -80,6 +88,9 @@ export type GetEstimateBySequenceParams = z.infer<
 >;
 export type GetEstimateItemByIdParams = z.infer<
   typeof getEstimateItemByIdSchema
+>;
+export type GetEstimateDescriptiveItemByIdParams = z.infer<
+  typeof getEstimateDescriptiveItemByIdSchema
 >;
 export type ListEstimatesQuery = z.infer<typeof listEstimatesSchema>;
 

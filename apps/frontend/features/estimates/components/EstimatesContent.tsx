@@ -26,6 +26,8 @@ import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useDownloadEstimatePdf } from "../hooks/useDownloadEstimatePDF";
+import { Button } from "@/components/ui/button";
+import { Mic } from "lucide-react";
 
 const VALID_STATUSES = ["all", "paid", "overdue", "issued", "draft"] as const;
 
@@ -153,10 +155,18 @@ export default function EstimatesContent() {
         onConvertToInvoice={estimateManager.onConvertToInvoice}
         isConvertingToInvoice={estimateManager.isConvertingToInvoice}
         draftItems={estimateManager.draftItems}
+        draftDescriptiveItems={estimateManager.draftDescriptiveItems}
         draftTotals={estimateManager.draftTotals}
         onDraftCreateItem={estimateManager.addDraftItem}
         onDraftUpdateItem={estimateManager.updateDraftItem}
         onDraftDeleteItem={estimateManager.removeDraftItem}
+        onDraftCreateDescriptiveItem={estimateManager.addDraftDescriptiveItem}
+        onDraftUpdateDescriptiveItem={
+          estimateManager.updateDraftDescriptiveItem
+        }
+        onDraftDeleteDescriptiveItem={
+          estimateManager.removeDraftDescriptiveItem
+        }
       />
     );
   }
@@ -259,6 +269,16 @@ export default function EstimatesContent() {
           }
         }}
       />
+
+      <Button
+        type="button"
+        size="icon-lg"
+        className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
+        onClick={estimateManager.handleCreateEstimateByVoice}
+        aria-label="Create estimate by voice"
+      >
+        <Mic className="size-8" />
+      </Button>
     </>
   );
 }

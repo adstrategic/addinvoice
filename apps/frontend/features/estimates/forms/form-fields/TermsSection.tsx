@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Controller, type UseFormReturn } from "react-hook-form";
 import type { CreateEstimateDTO } from "@addinvoice/schemas";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
@@ -24,14 +24,11 @@ export function TermsSection({ form }: TermsSectionProps) {
           name="terms"
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor={field.name}>Terms & Conditions</FieldLabel>
-              <Textarea
-                id={field.name}
-                aria-invalid={fieldState.invalid}
+              <FieldLabel>Terms & Conditions</FieldLabel>
+              <RichTextEditor
+                value={field.value as Record<string, unknown> | null | undefined}
+                onChange={field.onChange}
                 placeholder="Payment terms, late fees, etc..."
-                rows={3}
-                {...field}
-                value={field.value || ""}
               />
               {fieldState.error && <FieldError errors={[fieldState.error]} />}
             </Field>

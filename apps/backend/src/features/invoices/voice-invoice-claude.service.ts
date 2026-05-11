@@ -4,6 +4,13 @@ import { prisma } from "@addinvoice/db";
 
 import { runAgenticToolLoop } from "../../lib/agentic-runner.js";
 import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js";
+import { languageDisplayName } from "../../lib/voice-language.js";
+import {
+  normalizeTipTapField,
+  TIPTAP_DOC_JSON_SCHEMA_NULLABLE,
+  TIPTAP_DOC_JSON_SCHEMA_REQUIRED,
+  TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS,
+} from "../../lib/tiptap.js";
 import { createInvoiceSchema } from "./invoices.schemas.js";
 import * as invoicesService from "./invoices.service.js";
 
@@ -43,8 +50,8 @@ const CREATE_INVOICE_TOOL: Tool = {
       taxMode: { type: "string", enum: ["NONE", "BY_PRODUCT", "BY_TOTAL"] },
       taxName: { type: ["string", "null"] },
       taxPercentage: { type: ["number", "null"] },
-      notes: { type: ["string", "null"] },
-      terms: { type: ["string", "null"] },
+      notes: TIPTAP_DOC_JSON_SCHEMA_NULLABLE,
+      terms: TIPTAP_DOC_JSON_SCHEMA_NULLABLE,
       discount: { type: "number" },
       discountType: { type: "string", enum: ["NONE", "PERCENTAGE", "FIXED"] },
       clientAddress: { type: ["string", "null"] },
@@ -55,7 +62,7 @@ const CREATE_INVOICE_TOOL: Tool = {
           type: "object",
           properties: {
             name: { type: "string" },
-            description: { type: "string" },
+            description: TIPTAP_DOC_JSON_SCHEMA_REQUIRED,
             quantity: { type: "number" },
             unitPrice: { type: "number" },
             quantityUnit: { type: "string", enum: ["DAYS", "HOURS", "UNITS"] },
@@ -99,6 +106,7 @@ function buildSystemPrompt(params: {
   lockedClient: LockedClient;
   suggestedNextInvoiceNumber: string;
   todayIso: string;
+  workspaceLanguage: string;
 }): string {
   return `You are an invoice extraction assistant for a B2B invoicing app. The user spoke (or pasted) a description of line items, quantities, prices, and optional dates or notes for ONE invoice. The customer is already selected in the UI — you must not change or guess the customer.
 
@@ -122,7 +130,11 @@ Rules:
 4. Every line item: name, description, quantity > 0, unitPrice > 0; quantityUnit defaults to UNITS.
 5. If the transcript is vague, infer one reasonable line item from what they said (user can edit the draft later).
 
-Extract line items and amounts from the transcript only — ignore any other customer names they mention; the customer is fixed above.`;
+Extract line items and amounts from the transcript only — ignore any other customer names they mention; the customer is fixed above.
+
+Language rule: All text you generate (item names, descriptions, notes, terms, etc.) MUST be written in ${params.workspaceLanguage}. The transcript may be in any language — your output must always be in ${params.workspaceLanguage}.
+
+${TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS}`;
 }
 
 async function executeCreateInvoice(
@@ -131,13 +143,24 @@ async function executeCreateInvoice(
   lockedClient: LockedClient,
   input: unknown,
 ): Promise<unknown> {
+  const raw = (input ?? {}) as Record<string, unknown>;
+  const rawItems = Array.isArray(raw.items) ? raw.items : [];
+  const normalizedItems = rawItems.map((item: unknown) => {
+    const obj =
+      typeof item === "object" && item !== null && !Array.isArray(item)
+        ? (item as Record<string, unknown>)
+        : {};
+    return { ...obj, description: normalizeTipTapField(obj.description) };
+  });
   const body: Record<string, unknown> = {
-    ...(input as Record<string, unknown>),
-    // Server always overrides these — never trust what the model sent.
+    ...raw,
     businessId,
     clientEmail: lockedClient.email,
     clientId: lockedClient.id,
     createClient: false,
+    notes: raw.notes != null ? normalizeTipTapField(raw.notes) : null,
+    terms: raw.terms != null ? normalizeTipTapField(raw.terms) : null,
+    items: normalizedItems,
   };
 
   const parsed = createInvoiceSchema.safeParse(body);
@@ -149,13 +172,17 @@ async function executeCreateInvoice(
     };
   }
 
-  const invoice = await invoicesService.createInvoice(workspaceId, parsed.data);
-  return {
-    id: invoice.id,
-    invoiceNumber: invoice.invoiceNumber,
-    ok: true,
-    sequence: invoice.sequence,
-  };
+  try {
+    const invoice = await invoicesService.createInvoice(workspaceId, parsed.data);
+    return {
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      ok: true,
+      sequence: invoice.sequence,
+    };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err), ok: false };
+  }
 }
 
 function extractInvoiceSuccess(
@@ -193,7 +220,7 @@ export async function createInvoiceFromVoiceTranscript(
     return { error: "anthropic_unconfigured" };
   }
 
-  const [business, clientRow] = await Promise.all([
+  const [business, clientRow, workspace] = await Promise.all([
     prisma.business.findFirst({
       select: { id: true, name: true },
       where: { id: businessId, workspaceId },
@@ -201,6 +228,10 @@ export async function createInvoiceFromVoiceTranscript(
     prisma.client.findFirst({
       select: { email: true, id: true, name: true },
       where: { id: clientId, workspaceId },
+    }),
+    prisma.workspace.findFirst({
+      select: { language: true },
+      where: { id: workspaceId },
     }),
   ]);
 
@@ -215,6 +246,13 @@ export async function createInvoiceFromVoiceTranscript(
     return {
       error: "creation_failed",
       message: "Client not found or does not belong to your workspace",
+    };
+  }
+
+  if (!workspace) {
+    return {
+      error: "creation_failed",
+      message: "Workspace not found",
     };
   }
 
@@ -237,6 +275,7 @@ export async function createInvoiceFromVoiceTranscript(
     lockedClient,
     suggestedNextInvoiceNumber,
     todayIso,
+    workspaceLanguage: languageDisplayName(workspace.language),
   });
 
   const results = await runAgenticToolLoop(

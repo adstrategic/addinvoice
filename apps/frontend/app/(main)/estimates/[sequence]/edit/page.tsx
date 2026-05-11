@@ -39,10 +39,14 @@ export default function EditEstimatePage() {
         onConvertToInvoice={estimateManager.onConvertToInvoice}
         isConvertingToInvoice={estimateManager.isConvertingToInvoice}
         draftItems={estimateManager.draftItems}
+        draftDescriptiveItems={estimateManager.draftDescriptiveItems}
         draftTotals={estimateManager.draftTotals}
         onDraftCreateItem={estimateManager.addDraftItem}
         onDraftUpdateItem={estimateManager.updateDraftItem}
         onDraftDeleteItem={estimateManager.removeDraftItem}
+        onDraftCreateDescriptiveItem={estimateManager.addDraftDescriptiveItem}
+        onDraftUpdateDescriptiveItem={estimateManager.updateDraftDescriptiveItem}
+        onDraftDeleteDescriptiveItem={estimateManager.removeDraftDescriptiveItem}
       />
     );
   }

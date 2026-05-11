@@ -48,7 +48,8 @@ export default function SubscribePage() {
 
   const yearlySavePercent = useMemo(() => {
     const recurring = plans?.find(
-      (p) => p.id === "CORE" && "monthly" in p.prices && "yearly" in p.prices,
+      (p) =>
+        p.id === "MINIMUM" && "monthly" in p.prices && "yearly" in p.prices,
     );
     if (!recurring || !("monthly" in recurring.prices)) return null;
     const { monthly, yearly } = recurring.prices as PlanPricesRecurring;
@@ -151,12 +152,12 @@ export default function SubscribePage() {
                 <Card
                   key={plan.id}
                   className={`relative ${
-                    plan.id === "AI_PRO"
+                    plan.id === "ESSENTIAL"
                       ? "border-primary shadow-lg scale-105"
                       : ""
                   }`}
                 >
-                  {plan.id === "AI_PRO" && (
+                  {plan.id === "ESSENTIAL" && (
                     <Badge
                       className="absolute -top-3 left-1/2 -translate-x-1/2"
                       variant="default"
@@ -195,23 +196,49 @@ export default function SubscribePage() {
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-3 mb-6">
-                      <li className="flex items-center gap-2">
-                        <Check className="h-5 w-5 text-primary" />
-                        <span>Full access to all features</span>
-                      </li>
-                      {plan.id === "CORE" && (
+                      {plan.id === "MINIMUM" && (
                         <>
                           <li className="flex items-center gap-2">
                             <Check className="h-5 w-5 text-primary" />
-                            <span>$3 worth of AI credits included</span>
+                            <span>
+                              Manage invoices, estimates, expenses & clients
+                            </span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-5 w-5 text-primary" />
+                            <span>Voice creation (25 sessions/month)</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-5 w-5 text-primary" />
+                            <span>Dashboard & reports</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-5 w-5 text-primary" />
+                            <span>PDF generation & email delivery</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-5 w-5 text-primary" />
+                            <span>Payment tracking</span>
                           </li>
                         </>
                       )}
-                      {plan.id === "AI_PRO" && (
+                      {plan.id === "ESSENTIAL" && (
                         <>
                           <li className="flex items-center gap-2">
                             <Check className="h-5 w-5 text-primary" />
-                            <span>$8 worth of AI credits included</span>
+                            <span>Everything in Minimum</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-5 w-5 text-primary" />
+                            <span>Unlimited voice sessions</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-5 w-5 text-primary" />
+                            <span>AI bookkeeper conversational assistant</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-5 w-5 text-primary" />
+                            <span>Advances module</span>
                           </li>
                         </>
                       )}
@@ -219,18 +246,18 @@ export default function SubscribePage() {
                         <>
                           <li className="flex items-center gap-2">
                             <Check className="h-5 w-5 text-primary" />
-                            <span>One-time payment</span>
+                            <span>Everything in Essential</span>
                           </li>
                           <li className="flex items-center gap-2">
                             <Check className="h-5 w-5 text-primary" />
-                            <span>Free tier AI credits</span>
+                            <span>One-time payment, lifetime access</span>
                           </li>
                         </>
                       )}
                     </ul>
                     <Button
                       className="w-full"
-                      variant={plan.id === "AI_PRO" ? "default" : "outline"}
+                      variant={plan.id === "ESSENTIAL" ? "default" : "outline"}
                       onClick={() => handleSelectPlan(plan.id)}
                       disabled={isProcessing || createCheckout.isPending}
                     >

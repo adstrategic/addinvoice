@@ -23,17 +23,22 @@ import type { BusinessResponse } from "@addinvoice/schemas";
 import { SendEstimateDialog } from "@/components/send-estimate-dialog";
 import type {
   ClientResponse,
+  CreateEstimateDescriptiveItemDTO,
   CreateEstimateDTO,
   CreateEstimateItemDTO,
   EstimateResponse,
 } from "@addinvoice/schemas";
-import type { EstimateEditorItem } from "../types/editor";
+import type {
+  EstimateEditorDescriptiveItem,
+  EstimateEditorItem,
+} from "../types/editor";
 import { HeaderSection } from "./form-fields/HeaderSection";
 import { ClientSection } from "./form-fields/ClientSection";
 import { DiscountsVATSection } from "./form-fields/DiscountsVATSection";
 import { NotesSection } from "./form-fields/NotesSection";
 import { TermsSection } from "./form-fields/TermsSection";
 import { ProductsSection } from "./form-fields/ProductsSection";
+import { DescriptiveItemsSection } from "./form-fields/DescriptiveItemsSection";
 import { Form } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -43,7 +48,6 @@ import LoadingComponent from "@/components/loading-component";
 import { toast } from "sonner";
 import type { EstimateMutationCallbacks } from "../hooks/useEstimateActions";
 import { useDownloadEstimatePdf } from "../hooks/useDownloadEstimatePDF";
-import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 
 interface EstimateFormProps {
   selectedBusiness: BusinessResponse;
@@ -66,6 +70,7 @@ interface EstimateFormProps {
   onConvertToInvoice?: (estimate: { sequence: number }) => void;
   isConvertingToInvoice?: boolean;
   draftItems?: EstimateEditorItem[];
+  draftDescriptiveItems?: EstimateEditorDescriptiveItem[];
   draftTotals?: {
     subtotal: number;
     totalTax: number;
@@ -74,6 +79,12 @@ interface EstimateFormProps {
   onDraftCreateItem?: (data: CreateEstimateItemDTO) => void;
   onDraftUpdateItem?: (uiKey: string, data: CreateEstimateItemDTO) => void;
   onDraftDeleteItem?: (uiKey: string) => void;
+  onDraftCreateDescriptiveItem?: (data: CreateEstimateDescriptiveItemDTO) => void;
+  onDraftUpdateDescriptiveItem?: (
+    uiKey: string,
+    data: CreateEstimateDescriptiveItemDTO,
+  ) => void;
+  onDraftDeleteDescriptiveItem?: (uiKey: string) => void;
 }
 
 export function EstimateForm({
@@ -93,10 +104,14 @@ export function EstimateForm({
   onConvertToInvoice,
   isConvertingToInvoice,
   draftItems = [],
+  draftDescriptiveItems = [],
   draftTotals = null,
   onDraftCreateItem,
   onDraftUpdateItem,
   onDraftDeleteItem,
+  onDraftCreateDescriptiveItem,
+  onDraftUpdateDescriptiveItem,
+  onDraftDeleteDescriptiveItem,
 }: EstimateFormProps) {
   const router = useRouter();
   const isDirty = form.formState.isDirty;
@@ -104,13 +119,6 @@ export function EstimateForm({
   const [isExporting, setIsExporting] = useState(false);
   const [isSavingBeforeSend, setIsSavingBeforeSend] = useState(false);
   const [isSavingBeforeConvert, setIsSavingBeforeConvert] = useState(false);
-  const { confirmNavigation } = useUnsavedChangesWarning({
-    enabled:
-      isDirty &&
-      !isLoading &&
-      !form.formState.isSubmitting &&
-      !isSavingBeforeSend,
-  });
 
   const handleSendClick = async () => {
     if (saveBeforeSend && isDirty) {
@@ -220,9 +228,7 @@ export function EstimateForm({
               variant="ghost"
               size="icon"
               onClick={() => {
-                if (confirmNavigation()) {
-                  onCancel();
-                }
+                onCancel();
               }}
             >
               <ArrowLeft className="h-5 w-5" />
@@ -245,9 +251,7 @@ export function EstimateForm({
             </p>
             <Button
               onClick={() => {
-                if (confirmNavigation()) {
-                  onCancel();
-                }
+                onCancel();
               }}
               variant="outline"
               className="mt-4"
@@ -270,9 +274,7 @@ export function EstimateForm({
             variant="ghost"
             size="icon"
             onClick={() => {
-              if (confirmNavigation()) {
-                onCancel();
-              }
+              onCancel();
             }}
           >
             <ArrowLeft className="h-5 w-5" />
@@ -426,6 +428,15 @@ export function EstimateForm({
               onDraftDeleteItem={onDraftDeleteItem}
             />
 
+            <DescriptiveItemsSection
+              estimateId={existingEstimate?.id ?? null}
+              mode={mode}
+              items={draftDescriptiveItems}
+              onDraftCreateItem={onDraftCreateDescriptiveItem}
+              onDraftUpdateItem={onDraftUpdateDescriptiveItem}
+              onDraftDeleteItem={onDraftDeleteDescriptiveItem}
+            />
+
             <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
               {/* Discounts & VAT Section */}
               <DiscountsVATSection form={form} />
@@ -566,9 +577,7 @@ export function EstimateForm({
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  if (confirmNavigation()) {
-                    router.push(`/estimates/${existingEstimate.sequence}`);
-                  }
+                  router.push(`/estimates/${existingEstimate.sequence}`);
                 }}
                 className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
               >

@@ -75,11 +75,15 @@ export async function createCheckoutSession(
 		const quantity = Number(item.quantity)
 		// unit_amount must be a non-negative integer in the smallest currency unit (cents)
 		const unitAmount = Math.round((itemTotal / quantity) * 100)
+		const descriptionText =
+			item.description && typeof item.description === 'object'
+				? JSON.stringify(item.description)
+				: undefined
 		return {
 			price_data: {
 				currency,
 				product_data: {
-					description: item.description || undefined,
+					description: descriptionText,
 					name: item.name,
 				},
 				unit_amount: Math.max(0, unitAmount),

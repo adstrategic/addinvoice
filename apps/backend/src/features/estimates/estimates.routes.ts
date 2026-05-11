@@ -1,6 +1,8 @@
 import {
+  createEstimateDescriptiveItemSchema,
   createEstimateItemSchema,
   createEstimateSchema,
+  updateEstimateDescriptiveItemSchema,
   updateEstimateItemSchema,
   updateEstimateSchema,
 } from "@addinvoice/schemas";
@@ -11,10 +13,12 @@ import { processRequest } from "zod-express-middleware";
 import asyncHandler from "../../core/async-handler.js";
 import {
   addEstimateItem,
+  addEstimateDescriptiveItem,
   convertEstimateToInvoice,
   createEstimate,
   createEstimateFromVoiceAudio,
   deleteEstimate,
+  deleteEstimateDescriptiveItem,
   deleteEstimateItem,
   enqueueSendEstimate,
   getEstimateBySequence,
@@ -24,10 +28,12 @@ import {
   markEstimateAsAccepted,
   sendEstimate,
   updateEstimate,
+  updateEstimateDescriptiveItem,
   updateEstimateItem,
 } from "./estimates.controller.js";
 import {
   fromVoiceAudioBodySchema,
+  getEstimateDescriptiveItemByIdSchema,
   getEstimateByIdSchema,
   getEstimateBySequenceSchema,
   getEstimateItemByIdSchema,
@@ -169,4 +175,31 @@ estimatesRoutes.delete(
   "/:estimateId/items/:itemId",
   processRequest({ params: getEstimateItemByIdSchema }),
   asyncHandler(deleteEstimateItem),
+);
+
+// POST /api/v1/estimates/:estimateId/descriptive-items - Add a descriptive item
+estimatesRoutes.post(
+  "/:estimateId/descriptive-items",
+  processRequest({
+    body: createEstimateDescriptiveItemSchema,
+    params: getEstimateByIdSchema,
+  }),
+  asyncHandler(addEstimateDescriptiveItem),
+);
+
+// PATCH /api/v1/estimates/:estimateId/descriptive-items/:descriptiveItemId - Update descriptive item
+estimatesRoutes.patch(
+  "/:estimateId/descriptive-items/:descriptiveItemId",
+  processRequest({
+    body: updateEstimateDescriptiveItemSchema,
+    params: getEstimateDescriptiveItemByIdSchema,
+  }),
+  asyncHandler(updateEstimateDescriptiveItem),
+);
+
+// DELETE /api/v1/estimates/:estimateId/descriptive-items/:descriptiveItemId - Delete descriptive item
+estimatesRoutes.delete(
+  "/:estimateId/descriptive-items/:descriptiveItemId",
+  processRequest({ params: getEstimateDescriptiveItemByIdSchema }),
+  asyncHandler(deleteEstimateDescriptiveItem),
 );

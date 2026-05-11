@@ -1,4 +1,6 @@
 import type { AdvancePdfPayload } from "./schema.js";
+import { generateHTML } from "@tiptap/html";
+import StarterKit from "@tiptap/starter-kit";
 
 export function buildAdvanceHtml(payload: AdvancePdfPayload): string {
   const formattedDate = formatDate(payload.advance.advanceDate);
@@ -32,7 +34,15 @@ export function buildAdvanceHtml(payload: AdvancePdfPayload): string {
     .meta { margin-top: 16px; font-size: 12px; color: #4b5563; line-height: 1.8; }
     .meta strong { color: #111827; font-size: 13px; }
     .section-title { font-size: 19px; font-weight: 800; border-left: 4px solid #0ea5e9; padding-left: 10px; margin: 0 0 12px; }
-    .work-text { white-space: pre-wrap; color: #374151; line-height: 1.7; font-size: 13px; margin-bottom: 24px; }
+    .work-text { color: #374151; line-height: 1.7; font-size: 13px; margin-bottom: 24px; }
+    .work-text p { margin: 0 0 6px; }
+    .work-text ul { list-style: disc; padding-left: 16px; margin: 4px 0; }
+    .work-text ol { list-style: decimal; padding-left: 16px; margin: 4px 0; }
+    .work-text li { margin-bottom: 2px; }
+    .work-text strong { font-weight: 700; }
+    .work-text em { font-style: italic; }
+    .work-text h2 { font-size: 14px; font-weight: 700; margin: 8px 0 4px; color: #111; }
+    .work-text h3 { font-size: 12px; font-weight: 700; margin: 6px 0 4px; color: #111; }
     .photos-wrap { border-top: 1px solid #f3f4f6; padding-top: 18px; }
     .photos-title { font-size: 18px; font-weight: 800; margin: 0 0 12px; color: #111827; }
     .photos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -67,7 +77,7 @@ export function buildAdvanceHtml(payload: AdvancePdfPayload): string {
       </div>
       <section>
         <h2 class="section-title">Work Completed</h2>
-        <p class="work-text">${escapeHtml(payload.advance.workCompleted || "No work details added yet.")}</p>
+         <div class="work-text">${payload.advance.workCompleted ? generateHTML(payload.advance.workCompleted as Record<string, unknown>, [StarterKit]) : "No work details added yet."}</div>
       </section>
       ${
         payload.attachments.length > 0

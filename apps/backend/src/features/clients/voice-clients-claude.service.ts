@@ -1,7 +1,10 @@
 import type { Tool } from "@anthropic-ai/sdk/resources/messages/messages";
 
+import { prisma } from "@addinvoice/db";
+
 import { runAgenticToolLoop } from "../../lib/agentic-runner.js";
 import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js";
+import { languageDisplayName } from "../../lib/voice-language.js";
 import { createClientSchema } from "./clients.schemas.js";
 import * as clientsService from "./clients.service.js";
 
@@ -30,7 +33,7 @@ const CREATE_CLIENT_TOOL: Tool = {
   },
 };
 
-function buildSystemPrompt(): string {
+function buildSystemPrompt(params: { workspaceLanguage: string }): string {
   return `You are a client extraction assistant for a B2B invoicing app.
 The user spoke (or pasted) details for ONE new client (contact person / company).
 
@@ -42,7 +45,9 @@ Rules:
 3. phone: only set if the user gave digits; format as international +countrycode number (e.g. +573011234567). If unsure, omit phone (null).
 4. address, nit, businessName: set only when stated; otherwise null.
 5. reminder fields: set only if the user explicitly asked for reminder intervals in days; otherwise null.
-6. If the transcript is thin but mentions a company and contact, still produce one create_client the user can edit later.`;
+6. If the transcript is thin but mentions a company and contact, still produce one create_client the user can edit later.
+
+Language rule: All text you generate (name, businessName, address, etc.) MUST be written in ${params.workspaceLanguage}. The transcript may be in any language — your output must always be in ${params.workspaceLanguage}.`;
 }
 
 async function executeCreateClient(
@@ -59,17 +64,17 @@ async function executeCreateClient(
   }
 
   try {
-    const client = await clientsService.createClient(
-      workspaceId,
-      parsed.data,
-    );
+    const client = await clientsService.createClient(workspaceId, parsed.data);
     return {
       name: client.name,
       ok: true,
       sequence: client.sequence,
     };
   } catch (err) {
-    return { error: err instanceof Error ? err.message : String(err), ok: false };
+    return {
+      error: err instanceof Error ? err.message : String(err),
+      ok: false,
+    };
   }
 }
 
@@ -106,7 +111,21 @@ export async function createClientFromVoiceTranscript(
     return { error: "anthropic_unconfigured" };
   }
 
-  const system = buildSystemPrompt();
+  const workspace = await prisma.workspace.findFirst({
+    select: { language: true },
+    where: { id: workspaceId },
+  });
+
+  if (!workspace) {
+    return {
+      error: "creation_failed",
+      message: "Workspace not found",
+    };
+  }
+
+  const system = buildSystemPrompt({
+    workspaceLanguage: languageDisplayName(workspace.language),
+  });
 
   const results = await runAgenticToolLoop(
     {

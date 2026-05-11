@@ -96,11 +96,7 @@ export const sendInvoiceBodySchema = z.object({
  */
 export const invoiceItemSchema = z.object({
   catalogId: z.coerce.number().int().positive().optional().nullable(), // Optional: link to existing catalog
-  description: z
-    .string()
-    .trim()
-    .min(1, "Item description is required")
-    .max(1000, "Item description is too long"),
+  description: z.record(z.string(), z.unknown()),
   discount: z.coerce
     .number()
     .nonnegative("Discount must be greater than or equal to 0")
@@ -157,7 +153,7 @@ const baseInvoiceSchema = z.object({
   issueDate: z.coerce.date({ required_error: "Issue date is required" }),
   // Items
   items: z.array(invoiceItemSchema).optional(),
-  notes: z.string().trim().max(2000).nullish(),
+  notes: z.record(z.string(), z.unknown()).nullish(),
   purchaseOrder: z.string().trim().max(100).nullish(),
   selectedPaymentMethodId: z.coerce
     .number()
@@ -172,7 +168,7 @@ const baseInvoiceSchema = z.object({
     .min(0, "Tax percentage must be between 0 and 100")
     .max(100, "Tax percentage must be between 0 and 100")
     .nullish(),
-  terms: z.string().trim().max(2000).nullish(),
+  terms: z.record(z.string(), z.unknown()).nullish(),
 });
 
 /**
@@ -278,10 +274,9 @@ export const updateInvoiceSchema = baseInvoiceSchema.partial().extend({
 export const createInvoiceItemSchema = z.object({
   catalogId: z.coerce.number().int().positive().optional().nullable(), // Optional: link to existing catalog
   description: z
-    .string()
-    .trim()
-    .min(1, "Item description is required")
-    .max(1000, "Item description is too long"),
+    .record(z.string(), z.unknown())
+    .nullable()
+    .refine((v) => v !== null, { message: "Item description is required" }),
   discount: z.coerce
     .number()
     .nonnegative("Discount must be greater than or equal to 0")

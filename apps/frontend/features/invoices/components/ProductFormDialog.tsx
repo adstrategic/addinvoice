@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -41,7 +41,7 @@ function invoiceItemDialogDefaults(
 ): DefaultValues<InvoiceItemCreateInput> {
   return {
     name: editingItem?.data.name || "",
-    description: editingItem?.data.description || "",
+    description: editingItem?.data.description ?? null,
     quantity: editingItem?.data.quantity || 1,
     quantityUnit: editingItem?.data.quantityUnit || "UNITS",
     unitPrice: editingItem?.data.unitPrice || 0,
@@ -187,12 +187,10 @@ export function ProductFormDialog({
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="description">Description *</FieldLabel>
-                  <Textarea
-                    {...field}
-                    id="description"
-                    rows={3}
-                    aria-invalid={fieldState.invalid}
+                  <FieldLabel>Description *</FieldLabel>
+                  <RichTextEditor
+                    value={field.value as Record<string, unknown> | null | undefined}
+                    onChange={field.onChange}
                     placeholder="Detailed description of the product or service..."
                   />
                   {fieldState.invalid && (
