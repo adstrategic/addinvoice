@@ -39,7 +39,6 @@ import LoadingComponent from "@/components/loading-component";
 import { toast } from "sonner";
 import type { InvoiceMutationCallbacks } from "../hooks/useInvoiceActions";
 import { useDownloadInvoicePdf } from "../hooks/useDownloadInvoicePDF";
-import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 
 interface InvoiceFormProps {
   selectedBusiness: BusinessResponse;
@@ -90,13 +89,6 @@ export function InvoiceForm({
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isSavingBeforeSend, setIsSavingBeforeSend] = useState(false);
-  const { confirmNavigation } = useUnsavedChangesWarning({
-    enabled:
-      isDirty &&
-      !isLoading &&
-      !form.formState.isSubmitting &&
-      !isSavingBeforeSend,
-  });
 
   const downloadPdf = useDownloadInvoicePdf();
 
@@ -160,9 +152,7 @@ export function InvoiceForm({
               variant="ghost"
               size="icon"
               onClick={() => {
-                if (confirmNavigation()) {
-                  onCancel();
-                }
+                onCancel();
               }}
             >
               <ArrowLeft className="h-5 w-5" />
@@ -185,9 +175,7 @@ export function InvoiceForm({
             </p>
             <Button
               onClick={() => {
-                if (confirmNavigation()) {
-                  onCancel();
-                }
+                onCancel();
               }}
               variant="outline"
               className="mt-4"
@@ -210,9 +198,7 @@ export function InvoiceForm({
             variant="ghost"
             size="icon"
             onClick={() => {
-              if (confirmNavigation()) {
-                onCancel();
-              }
+              onCancel();
             }}
           >
             <ArrowLeft className="h-5 w-5" />
@@ -521,9 +507,7 @@ export function InvoiceForm({
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  if (confirmNavigation()) {
-                    router.push(`/invoices/${existingInvoice.sequence}`);
-                  }
+                  router.push(`/invoices/${existingInvoice.sequence}`);
                 }}
                 className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
               >
@@ -551,9 +535,7 @@ export function InvoiceForm({
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  if (confirmNavigation()) {
-                    onCancel();
-                  }
+                  onCancel();
                 }}
                 className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
               >

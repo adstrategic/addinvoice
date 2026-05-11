@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type DefaultValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type CreateCatalogDto,
@@ -47,9 +47,9 @@ export function useCatalogFormManager(options?: UseCatalogManagerOptions) {
   );
 
   // === CONFIGURACIÓN DEL FORMULARIO ===
-  const defaultValues: CreateCatalogDto = {
+  const defaultValues: DefaultValues<CreateCatalogDto> = {
     name: "",
-    description: "",
+    description: null,
     price: 0,
     quantityUnit: "UNITS",
     businessId: 0,

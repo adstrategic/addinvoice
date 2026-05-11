@@ -3,7 +3,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { estimatesService } from "../service/estimates.service";
 import { estimateKeys } from "./useEstimates";
 import type {
+  CreateEstimateDescriptiveItemDTO,
   CreateEstimateItemDTO,
+  UpdateEstimateDescriptiveItemDTO,
   UpdateEstimateItemDTO,
 } from "@addinvoice/schemas";
 import { handleMutationError } from "@/lib/errors/handle-error";
@@ -87,6 +89,78 @@ export function useDeleteEstimateItem() {
       toast.success("Product deleted", {
         description: "The product has been removed from the estimate.",
       });
+    },
+    onError: (err) => handleMutationError(err),
+  });
+}
+
+export function useCreateEstimateDescriptiveItem(
+  setError?: UseFormSetError<CreateEstimateDescriptiveItemDTO>,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      estimateId,
+      data,
+    }: {
+      estimateId: number;
+      data: CreateEstimateDescriptiveItemDTO;
+    }) => estimatesService.createDescriptiveItem(estimateId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: estimateKeys.details() });
+      queryClient.invalidateQueries({ queryKey: estimateKeys.lists() });
+      toast.success("Descriptive item added");
+    },
+    onError: (err) => handleMutationError(err, setError),
+  });
+}
+
+export function useUpdateEstimateDescriptiveItem(
+  setError?: UseFormSetError<UpdateEstimateDescriptiveItemDTO>,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      estimateId,
+      descriptiveItemId,
+      data,
+    }: {
+      estimateId: number;
+      descriptiveItemId: number;
+      data: UpdateEstimateDescriptiveItemDTO;
+    }) =>
+      estimatesService.updateDescriptiveItem(
+        estimateId,
+        descriptiveItemId,
+        data,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: estimateKeys.details() });
+      queryClient.invalidateQueries({ queryKey: estimateKeys.lists() });
+      toast.success("Descriptive item updated");
+    },
+    onError: (err) => handleMutationError(err, setError),
+  });
+}
+
+export function useDeleteEstimateDescriptiveItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      estimateId,
+      descriptiveItemId,
+    }: {
+      estimateId: number;
+      descriptiveItemId: number;
+    }) =>
+      estimatesService.deleteDescriptiveItem(estimateId, descriptiveItemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: estimateKeys.details() });
+      queryClient.invalidateQueries({ queryKey: estimateKeys.lists() });
+      toast.success("Descriptive item deleted");
     },
     onError: (err) => handleMutationError(err),
   });

@@ -4,6 +4,11 @@ import { prisma } from "@addinvoice/db";
 
 import { runAgenticToolLoop } from "../../lib/agentic-runner.js";
 import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js";
+import {
+  normalizeTipTapField,
+  TIPTAP_DOC_JSON_SCHEMA_REQUIRED,
+  TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS,
+} from "../../lib/tiptap.js";
 import { languageDisplayName } from "../../lib/voice-language.js";
 import { createCatalogSchema } from "./catalog.schemas.js";
 import * as catalogService from "./catalog.service.js";
@@ -21,7 +26,7 @@ const CREATE_CATALOG_TOOL: Tool = {
     type: "object",
     properties: {
       businessId: { type: "number" },
-      description: { type: "string" },
+      description: TIPTAP_DOC_JSON_SCHEMA_REQUIRED,
       name: { type: "string" },
       price: { type: "number" },
       quantityUnit: { enum: ["DAYS", "HOURS", "UNITS"], type: "string" },
@@ -52,17 +57,22 @@ Rules:
 5. quantityUnit should be UNITS by default unless user clearly says hours/days.
 6. If transcript is vague, infer one sensible catalog item the user can edit later.
 
-Language rule: All text you generate (name, description, etc.) MUST be written in ${params.workspaceLanguage}. The transcript may be in any language — your output must always be in ${params.workspaceLanguage}.`;
+Language rule: All text you generate (name, description, etc.) MUST be written in ${params.workspaceLanguage}. The transcript may be in any language — your output must always be in ${params.workspaceLanguage}.
+
+${TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS}`;
 }
+
 
 async function executeCreateCatalog(
   workspaceId: number,
   businessId: number,
   input: unknown,
 ): Promise<unknown> {
+  const raw = (input ?? {}) as Record<string, unknown>;
   const body: Record<string, unknown> = {
-    ...(input as Record<string, unknown>),
+    ...raw,
     businessId,
+    description: normalizeTipTapField(raw.description),
   };
 
   const parsed = createCatalogSchema.safeParse(body);

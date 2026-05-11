@@ -6,6 +6,7 @@ import { createEstimateSchema } from "@addinvoice/schemas"
 import { runAgenticToolLoop } from "../../lib/agentic-runner.js"
 import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js"
 import { languageDisplayName } from "../../lib/voice-language.js"
+import { normalizeTipTapField, TIPTAP_DOC_JSON_SCHEMA_NULLABLE, TIPTAP_DOC_JSON_SCHEMA_REQUIRED, TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS } from "../../lib/tiptap.js"
 import * as estimatesService from "./estimates.service.js"
 
 // Re-export so the controller keeps a feature-local import path.
@@ -36,9 +37,9 @@ const CREATE_ESTIMATE_TOOL: Tool = {
       taxMode: { type: "string", enum: ["NONE", "BY_PRODUCT", "BY_TOTAL"] },
       taxName: { type: ["string", "null"] },
       taxPercentage: { type: ["number", "null"] },
-      summary: { type: ["string", "null"] },
-      notes: { type: ["string", "null"] },
-      terms: { type: ["string", "null"] },
+      summary: TIPTAP_DOC_JSON_SCHEMA_NULLABLE,
+      notes: TIPTAP_DOC_JSON_SCHEMA_NULLABLE,
+      terms: TIPTAP_DOC_JSON_SCHEMA_NULLABLE,
       discount: { type: "number" },
       discountType: { type: "string", enum: ["NONE", "PERCENTAGE", "FIXED"] },
       clientAddress: { type: ["string", "null"] },
@@ -49,7 +50,7 @@ const CREATE_ESTIMATE_TOOL: Tool = {
           type: "object",
           properties: {
             name: { type: "string" },
-            description: { type: "string" },
+            description: TIPTAP_DOC_JSON_SCHEMA_REQUIRED,
             quantity: { type: "number" },
             unitPrice: { type: "number" },
             quantityUnit: { type: "string", enum: ["DAYS", "HOURS", "UNITS"] },
@@ -118,7 +119,9 @@ Rules:
 
 Extract item and amount details from transcript only.
 
-Language rule: All text you generate (item names, descriptions, notes, terms, summary, etc.) MUST be written in ${params.workspaceLanguage}. The transcript may be in any language — your output must always be in ${params.workspaceLanguage}.`
+Language rule: All text you generate (item names, descriptions, notes, terms, summary, etc.) MUST be written in ${params.workspaceLanguage}. The transcript may be in any language — your output must always be in ${params.workspaceLanguage}.
+
+${TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS}`
 }
 
 async function executeCreateEstimate(
@@ -127,12 +130,25 @@ async function executeCreateEstimate(
   lockedClient: LockedClient,
   input: unknown,
 ): Promise<unknown> {
+  const raw = (input ?? {}) as Record<string, unknown>
+  const rawItems = Array.isArray(raw.items) ? raw.items : []
+  const normalizedItems = rawItems.map((item: unknown) => {
+    const obj =
+      typeof item === "object" && item !== null && !Array.isArray(item)
+        ? (item as Record<string, unknown>)
+        : {}
+    return { ...obj, description: normalizeTipTapField(obj.description) }
+  })
   const body: Record<string, unknown> = {
-    ...(input as Record<string, unknown>),
+    ...raw,
     businessId,
     clientEmail: lockedClient.email,
     clientId: lockedClient.id,
     createClient: false,
+    summary: raw.summary != null ? normalizeTipTapField(raw.summary) : null,
+    notes: raw.notes != null ? normalizeTipTapField(raw.notes) : null,
+    terms: raw.terms != null ? normalizeTipTapField(raw.terms) : null,
+    items: normalizedItems,
   }
 
   const parsed = createEstimateSchema.safeParse(body)

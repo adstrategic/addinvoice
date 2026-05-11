@@ -38,11 +38,7 @@ export const getCatalogByIdSchema = z.object({
  */
 export const createCatalogSchema = z.object({
   businessId: z.number().int().positive("Business is required"),
-  description: z
-    .string()
-    .trim()
-    .min(1, "Description is required")
-    .max(1000, "Description is too long"),
+  description: z.record(z.string(), z.unknown()),
   name: z
     .string()
     .trim()

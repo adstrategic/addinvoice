@@ -36,8 +36,8 @@ export const businessBaseSchema = z.object({
   defaultTaxMode: defaultTaxModeEnum.optional().nullable(),
   defaultTaxName: nullableOptional(z.string().trim()),
   defaultTaxPercentage: nullableOptional(z.number().min(0).max(100)),
-  defaultNotes: nullableOptional(z.string()),
-  defaultTerms: nullableOptional(z.string()),
+  defaultNotes: z.record(z.string(), z.unknown()).nullish(),
+  defaultTerms: z.record(z.string(), z.unknown()).nullish(),
 });
 
 export type BusinessBase = z.infer<typeof businessBaseSchema>;

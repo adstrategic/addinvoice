@@ -1,6 +1,9 @@
 import type { FieldArrayWithId } from "react-hook-form";
 import type { CreateEstimateDTO, EstimateResponse } from "@addinvoice/schemas";
-import type { EstimateEditorItem } from "../types/editor";
+import type {
+  EstimateEditorDescriptiveItem,
+  EstimateEditorItem,
+} from "../types/editor";
 
 export function mapFieldArrayToEditorItems(
   fieldItems: FieldArrayWithId<CreateEstimateDTO, "items", "id">[],
@@ -9,6 +12,28 @@ export function mapFieldArrayToEditorItems(
 ): EstimateEditorItem[] {
   const items = watchedItems ?? [];
   const editorItems: EstimateEditorItem[] = [];
+
+  fieldItems.forEach((fieldItem, index) => {
+    const itemData = items[index];
+    if (!itemData) return;
+
+    editorItems.push({
+      uiKey: fieldItem.id,
+      persistedItemId: persistedItems?.[index]?.id,
+      data: itemData,
+    });
+  });
+
+  return editorItems;
+}
+
+export function mapFieldArrayToEditorDescriptiveItems(
+  fieldItems: FieldArrayWithId<CreateEstimateDTO, "descriptiveItems", "id">[],
+  watchedItems: CreateEstimateDTO["descriptiveItems"] | undefined,
+  persistedItems?: EstimateResponse["descriptiveItems"],
+): EstimateEditorDescriptiveItem[] {
+  const items = watchedItems ?? [];
+  const editorItems: EstimateEditorDescriptiveItem[] = [];
 
   fieldItems.forEach((fieldItem, index) => {
     const itemData = items[index];

@@ -113,7 +113,7 @@ model Catalog {
     businessId  Int
 
     name         String
-    description  String
+    description  Json
     price        Decimal      @db.Decimal(10, 2)
     quantityUnit QuantityUnit @default(UNITS) // Default quantity unit for items created from catalog
     sequence     Int
@@ -217,8 +217,8 @@ model Invoice {
     taxPercentage           Decimal?      @db.Decimal(10, 2) // Tax percentage when taxMode is "BY_TOTAL"
     total                   Decimal       @default(0) @db.Decimal(10, 2)
     balance                 Decimal       @default(0) @db.Decimal(10, 2)
-    notes                   String?
-    terms                   String?
+    notes                   Json?
+    terms                   Json?
     paymentLink             String?
     paymentProvider         String? // e.g. "stripe"
     sentAt                  DateTime?
@@ -252,7 +252,7 @@ model InvoiceItem {
     id           Int          @id @default(autoincrement())
     invoiceId    Int
     name         String // Product/service name
-    description  String
+    description  Json
     quantity     Decimal      @default(1)
     quantityUnit QuantityUnit @default(UNITS) // "DAYS" or "HOURS" for display
     unitPrice    Decimal      @db.Decimal(10, 2)
@@ -322,7 +322,7 @@ model Estimate {
     clientPhone   String?
     clientAddress String?
 
-    summary           String?
+    summary           Json?
     timelineStartDate DateTime? @db.Date
     timelineEndDate   DateTime? @db.Date
 
@@ -339,8 +339,8 @@ model Estimate {
     taxName                 String?
     taxPercentage           Decimal?       @db.Decimal(10, 2)
     total                   Decimal        @default(0) @db.Decimal(10, 2)
-    notes                   String?
-    terms                   String?
+    notes                   Json?
+    terms                   Json?
     requireSignature        Boolean        @default(false)
     rejectionReason         String?
     sentAt                  DateTime?
@@ -355,13 +355,14 @@ model Estimate {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    workspace             Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-    client                Client                  @relation(fields: [clientId], references: [id], onDelete: Restrict)
-    business              Business                @relation(fields: [businessId], references: [id], onDelete: Restrict)
+    workspace             Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    client                Client                    @relation(fields: [clientId], references: [id], onDelete: Restrict)
+    business              Business                  @relation(fields: [businessId], references: [id], onDelete: Restrict)
     items                 EstimateItem[]
+    descriptiveItems      EstimateDescriptiveItem[]
     attachments           EstimateAttachment[]
-    convertedToInvoice    Invoice?                @relation(fields: [convertedToInvoiceId], references: [id], onDelete: SetNull)
-    selectedPaymentMethod WorkspacePaymentMethod? @relation(fields: [selectedPaymentMethodId], references: [id], onDelete: SetNull)
+    convertedToInvoice    Invoice?                  @relation(fields: [convertedToInvoiceId], references: [id], onDelete: SetNull)
+    selectedPaymentMethod WorkspacePaymentMethod?   @relation(fields: [selectedPaymentMethodId], references: [id], onDelete: SetNull)
 
     @@unique([workspaceId, businessId, estimateNumber])
     @@unique([workspaceId, sequence])
@@ -377,7 +378,7 @@ model EstimateItem {
     id           Int          @id @default(autoincrement())
     estimateId   Int
     name         String
-    description  String
+    description  Json
     quantity     Decimal      @default(1)
     quantityUnit QuantityUnit @default(UNITS)
     unitPrice    Decimal      @db.Decimal(10, 2)
@@ -396,6 +397,22 @@ model EstimateItem {
     @@index([estimateId])
     @@index([catalogId])
     @@map("estimate_items")
+}
+
+model EstimateDescriptiveItem {
+    id          Int      @id @default(autoincrement())
+    estimateId  Int
+    title       String
+    description Json
+    sortOrder   Int      @default(0)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    estimate Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+    @@index([estimateId])
+    @@index([estimateId, sortOrder])
+    @@map("estimate_descriptive_items")
 }
 
 model EstimateAttachment {
@@ -430,8 +447,8 @@ model Business {
     defaultTaxMode       TaxMode? // "NONE" | "BY_PRODUCT" | "BY_TOTAL"
     defaultTaxName       String?
     defaultTaxPercentage Decimal? @db.Decimal(10, 2)
-    defaultNotes         String?
-    defaultTerms         String?
+    defaultNotes         Json?
+    defaultTerms         Json?
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -465,7 +482,7 @@ model Advance {
     projectName   String
     advanceDate   DateTime      @db.Date
     location      String?
-    workCompleted String?
+    workCompleted Json?
     status        AdvanceStatus @default(DRAFT)
     sentAt        DateTime?
     createdAt     DateTime      @default(now())

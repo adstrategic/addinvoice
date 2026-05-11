@@ -15,9 +15,11 @@ export const createAdvanceSchema = baseAdvanceSchema
   })
   .refine(
     (data) => {
-      const hasNotes = (data.workCompleted ?? "").trim().length > 0;
+      // TODO: Add notes validation
+      // const hasNotes = (data.workCompleted ?? "").trim().length > 0;
       const hasAttachments = (data.attachments?.length ?? 0) > 0;
-      return hasNotes || hasAttachments;
+      // return hasNotes || hasAttachments;
+      return hasAttachments;
     },
     {
       message: "Either progress notes or an attachment is required",

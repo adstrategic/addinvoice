@@ -50,7 +50,7 @@ export const baseAdvanceSchema = z.object({
     .trim()
     .min(1, "Project name is required")
     .max(255, "Project name is too long"),
-  workCompleted: z.string().trim().max(10000).nullish(),
+  workCompleted: z.record(z.string(), z.unknown()).nullish(),
 });
 
 export const advanceFiltersSchema = z.object({

@@ -26,11 +26,11 @@ const createBusinessSchemaBase = z.object({
     .trim()
     .min(1, "Address cannot be empty")
     .max(500, "Address cannot exceed 500 characters"),
-  defaultNotes: z.string().optional().nullable(),
+  defaultNotes: z.record(z.string(), z.unknown()).nullish(),
   defaultTaxMode: defaultTaxModeEnum.optional().nullable(),
   defaultTaxName: z.string().trim().optional().nullable(),
   defaultTaxPercentage: z.number().min(0).max(100).optional().nullable(),
-  defaultTerms: z.string().optional().nullable(),
+  defaultTerms: z.record(z.string(), z.unknown()).nullish(),
   email: z.string().trim().email("Invalid email address"),
   logo: z.string().url("Invalid logo URL").optional().nullable(),
   name: z

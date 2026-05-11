@@ -100,8 +100,8 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
       taxMode: "NONE",
       currency: "USD",
       createClient: false,
-      notes: "",
-      terms: "",
+      notes: null,
+      terms: null,
       discount: 0,
       clientId: 0,
       businessId: business?.id ?? 0,
@@ -124,8 +124,8 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
         business.defaultTaxPercentage != null
           ? Number(business.defaultTaxPercentage)
           : null,
-      notes: business.defaultNotes ?? "",
-      terms: business.defaultTerms ?? "",
+      notes: business.defaultNotes ?? null,
+      terms: business.defaultTerms ?? null,
     };
   }
 
@@ -294,16 +294,6 @@ export function useInvoiceManager(options?: UseInvoiceManagerOptions) {
           form.setError,
         );
         return;
-      }
-
-      if (mode === "create") {
-        if (draftFormState.watchedItems.length === 0) {
-          form.setError("items", {
-            message: "Add at least one item before creating the invoice",
-            type: "manual",
-          });
-          return;
-        }
       }
 
       const apiData = processFormData(data);

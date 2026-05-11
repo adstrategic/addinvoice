@@ -1,5 +1,6 @@
 "use client";
 
+import { plainTextFromTipTapJson } from "@/lib/rich-text-plain";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,12 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import {
-  Package,
-  MoreVertical,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { Package, MoreVertical, Edit, Trash2 } from "lucide-react";
 import type { CatalogResponse } from "@/features/catalog";
 
 interface CatalogCardProps {
@@ -27,11 +23,7 @@ interface CatalogCardProps {
  * Catalog card component
  * Displays catalog item information and action menu
  */
-export function CatalogCard({
-  catalog,
-  onEdit,
-  onDelete,
-}: CatalogCardProps) {
+export function CatalogCard({ catalog, onEdit, onDelete }: CatalogCardProps) {
   const quantityUnitLabels = {
     UNITS: "Units",
     HOURS: "Hours",
@@ -74,7 +66,8 @@ export function CatalogCard({
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-[2.5rem]">
-          {catalog.description || "No description provided."}
+          {plainTextFromTipTapJson(catalog.description as unknown) ||
+            "No description provided."}
         </p>
         <div className="flex items-center justify-between">
           <span className="text-xl font-bold text-primary">
@@ -85,4 +78,3 @@ export function CatalogCard({
     </Card>
   );
 }
-

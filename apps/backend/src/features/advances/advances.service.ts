@@ -20,21 +20,17 @@ import {
   uploadAdvanceAttachment,
   validateAdvanceAttachmentFile,
 } from "../../core/cloudinary.js";
+import { toNullableJsonInput } from "../../core/prisma-json.js";
 import {
   EntityNotFoundError,
   EntityValidationError,
 } from "../../errors/EntityErrors.js";
+import { toAdvanceListItem, toAdvanceResponse } from "./advances.mapper.js";
 
-type AdvanceWithRelations = Prisma.AdvanceGetPayload<{
-  include: { attachments: true; business: true; client: true };
-}>;
-type AdvanceListWithRelations = Prisma.AdvanceGetPayload<{
-  include: { business: true; client: true };
-}>;
-
-const deleteAdvanceAttachmentByPublicIdSafe = deleteAdvanceAttachmentByPublicId as (
-  publicId: string,
-) => Promise<{ result: string }>;
+const deleteAdvanceAttachmentByPublicIdSafe =
+  deleteAdvanceAttachmentByPublicId as (
+    publicId: string,
+  ) => Promise<{ result: string }>;
 const validateAdvanceAttachmentFileSafe = validateAdvanceAttachmentFile as (
   file: Express.Multer.File,
 ) => {
@@ -46,38 +42,6 @@ const uploadAdvanceAttachmentSafe = uploadAdvanceAttachment as (
   workspaceId: number,
   advanceId: number,
 ) => Promise<{ secure_url: string }>;
-
-function toAdvanceResponse(row: AdvanceWithRelations): AdvanceResponse {
-  return {
-    ...row,
-    business: row.business
-      ? {
-          ...row.business,
-          defaultTaxMode: row.business.defaultTaxMode,
-          defaultTaxPercentage: row.business.defaultTaxPercentage
-            ? Number(row.business.defaultTaxPercentage)
-            : null,
-        }
-      : null,
-  };
-}
-
-function toAdvanceListItem(
-  row: AdvanceListWithRelations,
-): AdvanceListItemResponse {
-  return {
-    ...row,
-    business: row.business
-      ? {
-          ...row.business,
-          defaultTaxMode: row.business.defaultTaxMode,
-          defaultTaxPercentage: row.business.defaultTaxPercentage
-            ? Number(row.business.defaultTaxPercentage)
-            : null,
-        }
-      : null,
-  };
-}
 
 async function getNextSequence(
   tx: Prisma.TransactionClient,
@@ -159,9 +123,6 @@ export async function createAdvance(
       }
     }
 
-    const normalizedWorkCompleted =
-      typeof data.workCompleted === "string" ? data.workCompleted : null;
-
     const created = await tx.advance.create({
       data: {
         advanceDate: data.advanceDate,
@@ -170,7 +131,7 @@ export async function createAdvance(
         invoiceId: data.invoiceId ?? null,
         location: data.location ?? null,
         projectName: data.projectName,
-        workCompleted: normalizedWorkCompleted,
+        workCompleted: toNullableJsonInput(data.workCompleted),
         sequence,
         status: data.status,
         workspaceId,
@@ -234,7 +195,6 @@ export async function listAdvances(
     ...(search
       ? {
           OR: [
-            { workCompleted: { contains: search, mode: "insensitive" } },
             { projectName: { contains: search, mode: "insensitive" } },
             { client: { name: { contains: search, mode: "insensitive" } } },
           ],
@@ -307,13 +267,17 @@ export async function updateAdvance(
     }
 
     const updateData: Prisma.AdvanceUpdateInput = {
-      ...(data.advanceDate !== undefined ? { advanceDate: data.advanceDate } : {}),
+      ...(data.advanceDate !== undefined
+        ? { advanceDate: data.advanceDate }
+        : {}),
       ...(data.businessId !== undefined ? { businessId: data.businessId } : {}),
       ...(data.invoiceId !== undefined ? { invoiceId: data.invoiceId } : {}),
       ...(data.location !== undefined ? { location: data.location } : {}),
-      ...(data.projectName !== undefined ? { projectName: data.projectName } : {}),
+      ...(data.projectName !== undefined
+        ? { projectName: data.projectName }
+        : {}),
       ...(data.workCompleted !== undefined
-        ? { workCompleted: data.workCompleted }
+        ? { workCompleted: toNullableJsonInput(data.workCompleted) }
         : {}),
       ...(data.status !== undefined
         ? {
@@ -366,12 +330,11 @@ export async function generateAdvanceReport(
   }
 
   const nextWorkCompleted =
-    typeof data.workCompleted === "string"
-      ? data.workCompleted
-      : (existing.workCompleted ?? "");
+    data.workCompleted ?? existing.workCompleted ?? null;
+
   const updated = await prisma.advance.update({
     data: {
-      workCompleted: nextWorkCompleted,
+      workCompleted: toNullableJsonInput(nextWorkCompleted),
       status: existing.status === "DRAFT" ? "ISSUED" : existing.status,
     },
     include: {
@@ -398,9 +361,6 @@ export async function sendAdvance(
   });
   if (!existing) {
     throw new EntityNotFoundError("Advance not found");
-  }
-  if (!existing.client) {
-    throw new EntityValidationError("Advance client not found");
   }
   if (data.email.trim().length === 0) {
     throw new EntityValidationError("Recipient email is required");
@@ -581,13 +541,13 @@ export interface AdvancePdfPayload {
     location: null | string;
     projectName: string;
     sequence: number;
-    workCompleted: null | string;
+    workCompleted: null | Record<string, unknown>;
   };
-  attachments: Array<{
+  attachments: {
     fileName: null | string;
     mimeType: null | string;
     url: string;
-  }>;
+  }[];
   client: {
     email: null | string;
     name: string;
@@ -620,7 +580,9 @@ export async function syncAdvanceAttachments(
   });
 
   const currentIds = new Set(currentAttachments.map((item) => item.id));
-  const invalidKeptIds = input.keptAttachmentIds.filter((id) => !currentIds.has(id));
+  const invalidKeptIds = input.keptAttachmentIds.filter(
+    (id) => !currentIds.has(id),
+  );
   if (invalidKeptIds.length > 0) {
     throw new EntityValidationError(
       "One or more kept attachment IDs do not belong to this advance",
@@ -642,7 +604,10 @@ export async function syncAdvanceAttachments(
     try {
       await deleteAdvanceAttachmentByPublicIdSafe(publicId);
     } catch (error) {
-      console.error("Failed to delete advance attachment from Cloudinary:", error);
+      console.error(
+        "Failed to delete advance attachment from Cloudinary:",
+        error,
+      );
     }
   }
 
@@ -720,7 +685,10 @@ export async function syncAdvanceAttachments(
     }
   }
 
-  const fallbackIds = [...input.keptAttachmentIds, ...uploadedRows.map((r) => r.id)];
+  const fallbackIds = [
+    ...input.keptAttachmentIds,
+    ...uploadedRows.map((r) => r.id),
+  ];
   for (const id of fallbackIds) {
     if (!orderedIds.includes(id)) {
       orderedIds.push(id);
@@ -749,7 +717,9 @@ export async function syncAdvanceAttachments(
   };
 }
 
-export function buildAdvancePdfPayload(advance: AdvanceResponse): AdvancePdfPayload {
+export function buildAdvancePdfPayload(
+  advance: AdvanceResponse,
+): AdvancePdfPayload {
   return {
     advance: {
       advanceDate: advance.advanceDate,
@@ -758,15 +728,15 @@ export function buildAdvancePdfPayload(advance: AdvanceResponse): AdvancePdfPayl
       sequence: advance.sequence,
       workCompleted: advance.workCompleted ?? null,
     },
-    attachments: (advance.attachments ?? []).map((attachment) => ({
+    attachments: advance.attachments.map((attachment) => ({
       fileName: attachment.fileName ?? null,
       mimeType: attachment.mimeType ?? null,
       url: attachment.url,
     })),
     client: {
-      email: advance.client?.email ?? null,
-      name: advance.client?.name ?? "Client",
-      phone: advance.client?.phone ?? null,
+      email: advance.client.email,
+      name: advance.client.name,
+      phone: advance.client.phone ?? null,
     },
     company: {
       address: advance.business?.address ?? null,

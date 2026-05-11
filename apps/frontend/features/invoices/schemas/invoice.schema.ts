@@ -40,7 +40,10 @@ export const clientSchema = z.object({
  */
 export const invoiceItemSchema = z.object({
   name: z.string().min(1, "Product name is required"),
-  description: z.string().min(1, "Description is required"),
+  description: z
+    .record(z.string(), z.unknown())
+    .nullable()
+    .refine((v) => v !== null, { message: "Description is required" }),
   quantity: z.coerce.number().min(0.01, "Quantity must be greater than 0"),
   quantityUnit: z.enum(["DAYS", "HOURS", "UNITS"]),
   unitPrice: z.coerce.number().positive("Unit price must be greater than 0"),
@@ -164,8 +167,8 @@ export const baseInvoiceSchema = z.object({
   taxMode: z.enum(["NONE", "BY_PRODUCT", "BY_TOTAL"]).default("NONE"),
   taxName: emptyStringToNull,
   taxPercentage: nullableOptional(z.coerce.number().min(0).max(100)),
-  notes: emptyStringToNull,
-  terms: emptyStringToNull,
+  notes: z.record(z.string(), z.unknown()).nullish(),
+  terms: z.record(z.string(), z.unknown()).nullish(),
   currency: z.string().default("USD"),
   selectedPaymentMethodId: z.coerce.number().int().positive().nullish(),
 });
@@ -310,7 +313,7 @@ export const invoiceItemResponseSchema = z.object({
   id: z.number().int().positive(),
   invoiceId: z.number().int().positive(),
   name: z.string(),
-  description: z.string(),
+  description: z.record(z.string(), z.unknown()),
   quantity: z.number(),
   quantityUnit: z.enum(["DAYS", "HOURS", "UNITS"]),
   unitPrice: z.number(),

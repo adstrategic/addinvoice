@@ -12,7 +12,7 @@ import type { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -36,6 +36,7 @@ import {
   useSetDefaultBusiness,
 } from "@/features/businesses";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 
 type EditCompanyForm = z.infer<typeof updateBusinessSchema>;
 
@@ -52,8 +53,8 @@ function getDefaultValues(company: BusinessResponse): EditCompanyForm {
       company.defaultTaxPercentage != null
         ? Number(company.defaultTaxPercentage)
         : null,
-    defaultNotes: company.defaultNotes ?? "",
-    defaultTerms: company.defaultTerms ?? "",
+    defaultNotes: company.defaultNotes ?? null,
+    defaultTerms: company.defaultTerms ?? null,
   };
 }
 
@@ -360,13 +361,15 @@ export function CompanyCard({
                     <FieldLabel className="text-muted-foreground">
                       Default notes (for invoices)
                     </FieldLabel>
-                    <Textarea
-                      {...field}
-                      value={field.value ?? ""}
+                    <RichTextEditor
+                      value={
+                        field.value as
+                          | Record<string, unknown>
+                          | null
+                          | undefined
+                      }
+                      onChange={field.onChange}
                       placeholder="Optional default notes on new invoices"
-                      className="mt-1"
-                      rows={2}
-                      aria-invalid={fieldState.invalid}
                     />
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
@@ -382,13 +385,15 @@ export function CompanyCard({
                     <FieldLabel className="text-muted-foreground">
                       Default terms & conditions (for invoices)
                     </FieldLabel>
-                    <Textarea
-                      {...field}
-                      value={field.value ?? ""}
+                    <RichTextEditor
+                      value={
+                        field.value as
+                          | Record<string, unknown>
+                          | null
+                          | undefined
+                      }
+                      onChange={field.onChange}
                       placeholder="Optional default terms on new invoices"
-                      className="mt-1"
-                      rows={2}
-                      aria-invalid={fieldState.invalid}
                     />
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />

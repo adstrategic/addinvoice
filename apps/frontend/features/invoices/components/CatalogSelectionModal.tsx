@@ -1,5 +1,6 @@
 "use client";
 
+import { plainTextFromTipTapJson } from "@/lib/rich-text-plain";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -84,7 +85,7 @@ export function CatalogSelectionModal({
   ): InvoiceItemCreateInput => {
     return {
       name: catalog.name,
-      description: catalog.description,
+      description: (catalog.description as Record<string, unknown>) ?? null,
       quantity: 1, // Default quantity
       quantityUnit: catalog.quantityUnit,
       unitPrice: catalog.price,
@@ -229,7 +230,9 @@ export function CatalogSelectionModal({
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground line-clamp-2">
-                          {catalog.description}
+                          {plainTextFromTipTapJson(
+                            catalog.description as unknown,
+                          )}
                         </p>
                       </div>
                       <div className="text-right">

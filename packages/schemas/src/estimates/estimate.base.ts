@@ -19,11 +19,7 @@ export const DiscountTypeEnum = z.nativeEnum(DiscountType);
  */
 export const baseEstimateItemSchema = z.object({
   catalogId: z.coerce.number().int().positive().optional().nullable(),
-  description: z
-    .string()
-    .trim()
-    .min(1, "Item description is required")
-    .max(1000, "Item description is too long"),
+  description: z.record(z.string(), z.unknown()),
   discount: z.coerce
     .number()
     .nonnegative("Discount must be greater than or equal to 0")
@@ -47,6 +43,15 @@ export const baseEstimateItemSchema = z.object({
   vatEnabled: z.boolean().default(false).optional(),
 });
 
+export const baseEstimateDescriptiveItemSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, "Descriptive item title is required")
+    .max(255, "Descriptive item title is too long"),
+  description: z.record(z.string(), z.unknown()),
+});
+
 /** * Base schema for estimate (before refinements). * No id, sequence, workspaceId, or relation objects. */
 export const baseEstimateSchema = z.object({
   businessId: z.coerce.number().int().positive("Business must be selected"),
@@ -55,7 +60,7 @@ export const baseEstimateSchema = z.object({
   clientPhone: z.string().trim().max(50).nullish(),
   clientId: z.coerce.number().int("Client must be selected"),
   currency: z.string().trim().min(1).max(10).default("USD"),
-  summary: z.string().trim().max(2000).nullish(),
+  summary: z.record(z.string(), z.unknown()).nullish(),
   timelineStartDate: z.coerce.date().nullish(),
   timelineEndDate: z.coerce.date().nullish(),
   discount: z.coerce
@@ -69,7 +74,8 @@ export const baseEstimateSchema = z.object({
     .min(1, "Estimate number is required")
     .max(50, "Estimate number is too long"),
   items: z.array(baseEstimateItemSchema).optional(),
-  notes: z.string().trim().max(2000).nullish(),
+  descriptiveItems: z.array(baseEstimateDescriptiveItemSchema).optional(),
+  notes: z.record(z.string(), z.unknown()).nullish(),
   purchaseOrder: z.string().trim().max(100).nullish(),
   selectedPaymentMethodId: z.coerce
     .number()
@@ -85,9 +91,12 @@ export const baseEstimateSchema = z.object({
       .min(0, "Tax percentage must be between 0 and 100")
       .max(100, "Tax percentage must be between 0 and 100"),
   ),
-  terms: z.string().trim().max(2000).nullish(),
+  terms: z.record(z.string(), z.unknown()).nullish(),
   requireSignature: z.boolean().default(false).optional(),
 });
 
 export type EstimateItemBase = z.infer<typeof baseEstimateItemSchema>;
+export type EstimateDescriptiveItemBase = z.infer<
+  typeof baseEstimateDescriptiveItemSchema
+>;
 export type EstimateBase = z.infer<typeof baseEstimateSchema>;

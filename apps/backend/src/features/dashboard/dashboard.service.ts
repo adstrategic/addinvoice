@@ -3,6 +3,7 @@ import type { Prisma } from "@addinvoice/db";
 import { prisma } from "@addinvoice/db";
 
 import type { InvoiceEntityWithRelations } from "../invoices/invoices.schemas.js";
+import { toInvoiceEntityWithRelations } from "../invoices/invoices.mapper.js";
 import type {
   DashboardStatsQuery,
   DashboardStatsResponse,
@@ -101,6 +102,7 @@ export async function getDashboardStats(
       payments: {
         orderBy: { paidAt: "desc" },
       },
+      selectedPaymentMethod: true,
     },
     orderBy: { createdAt: "desc" },
     where: {
@@ -109,36 +111,7 @@ export async function getDashboardStats(
   });
 
   const recentInvoicesData: InvoiceEntityWithRelations[] =
-    recentInvoicesWithDetails.map((inv) => ({
-      ...inv,
-      balance: Number(inv.balance),
-      business: {
-        ...inv.business,
-        defaultTaxPercentage: inv.business.defaultTaxPercentage
-          ? Number(inv.business.defaultTaxPercentage)
-          : null,
-      },
-      client: {
-        ...inv.client,
-      },
-      discount: Number(inv.discount),
-      items: inv.items.map((item) => ({
-        ...item,
-        discount: Number(item.discount),
-        quantity: Number(item.quantity),
-        tax: Number(item.tax),
-        total: Number(item.total),
-        unitPrice: Number(item.unitPrice),
-      })),
-      payments: inv.payments.map((payment) => ({
-        ...payment,
-        amount: Number(payment.amount),
-      })),
-      subtotal: Number(inv.subtotal),
-      taxPercentage: inv.taxPercentage ? Number(inv.taxPercentage) : null,
-      total: Number(inv.total),
-      totalTax: Number(inv.totalTax),
-    }));
+    recentInvoicesWithDetails.map(toInvoiceEntityWithRelations);
 
   return {
     chartSeries,

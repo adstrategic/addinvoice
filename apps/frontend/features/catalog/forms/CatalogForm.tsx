@@ -13,7 +13,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -27,8 +26,9 @@ import type {
   CreateCatalogDto,
 } from "../schema/catalog.schema";
 import { BusinessSelector } from "@/components/shared/BusinessSelector";
-import { BusinessResponse } from "@/features/businesses";
+import type { BusinessResponse } from "@addinvoice/schemas";
 import { NumericFormat } from "react-number-format";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface CatalogFormProps {
   form: UseFormReturn<CreateCatalogDto>;
@@ -134,11 +134,18 @@ export function CatalogForm({
                     Description <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
-                    <Textarea
+                    <RichTextEditor
+                      value={
+                        field.value as
+                          | Record<string, unknown>
+                          | null
+                          | undefined
+                      }
+                      onChange={field.onChange}
                       placeholder="Describe the product or service..."
-                      disabled={isLoading}
-                      rows={4}
-                      {...field}
+                      className={
+                        isLoading ? "opacity-50 pointer-events-none" : ""
+                      }
                     />
                   </FormControl>
                   <FormMessage />
