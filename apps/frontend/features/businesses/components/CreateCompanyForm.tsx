@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 
 const defaultFormValues: DefaultValues<CreateBusinessDTO> = {
   name: "",
@@ -419,7 +420,9 @@ export function CreateCompanyForm({
                   Default notes (for invoices)
                 </FieldLabel>
                 <RichTextEditor
-                  value={field.value as Record<string, unknown> | null | undefined}
+                  value={
+                    field.value as Record<string, unknown> | null | undefined
+                  }
                   onChange={field.onChange}
                   placeholder="Optional default notes on new invoices"
                 />
@@ -448,7 +451,9 @@ export function CreateCompanyForm({
                   Default terms & conditions (for invoices)
                 </FieldLabel>
                 <RichTextEditor
-                  value={field.value as Record<string, unknown> | null | undefined}
+                  value={
+                    field.value as Record<string, unknown> | null | undefined
+                  }
                   onChange={field.onChange}
                   placeholder="Optional default terms on new invoices"
                 />
