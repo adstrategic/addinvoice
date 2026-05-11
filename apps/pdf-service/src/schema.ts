@@ -24,17 +24,17 @@ export const invoicePdfPayloadSchema = z.object({
     dueDate: z.union([z.string(), z.date()]),
     invoiceNumber: z.string(),
     issueDate: z.union([z.string(), z.date()]),
-    notes: z.string().nullish(),
+    notes: z.record(z.string(), z.unknown()).nullish(),
     purchaseOrder: z.string().nullish(),
     subtotal: z.number(),
-    terms: z.string().nullish(),
+    terms: z.record(z.string(), z.unknown()).nullish(),
     total: z.number(),
     totalPaid: z.number().optional(),
     totalTax: z.number(),
   }),
   items: z.array(
     z.object({
-      description: z.string().nullish(),
+      description: z.record(z.string(), z.unknown()).nullish(),
       discountAmount: z.number().optional(),
       name: z.string(),
       quantity: z.number(),
@@ -115,16 +115,24 @@ export const estimatePdfPayloadSchema = z.object({
     nit: z.string().nullish(),
     phone: z.string().nullish(),
   }),
+  descriptiveItems: z
+    .array(
+      z.object({
+        description: z.record(z.string(), z.unknown()).nullish(),
+        title: z.string(),
+      }),
+    )
+    .optional(),
   invoice: z.object({
     currency: z.string(),
     discount: z.number(),
     documentType: z.literal("estimate"),
     invoiceNumber: z.string(),
-    notes: z.string().nullish(),
+    notes: z.record(z.string(), z.unknown()).nullish(),
     status: z.string(),
     subtotal: z.number(),
-    summary: z.string().nullish(),
-    terms: z.string().nullish(),
+    summary: z.record(z.string(), z.unknown()).nullish(),
+    terms: z.record(z.string(), z.unknown()).nullish(),
     timelineEndDate: z.union([z.string(), z.date()]).nullish(),
     timelineStartDate: z.union([z.string(), z.date()]).nullish(),
     total: z.number(),
@@ -132,7 +140,7 @@ export const estimatePdfPayloadSchema = z.object({
   }),
   items: z.array(
     z.object({
-      description: z.string().nullish(),
+      description: z.record(z.string(), z.unknown()).nullish(),
       discount: z.number(),
       discountAmount: z.number().optional(),
       name: z.string(),
@@ -154,7 +162,7 @@ export const advancePdfPayloadSchema = z.object({
     location: z.string().nullish(),
     projectName: z.string(),
     sequence: z.number(),
-    workCompleted: z.string().nullish(),
+    workCompleted: z.record(z.string(), z.unknown()).nullish(),
   }),
   attachments: z.array(
     z.object({

@@ -9,10 +9,12 @@ import type {
   UpdateCatalogDto,
 } from "./catalog.schemas.js";
 
+import { toJsonInput } from "../../core/prisma-json.js";
 import {
   EntityNotFoundError,
   EntityValidationError,
 } from "../../errors/EntityErrors.js";
+import { toCatalogEntity } from "./catalog.mapper.js";
 
 /**
  * Create a new catalog
@@ -27,7 +29,7 @@ export async function createCatalog(
     const catalog = await tx.catalog.create({
       data: {
         businessId: data.businessId,
-        description: data.description,
+        description: toJsonInput(data.description),
         name: data.name,
         price: data.price,
         quantityUnit: data.quantityUnit,
@@ -39,16 +41,7 @@ export async function createCatalog(
       },
     });
 
-    return {
-      ...catalog,
-      business: {
-        ...catalog.business,
-        defaultTaxPercentage: catalog.business.defaultTaxPercentage
-          ? Number(catalog.business.defaultTaxPercentage)
-          : null,
-      },
-      price: Number(catalog.price),
-    };
+    return toCatalogEntity(catalog);
   });
 }
 
@@ -60,7 +53,6 @@ export async function deleteCatalog(
   id: number,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    // Verify catalog exists and belongs to workspace
     const existingCatalog = await tx.catalog.findUnique({
       where: {
         id,
@@ -102,16 +94,7 @@ export async function getCatalogBySequence(
     throw new EntityNotFoundError("Catalog not found");
   }
 
-  return {
-    ...catalog,
-    business: {
-      ...catalog.business,
-      defaultTaxPercentage: catalog.business.defaultTaxPercentage
-        ? Number(catalog.business.defaultTaxPercentage)
-        : null,
-    },
-    price: Number(catalog.price),
-  };
+  return toCatalogEntity(catalog);
 }
 
 /**
@@ -134,10 +117,7 @@ export async function listCatalogs(
 
     ...(businessId && { businessId }),
     ...(search && {
-      OR: [
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-      ],
+      OR: [{ name: { contains: search, mode: "insensitive" } }],
     }),
   };
 
@@ -159,16 +139,7 @@ export async function listCatalogs(
   ]);
 
   return {
-    catalogs: catalogs.map((catalog) => ({
-      ...catalog,
-      business: {
-        ...catalog.business,
-        defaultTaxPercentage: catalog.business.defaultTaxPercentage
-          ? Number(catalog.business.defaultTaxPercentage)
-          : null,
-      },
-      price: Number(catalog.price),
-    })),
+    catalogs: catalogs.map(toCatalogEntity),
     limit,
     page,
     total,
@@ -184,7 +155,6 @@ export async function updateCatalog(
   data: UpdateCatalogDto,
 ): Promise<CatalogEntity> {
   return await prisma.$transaction(async (tx) => {
-    // Verify catalog exists and belongs to workspace
     const existingCatalog = await tx.catalog.findUnique({
       include: {
         invoiceItems: true,
@@ -206,8 +176,16 @@ export async function updateCatalog(
       }
     }
 
+    const { description, ...rest } = data;
+    const updateData: Prisma.CatalogUncheckedUpdateInput = {
+      ...rest,
+      ...(description !== undefined
+        ? { description: toJsonInput(description) }
+        : {}),
+    };
+
     const catalog = await tx.catalog.update({
-      data,
+      data: updateData,
       include: {
         business: true,
       },
@@ -217,16 +195,7 @@ export async function updateCatalog(
       },
     });
 
-    return {
-      ...catalog,
-      business: {
-        ...catalog.business,
-        defaultTaxPercentage: catalog.business.defaultTaxPercentage
-          ? Number(catalog.business.defaultTaxPercentage)
-          : null,
-      },
-      price: Number(catalog.price),
-    };
+    return toCatalogEntity(catalog);
   });
 }
 

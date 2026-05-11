@@ -1,5 +1,5 @@
-import { Worker } from "bullmq";
 import { PaymentMethodType, prisma } from "@addinvoice/db";
+import { Worker } from "bullmq";
 
 import type {
   SendAdvanceJobData,
@@ -35,7 +35,7 @@ export function startSendInvoiceWorker(): Worker<SendInvoiceJobData> {
       );
 
       // If Stripe is selected as payment method, create a Checkout Session
-      let paymentLink: string | null = null;
+      let paymentLink: null | string = null;
       if (invoice.selectedPaymentMethod?.type === "STRIPE") {
         const pm = await prisma.workspacePaymentMethod.findFirst({
           where: { type: PaymentMethodType.STRIPE, workspaceId },
@@ -179,7 +179,10 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
     "email-advance",
     async (job) => {
       const { advanceId, email, message, subject, workspaceId } = job.data;
-      const advance = await advancesService.getAdvanceById(workspaceId, advanceId);
+      const advance = await advancesService.getAdvanceById(
+        workspaceId,
+        advanceId,
+      );
       const payload = advancesService.buildAdvancePdfPayload(advance);
       const pdfBuffer = await fetchAdvancePdfFromService(payload);
 
@@ -192,7 +195,9 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
             }
             const arrayBuffer = await response.arrayBuffer();
             const mimeType =
-              attachment.mimeType?.trim() || response.headers.get("content-type") || "image/jpeg";
+              attachment.mimeType?.trim() ||
+              response.headers.get("content-type") ||
+              "image/jpeg";
             const extension = mimeType.includes("png")
               ? "png"
               : mimeType.includes("webp")
@@ -202,7 +207,8 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
             return {
               content: Buffer.from(arrayBuffer),
               filename:
-                attachment.fileName?.trim() || `advance-photo-${String(index + 1)}.${extension}`,
+                attachment.fileName?.trim() ||
+                `advance-photo-${String(index + 1)}.${extension}`,
             };
           } catch (error) {
             console.error("[queue] Failed to fetch advance attachment:", error);
@@ -210,6 +216,46 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
           }
         }),
       );
+
+      function tiptapToHtml(node: Record<string, unknown>): string {
+        const type = node.type as string;
+        const children = (
+          (node.content as Record<string, unknown>[] | undefined) ?? []
+        )
+          .map(tiptapToHtml)
+          .join("");
+        if (type === "text") {
+          const text = String(node.text ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+          return ((node.marks as undefined | { type: string }[]) ?? []).reduce(
+            (acc, m) =>
+              m.type === "bold"
+                ? `<strong>${acc}</strong>`
+                : m.type === "italic"
+                  ? `<em>${acc}</em>`
+                  : acc,
+            text,
+          );
+        }
+        switch (type) {
+          case "bulletList":
+            return `<ul style="padding-left:16px;">${children}</ul>`;
+          case "doc":
+            return children;
+          case "hardBreak":
+            return "<br>";
+          case "listItem":
+            return `<li>${children}</li>`;
+          case "orderedList":
+            return `<ol style="padding-left:16px;">${children}</ol>`;
+          case "paragraph":
+            return `<p style="margin:0 0 4px;line-height:1.6;">${children}</p>`;
+          default:
+            return children;
+        }
+      }
 
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -223,7 +269,7 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
           </div>
           <h3 style="color: #333; margin-top: 20px;">Work Completed</h3>
           <p style="line-height: 1.6; color: #666;">
-            ${(advance.workCompleted ?? "No work notes provided.").replace(/\n/g, "<br/>")}
+            ${advance.workCompleted ? tiptapToHtml(advance.workCompleted as Record<string, unknown>) : "No work notes provided."}
           </p>
           <p style="margin-top: 20px; color: #999; font-size: 12px;">
             Attached files include the PDF report and site images.
@@ -237,7 +283,9 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
         pdfBuffer,
         subject: subject.trim(),
         to: email,
-        attachments: attachmentFiles.filter((item): item is { content: Buffer; filename: string } => item != null),
+        attachments: attachmentFiles.filter(
+          (item): item is { content: Buffer; filename: string } => item != null,
+        ),
       });
     },
     { connection },

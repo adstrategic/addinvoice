@@ -97,8 +97,8 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
         discountType: "NONE",
         taxMode: "NONE",
         currency: "USD",
-        notes: "",
-        terms: "",
+        notes: null,
+        terms: null,
         discount: 0,
         clientId: 0,
         businessId: business?.id ?? 0,
@@ -106,6 +106,7 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
         createClient: false,
         selectedPaymentMethodId: defaultPaymentMethodId,
         items: [],
+        descriptiveItems: [],
       };
       if (!business) return base;
       return {
@@ -122,8 +123,8 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
           business.defaultTaxPercentage != null
             ? Number(business.defaultTaxPercentage)
             : null,
-        notes: business.defaultNotes ?? "",
-        terms: business.defaultTerms ?? "",
+        notes: business.defaultNotes ?? null,
+        terms: business.defaultTerms ?? null,
       };
     },
     [defaultPaymentMethodId],
@@ -291,14 +292,6 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
       const isCreatingNewClient = data.createClient === true && data.clientData;
 
       if (mode === "create") {
-        if (draftFormState.watchedItems.length === 0) {
-          form.setError("items", {
-            message: "Add at least one item before creating the estimate",
-            type: "manual",
-          });
-          return;
-        }
-
         let clientId: number;
         if (isCreatingNewClient && data.clientData) {
           try {
@@ -327,9 +320,11 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
           clientId = data.clientId;
         }
 
+        // Line items are optional: draft may be [] (draft-only header); API persists empty item list.
         const estimatePayload = {
           ...data,
           items: draftFormState.watchedItems,
+          descriptiveItems: draftFormState.watchedDescriptiveItems,
           clientId,
           businessId: selectedBusiness.id,
         };
@@ -372,6 +367,7 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
         const apiData = getDirtyValues(rawData) as UpdateEstimateDTO;
         delete apiData.createClient;
         delete apiData.clientData;
+        delete apiData.descriptiveItems;
 
         if (Object.keys(apiData).length === 0) {
           options?.onAfterSubmit?.();
@@ -391,6 +387,7 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
       }
     },
     (errors) => {
+      console.log("errors", errors);
       const firstErrorField = Object.keys(errors)[0];
       if (firstErrorField) {
         scrollToField(firstErrorField);
@@ -410,6 +407,7 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
       const apiData = (
         mode === "edit" ? getDirtyValues(data) : data
       ) as UpdateEstimateDTO;
+      delete apiData.descriptiveItems;
       actions.handleUpdate(existingEstimate.id, apiData, {
         onSuccess: () => callbacks?.onSuccess?.(),
       });
@@ -428,6 +426,7 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
     if (mode !== "edit" || !existingEstimate) return;
     const data = form.getValues();
     const apiData = getDirtyValues(data) as UpdateEstimateDTO;
+    delete apiData.descriptiveItems;
     if (Object.keys(apiData).length === 0) return;
     try {
       await updateMutation.mutateAsync({
@@ -478,11 +477,15 @@ export function useEstimateManager(options?: UseEstimateManagerOptions) {
       createMutation.isPending ||
       updateMutation.isPending,
     draftItems: draftFormState.editorItems,
+    draftDescriptiveItems: draftFormState.editorDescriptiveItems,
     draftTotals: draftFormState.draftTotals,
     addDraftItem: draftFormState.appendItem,
     updateDraftItem: draftFormState.updateItemByUiKey,
     removeDraftItem: draftFormState.removeItemByUiKey,
     replaceDraftItems: draftFormState.replaceItems,
+    addDraftDescriptiveItem: draftFormState.appendDescriptiveItem,
+    updateDraftDescriptiveItem: draftFormState.updateDescriptiveItemByUiKey,
+    removeDraftDescriptiveItem: draftFormState.removeDescriptiveItemByUiKey,
 
     // Business Selection
     selectedBusiness,

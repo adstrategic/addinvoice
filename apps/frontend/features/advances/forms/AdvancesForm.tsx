@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextReadOnly } from "@/components/ui/rich-text-read-only";
+import { plainTextFromTipTapJson } from "@/lib/rich-text-plain";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ArrowLeft,
@@ -119,6 +121,10 @@ export function AdvanceForm({
       "—");
   const previewBusinessLogo =
     selectedBusiness?.logo ?? existingAdvance?.business?.logo ?? null;
+
+  const workCompletedForPreview = form.watch("workCompleted");
+  const hasWorkCompletedPreview =
+    plainTextFromTipTapJson(workCompletedForPreview).trim().length > 0;
 
   if (isLoadingAdvance) {
     return (
@@ -314,11 +320,15 @@ export function AdvanceForm({
                     <Field>
                       <FieldLabel htmlFor="notes">Progress Notes</FieldLabel>
                       <FieldContent className="relative">
-                        <Textarea
-                          id="notes"
-                          className="min-h-[140px]"
-                          value={field.value ?? ""}
+                        <RichTextEditor
+                          value={
+                            field.value as
+                              | Record<string, unknown>
+                              | null
+                              | undefined
+                          }
                           onChange={field.onChange}
+                          placeholder="Describe the work completed..."
                         />
                         {fieldState.error && (
                           <FieldError errors={[fieldState.error]} />
@@ -455,10 +465,16 @@ export function AdvanceForm({
                     <h3 className="mb-3 border-l-4 border-primary pl-3 text-lg font-bold text-gray-900">
                       Work Completed
                     </h3>
-                    <p className="whitespace-pre-wrap leading-relaxed text-gray-700">
-                      {form.watch("workCompleted")?.trim() ||
-                        "No work details added yet."}
-                    </p>
+                    {hasWorkCompletedPreview ? (
+                      <RichTextReadOnly
+                        value={workCompletedForPreview}
+                        className="text-base leading-relaxed text-gray-700 [&_.ProseMirror]:text-gray-700 [&_li]:text-gray-700 [&_strong]:text-gray-900"
+                      />
+                    ) : (
+                      <p className="leading-relaxed text-gray-700">
+                        No work details added yet.
+                      </p>
+                    )}
                   </section>
 
                   {images.length > 0 && (
@@ -491,63 +507,92 @@ export function AdvanceForm({
         </div>
       </div>
 
-      {mode === "edit" && existingAdvance ? (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-backdrop-filter:bg-background/80 md:left-64">
-          <div className="mx-auto flex max-w-7xl gap-2 pb-2 overflow-x-auto">
-            <Button
-              type="button"
-              onClick={onSubmit}
-              disabled={isLoading || form.formState.isSubmitting || !isDirty}
-              className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
-            >
-              {isLoading || form.formState.isSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              <span className="text-xs">Save</span>
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSendClick}
-              disabled={isSavingBeforeSend}
-              className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
-            >
-              {isSavingBeforeSend ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              <span className="text-xs">Send</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() =>
-                router.push(`/advances/${existingAdvance.sequence}`)
-              }
-              className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
-            >
-              <FileText className="h-4 w-4" />
-              <span className="text-xs">Preview</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleDownloadPdf}
-              disabled={isExporting}
-              className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
-            >
-              {isExporting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              <span className="text-xs">Export</span>
-            </Button>
-          </div>
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-backdrop-filter:bg-background/80 md:left-64">
+        <div className="mx-auto flex max-w-7xl gap-2 pb-2 overflow-x-auto">
+          {mode === "edit" && existingAdvance ? (
+            <>
+              <Button
+                type="button"
+                onClick={onSubmit}
+                disabled={isLoading || form.formState.isSubmitting || !isDirty}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                {isLoading || form.formState.isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                <span className="text-xs">Save</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSendClick}
+                disabled={isSavingBeforeSend}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                {isSavingBeforeSend ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                <span className="text-xs">Send</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  router.push(`/advances/${existingAdvance.sequence}`)
+                }
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                <FileText className="h-4 w-4" />
+                <span className="text-xs">Preview</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDownloadPdf}
+                disabled={isExporting}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                <span className="text-xs">Export</span>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="text-xs">Back</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={onSubmit}
+                disabled={
+                  isLoading || form.formState.isSubmitting || !isDirty
+                }
+                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+              >
+                {isLoading || form.formState.isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                <span className="text-xs">Create</span>
+              </Button>
+            </>
+          )}
         </div>
-      ) : null}
+      </div>
 
       {mode === "edit" && existingAdvance ? (
         <SendAdvanceDialog

@@ -23,7 +23,9 @@ import { ProductFormDialog } from "../../components/ProductFormDialog";
 import { CatalogSelectionModal } from "../../components/CatalogSelectionModal";
 import { useDeleteEstimateItem } from "../../hooks/useEstimateItems";
 import { formatCurrency } from "@/lib/utils";
-import type { UseFormReturn } from "react-hook-form";
+import { plainTextFromTipTapJson } from "@/lib/rich-text-plain";
+import { RichTextReadOnly } from "@/components/ui/rich-text-read-only";
+import { useFormState, type UseFormReturn } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { estimateKeys } from "../../hooks/useEstimates";
 import type { DiscountTypeEnum } from "@addinvoice/schemas";
@@ -92,6 +94,14 @@ export function ProductsSection({
 
   const deleteItem = useDeleteEstimateItem();
   const queryClient = useQueryClient();
+  const { errors } = useFormState({ control: form.control });
+  const itemsRootMessage =
+    errors.items &&
+    typeof errors.items === "object" &&
+    "message" in errors.items &&
+    typeof errors.items.message === "string"
+      ? errors.items.message
+      : undefined;
 
   const handleAddProduct = async () => {
     setEditingItem(null);
@@ -320,12 +330,13 @@ export function ProductsSection({
 
   return (
     <>
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <div className="sm:flex items-center justify-between">
-            <CardTitle className="text-lg font-bold text-foreground  mb-4 sm:mb-0">
-              Items / Services
-            </CardTitle>
+      <div id="form-field-items">
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <div className="sm:flex items-center justify-between">
+              <CardTitle className="text-lg font-bold text-foreground  mb-4 sm:mb-0">
+                Items / Services
+              </CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
@@ -349,9 +360,17 @@ export function ProductsSection({
               </Button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {items.length === 0 ? (
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {itemsRootMessage && (
+              <p
+                className="text-sm text-destructive rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2"
+                role="alert"
+              >
+                {itemsRootMessage}
+              </p>
+            )}
+            {items.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No products added yet. Click &quot;Add Product&quot; to get
               started.
@@ -370,9 +389,10 @@ export function ProductsSection({
                           <h4 className="font-semibold text-foreground">
                             {item.data.name}
                           </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {item.data.description}
-                          </p>
+                          {plainTextFromTipTapJson(item.data.description).length >
+                            0 && (
+                            <RichTextReadOnly value={item.data.description} />
+                          )}
                         </div>
                         <div className="grid gap-2 md:grid-cols-4 text-sm">
                           <div>
@@ -497,8 +517,9 @@ export function ProductsSection({
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
       {showProductDialog && (
         <ProductFormDialog

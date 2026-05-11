@@ -1,8 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { anthropicCreate } = vi.hoisted(() => ({
+const { anthropicCreate, prismaMock } = vi.hoisted(() => ({
   anthropicCreate: vi.fn(),
+  prismaMock: {
+    workspace: { findFirst: vi.fn() },
+  },
 }));
+
+vi.mock("@addinvoice/db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@addinvoice/db")>();
+  return {
+    ...actual,
+    prisma: prismaMock,
+  };
+});
 
 vi.mock("@anthropic-ai/sdk", () => ({
   default: class MockAnthropic {
@@ -22,6 +33,9 @@ describe("voice-clients-claude.service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.ANTHROPIC_API_KEY = "test-key";
+    prismaMock.workspace.findFirst.mockResolvedValue({
+      language: "EN",
+    });
     vi.spyOn(clientsService, "createClient").mockResolvedValue({
       address: null,
       businessName: null,

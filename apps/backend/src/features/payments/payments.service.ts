@@ -5,7 +5,9 @@ import { prisma } from "@addinvoice/db";
 import type { PaymentDetail } from "../invoices/invoices.schemas.js";
 import type { ListPaymentsQuery, PaymentList } from "./payments.schemas.js";
 
+import { toJsonRecord } from "../../core/prisma-json.js";
 import { EntityNotFoundError } from "../../errors/EntityErrors.js";
+import { toBusinessEntity } from "../businesses/businesses.mapper.js";
 /**
  * Get a single payment by ID with full invoice, client, and business context
  */
@@ -41,18 +43,14 @@ export async function getPaymentById(
     invoice: {
       ...inv,
       balance: Number(inv.balance),
-      business: {
-        ...inv.business,
-        defaultTaxPercentage:
-          inv.business.defaultTaxPercentage != null
-            ? Number(inv.business.defaultTaxPercentage)
-            : null,
-      },
+      business: toBusinessEntity(inv.business),
       client: inv.client,
       discount: Number(inv.discount),
+      notes: toJsonRecord(inv.notes),
       subtotal: Number(inv.subtotal),
       taxPercentage:
         inv.taxPercentage != null ? Number(inv.taxPercentage) : null,
+      terms: toJsonRecord(inv.terms),
       total: Number(inv.total),
       totalTax: Number(inv.totalTax),
     },

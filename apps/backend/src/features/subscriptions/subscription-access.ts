@@ -12,5 +12,5 @@ export function isSubscriptionActive(
 export function hasVoiceAccess(
   plan: null | SubscriptionPlan | undefined,
 ): boolean {
-  return plan === "AI_PRO" || plan === "LIFETIME";
+  return plan === "MINIMUM" || plan === "ESSENTIAL" || plan === "LIFETIME";
 }

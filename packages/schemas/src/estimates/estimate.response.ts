@@ -1,5 +1,9 @@
 import z from "zod";
-import { baseEstimateSchema, baseEstimateItemSchema } from "./estimate.base.js";
+import {
+  baseEstimateDescriptiveItemSchema,
+  baseEstimateSchema,
+  baseEstimateItemSchema,
+} from "./estimate.base.js";
 import { EstimateStatusEnum } from "./estimate.base.js";
 import { clientResponseSchema } from "../clients/client.response.js";
 import { businessResponseSchema } from "../businesses/business.response.js";
@@ -16,6 +20,15 @@ export const estimateItemResponseSchema = baseEstimateItemSchema.extend({
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
+
+export const estimateDescriptiveItemResponseSchema =
+  baseEstimateDescriptiveItemSchema.extend({
+    id: z.number().int().positive(),
+    estimateId: z.number().int().positive(),
+    sortOrder: z.number().int().nonnegative(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+  });
 
 /**
  * Estimate response schema (single estimate with relations).
@@ -53,6 +66,7 @@ export const estimateResponseSchema = baseEstimateSchema.extend({
   business: businessResponseSchema,
   client: clientResponseSchema,
   items: z.array(estimateItemResponseSchema).optional(),
+  descriptiveItems: z.array(estimateDescriptiveItemResponseSchema).optional(),
 });
 
 export const estimateDashboardResponseSchema = estimateResponseSchema
@@ -79,6 +93,9 @@ export const publicEstimateSummarySchema = estimateResponseSchema.omit({
 });
 
 export type EstimateItemResponse = z.infer<typeof estimateItemResponseSchema>;
+export type EstimateDescriptiveItemResponse = z.infer<
+  typeof estimateDescriptiveItemResponseSchema
+>;
 export type EstimateDashboardResponse = z.infer<
   typeof estimateDashboardResponseSchema
 >;

@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type {
+  CreateEstimateDescriptiveItemDTO,
   CreateEstimateDTO,
   CreateEstimateItemDTO,
+  EstimateDescriptiveItemResponse,
   EstimateItemResponse,
   EstimateResponse,
+  UpdateEstimateDescriptiveItemDTO,
   UpdateEstimateDTO,
   UpdateEstimateItemDTO,
 } from "@addinvoice/schemas";
@@ -14,6 +17,11 @@ import { randomUUID } from "node:crypto";
 import type { ListEstimatesQuery } from "./estimates.schemas.js";
 
 import { uploadEstimateSignatureFromDataUrl } from "../../core/cloudinary.js";
+import {
+  toJsonInput,
+  toJsonRecord,
+  toNullableJsonInput,
+} from "../../core/prisma-json.js";
 import {
   EntityNotFoundError,
   EntityValidationError,
@@ -26,6 +34,13 @@ import {
   markInvoiceAsSent,
 } from "../invoices/invoices.service.js";
 import { resolveSelectedPaymentMethodId } from "../workspace/payment-method-resolver.service.js";
+import {
+  toEstimateDashboardResponse,
+  toEstimateDescriptiveItemResponse,
+  toEstimateItemResponse,
+  toEstimateResponse,
+  toEstimateResponseWithoutItems,
+} from "./estimates.mapper.js";
 
 // ===== HELPER FUNCTIONS =====
 
@@ -159,7 +174,7 @@ export async function addEstimateItem(
     const item = await tx.estimateItem.create({
       data: {
         catalogId,
-        description: data.description,
+        description: toJsonInput(data.description),
         discount: data.discount,
         discountType: data.discountType,
         estimateId,
@@ -229,14 +244,7 @@ export async function addEstimateItem(
       where: { id: estimateId },
     });
 
-    return {
-      ...item,
-      discount: Number(item.discount),
-      quantity: Number(item.quantity),
-      tax: Number(item.tax),
-      total: Number(item.total),
-      unitPrice: Number(item.unitPrice),
-    };
+    return toEstimateItemResponse(item);
   });
 }
 
@@ -356,42 +364,16 @@ export async function markEstimateAsAccepted(
       status: "ACCEPTED",
       acceptedBy: "CLIENT",
     },
-    include: { business: true, client: true, items: true },
+    include: {
+      business: true,
+      client: true,
+      items: true,
+      descriptiveItems: true,
+    },
     where: { id: estimateId },
   });
 
-  return {
-    ...updated,
-    signatureData: updated.signatureData as unknown as
-      | null
-      | Record<string, unknown>
-      | undefined,
-    business: {
-      ...updated.business,
-      defaultTaxMode: updated.business.defaultTaxMode as
-        | "BY_PRODUCT"
-        | "BY_TOTAL"
-        | "NONE"
-        | null
-        | undefined,
-      defaultTaxPercentage: updated.business.defaultTaxPercentage
-        ? Number(updated.business.defaultTaxPercentage)
-        : null,
-    },
-    discount: Number(updated.discount),
-    items: updated.items.map((item) => ({
-      ...item,
-      discount: Number(item.discount),
-      quantity: Number(item.quantity),
-      tax: Number(item.tax),
-      total: Number(item.total),
-      unitPrice: Number(item.unitPrice),
-    })),
-    subtotal: Number(updated.subtotal),
-    taxPercentage: updated.taxPercentage ? Number(updated.taxPercentage) : null,
-    total: Number(updated.total),
-    totalTax: Number(updated.totalTax),
-  };
+  return toEstimateResponse(updated);
 }
 
 /**
@@ -402,7 +384,12 @@ export async function getEstimateBySigningToken(
 ): Promise<EstimateResponse> {
   const estimate = await prisma.estimate.findFirst({
     where: { signingToken: token },
-    include: { business: true, client: true, items: true },
+    include: {
+      business: true,
+      client: true,
+      items: true,
+      descriptiveItems: true,
+    },
   });
 
   if (!estimate) {
@@ -420,37 +407,7 @@ export async function getEstimateBySigningToken(
     throw new GoneError("This link has expired or is no longer valid");
   }
 
-  return {
-    ...estimate,
-    signatureData: estimate.signatureData,
-    business: {
-      ...estimate.business,
-      defaultTaxMode: estimate.business.defaultTaxMode as
-        | "BY_PRODUCT"
-        | "BY_TOTAL"
-        | "NONE"
-        | null
-        | undefined,
-      defaultTaxPercentage: estimate.business.defaultTaxPercentage
-        ? Number(estimate.business.defaultTaxPercentage)
-        : null,
-    },
-    discount: Number(estimate.discount),
-    items: estimate.items.map((item) => ({
-      ...item,
-      discount: Number(item.discount),
-      quantity: Number(item.quantity),
-      tax: Number(item.tax),
-      total: Number(item.total),
-      unitPrice: Number(item.unitPrice),
-    })),
-    subtotal: Number(estimate.subtotal),
-    taxPercentage: estimate.taxPercentage
-      ? Number(estimate.taxPercentage)
-      : null,
-    total: Number(estimate.total),
-    totalTax: Number(estimate.totalTax),
-  };
+  return toEstimateResponse(estimate);
 }
 
 export async function acceptEstimateByToken(
@@ -511,7 +468,7 @@ export async function acceptEstimateByToken(
     data: {
       acceptedAt: new Date(),
       acceptedBy: "END_CUSTOMER",
-      signatureData: finalSignatureData as Prisma.InputJsonValue,
+      signatureData: toNullableJsonInput(finalSignatureData),
       signingToken: null,
       signingTokenExpiresAt: null,
       status: "ACCEPTED",
@@ -546,10 +503,7 @@ export async function rejectEstimateByToken(
       status: "REJECTED",
       signingToken: null,
       signingTokenExpiresAt: null,
-      // Keep reason in notes for now; you may want a dedicated column later.
-      notes: body.rejectionReason
-        ? [estimate.notes, body.rejectionReason].filter(Boolean).join("\n\n")
-        : estimate.notes,
+      rejectionReason: body.rejectionReason ?? null,
     },
     where: { id: estimate.id },
   });
@@ -576,23 +530,27 @@ export function buildEstimatePdfPayload(estimate: EstimateResponse): {
     nit: null | string;
     phone: null | string;
   };
+  descriptiveItems: {
+    description: null | Record<string, unknown>;
+    title: string;
+  }[];
   invoice: {
     currency: string;
     discount: number;
     documentType: "estimate";
     invoiceNumber: string;
-    notes: null | string;
+    notes: null | Record<string, unknown>;
     status: string;
     subtotal: number;
-    summary: null | string;
-    terms: null | string;
+    summary: null | Record<string, unknown>;
+    terms: null | Record<string, unknown>;
     timelineEndDate: Date | null | string;
     timelineStartDate: Date | null | string;
     total: number;
     totalTax: number;
   };
   items: {
-    description: null | string;
+    description: null | Record<string, unknown>;
     discount: number;
     discountAmount?: number;
     name: string;
@@ -663,6 +621,10 @@ export function buildEstimatePdfPayload(estimate: EstimateResponse): {
         unitPrice: item.unitPrice,
       };
     }),
+    descriptiveItems: (estimate.descriptiveItems ?? []).map((item) => ({
+      description: item.description,
+      title: item.title,
+    })),
     paymentMethod: null,
   };
 }
@@ -827,9 +789,9 @@ export async function createEstimate(
               vatEnabled: itemVatEnabled,
             });
 
-            return {
+            const itemInput = {
               catalogId,
-              description: item.description,
+              description: toJsonInput(item.description),
               discount: item.discount,
               discountType: item.discountType,
               name: item.name,
@@ -840,9 +802,17 @@ export async function createEstimate(
               unitPrice: item.unitPrice,
               vatEnabled: itemVatEnabled,
             };
+            return itemInput;
           }),
         )
       : [];
+    const descriptiveItemsToCreate = (data.descriptiveItems ?? []).map(
+      (item, index) => ({
+        description: toJsonInput(item.description),
+        sortOrder: index,
+        title: item.title,
+      }),
+    );
 
     // Calculate estimate totals
     const totals = calculateEstimateTotals(
@@ -958,7 +928,7 @@ export async function createEstimate(
         clientAddress,
         clientEmail,
         clientPhone,
-        summary: data.summary,
+        summary: toNullableJsonInput(data.summary),
         timelineStartDate: data.timelineStartDate,
         timelineEndDate: data.timelineEndDate,
         clientId: clientId,
@@ -969,7 +939,10 @@ export async function createEstimate(
         items: {
           create: itemsToCreate,
         },
-        notes: data.notes,
+        descriptiveItems: {
+          create: descriptiveItemsToCreate,
+        },
+        notes: toNullableJsonInput(data.notes),
         purchaseOrder: data.purchaseOrder,
         selectedPaymentMethodId,
         sequence,
@@ -978,7 +951,7 @@ export async function createEstimate(
         taxMode: data.taxMode,
         taxName: data.taxName ?? null,
         taxPercentage: data.taxPercentage ?? null,
-        terms: data.terms,
+        terms: toNullableJsonInput(data.terms),
         total: totals.total,
         totalTax: totals.totalTax,
         workspaceId,
@@ -987,36 +960,11 @@ export async function createEstimate(
         business: true,
         client: true,
         items: true,
+        descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
       },
     });
 
-    return {
-      ...estimate,
-      signatureData: estimate.signatureData,
-      business: {
-        ...estimate.business,
-        defaultTaxMode: estimate.business.defaultTaxMode,
-        defaultTaxPercentage: estimate.business.defaultTaxPercentage
-          ? Number(estimate.business.defaultTaxPercentage)
-          : null,
-      },
-      discount: Number(estimate.discount),
-      items: estimate.items.map((item) => ({
-        ...item,
-        discount: Number(item.discount),
-        quantity: Number(item.quantity),
-        tax: Number(item.tax),
-        total: Number(item.total),
-        unitPrice: Number(item.unitPrice),
-      })),
-      sequence: estimate.sequence,
-      subtotal: Number(estimate.subtotal),
-      taxPercentage: estimate.taxPercentage
-        ? Number(estimate.taxPercentage)
-        : null,
-      total: Number(estimate.total),
-      totalTax: Number(estimate.totalTax),
-    } as unknown as EstimateResponse;
+    return toEstimateResponse(estimate);
   });
 }
 
@@ -1115,6 +1063,138 @@ export async function deleteEstimateItem(
 }
 
 /**
+ * Add a descriptive estimate item
+ */
+export async function addEstimateDescriptiveItem(
+  workspaceId: number,
+  estimateId: number,
+  data: CreateEstimateDescriptiveItemDTO,
+): Promise<EstimateDescriptiveItemResponse> {
+  return prisma.$transaction(async (tx) => {
+    const estimate = await tx.estimate.findUnique({
+      where: { id: estimateId },
+    });
+
+    if (estimate?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError("Estimate not found");
+    }
+
+    if (estimate.status !== "DRAFT") {
+      throw new EntityValidationError(
+        "Cannot add descriptive item to a non-draft estimate",
+      );
+    }
+
+    const existingCount = await tx.estimateDescriptiveItem.count({
+      where: { estimateId },
+    });
+
+    const created = await tx.estimateDescriptiveItem.create({
+      data: {
+        description: toJsonInput(data.description),
+        estimateId,
+        sortOrder: existingCount,
+        title: data.title,
+      },
+    });
+    return toEstimateDescriptiveItemResponse(created);
+  });
+}
+
+export async function updateEstimateDescriptiveItem(
+  workspaceId: number,
+  estimateId: number,
+  descriptiveItemId: number,
+  data: UpdateEstimateDescriptiveItemDTO,
+): Promise<EstimateDescriptiveItemResponse> {
+  return prisma.$transaction(async (tx) => {
+    const estimate = await tx.estimate.findUnique({
+      where: { id: estimateId },
+    });
+
+    if (estimate?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError("Estimate not found");
+    }
+
+    if (estimate.status !== "DRAFT") {
+      throw new EntityValidationError(
+        "Cannot update descriptive item of a non-draft estimate",
+      );
+    }
+
+    const existing = await tx.estimateDescriptiveItem.findUnique({
+      where: { id: descriptiveItemId },
+    });
+
+    if (existing?.estimateId !== estimateId) {
+      throw new EntityNotFoundError("Estimate descriptive item not found");
+    }
+
+    const { description, ...rest } = data;
+    const updateData: Prisma.EstimateDescriptiveItemUpdateInput = {
+      ...rest,
+      ...(description !== undefined
+        ? { description: toJsonInput(description) }
+        : {}),
+    };
+
+    const updated = await tx.estimateDescriptiveItem.update({
+      data: updateData,
+      where: { id: descriptiveItemId },
+    });
+    return toEstimateDescriptiveItemResponse(updated);
+  });
+}
+
+export async function deleteEstimateDescriptiveItem(
+  workspaceId: number,
+  estimateId: number,
+  descriptiveItemId: number,
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const estimate = await tx.estimate.findUnique({
+      where: { id: estimateId },
+    });
+
+    if (estimate?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError("Estimate not found");
+    }
+
+    if (estimate.status !== "DRAFT") {
+      throw new EntityValidationError(
+        "Cannot delete descriptive item from a non-draft estimate",
+      );
+    }
+
+    const existing = await tx.estimateDescriptiveItem.findUnique({
+      where: { id: descriptiveItemId },
+    });
+
+    if (existing?.estimateId !== estimateId) {
+      throw new EntityNotFoundError("Estimate descriptive item not found");
+    }
+
+    await tx.estimateDescriptiveItem.delete({
+      where: { id: descriptiveItemId },
+    });
+
+    const remainingItems = await tx.estimateDescriptiveItem.findMany({
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      where: { estimateId },
+    });
+
+    await Promise.all(
+      remainingItems.map((item, index) =>
+        tx.estimateDescriptiveItem.update({
+          data: { sortOrder: index },
+          where: { id: item.id },
+        }),
+      ),
+    );
+  });
+}
+
+/**
  * Get estimate by ID with items and relations (same shape as getEstimateBySequence).
  * Used by the send-receipt queue worker to build the estimate PDF.
  */
@@ -1127,6 +1207,7 @@ export async function getEstimateById(
       business: true,
       client: true,
       items: { orderBy: { name: "asc" } },
+      descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
     },
     where: {
       id: estimateId,
@@ -1138,37 +1219,7 @@ export async function getEstimateById(
     throw new EntityNotFoundError("Estimate not found");
   }
 
-  return {
-    ...estimate,
-    signatureData: estimate.signatureData,
-    business: {
-      ...estimate.business,
-      defaultTaxMode: estimate.business.defaultTaxMode as
-        | "BY_PRODUCT"
-        | "BY_TOTAL"
-        | "NONE"
-        | null
-        | undefined,
-      defaultTaxPercentage: estimate.business.defaultTaxPercentage
-        ? Number(estimate.business.defaultTaxPercentage)
-        : null,
-    },
-    discount: Number(estimate.discount),
-    items: estimate.items.map((item) => ({
-      ...item,
-      discount: Number(item.discount),
-      quantity: Number(item.quantity),
-      tax: Number(item.tax),
-      total: Number(item.total),
-      unitPrice: Number(item.unitPrice),
-    })),
-    subtotal: Number(estimate.subtotal),
-    taxPercentage: estimate.taxPercentage
-      ? Number(estimate.taxPercentage)
-      : null,
-    total: Number(estimate.total),
-    totalTax: Number(estimate.totalTax),
-  };
+  return toEstimateResponse(estimate);
 }
 
 /**
@@ -1185,6 +1236,7 @@ export async function getEstimateBySequence(
       items: {
         orderBy: { name: "asc" },
       },
+      descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
     },
     where: {
       workspaceId_sequence: {
@@ -1198,37 +1250,7 @@ export async function getEstimateBySequence(
     throw new EntityNotFoundError("Estimate not found");
   }
 
-  return {
-    ...estimate,
-    signatureData: estimate.signatureData,
-    business: {
-      ...estimate.business,
-      defaultTaxMode: estimate.business.defaultTaxMode as
-        | "BY_PRODUCT"
-        | "BY_TOTAL"
-        | "NONE"
-        | null
-        | undefined,
-      defaultTaxPercentage: estimate.business.defaultTaxPercentage
-        ? Number(estimate.business.defaultTaxPercentage)
-        : null,
-    },
-    discount: Number(estimate.discount),
-    items: estimate.items.map((item) => ({
-      ...item,
-      discount: Number(item.discount),
-      quantity: Number(item.quantity),
-      tax: Number(item.tax),
-      total: Number(item.total),
-      unitPrice: Number(item.unitPrice),
-    })),
-    subtotal: Number(estimate.subtotal),
-    taxPercentage: estimate.taxPercentage
-      ? Number(estimate.taxPercentage)
-      : null,
-    total: Number(estimate.total),
-    totalTax: Number(estimate.totalTax),
-  };
+  return toEstimateResponse(estimate);
 }
 
 /**
@@ -1320,26 +1342,7 @@ export async function listEstimates(
   ]);
 
   return {
-    estimates: estimates.map((est) => {
-      const { _count, ...estFields } = est;
-      return {
-        ...estFields,
-        signatureData: estFields.signatureData,
-        business: {
-          ...estFields.business,
-          defaultTaxMode: est.business.defaultTaxMode,
-          defaultTaxPercentage: est.business.defaultTaxPercentage
-            ? Number(est.business.defaultTaxPercentage)
-            : null,
-        },
-        discount: Number(est.discount),
-        itemCount: _count.items,
-        subtotal: Number(est.subtotal),
-        taxPercentage: est.taxPercentage ? Number(est.taxPercentage) : null,
-        total: Number(est.total),
-        totalTax: Number(est.totalTax),
-      };
-    }),
+    estimates: estimates.map(toEstimateDashboardResponse),
     limit,
     page,
     stats: {
@@ -1384,24 +1387,7 @@ export async function markEstimateAsSent(
       where: { id: estimateId },
     });
     if (!existing) throw new EntityNotFoundError("Estimate not found");
-    return {
-      ...existing,
-      signatureData: existing.signatureData,
-      business: {
-        ...existing.business,
-        defaultTaxMode: existing.business.defaultTaxMode,
-        defaultTaxPercentage: existing.business.defaultTaxPercentage
-          ? Number(existing.business.defaultTaxPercentage)
-          : null,
-      },
-      discount: Number(existing.discount),
-      subtotal: Number(existing.subtotal),
-      taxPercentage: existing.taxPercentage
-        ? Number(existing.taxPercentage)
-        : null,
-      total: Number(existing.total),
-      totalTax: Number(existing.totalTax),
-    };
+    return toEstimateResponseWithoutItems(existing);
   }
 
   const now = new Date();
@@ -1432,24 +1418,7 @@ export async function markEstimateAsSent(
     },
   });
 
-  return {
-    ...updatedEstimate,
-    signatureData: updatedEstimate.signatureData,
-    business: {
-      ...updatedEstimate.business,
-      defaultTaxMode: updatedEstimate.business.defaultTaxMode,
-      defaultTaxPercentage: updatedEstimate.business.defaultTaxPercentage
-        ? Number(updatedEstimate.business.defaultTaxPercentage)
-        : null,
-    },
-    discount: Number(updatedEstimate.discount),
-    subtotal: Number(updatedEstimate.subtotal),
-    taxPercentage: updatedEstimate.taxPercentage
-      ? Number(updatedEstimate.taxPercentage)
-      : null,
-    total: Number(updatedEstimate.total),
-    totalTax: Number(updatedEstimate.totalTax),
-  };
+  return toEstimateResponseWithoutItems(updatedEstimate);
 }
 
 /**
@@ -1513,10 +1482,21 @@ export async function updateEstimate(
       clientId,
       clientPhone,
       items: _items,
+      descriptiveItems: _descriptiveItems,
       selectedPaymentMethodId,
+      notes,
+      terms,
+      summary,
       ...estimateData
     } = data;
-    const updateData: Prisma.EstimateUpdateInput = { ...estimateData };
+    const updateData: Prisma.EstimateUpdateInput = {
+      ...estimateData,
+      ...(notes !== undefined ? { notes: toNullableJsonInput(notes) } : {}),
+      ...(terms !== undefined ? { terms: toNullableJsonInput(terms) } : {}),
+      ...(summary !== undefined
+        ? { summary: toNullableJsonInput(summary) }
+        : {}),
+    };
 
     // Handle client creation or selection
     let newClientId: number | undefined;
@@ -1605,11 +1585,12 @@ export async function updateEstimate(
     }
 
     if (selectedPaymentMethodId !== undefined) {
-      updateData.selectedPaymentMethod = await getSelectedPaymentMethodRelationInput(
-        tx,
-        workspaceId,
-        selectedPaymentMethodId,
-      );
+      updateData.selectedPaymentMethod =
+        await getSelectedPaymentMethodRelationInput(
+          tx,
+          workspaceId,
+          selectedPaymentMethodId,
+        );
     }
 
     // Just update estimate fields, recalculate if tax/discount changed
@@ -1715,36 +1696,12 @@ export async function updateEstimate(
         business: true,
         client: true,
         items: true,
+        descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
       },
       where: { id, workspaceId },
     });
 
-    return {
-      ...updatedEstimate,
-      signatureData: updatedEstimate.signatureData,
-      business: {
-        ...updatedEstimate.business,
-        defaultTaxMode: updatedEstimate.business.defaultTaxMode,
-        defaultTaxPercentage: updatedEstimate.business.defaultTaxPercentage
-          ? Number(updatedEstimate.business.defaultTaxPercentage)
-          : null,
-      },
-      discount: Number(updatedEstimate.discount),
-      items: updatedEstimate.items.map((item) => ({
-        ...item,
-        discount: Number(item.discount),
-        quantity: Number(item.quantity),
-        tax: Number(item.tax),
-        total: Number(item.total),
-        unitPrice: Number(item.unitPrice),
-      })),
-      subtotal: Number(updatedEstimate.subtotal),
-      taxPercentage: updatedEstimate.taxPercentage
-        ? Number(updatedEstimate.taxPercentage)
-        : null,
-      total: Number(updatedEstimate.total),
-      totalTax: Number(updatedEstimate.totalTax),
-    };
+    return toEstimateResponse(updatedEstimate);
   });
 }
 
@@ -1815,7 +1772,8 @@ export async function updateEstimateItem(
         workspaceId,
         estimate.businessId,
         {
-          description: data.description ?? existingItem.description,
+          description:
+            data.description ?? toJsonRecord(existingItem.description) ?? {},
           name: data.name ?? existingItem.name,
           price: data.unitPrice ?? Number(existingItem.unitPrice),
           quantityUnit: data.quantityUnit ?? existingItem.quantityUnit,
@@ -1873,7 +1831,7 @@ export async function updateEstimateItem(
     // Only include fields that are provided in the update
     if (itemData.name !== undefined) updateData.name = itemData.name;
     if (itemData.description !== undefined)
-      updateData.description = itemData.description;
+      updateData.description = toJsonInput(itemData.description);
     if (itemData.quantity !== undefined)
       updateData.quantity = itemData.quantity;
     if (itemData.quantityUnit !== undefined)
@@ -2008,14 +1966,7 @@ export async function updateEstimateItem(
       where: { id: estimateId },
     });
 
-    return {
-      ...item,
-      discount: Number(item.discount),
-      quantity: Number(item.quantity),
-      tax: Number(item.tax),
-      total: Number(item.total),
-      unitPrice: Number(item.unitPrice),
-    };
+    return toEstimateItemResponse(item);
   });
 }
 
@@ -2209,7 +2160,7 @@ async function handleCatalogIntegration(
   workspaceId: number,
   businessId: number,
   itemData: {
-    description: string;
+    description: Record<string, unknown>;
     name: string;
     price: number;
     quantityUnit: "DAYS" | "HOURS" | "UNITS";
@@ -2251,7 +2202,7 @@ async function handleCatalogIntegration(
   const newCatalog = await tx.catalog.create({
     data: {
       businessId,
-      description: itemData.description,
+      description: toJsonInput(itemData.description),
       name: itemData.name,
       price: itemData.price,
       quantityUnit: itemData.quantityUnit,
@@ -2267,10 +2218,7 @@ async function getSelectedPaymentMethodRelationInput(
   tx: Prisma.TransactionClient,
   workspaceId: number,
   selectedPaymentMethodId: null | number,
-): Promise<
-  | { connect: { id: number } }
-  | { disconnect: true }
-> {
+): Promise<{ connect: { id: number } } | { disconnect: true }> {
   const validatedPaymentMethodId = await resolveSelectedPaymentMethodId(
     tx,
     workspaceId,

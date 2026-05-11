@@ -10,7 +10,7 @@ import {
 import { Building2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import {
   Field,
   FieldError,
@@ -26,11 +26,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
-const DEFAULT_INVOICE_NOTES =
-  "Thank you for choosing us. If you have any questions about this invoice, please contact us and reference the invoice number.";
-const DEFAULT_INVOICE_TERMS =
-  "Late payments may be subject to additional charges as permitted by applicable law.";
-
 const defaultFormValues: DefaultValues<CreateBusinessDTO> = {
   name: "",
   nit: "",
@@ -40,8 +35,8 @@ const defaultFormValues: DefaultValues<CreateBusinessDTO> = {
   defaultTaxMode: "NONE",
   defaultTaxName: null,
   defaultTaxPercentage: null,
-  defaultNotes: DEFAULT_INVOICE_NOTES,
-  defaultTerms: DEFAULT_INVOICE_TERMS,
+  defaultNotes: null,
+  defaultTerms: null,
 };
 
 function buildPayload(data: CreateBusinessDTO): CreateBusinessDTO {
@@ -423,20 +418,17 @@ export function CreateCompanyForm({
                 <FieldLabel className="text-muted-foreground">
                   Default notes (for invoices)
                 </FieldLabel>
-                <Textarea
-                  {...field}
-                  value={field.value ?? ""}
+                <RichTextEditor
+                  value={field.value as Record<string, unknown> | null | undefined}
+                  onChange={field.onChange}
                   placeholder="Optional default notes on new invoices"
-                  className="mt-1"
-                  rows={2}
-                  aria-invalid={fieldState.invalid}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => field.onChange("")}
+                  onClick={() => field.onChange(null)}
                   disabled={!field.value}
                 >
                   Clear text
@@ -455,20 +447,17 @@ export function CreateCompanyForm({
                 <FieldLabel className="text-muted-foreground">
                   Default terms & conditions (for invoices)
                 </FieldLabel>
-                <Textarea
-                  {...field}
-                  value={field.value ?? ""}
+                <RichTextEditor
+                  value={field.value as Record<string, unknown> | null | undefined}
+                  onChange={field.onChange}
                   placeholder="Optional default terms on new invoices"
-                  className="mt-1"
-                  rows={2}
-                  aria-invalid={fieldState.invalid}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => field.onChange("")}
+                  onClick={() => field.onChange(null)}
                   disabled={!field.value}
                 >
                   Clear text

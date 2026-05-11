@@ -1,6 +1,7 @@
 import z from "zod";
 
 import {
+  baseEstimateDescriptiveItemSchema,
   baseEstimateItemSchema,
   baseEstimateSchema,
   TaxModeEnum,
@@ -84,6 +85,7 @@ export const updateEstimateSchema = baseEstimateSchema
   .partial()
   .extend({
     items: z.array(baseEstimateItemSchema).optional(),
+    descriptiveItems: z.array(baseEstimateDescriptiveItemSchema).optional(),
   });
 
 export const createEstimateItemSchema = baseEstimateItemSchema.extend({
@@ -111,8 +113,20 @@ export const updateEstimateItemSchema = baseEstimateItemSchema
   })
   .partial();
 
+export const createEstimateDescriptiveItemSchema =
+  baseEstimateDescriptiveItemSchema;
+
+export const updateEstimateDescriptiveItemSchema =
+  baseEstimateDescriptiveItemSchema.partial();
+
 export type CreateEstimateDTO = z.infer<typeof createEstimateSchema>;
 export type CreateEstimateItemDTO = z.infer<typeof createEstimateItemSchema>;
 
 export type UpdateEstimateDTO = z.infer<typeof updateEstimateSchema>;
 export type UpdateEstimateItemDTO = z.infer<typeof updateEstimateItemSchema>;
+export type CreateEstimateDescriptiveItemDTO = z.infer<
+  typeof createEstimateDescriptiveItemSchema
+>;
+export type UpdateEstimateDescriptiveItemDTO = z.infer<
+  typeof updateEstimateDescriptiveItemSchema
+>;

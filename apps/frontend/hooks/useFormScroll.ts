@@ -14,7 +14,9 @@ export function useFormScroll() {
   const scrollToField = useCallback((fieldName: string) => {
     // Use setTimeout to ensure the error is rendered in the DOM first
     setTimeout(() => {
-      const element = document.querySelector(`[name="${fieldName}"]`);
+      const element =
+        document.querySelector(`[name="${fieldName}"]`) ??
+        document.getElementById(`form-field-${fieldName}`);
 
       if (element) {
         element.scrollIntoView({

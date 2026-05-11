@@ -21,6 +21,8 @@ import { ProductFormDialog } from "../../components/ProductFormDialog";
 import { CatalogSelectionModal } from "../../components/CatalogSelectionModal";
 import { useDeleteInvoiceItem } from "../../hooks/useInvoiceItems";
 import { formatCurrency } from "@/lib/utils";
+import { plainTextFromTipTapJson } from "@/lib/rich-text-plain";
+import { RichTextReadOnly } from "@/components/ui/rich-text-read-only";
 import type { UseFormReturn } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { invoiceKeys } from "../../hooks/useInvoices";
@@ -343,9 +345,10 @@ export function ProductsSection({
                           <h4 className="font-semibold text-foreground">
                             {item.data.name}
                           </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {item.data.description}
-                          </p>
+                          {plainTextFromTipTapJson(item.data.description).length >
+                            0 && (
+                            <RichTextReadOnly value={item.data.description} />
+                          )}
                         </div>
                         <div className="grid gap-2 md:grid-cols-4 text-sm">
                           <div>

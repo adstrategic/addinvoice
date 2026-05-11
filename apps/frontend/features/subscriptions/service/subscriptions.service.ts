@@ -7,7 +7,7 @@ import type { ApiSuccessResponse } from "@/lib/api/types";
  */
 const BASE_URL = "/subscription";
 
-export type SubscriptionPlan = "CORE" | "AI_PRO" | "LIFETIME";
+export type SubscriptionPlan = "MINIMUM" | "ESSENTIAL" | "LIFETIME";
 export type SubscriptionStatus =
   | "ACTIVE"
   | "CANCELED"

@@ -2,10 +2,18 @@ import { apiClient } from "@/lib/api/client";
 import { handleApiError } from "@/lib/errors/handler";
 import type { ApiSuccessResponse } from "@/lib/api/types";
 import {
+  type CreateEstimateDTO,
+  type CreateEstimateItemDTO,
   estimateResponseSchema,
   type EstimateResponse,
+  type EstimateDescriptiveItemResponse,
+  type CreateEstimateDescriptiveItemDTO,
+  type UpdateEstimateDTO,
+  type UpdateEstimateItemDTO,
+  type UpdateEstimateDescriptiveItemDTO,
   type EstimateItemResponse,
   estimateItemResponseSchema,
+  estimateDescriptiveItemResponseSchema,
 } from "@addinvoice/schemas";
 
 import {
@@ -103,7 +111,7 @@ async function getEstimateBySequence(
 /**
  * Create a new estimate
  */
-async function createEstimate(dto: any): Promise<EstimateResponse> {
+async function createEstimate(dto: CreateEstimateDTO): Promise<EstimateResponse> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<EstimateResponse>>(
       BASE_URL,
@@ -112,6 +120,7 @@ async function createEstimate(dto: any): Promise<EstimateResponse> {
 
     return estimateResponseSchema.parse(data.data);
   } catch (error) {
+    console.log("error", error);
     handleApiError(error);
   }
 }
@@ -119,7 +128,10 @@ async function createEstimate(dto: any): Promise<EstimateResponse> {
 /**
  * Update an existing estimate
  */
-async function updateEstimate(id: number, dto: any): Promise<EstimateResponse> {
+async function updateEstimate(
+  id: number,
+  dto: UpdateEstimateDTO,
+): Promise<EstimateResponse> {
   try {
     const { data } = await apiClient.patch<
       ApiSuccessResponse<EstimateResponse>
@@ -186,7 +198,7 @@ async function deleteEstimate(id: number): Promise<void> {
  */
 async function createEstimateItem(
   estimateId: number,
-  dto: any,
+  dto: CreateEstimateItemDTO,
 ): Promise<EstimateItemResponse> {
   try {
     const { data } = await apiClient.post<
@@ -205,7 +217,7 @@ async function createEstimateItem(
 async function updateEstimateItem(
   estimateId: number,
   itemId: number,
-  dto: any,
+  dto: UpdateEstimateItemDTO,
 ): Promise<EstimateItemResponse> {
   try {
     const { data } = await apiClient.patch<
@@ -227,6 +239,53 @@ async function deleteEstimateItem(
 ): Promise<void> {
   try {
     await apiClient.delete(`${BASE_URL}/${estimateId}/items/${itemId}`);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+async function createEstimateDescriptiveItem(
+  estimateId: number,
+  dto: CreateEstimateDescriptiveItemDTO,
+): Promise<EstimateDescriptiveItemResponse> {
+  try {
+    const { data } = await apiClient.post<
+      ApiSuccessResponse<EstimateDescriptiveItemResponse>
+    >(`${BASE_URL}/${estimateId}/descriptive-items`, dto);
+
+    return estimateDescriptiveItemResponseSchema.parse(data.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+async function updateEstimateDescriptiveItem(
+  estimateId: number,
+  descriptiveItemId: number,
+  dto: UpdateEstimateDescriptiveItemDTO,
+): Promise<EstimateDescriptiveItemResponse> {
+  try {
+    const { data } = await apiClient.patch<
+      ApiSuccessResponse<EstimateDescriptiveItemResponse>
+    >(
+      `${BASE_URL}/${estimateId}/descriptive-items/${descriptiveItemId}`,
+      dto,
+    );
+
+    return estimateDescriptiveItemResponseSchema.parse(data.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+async function deleteEstimateDescriptiveItem(
+  estimateId: number,
+  descriptiveItemId: number,
+): Promise<void> {
+  try {
+    await apiClient.delete(
+      `${BASE_URL}/${estimateId}/descriptive-items/${descriptiveItemId}`,
+    );
   } catch (error) {
     handleApiError(error);
   }
@@ -285,4 +344,7 @@ export const estimatesService = {
   createItem: createEstimateItem,
   updateItem: updateEstimateItem,
   deleteItem: deleteEstimateItem,
+  createDescriptiveItem: createEstimateDescriptiveItem,
+  updateDescriptiveItem: updateEstimateDescriptiveItem,
+  deleteDescriptiveItem: deleteEstimateDescriptiveItem,
 };

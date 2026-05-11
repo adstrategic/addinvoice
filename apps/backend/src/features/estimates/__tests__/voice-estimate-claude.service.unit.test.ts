@@ -5,6 +5,7 @@ const { prismaMock, anthropicCreate } = vi.hoisted(() => ({
   prismaMock: {
     business: { findFirst: vi.fn() },
     client: { findFirst: vi.fn() },
+    workspace: { findFirst: vi.fn() },
   },
 }))
 
@@ -36,7 +37,7 @@ describe("voice-estimate-claude.service", () => {
     estimateNumber: "EST-0001",
     items: [
       {
-        description: "Website maintenance",
+        description: { text: "Website maintenance" },
         name: "Maintenance",
         quantity: 2,
         unitPrice: 150,
@@ -56,6 +57,9 @@ describe("voice-estimate-claude.service", () => {
       email: "voice@test.com",
       id: 99,
       name: "Locked Client",
+    })
+    prismaMock.workspace.findFirst.mockResolvedValue({
+      language: "EN",
     })
     vi.spyOn(
       estimatesService,
