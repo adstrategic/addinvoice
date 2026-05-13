@@ -7,6 +7,7 @@ import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js";
 import { languageDisplayName } from "../../lib/voice-language.js";
 import {
   normalizeTipTapField,
+  resolveVoiceTiptapOrBusinessDefault,
   TIPTAP_DOC_JSON_SCHEMA_NULLABLE,
   TIPTAP_DOC_JSON_SCHEMA_REQUIRED,
   TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS,
@@ -129,6 +130,7 @@ Rules:
 3. issueDate defaults to ${params.todayIso} if not stated. dueDate defaults to 30 days after issue date if not stated.
 4. Every line item: name, description, quantity > 0, unitPrice > 0; quantityUnit defaults to UNITS.
 5. If the transcript is vague, infer one reasonable line item from what they said (user can edit the draft later).
+6. Leave notes and terms null unless the user explicitly asked for invoice-specific notes or terms; the server applies the business registered defaults when null.
 
 Extract line items and amounts from the transcript only — ignore any other customer names they mention; the customer is fixed above.
 
@@ -141,6 +143,8 @@ async function executeCreateInvoice(
   workspaceId: number,
   businessId: number,
   lockedClient: LockedClient,
+  businessDefaultNotes: unknown,
+  businessDefaultTerms: unknown,
   input: unknown,
 ): Promise<unknown> {
   const raw = (input ?? {}) as Record<string, unknown>;
@@ -158,8 +162,8 @@ async function executeCreateInvoice(
     clientEmail: lockedClient.email,
     clientId: lockedClient.id,
     createClient: false,
-    notes: raw.notes != null ? normalizeTipTapField(raw.notes) : null,
-    terms: raw.terms != null ? normalizeTipTapField(raw.terms) : null,
+    notes: resolveVoiceTiptapOrBusinessDefault(raw.notes, businessDefaultNotes),
+    terms: resolveVoiceTiptapOrBusinessDefault(raw.terms, businessDefaultTerms),
     items: normalizedItems,
   };
 
@@ -222,7 +226,12 @@ export async function createInvoiceFromVoiceTranscript(
 
   const [business, clientRow, workspace] = await Promise.all([
     prisma.business.findFirst({
-      select: { id: true, name: true },
+      select: {
+        defaultNotes: true,
+        defaultTerms: true,
+        id: true,
+        name: true,
+      },
       where: { id: businessId, workspaceId },
     }),
     prisma.client.findFirst({
@@ -292,6 +301,8 @@ export async function createInvoiceFromVoiceTranscript(
           workspaceId,
           businessId,
           lockedClient,
+          business.defaultNotes,
+          business.defaultTerms,
           input,
         );
       }

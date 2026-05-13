@@ -30,6 +30,20 @@ export function normalizeTipTapField(
   return { type: "doc", content: [{ type: "paragraph" }] };
 }
 
+/** Model nullish → business TipTap default → null (used by voice extraction). */
+export function resolveVoiceTiptapOrBusinessDefault(
+  fromModel: unknown,
+  businessDefault: unknown,
+): null | Record<string, unknown> {
+  if (fromModel != null) {
+    return normalizeTipTapField(fromModel);
+  }
+  if (businessDefault != null) {
+    return normalizeTipTapField(businessDefault);
+  }
+  return null;
+}
+
 export const TIPTAP_DOC_JSON_SCHEMA_NULLABLE = {
   type: ["object", "null"],
   description:

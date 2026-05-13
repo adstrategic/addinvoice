@@ -27,6 +27,21 @@ import * as estimatesService from "../estimates.service.js"
 import { createEstimateFromVoiceTranscript } from "../voice-estimate-claude.service.js"
 
 describe("voice-estimate-claude.service", () => {
+  const tiptapParagraph = (text: string) => ({
+    type: "doc" as const,
+    content: [
+      {
+        type: "paragraph" as const,
+        content: [{ type: "text" as const, text }],
+      },
+    ],
+  });
+
+  const businessDefaults = {
+    defaultNotes: tiptapParagraph("Registered default notes"),
+    defaultTerms: tiptapParagraph("Registered default terms"),
+  };
+
   const validCreateEstimateToolInput = {
     clientEmail: "voice@test.com",
     clientId: 99,
@@ -52,6 +67,7 @@ describe("voice-estimate-claude.service", () => {
     prismaMock.business.findFirst.mockResolvedValue({
       id: 1,
       name: "Test Business",
+      ...businessDefaults,
     })
     prismaMock.client.findFirst.mockResolvedValue({
       email: "voice@test.com",
@@ -140,6 +156,72 @@ describe("voice-estimate-claude.service", () => {
         clientId: 99,
         createClient: false,
         estimateNumber: "EST-0001",
+        notes: businessDefaults.defaultNotes,
+        terms: businessDefaults.defaultTerms,
+      }),
+    )
+  })
+
+  it("applies business default notes and terms when tool input has null notes and terms", async () => {
+    anthropicCreate
+      .mockResolvedValueOnce({
+        content: [
+          {
+            id: "toolu_create_est",
+            input: { ...validCreateEstimateToolInput, notes: null, terms: null },
+            name: "create_estimate",
+            type: "tool_use",
+          },
+        ],
+        stop_reason: "tool_use",
+      })
+      .mockResolvedValueOnce({
+        content: [{ text: "Done.", type: "text" }],
+        stop_reason: "end_turn",
+      })
+
+    await createEstimateFromVoiceTranscript(10, 1, 99, "one line item")
+
+    expect(estimatesService.createEstimate).toHaveBeenCalledWith(
+      10,
+      expect.objectContaining({
+        notes: businessDefaults.defaultNotes,
+        terms: businessDefaults.defaultTerms,
+      }),
+    )
+  })
+
+  it("uses model notes and terms when provided instead of business defaults", async () => {
+    const modelNotes = tiptapParagraph("From transcript")
+    const modelTerms = tiptapParagraph("Custom T and C")
+    anthropicCreate
+      .mockResolvedValueOnce({
+        content: [
+          {
+            id: "toolu_create_est",
+            input: {
+              ...validCreateEstimateToolInput,
+              notes: modelNotes,
+              terms: modelTerms,
+            },
+            name: "create_estimate",
+            type: "tool_use",
+          },
+        ],
+        stop_reason: "tool_use",
+      })
+      .mockResolvedValueOnce({
+        content: [{ text: "Done.", type: "text" }],
+        stop_reason: "end_turn",
+      })
+
+    await createEstimateFromVoiceTranscript(10, 1, 99, "with notes")
+
+    expect(estimatesService.createEstimate).toHaveBeenCalledWith(
+      10,
+      expect.objectContaining({
+        notes: modelNotes,
+        terms: modelTerms,
       }),
     )
   })

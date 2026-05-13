@@ -12,10 +12,7 @@ import { prisma } from "@addinvoice/db";
 import { randomUUID } from "node:crypto";
 
 import { uploadEstimateSignatureFromDataUrl } from "../../core/cloudinary.js";
-import {
-  toJsonInput,
-  toNullableJsonInput,
-} from "../../core/prisma-json.js";
+import { toJsonInput, toNullableJsonInput } from "../../core/prisma-json.js";
 import {
   EntityNotFoundError,
   EntityValidationError,
@@ -157,8 +154,7 @@ export async function convertEstimateToProposal(
       );
     }
 
-    const proposalNumber =
-      "PROP-" + String(estimate.sequence).padStart(3, "0");
+    const proposalNumber = "PROP-" + String(estimate.sequence).padStart(3, "0");
 
     const lastProposal = await tx.proposal.findFirst({
       orderBy: { sequence: "desc" },
@@ -308,7 +304,14 @@ export async function listProposals(
   page: number;
   total: number;
 }> {
-  const { businessId, clientId, limit, page, search, status: statusParam } = query;
+  const {
+    businessId,
+    clientId,
+    limit,
+    page,
+    search,
+    status: statusParam,
+  } = query;
   const skip = (page - 1) * limit;
 
   const where: Prisma.ProposalWhereInput = {
@@ -459,9 +462,7 @@ export async function resendProposal(
   }
 
   if (existing.status !== "REJECTED") {
-    throw new EntityValidationError(
-      "Only rejected proposals can be resent",
-    );
+    throw new EntityValidationError("Only rejected proposals can be resent");
   }
 
   const now = new Date();
