@@ -130,6 +130,13 @@ export const estimatePdfPayloadSchema = z.object({
     exclusions: z.record(z.string(), z.unknown()).nullish(),
     invoiceNumber: z.string(),
     notes: z.record(z.string(), z.unknown()).nullish(),
+    signature: z
+      .object({
+        fullName: z.string(),
+        signatureImageUrl: z.string().optional(),
+        signedAt: z.string(),
+      })
+      .nullish(),
     status: z.string(),
     subtotal: z.number(),
     summary: z.record(z.string(), z.unknown()).nullish(),
@@ -218,6 +225,13 @@ export const proposalPdfPayloadSchema = z.object({
     exclusions: z.record(z.string(), z.unknown()).nullish(),
     notes: z.record(z.string(), z.unknown()).nullish(),
     proposalNumber: z.string(),
+    signature: z
+      .object({
+        fullName: z.string(),
+        signatureImageUrl: z.string().optional(),
+        signedAt: z.string(),
+      })
+      .nullish(),
     summary: z.record(z.string(), z.unknown()).nullish(),
     terms: z.record(z.string(), z.unknown()).nullish(),
     timelineEndDate: z.union([z.string(), z.date()]).nullish(),

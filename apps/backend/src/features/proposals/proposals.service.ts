@@ -1,15 +1,17 @@
 import type { Prisma } from "@addinvoice/db";
 import type {
   CreateProposalDescriptiveItemDTO,
-  ProposalDescriptiveItemResponse,
   ProposalDashboardResponse,
+  ProposalDescriptiveItemResponse,
   ProposalResponse,
-  UpdateProposalDTO,
   UpdateProposalDescriptiveItemDTO,
+  UpdateProposalDTO,
 } from "@addinvoice/schemas";
 
 import { prisma } from "@addinvoice/db";
 import { randomUUID } from "node:crypto";
+
+import type { ListProposalsQuery } from "./proposals.schemas.js";
 
 import { uploadEstimateSignatureFromDataUrl } from "../../core/cloudinary.js";
 import { toJsonInput, toNullableJsonInput } from "../../core/prisma-json.js";
@@ -27,7 +29,6 @@ import {
   toProposalResponse,
   toProposalResponseWithoutItems,
 } from "./proposals.mapper.js";
-import type { ListProposalsQuery } from "./proposals.schemas.js";
 
 // ===== HELPER FUNCTIONS =====
 
@@ -125,9 +126,9 @@ export async function convertEstimateToProposal(
   estimateSequence: number,
   emailData?: {
     email?: string;
-    subject?: string;
     message?: string;
     requireSignature?: boolean;
+    subject?: string;
   },
 ): Promise<ProposalResponse> {
   const proposal = await prisma.$transaction(async (tx) => {
@@ -144,7 +145,7 @@ export async function convertEstimateToProposal(
       },
     });
 
-    if (!estimate || estimate.workspaceId !== workspaceId) {
+    if (estimate?.workspaceId !== workspaceId) {
       throw new EntityNotFoundError("Estimate not found");
     }
 
@@ -170,7 +171,8 @@ export async function convertEstimateToProposal(
 
     const now = new Date();
     const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-    const requireSignature = emailData?.requireSignature ?? estimate.requireSignature ?? true;
+    const requireSignature =
+      emailData?.requireSignature ?? estimate.requireSignature ?? true;
 
     const signingToken = requireSignature ? randomUUID() : null;
     const signingTokenExpiresAt = requireSignature
@@ -231,7 +233,9 @@ export async function convertEstimateToProposal(
   await sendProposalQueue.add("send-proposal", {
     email: emailData?.email ?? proposal.clientEmail,
     proposalId: proposal.id,
-    message: emailData?.message ?? `Please find the attached proposal ${proposal.proposalNumber}.`,
+    message:
+      emailData?.message ??
+      `Please find the attached proposal ${proposal.proposalNumber}.`,
     sequence: proposal.sequence,
     subject: emailData?.subject ?? `Proposal ${proposal.proposalNumber}`,
     workspaceId,
@@ -305,9 +309,9 @@ export async function listProposals(
   workspaceId: number,
   query: ListProposalsQuery,
 ): Promise<{
-  proposals: ProposalDashboardResponse[];
   limit: number;
   page: number;
+  proposals: ProposalDashboardResponse[];
   total: number;
 }> {
   const {
@@ -576,7 +580,7 @@ export async function getProposalBySigningToken(
     throw new GoneError("This link has expired or is no longer valid");
   }
 
-  if (["ACCEPTED", "REJECTED", "INVOICED"].includes(proposal.status)) {
+  if (["ACCEPTED", "INVOICED", "REJECTED"].includes(proposal.status)) {
     throw new GoneError("This link has expired or is no longer valid");
   }
 
@@ -842,6 +846,11 @@ export function buildProposalPdfPayload(proposal: ProposalResponse): {
     exclusions: null | Record<string, unknown>;
     notes: null | Record<string, unknown>;
     proposalNumber: string;
+    signature: null | {
+      fullName: string;
+      signatureImageUrl?: string;
+      signedAt: string;
+    };
     summary: null | Record<string, unknown>;
     terms: null | Record<string, unknown>;
     timelineEndDate: Date | null | string;
@@ -872,6 +881,7 @@ export function buildProposalPdfPayload(proposal: ProposalResponse): {
       exclusions: proposal.exclusions ?? null,
       notes: proposal.notes ?? null,
       proposalNumber: proposal.proposalNumber,
+      signature: extractSignature(proposal.signatureData),
       summary: proposal.summary ?? null,
       terms: proposal.terms ?? null,
       timelineEndDate: proposal.timelineEndDate ?? null,
@@ -882,6 +892,22 @@ export function buildProposalPdfPayload(proposal: ProposalResponse): {
       description: item.description,
       title: item.title,
     })),
+  };
+}
+
+function extractSignature(
+  raw: unknown,
+): null | { fullName: string; signatureImageUrl?: string; signedAt: string } {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as Record<string, unknown>;
+  if (typeof data.fullName !== "string" || typeof data.signedAt !== "string")
+    return null;
+  return {
+    fullName: data.fullName,
+    signedAt: data.signedAt,
+    ...(typeof data.signatureImageUrl === "string"
+      ? { signatureImageUrl: data.signatureImageUrl }
+      : {}),
   };
 }
 

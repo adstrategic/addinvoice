@@ -30,6 +30,7 @@ export interface ProposalPdfDocument {
   exclusions?: null | Record<string, unknown>;
   notes?: null | Record<string, unknown>;
   proposalNumber: string;
+  signature?: null | ProposalPdfSignature;
   summary?: null | Record<string, unknown>;
   terms?: null | Record<string, unknown>;
   timelineEndDate?: Date | null | string;
@@ -42,6 +43,12 @@ export interface ProposalPdfPayload {
   company: ProposalPdfBusiness;
   descriptiveItems?: ProposalPdfDescriptiveItem[];
   document: ProposalPdfDocument;
+}
+
+export interface ProposalPdfSignature {
+  fullName: string;
+  signatureImageUrl?: string;
+  signedAt: string;
 }
 
 export function buildProposalHtml(payload: ProposalPdfPayload): string {
@@ -151,6 +158,12 @@ export function buildProposalHtml(payload: ProposalPdfPayload): string {
     .notes-section em { font-style: italic; }
     .notes-section h2 { font-size: 14px; font-weight: 700; margin: 8px 0 4px; color: #111; }
     .notes-section h3 { font-size: 12px; font-weight: 700; margin: 6px 0 4px; color: #111; }
+    .signature-section { margin-top: 30px; padding-top: 16px; }
+    .signature-label { font-size: 10px; font-weight: 600; color: #888; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .signature-image { max-width: 200px; max-height: 80px; object-fit: contain; display: block; margin-bottom: 8px; }
+    .signature-line { border-bottom: 1px solid #000; width: 200px; margin-bottom: 6px; }
+    .signature-name { font-size: 12px; font-weight: bold; color: #111; }
+    .signature-date { font-size: 11px; color: #666; margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -294,24 +307,16 @@ export function buildProposalHtml(payload: ProposalPdfPayload): string {
         </div>
       </div>
       ${
-        ""
-        /*
-        document.notes || document.terms
+        document.signature
           ? `
-      <div class="notes-section">
-        ${
-          document.notes
-            ? `<div class="notes-title">Notes:</div><div style="margin-bottom: 8px">${generateHTML(document.notes, [StarterKit])}</div>`
-            : ""
-        }
-        ${
-          document.terms
-            ? `<div class="notes-title">Terms &amp; Conditions:</div><div>${generateHTML(document.terms, [StarterKit])}</div>`
-            : ""
-        }
+      <div class="signature-section">
+        <div class="signature-label">Accepted by</div>
+        ${document.signature.signatureImageUrl ? `<img src="${escapeHtml(document.signature.signatureImageUrl)}" alt="Signature" class="signature-image" />` : ""}
+        <div class="signature-line"></div>
+        <div class="signature-name">${escapeHtml(document.signature.fullName)}</div>
+        <div class="signature-date">Signed: ${escapeHtml(formatDate(document.signature.signedAt))}</div>
       </div>`
           : ""
-        */
       }
             </div>
           </div>

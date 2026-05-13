@@ -39,6 +39,7 @@ export interface EstimatePdfInvoice {
   exclusions?: null | Record<string, unknown>;
   invoiceNumber: string;
   notes?: null | Record<string, unknown>;
+  signature?: EstimatePdfSignature | null;
   status: string;
   subtotal: number;
   summary?: null | Record<string, unknown>;
@@ -74,6 +75,12 @@ export interface EstimatePdfPayload {
   descriptiveItems?: EstimatePdfDescriptiveItem[];
   invoice: EstimatePdfInvoice;
   items: EstimatePdfItem[];
+}
+
+export interface EstimatePdfSignature {
+  fullName: string;
+  signatureImageUrl?: string;
+  signedAt: string;
 }
 
 // Backwards compatible type aliases used by the rest of the PDF service.
@@ -226,7 +233,7 @@ export function buildEstimateHtml(payload: EstimatePdfPayload): string {
     .total-value { font-weight: bold; color: #000; }
     .total-final { font-size: 14px; font-weight: bold; margin-top: 10px; padding-top: 10px; border-top: 1px solid #000; }
     .total-final-value { color: #00aaab; }
-    .notes-section { margin-top: 30px; padding-top: 10px; border-top: 1px solid #000; font-size: 11px; }
+    .notes-section { margin-top: 30px; padding-top: 10px; font-size: 11px; }
     .notes-title { font-weight: bold; margin-bottom: 4px; }
     .notes-section p { margin: 0 0 4px; }
     .notes-section ul { list-style: disc; padding-left: 16px; margin: 4px 0; }
@@ -236,6 +243,12 @@ export function buildEstimateHtml(payload: EstimatePdfPayload): string {
     .notes-section em { font-style: italic; }
     .notes-section h2 { font-size: 14px; font-weight: 700; margin: 8px 0 4px; color: #111; }
     .notes-section h3 { font-size: 12px; font-weight: 700; margin: 6px 0 4px; color: #111; }
+    .signature-section { margin-top: 30px; padding-top: 16px; }
+    .signature-label { font-size: 10px; font-weight: 600; color: #888; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .signature-image { max-width: 200px; max-height: 80px; object-fit: contain; display: block; margin-bottom: 8px; }
+    .signature-line { border-bottom: 1px solid #000; width: 200px; margin-bottom: 6px; }
+    .signature-name { font-size: 12px; font-weight: bold; color: #111; }
+    .signature-date { font-size: 11px; color: #666; margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -417,6 +430,18 @@ export function buildEstimateHtml(payload: EstimatePdfPayload): string {
             ? `<div class="notes-title">Terms &amp; Conditions:</div><div>${generateHTML(invoice.terms, [StarterKit])}</div>`
             : ""
         }
+      </div>`
+          : ""
+      }
+      ${
+        invoice.signature
+          ? `
+      <div class="signature-section">
+        <div class="signature-label">Accepted by</div>
+        ${invoice.signature.signatureImageUrl ? `<img src="${escapeHtml(invoice.signature.signatureImageUrl)}" alt="Signature" class="signature-image" />` : ""}
+        <div class="signature-line"></div>
+        <div class="signature-name">${escapeHtml(invoice.signature.fullName)}</div>
+        <div class="signature-date">Signed: ${escapeHtml(formatDate(invoice.signature.signedAt))}</div>
       </div>`
           : ""
       }

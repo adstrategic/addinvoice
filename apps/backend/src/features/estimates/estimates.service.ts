@@ -549,6 +549,11 @@ export function buildEstimatePdfPayload(estimate: EstimateResponse): {
     exclusions: null | Record<string, unknown>;
     invoiceNumber: string;
     notes: null | Record<string, unknown>;
+    signature: null | {
+      fullName: string;
+      signatureImageUrl?: string;
+      signedAt: string;
+    };
     status: string;
     subtotal: number;
     summary: null | Record<string, unknown>;
@@ -601,6 +606,7 @@ export function buildEstimatePdfPayload(estimate: EstimateResponse): {
       documentType: "estimate",
       exclusions: estimate.exclusions ?? null,
       invoiceNumber: estimate.estimateNumber,
+      signature: extractSignature(estimate.signatureData),
       summary: estimate.summary ?? null,
       timelineEndDate: estimate.timelineEndDate ?? null,
       timelineStartDate: estimate.timelineStartDate ?? null,
@@ -636,6 +642,22 @@ export function buildEstimatePdfPayload(estimate: EstimateResponse): {
       title: item.title,
     })),
     paymentMethod: null,
+  };
+}
+
+function extractSignature(
+  raw: unknown,
+): null | { fullName: string; signatureImageUrl?: string; signedAt: string } {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as Record<string, unknown>;
+  if (typeof data.fullName !== "string" || typeof data.signedAt !== "string")
+    return null;
+  return {
+    fullName: data.fullName,
+    signedAt: data.signedAt,
+    ...(typeof data.signatureImageUrl === "string"
+      ? { signatureImageUrl: data.signatureImageUrl }
+      : {}),
   };
 }
 
