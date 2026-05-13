@@ -10,6 +10,8 @@ import {
   Trash2,
   Receipt,
   Loader2,
+  CheckCircle,
+  ScrollText,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -19,6 +21,7 @@ import {
   useEstimateBySequence,
   useEstimateDelete,
   useEstimateActions,
+  useMarkEstimateAsAccepted,
   mapStatusToUI,
 } from "@/features/estimates";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
@@ -56,6 +59,7 @@ export default function EstimateDetailPage() {
     },
   });
   const estimateActions = useEstimateActions();
+  const markAsAccepted = useMarkEstimateAsAccepted();
 
   const sequence = params?.sequence
     ? parseInt(params.sequence as string)
@@ -192,51 +196,108 @@ export default function EstimateDetailPage() {
                 </TooltipContent>
               </Tooltip>
             )}
-            {items.length > 0 && (
+            {items.length > 0 &&
+              estimate.status !== "PROPOSAL" &&
+              estimate.status !== "INVOICED" && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => setSendDialogOpen(true)}
+                      className="gap-2 shrink-0"
+                      size="sm"
+                    >
+                      <Send className="h-4 w-4 shrink-0" />
+                      <span className="hidden sm:inline">Send</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Send estimate</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            {estimate.status === "SENT" && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    onClick={() => setSendDialogOpen(true)}
+                    onClick={() => markAsAccepted.mutate(estimate.id)}
+                    disabled={markAsAccepted.isPending}
                     className="gap-2 shrink-0"
                     size="sm"
                   >
-                    <Send className="h-4 w-4 shrink-0" />
-                    <span className="hidden sm:inline">Send</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Send estimate</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {estimate.status === "ACCEPTED" && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() =>
-                      estimateActions.handleConvertToInvoice(estimate)
-                    }
-                    disabled={estimateActions.isConvertingToInvoice}
-                    className="gap-2 shrink-0"
-                    size="sm"
-                    variant="secondary"
-                  >
-                    {estimateActions.isConvertingToInvoice ? (
+                    {markAsAccepted.isPending ? (
                       <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
                     ) : (
-                      <Receipt className="h-4 w-4 shrink-0" />
+                      <CheckCircle className="h-4 w-4 shrink-0" />
                     )}
                     <span className="hidden sm:inline">
-                      {estimateActions.isConvertingToInvoice
-                        ? "Converting…"
-                        : "Convert to Invoice"}
+                      {markAsAccepted.isPending
+                        ? "Accepting…"
+                        : "Mark as accepted"}
                     </span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Convert to invoice</p>
+                  <p>Mark as accepted</p>
                 </TooltipContent>
               </Tooltip>
+            )}
+            {estimate.status === "ACCEPTED" && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() =>
+                        estimateActions.handleConvertToProposal(estimate)
+                      }
+                      disabled={estimateActions.isConvertingToProposal}
+                      className="gap-2 shrink-0"
+                      size="sm"
+                      variant="secondary"
+                    >
+                      {estimateActions.isConvertingToProposal ? (
+                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                      ) : (
+                        <ScrollText className="h-4 w-4 shrink-0" />
+                      )}
+                      <span className="hidden sm:inline">
+                        {estimateActions.isConvertingToProposal
+                          ? "Converting…"
+                          : "Convert to Proposal"}
+                      </span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Convert to proposal</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() =>
+                        estimateActions.handleConvertToInvoice(estimate)
+                      }
+                      disabled={estimateActions.isConvertingToInvoice}
+                      className="gap-2 shrink-0"
+                      size="sm"
+                      variant="secondary"
+                    >
+                      {estimateActions.isConvertingToInvoice ? (
+                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                      ) : (
+                        <Receipt className="h-4 w-4 shrink-0" />
+                      )}
+                      <span className="hidden sm:inline">
+                        {estimateActions.isConvertingToInvoice
+                          ? "Converting…"
+                          : "Convert to Invoice"}
+                      </span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Convert to invoice</p>
+                  </TooltipContent>
+                </Tooltip>
+              </>
             )}
           </div>
         </div>
