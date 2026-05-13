@@ -11,17 +11,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  useEstimateForAccept,
-  useEstimatePdfForAccept,
-  useAcceptEstimateByToken,
-  useRejectEstimateByToken,
-  PublicEstimateError,
-} from "@/features/estimates";
+  useProposalForAccept,
+  useProposalPdfForAccept,
+  useAcceptProposalByToken,
+  useRejectProposalByToken,
+} from "@/features/proposals";
 import { ApiError } from "@/lib/errors/handler";
 import type {
-  AcceptEstimateByTokenBody,
-  RejectEstimateByTokenBody,
-} from "@/features/estimates/service/public-estimates.service";
+  AcceptProposalByTokenBody,
+  RejectProposalByTokenBody,
+} from "@/features/proposals/service/public-proposals.service";
 import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
@@ -123,7 +122,7 @@ function PdfPage({ pdf, pageNumber, containerWidth }: PdfPageProps) {
   return <canvas ref={canvasRef} className="shrink-0 bg-white shadow-sm" />;
 }
 
-export default function EstimateAcceptPage() {
+export default function ProposalAcceptPage() {
   const params = useParams();
   const token = params?.token as string | undefined;
   const [rejectReason, setRejectReason] = useState("");
@@ -135,17 +134,17 @@ export default function EstimateAcceptPage() {
 
   const signatureRef = useRef<SignatureCanvas | null>(null);
 
-  const { data: estimate, isLoading, error } = useEstimateForAccept(token);
+  const { data: proposal, isLoading, error } = useProposalForAccept(token);
   const {
     data: pdfBytes,
     isPending: isPdfPending,
     isError: isPdfError,
     error: pdfError,
     refetch: refetchPdf,
-  } = useEstimatePdfForAccept(token);
-  const acceptMutation = useAcceptEstimateByToken(token);
-  const rejectMutation = useRejectEstimateByToken(token);
-  const requireSignature = !!estimate?.requireSignature;
+  } = useProposalPdfForAccept(token);
+  const acceptMutation = useAcceptProposalByToken(token);
+  const rejectMutation = useRejectProposalByToken(token);
+  const requireSignature = !!proposal?.requireSignature;
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
 
@@ -191,9 +190,9 @@ export default function EstimateAcceptPage() {
 
   const handleAcceptSubmit = useCallback(
     async (values: AcceptFormValues) => {
-      if (!token || !estimate) return;
+      if (!token || !proposal) return;
 
-      const payload: AcceptEstimateByTokenBody = {
+      const payload: AcceptProposalByTokenBody = {
         fullName: values.fullName.trim(),
         ...(values.signatureImageDataUrl
           ? {
@@ -209,30 +208,26 @@ export default function EstimateAcceptPage() {
       try {
         await acceptMutation.mutateAsync(payload);
         setOutcome("accepted");
-      } catch (err) {
-        if (err instanceof PublicEstimateError && err.code === "CONFLICT") {
-          setOutcome("already_accepted");
-        }
+      } catch {
+        // hook's onError already shows a toast
       }
     },
-    [token, estimate, acceptMutation],
+    [token, proposal, acceptMutation],
   );
 
   const handleRejectSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!token) return;
-      const payload: RejectEstimateByTokenBody = {
+      const payload: RejectProposalByTokenBody = {
         rejectionReason: rejectReason.trim() || undefined,
       };
       try {
         await rejectMutation.mutateAsync(payload);
         setShowRejectForm(false);
         setOutcome("rejected");
-      } catch (err) {
-        if (err instanceof PublicEstimateError && err.code === "CONFLICT") {
-          setOutcome("already_accepted");
-        }
+      } catch {
+        // hook's onError already shows a toast
       }
     },
     [token, rejectReason, rejectMutation],
@@ -262,13 +257,65 @@ export default function EstimateAcceptPage() {
     );
   }
 
+  if (outcome === "accepted") {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Proposal accepted</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Thank you. This proposal has been accepted successfully.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (outcome === "rejected") {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Proposal rejected</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              You have rejected this proposal. Thank you for your feedback.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (outcome === "already_accepted") {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Already accepted</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              This proposal has already been accepted. You do not need to take
+              any further action.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <p className="text-muted-foreground text-center">
-              Loading estimate…
+              Loading proposal…
             </p>
           </CardContent>
         </Card>
@@ -289,7 +336,7 @@ export default function EstimateAcceptPage() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                This estimate link is invalid or has expired. Please contact the
+                This proposal link is invalid or has expired. Please contact the
                 sender for a new link.
               </p>
             </CardContent>
@@ -307,7 +354,7 @@ export default function EstimateAcceptPage() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                This estimate has already been accepted. You do not need to take
+                This proposal has already been accepted. You do not need to take
                 any further action.
               </p>
             </CardContent>
@@ -323,7 +370,7 @@ export default function EstimateAcceptPage() {
             <CardTitle>Error</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">Failed to load estimate.</p>
+            <p className="text-muted-foreground">Failed to load proposal.</p>
             <Button variant="outline" onClick={() => router.refresh()}>
               Try again
             </Button>
@@ -333,25 +380,7 @@ export default function EstimateAcceptPage() {
     );
   }
 
-  if (outcome === "already_accepted") {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Already accepted</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              This estimate has already been accepted. You do not need to take
-              any further action.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (estimate?.status === "REJECTED") {
+  if (proposal?.status === "REJECTED") {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
         <Card className="w-full max-w-md">
@@ -360,7 +389,7 @@ export default function EstimateAcceptPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              This estimate was previously rejected. Please contact the sender
+              This proposal was previously rejected. Please contact the sender
               if you need a new version.
             </p>
           </CardContent>
@@ -369,41 +398,7 @@ export default function EstimateAcceptPage() {
     );
   }
 
-  if (outcome === "accepted") {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Estimate accepted</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Thank you. This estimate has been accepted successfully.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (outcome === "rejected") {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Estimate rejected</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              You have rejected this estimate. Thank you for your feedback.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!estimate || estimate.status !== "SENT") {
+  if (!proposal || proposal.status !== "SENT") {
     return null;
   }
 
@@ -418,18 +413,18 @@ export default function EstimateAcceptPage() {
       <div className="min-h-screen flex flex-col items-center p-4 bg-muted/30">
         <div className="w-full max-w-5xl space-y-6">
           <Card className="bg-card border-border overflow-hidden">
-            <CardHeader className="p-4 sm:p-6">
+            <CardHeader className="">
               <header>
                 <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                  Estimate #{estimate.estimateNumber}
+                  Proposal #{proposal.proposalNumber}
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Preview generated from the estimate PDF
+                  Preview generated from the proposal PDF
                 </p>
               </header>
             </CardHeader>
 
-            <CardContent className="pt-4 sm:pt-6 space-y-6 p-4 sm:p-6">
+            <CardContent className="space-y-4">
               {isPdfPending || (pdfBytes && !pdfDoc) ? (
                 <div className="h-[70vh] rounded-lg border border-border bg-card flex items-center justify-center">
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -475,7 +470,7 @@ export default function EstimateAcceptPage() {
               <Separator />
 
               <p className="text-sm text-muted-foreground">
-                {estimate.requireSignature
+                {proposal.requireSignature
                   ? "Confirm your acceptance by entering your full name and signing below."
                   : "Please confirm your acceptance by entering your full name below."}
               </p>
@@ -503,7 +498,7 @@ export default function EstimateAcceptPage() {
                     )}
                   />
 
-                  {estimate.requireSignature && (
+                  {proposal.requireSignature && (
                     <FormField
                       control={form.control}
                       name="signatureImageDataUrl"
@@ -540,7 +535,7 @@ export default function EstimateAcceptPage() {
 
                   <div className="flex flex-wrap gap-2">
                     <Button type="submit" disabled={!canAccept}>
-                      {isSubmitting ? "Accepting…" : "Accept estimate"}
+                      {isSubmitting ? "Accepting…" : "Accept proposal"}
                     </Button>
                     <Button
                       type="button"
@@ -548,7 +543,7 @@ export default function EstimateAcceptPage() {
                       onClick={() => setShowRejectForm(true)}
                       disabled={isSubmitting}
                     >
-                      Reject estimate
+                      Reject proposal
                     </Button>
                   </div>
                 </form>
@@ -561,13 +556,13 @@ export default function EstimateAcceptPage() {
       <AlertDialog open={showRejectForm} onOpenChange={setShowRejectForm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reject estimate</AlertDialogTitle>
+            <AlertDialogTitle>Reject proposal</AlertDialogTitle>
             <AlertDialogDescription>
-              Optionally tell the sender why you are rejecting this estimate.
+              Optionally tell the sender why you are rejecting this proposal.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <form
-            id="reject-estimate-form"
+            id="reject-proposal-form"
             onSubmit={handleRejectSubmit}
             className="space-y-4"
           >
@@ -590,11 +585,11 @@ export default function EstimateAcceptPage() {
               </AlertDialogCancel>
               <Button
                 type="submit"
-                form="reject-estimate-form"
+                form="reject-proposal-form"
                 variant="destructive"
                 disabled={rejectMutation.isPending}
               >
-                {rejectMutation.isPending ? "Rejecting…" : "Reject estimate"}
+                {rejectMutation.isPending ? "Rejecting…" : "Reject proposal"}
               </Button>
             </AlertDialogFooter>
           </form>

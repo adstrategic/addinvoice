@@ -41,6 +41,13 @@ export const getEstimateBySequenceForProposalSchema = z.object({
     .positive("The sequence must be a positive number"),
 });
 
+export const convertEstimateToProposalBodySchema = z.object({
+  email: z.string().trim().email("Valid email is required").optional(),
+  subject: z.string().trim().optional(),
+  message: z.string().trim().optional(),
+  requireSignature: z.boolean().optional(),
+});
+
 // ===== PUBLIC (no auth) =====
 
 export const getProposalByTokenParamsSchema = z.object({

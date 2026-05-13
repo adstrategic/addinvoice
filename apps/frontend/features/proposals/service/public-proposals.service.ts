@@ -4,7 +4,7 @@ import {
   type PublicProposalSummary,
 } from "@addinvoice/schemas";
 
-const PUBLIC_ESTIMATES_BASE = "/public/proposals";
+const PUBLIC_PROPOSALS_BASE = "/public/proposals";
 
 /**
  * Fetch proposal summary by accept token (public, no auth).
@@ -15,7 +15,7 @@ export async function getProposalByAcceptToken(
 ): Promise<PublicProposalSummary> {
   try {
     const { data } = await publicApiClient.get<{ data: unknown }>(
-      `${PUBLIC_ESTIMATES_BASE}/accept/${encodeURIComponent(token)}`,
+      `${PUBLIC_PROPOSALS_BASE}/accept/${encodeURIComponent(token)}`,
     );
     return publicProposalSummarySchema.parse(data.data);
   } catch (error) {
@@ -61,7 +61,7 @@ export async function acceptProposalByToken(
   body: AcceptProposalByTokenBody,
 ): Promise<{ message: string }> {
   const { data } = await publicApiClient.post<{ message?: string }>(
-    `${PUBLIC_ESTIMATES_BASE}/accept/${encodeURIComponent(token)}`,
+    `${PUBLIC_PROPOSALS_BASE}/accept/${encodeURIComponent(token)}`,
     body,
   );
   return { message: data?.message ?? "Proposal accepted" };
@@ -81,7 +81,7 @@ export async function rejectProposalByToken(
   body: RejectProposalByTokenBody,
 ): Promise<{ message: string }> {
   const { data } = await publicApiClient.post<{ message?: string }>(
-    `${PUBLIC_ESTIMATES_BASE}/reject/${encodeURIComponent(token)}`,
+    `${PUBLIC_PROPOSALS_BASE}/reject/${encodeURIComponent(token)}`,
     body,
   );
   return { message: data?.message ?? "Proposal rejected" };

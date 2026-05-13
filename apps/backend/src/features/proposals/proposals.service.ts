@@ -123,6 +123,12 @@ async function getNextInvoiceNumberForProposal(
 export async function convertEstimateToProposal(
   workspaceId: number,
   estimateSequence: number,
+  emailData?: {
+    email?: string;
+    subject?: string;
+    message?: string;
+    requireSignature?: boolean;
+  },
 ): Promise<ProposalResponse> {
   const proposal = await prisma.$transaction(async (tx) => {
     const estimate = await tx.estimate.findUnique({
@@ -164,7 +170,7 @@ export async function convertEstimateToProposal(
 
     const now = new Date();
     const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-    const requireSignature = estimate.requireSignature ?? true;
+    const requireSignature = emailData?.requireSignature ?? estimate.requireSignature ?? true;
 
     const signingToken = requireSignature ? randomUUID() : null;
     const signingTokenExpiresAt = requireSignature
@@ -223,11 +229,11 @@ export async function convertEstimateToProposal(
   });
 
   await sendProposalQueue.add("send-proposal", {
-    email: proposal.clientEmail,
+    email: emailData?.email ?? proposal.clientEmail,
     proposalId: proposal.id,
-    message: `Please find the attached proposal ${proposal.proposalNumber}.`,
+    message: emailData?.message ?? `Please find the attached proposal ${proposal.proposalNumber}.`,
     sequence: proposal.sequence,
-    subject: `Proposal ${proposal.proposalNumber}`,
+    subject: emailData?.subject ?? `Proposal ${proposal.proposalNumber}`,
     workspaceId,
   });
 

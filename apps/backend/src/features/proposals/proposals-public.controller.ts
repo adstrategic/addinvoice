@@ -43,7 +43,7 @@ export async function getProposalPdfByToken(
 
   try {
     const pdfResponse = await fetch(
-      `${pdfServiceUrl.replace(/\/$/, "")}/generate-estimate`,
+      `${pdfServiceUrl.replace(/\/$/, "")}/generate-proposal`,
       {
         body: JSON.stringify(payload),
         headers: {

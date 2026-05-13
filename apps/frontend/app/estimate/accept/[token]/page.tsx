@@ -262,6 +262,58 @@ export default function EstimateAcceptPage() {
     );
   }
 
+  if (outcome === "accepted") {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Estimate accepted</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Thank you. This estimate has been accepted successfully.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (outcome === "rejected") {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Estimate rejected</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              You have rejected this estimate. Thank you for your feedback.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (outcome === "already_accepted") {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Already accepted</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              This estimate has already been accepted. You do not need to take
+              any further action.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
@@ -333,24 +385,6 @@ export default function EstimateAcceptPage() {
     );
   }
 
-  if (outcome === "already_accepted") {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Already accepted</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              This estimate has already been accepted. You do not need to take
-              any further action.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   if (estimate?.status === "REJECTED") {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
@@ -362,40 +396,6 @@ export default function EstimateAcceptPage() {
             <p className="text-muted-foreground">
               This estimate was previously rejected. Please contact the sender
               if you need a new version.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (outcome === "accepted") {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Estimate accepted</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Thank you. This estimate has been accepted successfully.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (outcome === "rejected") {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Estimate rejected</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              You have rejected this estimate. Thank you for your feedback.
             </p>
           </CardContent>
         </Card>

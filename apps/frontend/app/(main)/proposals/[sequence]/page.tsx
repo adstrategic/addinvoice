@@ -12,6 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { SendProposalDialog } from "@/components/send-proposal-dialog";
@@ -30,7 +31,24 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useDownloadProposalPdf } from "@/features/proposals/hooks/useDownloadProposalPDF";
-import { ProposalPdfPreview } from "@/features/proposals/components/ProposalPdfPreview";
+
+const ProposalPdfPreview = dynamic(
+  () =>
+    import("@/features/proposals/components/ProposalPdfPreview").then(
+      (m) => m.ProposalPdfPreview,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[70vh] rounded-lg border border-border bg-card flex items-center justify-center">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading PDF preview...</span>
+        </div>
+      </div>
+    ),
+  },
+);
 
 const statusConfig = {
   sent: { label: "Sent", className: "bg-chart-3/20 text-chart-3" },

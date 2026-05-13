@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
   "/login(.*)", // Keep old login route public for now
   "/subscribe(.*)", // Subscription pages are accessible to authenticated users
   "/estimate/accept(.*)", // Public quote signing (end customer, no auth)
+  "/proposal/accept(.*)", // Public proposal signing (end customer, no auth)
   // "/setup(.*)", // Setup page is accessible to authenticated users
   //   "/",
 ]);

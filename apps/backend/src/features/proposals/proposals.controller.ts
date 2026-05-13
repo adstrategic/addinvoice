@@ -8,6 +8,7 @@ import {
 } from "@addinvoice/schemas";
 
 import type {
+  convertEstimateToProposalBodySchema,
   getEstimateBySequenceForProposalSchema,
   getProposalByIdSchema,
   getProposalBySequenceSchema,
@@ -22,15 +23,21 @@ import * as proposalsService from "./proposals.service.js";
  * POST /proposals/from-estimate/:estimateSequence - Convert an accepted estimate to a proposal
  */
 export async function convertEstimateToProposal(
-  req: TypedRequest<typeof getEstimateBySequenceForProposalSchema, never, never>,
+  req: TypedRequest<
+    typeof getEstimateBySequenceForProposalSchema,
+    never,
+    typeof convertEstimateToProposalBodySchema
+  >,
   res: Response,
 ): Promise<void> {
   const workspaceId = getWorkspaceId(req);
   const { estimateSequence } = req.params;
+  const emailData = req.body;
 
   const proposal = await proposalsService.convertEstimateToProposal(
     workspaceId,
     estimateSequence,
+    emailData,
   );
 
   res.status(201).json({

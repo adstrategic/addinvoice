@@ -106,8 +106,8 @@ export function buildProposalHtml(payload: ProposalPdfPayload): string {
     .bill-to-section { flex: 1; }
     .client-logo-wrap { height: 80px; max-width: 200px; display: flex; align-items: center; flex-shrink: 0; margin-left: 24px; }
     .client-logo { max-height: 100%; width: auto; max-width: 100%; object-fit: contain; object-position: right center; display: block; }
-    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 6px; color: #666; }
-    .bill-to-content { font-size: 16px; color: #000; margin-top: 2px; }
+    .section-title { font-size: 14px; font-weight: bold; margin-bottom: 6px; color: #666; }
+    .bill-to-content { font-size: 12px; color: #000; margin-top: 2px; }
     .bill-to-label { font-weight: bold; }
     .summary-section { margin-top: 16px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-size: 11px; }
     .summary-title { font-weight: 600; color: #666; margin-bottom: 4px; text-transform: uppercase; }

@@ -15,7 +15,7 @@ if (!hasRedis) {
   process.exit(1);
 }
 
-const { invoiceWorker, receiptWorker, estimateWorker } = startWorkers();
+const { invoiceWorker, receiptWorker, estimateWorker, proposalWorker } = startWorkers();
 
 async function shutdown(): Promise<void> {
   console.log("[worker] Shutting down...");
@@ -23,6 +23,7 @@ async function shutdown(): Promise<void> {
     invoiceWorker.close(),
     receiptWorker.close(),
     estimateWorker.close(),
+    proposalWorker.close(),
   ]);
   console.log("[worker] Workers closed.");
   process.exit(0);

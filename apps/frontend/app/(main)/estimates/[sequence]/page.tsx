@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { SendEstimateDialog } from "@/components/send-estimate-dialog";
+import { ConvertToProposalDialog } from "@/components/convert-to-proposal-dialog";
 import {
   useEstimateBySequence,
   useEstimateDelete,
@@ -52,6 +53,7 @@ export default function EstimateDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [convertToProposalDialogOpen, setConvertToProposalDialogOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const estimateDelete = useEstimateDelete({
     onAfterDelete: () => {
@@ -246,24 +248,13 @@ export default function EstimateDetailPage() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      onClick={() =>
-                        estimateActions.handleConvertToProposal(estimate)
-                      }
-                      disabled={estimateActions.isConvertingToProposal}
+                      onClick={() => setConvertToProposalDialogOpen(true)}
                       className="gap-2 shrink-0"
                       size="sm"
                       variant="secondary"
                     >
-                      {estimateActions.isConvertingToProposal ? (
-                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                      ) : (
-                        <ScrollText className="h-4 w-4 shrink-0" />
-                      )}
-                      <span className="hidden sm:inline">
-                        {estimateActions.isConvertingToProposal
-                          ? "Converting…"
-                          : "Convert to Proposal"}
-                      </span>
+                      <ScrollText className="h-4 w-4 shrink-0" />
+                      <span className="hidden sm:inline">Convert to Proposal</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -317,6 +308,16 @@ export default function EstimateDetailPage() {
         estimateNumber={estimate.estimateNumber}
         clientName={client.name || "Client"}
         clientEmail={estimate.clientEmail}
+      />
+
+      <ConvertToProposalDialog
+        open={convertToProposalDialogOpen}
+        onOpenChange={setConvertToProposalDialogOpen}
+        estimateSequence={sequence!}
+        estimateNumber={estimate.estimateNumber}
+        clientName={client.name || "Client"}
+        clientEmail={estimate.clientEmail ?? undefined}
+        requireSignature={estimate.requireSignature ?? true}
       />
 
       <EntityDeleteModal

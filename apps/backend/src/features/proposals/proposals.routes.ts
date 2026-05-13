@@ -22,6 +22,7 @@ import {
   updateProposalDescriptiveItem,
 } from "./proposals.controller.js";
 import {
+  convertEstimateToProposalBodySchema,
   getEstimateBySequenceForProposalSchema,
   getProposalByIdSchema,
   getProposalBySequenceSchema,
@@ -39,7 +40,10 @@ export const proposalsRoutes: Router = Router();
 // POST /api/v1/proposals/from-estimate/:estimateSequence - Convert accepted estimate to proposal
 proposalsRoutes.post(
   "/from-estimate/:estimateSequence",
-  processRequest({ params: getEstimateBySequenceForProposalSchema }),
+  processRequest({
+    params: getEstimateBySequenceForProposalSchema,
+    body: convertEstimateToProposalBodySchema,
+  }),
   asyncHandler(convertEstimateToProposal),
 );
 
