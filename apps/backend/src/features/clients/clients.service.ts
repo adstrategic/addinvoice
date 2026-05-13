@@ -102,6 +102,43 @@ export async function getClientBySequence(
 }
 
 /**
+ * Get a client by ID within a workspace
+ */
+export async function getClientById(
+  workspaceId: number,
+  id: number,
+): Promise<ClientEntity> {
+  const client = await prisma.client.findUnique({ where: { id } });
+
+  if (!client || client.workspaceId !== workspaceId) {
+    throw new EntityNotFoundError("Client not found");
+  }
+
+  return client;
+}
+
+/**
+ * Set or replace client logo URL
+ */
+export async function setClientLogo(
+  workspaceId: number,
+  id: number,
+  logo: string,
+): Promise<ClientEntity> {
+  return prisma.$transaction(async (tx) => {
+    const existing = await findById(tx, id);
+    if (existing?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError("Client not found");
+    }
+
+    return tx.client.update({
+      data: { logo },
+      where: { id, workspaceId },
+    });
+  });
+}
+
+/**
  * List all clients for a workspace
  */
 export async function listClients(

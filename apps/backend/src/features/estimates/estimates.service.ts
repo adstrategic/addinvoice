@@ -282,6 +282,12 @@ export async function convertEstimateToInvoice(
       throw new EntityNotFoundError("Estimate not found");
     }
 
+    if (estimate.status === "PROPOSAL") {
+      throw new EntityValidationError(
+        "This estimate has been converted to a proposal. Convert the proposal to an invoice instead.",
+      );
+    }
+
     if (estimate.status !== "ACCEPTED") {
       throw new EntityValidationError(
         "Only accepted estimates can be converted to an invoice",
@@ -369,6 +375,7 @@ export async function markEstimateAsAccepted(
       client: true,
       items: true,
       descriptiveItems: true,
+      proposal: { select: { sequence: true } },
     },
     where: { id: estimateId },
   });
@@ -389,6 +396,7 @@ export async function getEstimateBySigningToken(
       client: true,
       items: true,
       descriptiveItems: true,
+      proposal: { select: { sequence: true } },
     },
   });
 
@@ -538,6 +546,7 @@ export function buildEstimatePdfPayload(estimate: EstimateResponse): {
     currency: string;
     discount: number;
     documentType: "estimate";
+    exclusions: null | Record<string, unknown>;
     invoiceNumber: string;
     notes: null | Record<string, unknown>;
     status: string;
@@ -590,6 +599,7 @@ export function buildEstimatePdfPayload(estimate: EstimateResponse): {
       currency: estimate.currency,
       discount: estimateDiscountFixed,
       documentType: "estimate",
+      exclusions: estimate.exclusions ?? null,
       invoiceNumber: estimate.estimateNumber,
       summary: estimate.summary ?? null,
       timelineEndDate: estimate.timelineEndDate ?? null,
@@ -942,6 +952,7 @@ export async function createEstimate(
         descriptiveItems: {
           create: descriptiveItemsToCreate,
         },
+        exclusions: toNullableJsonInput(data.exclusions),
         notes: toNullableJsonInput(data.notes),
         purchaseOrder: data.purchaseOrder,
         selectedPaymentMethodId,
@@ -961,6 +972,7 @@ export async function createEstimate(
         client: true,
         items: true,
         descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+        proposal: { select: { sequence: true } },
       },
     });
 
@@ -984,6 +996,12 @@ export async function deleteEstimate(
 
     if (existingEstimate?.workspaceId !== workspaceId) {
       throw new EntityNotFoundError("Estimate not found");
+    }
+
+    if (existingEstimate.status === "PROPOSAL") {
+      throw new EntityValidationError(
+        "Cannot delete an estimate that has an active proposal",
+      );
     }
 
     if (existingEstimate.status !== "DRAFT") {
@@ -1208,6 +1226,7 @@ export async function getEstimateById(
       client: true,
       items: { orderBy: { name: "asc" } },
       descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+      proposal: { select: { sequence: true } },
     },
     where: {
       id: estimateId,
@@ -1233,10 +1252,11 @@ export async function getEstimateBySequence(
     include: {
       business: true,
       client: true,
+      descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
       items: {
         orderBy: { name: "asc" },
       },
-      descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+      proposal: { select: { sequence: true } },
     },
     where: {
       workspaceId_sequence: {
@@ -1325,9 +1345,10 @@ export async function listEstimates(
   ] = await Promise.all([
     prisma.estimate.findMany({
       include: {
+        _count: { select: { items: true } },
         business: true,
         client: true,
-        _count: { select: { items: true } },
+        proposal: { select: { sequence: true } },
       },
       orderBy: { createdAt: "desc" },
       skip,
@@ -1468,6 +1489,12 @@ export async function updateEstimate(
       throw new EntityNotFoundError("Estimate not found");
     }
 
+    if (existingEstimate.status === "PROPOSAL") {
+      throw new EntityValidationError(
+        "Estimates that have been converted to a proposal cannot be modified",
+      );
+    }
+
     if (
       existingEstimate.status !== "DRAFT" &&
       existingEstimate.status !== "REJECTED"
@@ -1486,6 +1513,7 @@ export async function updateEstimate(
       selectedPaymentMethodId,
       notes,
       terms,
+      exclusions,
       summary,
       ...estimateData
     } = data;
@@ -1493,6 +1521,9 @@ export async function updateEstimate(
       ...estimateData,
       ...(notes !== undefined ? { notes: toNullableJsonInput(notes) } : {}),
       ...(terms !== undefined ? { terms: toNullableJsonInput(terms) } : {}),
+      ...(exclusions !== undefined
+        ? { exclusions: toNullableJsonInput(exclusions) }
+        : {}),
       ...(summary !== undefined
         ? { summary: toNullableJsonInput(summary) }
         : {}),
@@ -1697,6 +1728,7 @@ export async function updateEstimate(
         client: true,
         items: true,
         descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+        proposal: { select: { sequence: true } },
       },
       where: { id, workspaceId },
     });

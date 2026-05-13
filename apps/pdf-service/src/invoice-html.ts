@@ -71,7 +71,7 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
     <tr>
       <td class="cell-desc">
         <div class="item-name">${escapeHtml(item.name)}</div>
-        ${item.description ? `<div class="item-desc">${generateHTML(item.description as Record<string, unknown>, [StarterKit])}</div>` : ""}
+        ${item.description ? `<div class="item-desc">${generateHTML(item.description, [StarterKit])}</div>` : ""}
       </td>
       <td class="cell-num">${escapeHtml(String(item.quantity))} ${escapeHtml(item.quantityUnit)}</td>
       <td class="cell-num">${usdFormatter.format(item.unitPrice)}</td>
@@ -88,21 +88,25 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
   <meta charset="UTF-8">
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 40px; font-size: 12px; font-family: Helvetica, Arial, sans-serif; }
-    .page { position: relative; min-height: 85vh; }
-    .watermark { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; display: flex; justify-content: center; align-items: center; pointer-events: none; }
+    body { margin: 0; padding: 0; font-size: 12px; font-family: Helvetica, Arial, sans-serif; }
+    .page-table { width: 100%; border-collapse: collapse; }
+    .page-table > thead { display: table-header-group; }
+    .page-table > thead > tr > td,
+    .page-table > tbody > tr > td { padding: 0; vertical-align: top; }
+    .page-header { padding: 14px 40px 10px; background: #fff; }
+    .page-header-inner { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; gap: 16px; }
+    .page-header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    .page-header-title { font-size: 28px; font-weight: bold; color: #00aaab; line-height: 1.1; }
+    .page-header-meta { font-size: 12px; color: #666; }
+    .page-header-meta b { font-weight: bold; color: #000; }
+    .page-header-logo { max-height: 60px; width: auto; max-width: 200px; object-fit: contain; display: block; }
+    .page-header-divider { border-bottom: 1px solid #000; }
+    .page-body { padding: 0 40px; min-height: 85vh; }
+    .watermark { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; display: flex; justify-content: center; align-items: center; pointer-events: none; }
     .watermark-inner { transform: rotate(-45deg); transform-origin: center center; }
     .watermark-text { font-size: 100px; font-weight: bold; color: #000; opacity: 0.03; text-align: center; letter-spacing: 2px; }
     .content { position: relative; z-index: 1; }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .company-header { display: flex; align-items: center; gap: 25px; flex: 1; min-width: 0; }
-    .company-logo-wrap { height: 120px; max-width: 320px; display: flex; align-items: center; flex-shrink: 0; }
-    .company-logo { max-height: 100%; width: auto; max-width: 100%; object-fit: contain; object-position: left center; display: block; }
-    .invoice-info { text-align: right; }
-    .invoice-title { font-size: 30px; font-weight: bold; color: #00aaab; margin-bottom: 8px; }
-    .invoice-details { font-size: 14px; color: #666; margin-top: 2px; }
-    .invoice-details b { font-weight: bold; }
-    .divider { border-bottom: 1px solid #000; margin: 20px 0; }
     .bill-to-section { margin-bottom: 20px; }
     .section-title { font-size: 11px; font-weight: bold; margin-bottom: 6px; color: #666; }
     .bill-to-content { font-size: 11px; color: #000; margin-top: 2px; }
@@ -111,15 +115,15 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
     .company-name { font-size: 20px; font-weight: bold; margin-bottom: 4px; color: #000; }
     .company-details { font-size: 11px; color: #666; margin-top: 2px; }
     .table-wrap { margin-top: 20px; border: 1px solid #000; border-radius: 10px; overflow: hidden; }
-    table { width: 100%; border-collapse: collapse; }
-    thead { background: #f3f7f9; border-bottom: 1px solid #000; }
-    th { padding: 6px; font-size: 11px; font-weight: bold; border-right: 1px solid #000; text-align: right; }
-    th.th-desc { text-align: left; flex: 2; }
-    th.th-last { border-right: none; }
-    td { padding: 6px; font-size: 10px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right; }
-    .cell-desc { text-align: left; }
-    .cell-last { border-right: none; }
-    .cell-num { }
+    .table-wrap table { width: 100%; border-collapse: collapse; }
+    .table-wrap thead { background: #f3f7f9; border-bottom: 1px solid #000; }
+    .table-wrap th { padding: 6px; font-size: 11px; font-weight: bold; border-right: 1px solid #000; text-align: right; }
+    .table-wrap th.th-desc { text-align: left; flex: 2; }
+    .table-wrap th.th-last { border-right: none; }
+    .table-wrap td { padding: 6px; font-size: 10px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right; }
+    .table-wrap .cell-desc { text-align: left; }
+    .table-wrap .cell-last { border-right: none; }
+    .table-wrap .cell-num { }
     .item-name { font-weight: bold; margin-bottom: 2px; }
     .item-desc { font-size: 9px; color: #666; }
     .item-desc p { margin: 0; }
@@ -146,30 +150,39 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
     .payment-method-section { margin-top: 16px; font-size: 11px; border: 1px solid #00aaab; padding: 8px; }
     .payment-method-label { font-weight: bold; }
     .payment-method-value { margin-left: 4px; }
-    .footer { position: fixed; bottom: 30px; left: 32px; right: 32px; text-align: center; font-size: 9px; color: #999; }
   </style>
 </head>
 <body>
-  <div class="page">
-    <div class="watermark">
-      <div class="watermark-inner">
-        <div class="watermark-text">${escapeHtml(company.name)}</div>
-      </div>
+  <div class="watermark">
+    <div class="watermark-inner">
+      <div class="watermark-text">${escapeHtml(company.name)}</div>
     </div>
-    <div class="content">
-      <div class="header">
-        <div class="company-header">
-          ${company.logo ? `<div class="company-logo-wrap"><img src="${escapeHtml(company.logo)}" alt="" class="company-logo" /></div>` : ""}
-        </div>
-        <div class="invoice-info">
-          <div class="invoice-title">INVOICE</div>
-          <div class="invoice-details"><b>Invoice #:</b> ${escapeHtml(invoice.invoiceNumber)}</div>
-          <div class="invoice-details"><b>Issue Date:</b> ${escapeHtml(issueDateStr)}</div>
-          <div class="invoice-details"><b>Due Date:</b> ${escapeHtml(dueDateStr)}</div>
-          ${invoice.purchaseOrder ? `<div class="invoice-details">PO: ${escapeHtml(invoice.purchaseOrder)}</div>` : ""}
-        </div>
-      </div>
-      <div class="divider"></div>
+  </div>
+  <table class="page-table">
+    <thead>
+      <tr>
+        <td>
+          <div class="page-header">
+            <div class="page-header-inner">
+              ${company.logo ? `<img src="${escapeHtml(company.logo)}" alt="" class="page-header-logo" />` : `<div></div>`}
+              <div class="page-header-right">
+                <div class="page-header-title">INVOICE</div>
+                <div class="page-header-meta"><b>Invoice #:</b> ${escapeHtml(invoice.invoiceNumber)}</div>
+                <div class="page-header-meta"><b>Issue Date:</b> ${escapeHtml(issueDateStr)}</div>
+                <div class="page-header-meta"><b>Due Date:</b> ${escapeHtml(dueDateStr)}</div>
+                ${invoice.purchaseOrder ? `<div class="page-header-meta"><b>PO:</b> ${escapeHtml(invoice.purchaseOrder)}</div>` : ""}
+              </div>
+            </div>
+            <div class="page-header-divider"></div>
+          </div>
+        </td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <div class="page-body">
+            <div class="content">
       <div class="header">
         <div class="bill-to-section">
           <div class="section-title">BILLED TO:</div>
@@ -257,15 +270,18 @@ export function buildInvoiceHtml(payload: InvoicePdfPayload): string {
         invoice.notes || invoice.terms
           ? `
       <div class="notes-section">
-        ${invoice.notes ? `<div class="notes-title">REMARKS:</div><div style="margin-bottom: 8px">${generateHTML(invoice.notes as Record<string, unknown>, [StarterKit])}</div>` : ""}
-        ${invoice.terms ? `<div>${generateHTML(invoice.terms as Record<string, unknown>, [StarterKit])}</div>` : ""}
+        ${invoice.notes ? `<div class="notes-title">REMARKS:</div><div style="margin-bottom: 8px">${generateHTML(invoice.notes, [StarterKit])}</div>` : ""}
+        ${invoice.terms ? `<div>${generateHTML(invoice.terms, [StarterKit])}</div>` : ""}
       </div>`
           : ""
       }
      
-      <div class="footer">Page 1 of 1</div>
-    </div>
-  </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </body>
 </html>`;
 }

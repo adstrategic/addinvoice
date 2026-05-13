@@ -10,6 +10,12 @@ import type {
 
 import { getWorkspaceId } from "../../core/auth.js";
 import {
+  deleteBusinessLogo,
+  extractPublicIdFromUrl,
+  uploadClientLogo as uploadClientLogoToCloudinary,
+  validateImageFile,
+} from "../../core/cloudinary.js";
+import {
   fromVoiceAudioBodySchema,
   listClientsSchema,
 } from "./clients.schemas.js";
@@ -155,6 +161,52 @@ export async function listClients(
       totalPages: Math.ceil(result.total / result.limit),
     },
   });
+}
+
+/**
+ * POST /clients/:id/logo - Upload client logo
+ */
+export async function uploadClientLogo(
+  req: TypedRequest<typeof getClientByIdSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { id } = req.params;
+  const file = req.file;
+
+  if (!file) {
+    res.status(400).json({ error: "No file provided" });
+    return;
+  }
+
+  const validation = validateImageFile(file);
+  if (!validation.valid) {
+    res.status(400).json({ error: validation.error });
+    return;
+  }
+
+  const client = await clientsService.getClientById(workspaceId, id);
+
+  if (client.logo) {
+    const oldPublicId = extractPublicIdFromUrl(client.logo);
+    if (oldPublicId) {
+      try {
+        await deleteBusinessLogo(oldPublicId);
+      } catch (error) {
+        console.error("Failed to delete old client logo:", error);
+      }
+    }
+  }
+
+  const uploadResult = await uploadClientLogoToCloudinary(file, workspaceId, id);
+
+  const updatedClient = await clientsService.setClientLogo(
+    workspaceId,
+    id,
+    uploadResult.secure_url,
+  );
+
+  res.json({ data: updatedClient });
 }
 
 /**

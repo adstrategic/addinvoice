@@ -8,37 +8,39 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BasicInfoFields } from "./form-fields/BasicInfoFields";
 import { ContactFields } from "./form-fields/ContactFields";
 import { ReminderFields } from "./form-fields/ReminderFields";
-// import { BusinessTermsFields } from "./form-fields/BusinessTermsFields";
-// import { CiudadSelector } from "@/components/shared/selectors/ciudad-selector";
-// import { VendedorSelector } from "@/components/shared/selectors/vendedor-selector";
-import { FormField } from "@/components/ui/form";
+import { LogoUploadField } from "./form-fields/LogoUploadField";
 import type { UseFormReturn } from "react-hook-form";
-import type { ClientResponse, CreateClientDTO } from "@addinvoice/schemas";
+import type { CreateClientDTO } from "@addinvoice/schemas";
 
 interface ClientFormProps {
   form: UseFormReturn<CreateClientDTO>;
   mode: "create" | "edit";
-  initialData?: ClientResponse;
   onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   onCancel?: () => void;
   isLoading?: boolean;
+  // Logo
+  logoDisplayUrl: string | null;
+  onLogoSelect: (file: File) => void;
+  isUploadingLogo: boolean;
 }
 
 export function ClientForm({
   form,
   mode,
-  initialData,
   onSubmit,
   onCancel,
   isLoading = false,
+  logoDisplayUrl,
+  onLogoSelect,
+  isUploadingLogo,
 }: ClientFormProps) {
   const formTitle = mode === "create" ? "Create New Client" : "Edit Client";
   const submitButtonText =
     mode === "create" ? "Create Client" : "Update Client";
 
-  // Get root error for display
   const rootError = form.formState.errors.root;
   const isDirty = form.formState.isDirty;
+  const clientName = form.watch("name") ?? "";
 
   return (
     <Form {...form}>
@@ -51,6 +53,16 @@ export function ClientForm({
               ? "Fill in the information below to create a new client."
               : "Update the client information below."}
           </p>
+        </div>
+
+        {/* Logo */}
+        <div className="flex justify-center py-2">
+          <LogoUploadField
+            logoDisplayUrl={logoDisplayUrl}
+            clientName={clientName}
+            onFileSelect={onLogoSelect}
+            isUploading={isUploadingLogo}
+          />
         </div>
 
         <Separator />
@@ -103,63 +115,6 @@ export function ClientForm({
           </div>
           <ReminderFields control={form.control} isLoading={isLoading} />
         </div>
-
-        {/* <Separator />
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-base font-medium">Location</h3>
-            <p className="text-sm text-muted-foreground">
-              Geographic location for shipping and billing.
-            </p>
-          </div>
-          <FormField
-            control={form.control}
-            name="CCiudadId"
-            render={({ field }) => (
-              <CiudadSelector
-                field={field}
-                initialCiudad={initialData?.ciudad || null}
-                label="City *"
-              />
-            )}
-          />
-        </div>
-
-        <Separator />
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-base font-medium">Business Terms</h3>
-            <p className="text-sm text-muted-foreground">
-              Payment terms, credit limits, and financial settings.
-            </p>
-          </div>
-          <BusinessTermsFields control={form.control} isLoading={isLoading} />
-        </div>
-
-        <Separator />
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-base font-medium">Vendor Assignment</h3>
-            <p className="text-sm text-muted-foreground">
-              Assign a vendor to manage this client relationship.
-            </p>
-          </div>
-          <FormField
-            control={form.control}
-            name="CVendedorVId"
-            render={({ field }) => (
-              <VendedorSelector
-                field={field}
-                initialVendor={initialData?.vendedor || null}
-              />
-            )}
-          />
-        </div>
-
-        <Separator /> */}
 
         {/* Form Actions */}
         <div className="flex justify-end gap-3 pt-4">

@@ -29,7 +29,7 @@ import { useDownloadEstimatePdf } from "../hooks/useDownloadEstimatePDF";
 import { Button } from "@/components/ui/button";
 import { Mic } from "lucide-react";
 
-const VALID_STATUSES = ["all", "paid", "overdue", "issued", "draft"] as const;
+const VALID_STATUSES = ["all", "draft", "sent", "accepted", "rejected", "proposal", "invoiced"] as const;
 
 function parseStatusParam(value: string | null): string {
   if (!value) return "all";
@@ -213,6 +213,7 @@ export default function EstimatesContent() {
           onDelete={estimateDelete.openDeleteModal}
           onAccept={handleAccept}
           onConvertToInvoice={estimateActions.handleConvertToInvoice}
+          onConvertToProposal={estimateActions.handleConvertToProposal}
         >
           {pagination && (
             <TablePagination

@@ -157,3 +157,26 @@ export function useDeleteClient() {
     },
   });
 }
+
+/**
+ * Hook to upload a client logo.
+ * Call after creating/updating the client to attach the logo.
+ */
+export function useUploadClientLogo() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, file }: { id: number; file: File }) =>
+      clientsService.uploadLogo(id, file),
+    onSuccess: (updatedClient) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.bySequence(updatedClient.sequence),
+      });
+      toast.success("Logo uploaded", {
+        description: "The client logo has been uploaded successfully.",
+      });
+    },
+    onError: (err) => handleMutationError(err, undefined),
+  });
+}

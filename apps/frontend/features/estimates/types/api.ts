@@ -19,9 +19,11 @@ export function mapStatusToUI(status: EstimateStatus): string {
   const statusMap: Record<EstimateStatus, string> = {
     DRAFT: "draft",
     SENT: "sent",
+    VIEWED: "sent",
     ACCEPTED: "accepted",
     REJECTED: "rejected",
     INVOICED: "invoiced",
+    PROPOSAL: "proposal",
   };
   return statusMap[status] || "draft";
 }
@@ -36,6 +38,7 @@ export function mapUIToStatus(uiStatus: string): EstimateStatus | null {
     accepted: "ACCEPTED",
     rejected: "REJECTED",
     invoiced: "INVOICED",
+    proposal: "PROPOSAL",
   };
   return statusMap[uiStatus] || null;
 }

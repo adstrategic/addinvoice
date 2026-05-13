@@ -75,6 +75,7 @@ export const baseEstimateSchema = z.object({
     .max(50, "Estimate number is too long"),
   items: z.array(baseEstimateItemSchema).optional(),
   descriptiveItems: z.array(baseEstimateDescriptiveItemSchema).optional(),
+  exclusions: z.record(z.string(), z.unknown()).nullish(),
   notes: z.record(z.string(), z.unknown()).nullish(),
   purchaseOrder: z.string().trim().max(100).nullish(),
   selectedPaymentMethodId: z.coerce

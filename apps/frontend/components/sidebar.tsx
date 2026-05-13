@@ -42,6 +42,7 @@ const navigation = [
   { name: "Clients", href: "/clients", icon: Users },
   { name: "Catalog", href: "/catalog", icon: Package },
   { name: "Estimates", href: "/estimates", icon: FileCheck },
+  { name: "Proposals", href: "/proposals", icon: FileText },
   { name: "Expenses", href: "/expenses", icon: Receipt },
   { name: "Ask Me How", href: "/ask-me-how", icon: HelpCircle },
   { name: "Configuration", href: "/configuration", icon: Settings },

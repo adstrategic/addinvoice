@@ -67,6 +67,8 @@ export const estimateResponseSchema = baseEstimateSchema.extend({
   client: clientResponseSchema,
   items: z.array(estimateItemResponseSchema).optional(),
   descriptiveItems: z.array(estimateDescriptiveItemResponseSchema).optional(),
+  /** Sequence of the linked proposal, if the estimate was converted to one */
+  proposalSequence: z.number().int().positive().nullable().optional(),
 });
 
 export const estimateDashboardResponseSchema = estimateResponseSchema
@@ -76,6 +78,8 @@ export const estimateDashboardResponseSchema = estimateResponseSchema
   .extend({
     /** Present on list responses so UI can show Send only when estimate has items */
     itemCount: z.number().int().min(0),
+    /** Sequence of the linked proposal, if the estimate was converted to one */
+    proposalSequence: z.number().int().positive().nullable().optional(),
   });
 
 export const publicEstimateSummarySchema = estimateResponseSchema.omit({

@@ -127,6 +127,7 @@ export const estimatePdfPayloadSchema = z.object({
     currency: z.string(),
     discount: z.number(),
     documentType: z.literal("estimate"),
+    exclusions: z.record(z.string(), z.unknown()).nullish(),
     invoiceNumber: z.string(),
     notes: z.record(z.string(), z.unknown()).nullish(),
     status: z.string(),
@@ -185,3 +186,44 @@ export const advancePdfPayloadSchema = z.object({
 });
 
 export type AdvancePdfPayload = z.infer<typeof advancePdfPayloadSchema>;
+
+export const proposalPdfPayloadSchema = z.object({
+  client: z.object({
+    address: z.string().nullish(),
+    businessName: z.string().nullish(),
+    email: z.string().nullish(),
+    logo: z.string().nullish(),
+    name: z.string(),
+    nit: z.string().nullish(),
+    phone: z.string().nullish(),
+  }),
+  company: z.object({
+    address: z.string().nullish(),
+    email: z.string().nullish(),
+    logo: z.string().nullish(),
+    name: z.string(),
+    nit: z.string().nullish(),
+    phone: z.string().nullish(),
+  }),
+  descriptiveItems: z
+    .array(
+      z.object({
+        description: z.record(z.string(), z.unknown()).nullish(),
+        title: z.string(),
+      }),
+    )
+    .optional(),
+  document: z.object({
+    currency: z.string(),
+    exclusions: z.record(z.string(), z.unknown()).nullish(),
+    notes: z.record(z.string(), z.unknown()).nullish(),
+    proposalNumber: z.string(),
+    summary: z.record(z.string(), z.unknown()).nullish(),
+    terms: z.record(z.string(), z.unknown()).nullish(),
+    timelineEndDate: z.union([z.string(), z.date()]).nullish(),
+    timelineStartDate: z.union([z.string(), z.date()]).nullish(),
+    total: z.number(),
+  }),
+});
+
+export type ProposalPdfPayload = z.infer<typeof proposalPdfPayloadSchema>;
