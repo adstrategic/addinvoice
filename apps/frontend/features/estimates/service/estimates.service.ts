@@ -14,6 +14,8 @@ import {
   type EstimateItemResponse,
   estimateItemResponseSchema,
   estimateDescriptiveItemResponseSchema,
+  proposalResponseSchema,
+  type ProposalResponse,
 } from "@addinvoice/schemas";
 
 import {
@@ -183,6 +185,22 @@ async function convertEstimateToInvoice(
 }
 
 /**
+ * Convert an accepted estimate to a proposal
+ */
+async function convertEstimateToProposal(
+  estimateSequence: number,
+): Promise<ProposalResponse> {
+  try {
+    const { data } = await apiClient.post<ApiSuccessResponse<ProposalResponse>>(
+      `/proposals/from-estimate/${estimateSequence}`,
+    );
+    return proposalResponseSchema.parse(data.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+/**
  * Delete an estimate (soft delete)
  */
 async function deleteEstimate(id: number): Promise<void> {
@@ -339,6 +357,7 @@ export const estimatesService = {
   update: updateEstimate,
   markAsAccepted,
   convertToInvoice: convertEstimateToInvoice,
+  convertToProposal: convertEstimateToProposal,
   createFromVoiceAudio,
   delete: deleteEstimate,
   createItem: createEstimateItem,

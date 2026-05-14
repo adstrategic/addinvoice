@@ -27,6 +27,21 @@ import * as invoicesService from "../invoices.service.js";
 import { createInvoiceFromVoiceTranscript } from "../voice-invoice-claude.service.js";
 
 describe("voice-invoice-claude.service", () => {
+  const tiptapParagraph = (text: string) => ({
+    type: "doc" as const,
+    content: [
+      {
+        type: "paragraph" as const,
+        content: [{ type: "text" as const, text }],
+      },
+    ],
+  });
+
+  const businessDefaults = {
+    defaultNotes: tiptapParagraph("Registered default notes"),
+    defaultTerms: tiptapParagraph("Registered default terms"),
+  };
+
   const validCreateInvoiceToolInput = {
     clientEmail: "voice@test.com",
     clientId: 99,
@@ -54,6 +69,7 @@ describe("voice-invoice-claude.service", () => {
     prismaMock.business.findFirst.mockResolvedValue({
       id: 1,
       name: "Test Business",
+      ...businessDefaults,
     });
     prismaMock.client.findFirst.mockResolvedValue({
       email: "voice@test.com",
@@ -151,6 +167,72 @@ describe("voice-invoice-claude.service", () => {
         clientId: 99,
         createClient: false,
         invoiceNumber: "VOICE-001",
+        notes: businessDefaults.defaultNotes,
+        terms: businessDefaults.defaultTerms,
+      }),
+    );
+  });
+
+  it("applies business default notes and terms when tool input has null notes and terms", async () => {
+    anthropicCreate
+      .mockResolvedValueOnce({
+        content: [
+          {
+            id: "toolu_create_inv",
+            input: { ...validCreateInvoiceToolInput, notes: null, terms: null },
+            name: "create_invoice",
+            type: "tool_use",
+          },
+        ],
+        stop_reason: "tool_use",
+      })
+      .mockResolvedValueOnce({
+        content: [{ text: "Done.", type: "text" }],
+        stop_reason: "end_turn",
+      });
+
+    await createInvoiceFromVoiceTranscript(10, 1, 99, "one line item");
+
+    expect(invoicesService.createInvoice).toHaveBeenCalledWith(
+      10,
+      expect.objectContaining({
+        notes: businessDefaults.defaultNotes,
+        terms: businessDefaults.defaultTerms,
+      }),
+    );
+  });
+
+  it("uses model notes and terms when provided instead of business defaults", async () => {
+    const modelNotes = tiptapParagraph("From transcript");
+    const modelTerms = tiptapParagraph("Custom T and C");
+    anthropicCreate
+      .mockResolvedValueOnce({
+        content: [
+          {
+            id: "toolu_create_inv",
+            input: {
+              ...validCreateInvoiceToolInput,
+              notes: modelNotes,
+              terms: modelTerms,
+            },
+            name: "create_invoice",
+            type: "tool_use",
+          },
+        ],
+        stop_reason: "tool_use",
+      })
+      .mockResolvedValueOnce({
+        content: [{ text: "Done.", type: "text" }],
+        stop_reason: "end_turn",
+      });
+
+    await createInvoiceFromVoiceTranscript(10, 1, 99, "with notes");
+
+    expect(invoicesService.createInvoice).toHaveBeenCalledWith(
+      10,
+      expect.objectContaining({
+        notes: modelNotes,
+        terms: modelTerms,
       }),
     );
   });

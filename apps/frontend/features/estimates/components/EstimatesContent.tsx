@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import LoadingComponent from "@/components/loading-component";
 import { motion } from "framer-motion";
 import { SendEstimateDialog } from "@/components/send-estimate-dialog";
+import { ConvertToProposalDialog } from "@/components/convert-to-proposal-dialog";
 import { BusinessSelectionDialog } from "@/components/business-selection-dialog";
 import { EstimateForm } from "../forms/EstimateForm";
 import { VoiceEstimatePromptDialog } from "./VoiceEstimatePromptDialog";
@@ -29,7 +30,7 @@ import { useDownloadEstimatePdf } from "../hooks/useDownloadEstimatePDF";
 import { Button } from "@/components/ui/button";
 import { Mic } from "lucide-react";
 
-const VALID_STATUSES = ["all", "paid", "overdue", "issued", "draft"] as const;
+const VALID_STATUSES = ["all", "draft", "sent", "accepted", "rejected", "proposal", "invoiced"] as const;
 
 function parseStatusParam(value: string | null): string {
   if (!value) return "all";
@@ -63,6 +64,10 @@ export default function EstimatesContent() {
 
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedEstimateForSend, setSelectedEstimateForSend] = useState<
+    EstimateDashboardResponse | undefined
+  >(undefined);
+  const [convertToProposalDialogOpen, setConvertToProposalDialogOpen] = useState(false);
+  const [selectedEstimateForProposal, setSelectedEstimateForProposal] = useState<
     EstimateDashboardResponse | undefined
   >(undefined);
   // Fetch estimates with pagination, search, and status (server-side)
@@ -101,6 +106,11 @@ export default function EstimatesContent() {
   const handleSendEstimate = (estimate: EstimateDashboardResponse) => {
     setSelectedEstimateForSend(estimate);
     setSendDialogOpen(true);
+  };
+
+  const handleConvertToProposal = (estimate: EstimateDashboardResponse) => {
+    setSelectedEstimateForProposal(estimate);
+    setConvertToProposalDialogOpen(true);
   };
 
   if (isLoading) {
@@ -213,6 +223,7 @@ export default function EstimatesContent() {
           onDelete={estimateDelete.openDeleteModal}
           onAccept={handleAccept}
           onConvertToInvoice={estimateActions.handleConvertToInvoice}
+          onConvertToProposal={handleConvertToProposal}
         >
           {pagination && (
             <TablePagination
@@ -250,6 +261,23 @@ export default function EstimatesContent() {
           estimateNumber={selectedEstimateForSend?.estimateNumber}
           clientName={selectedEstimateForSend?.client?.name || "Client"}
           clientEmail={selectedEstimateForSend?.clientEmail}
+        />
+      )}
+
+      {selectedEstimateForProposal && (
+        <ConvertToProposalDialog
+          open={convertToProposalDialogOpen}
+          onOpenChange={(open) => {
+            setConvertToProposalDialogOpen(open);
+            if (!open) {
+              setSelectedEstimateForProposal(undefined);
+            }
+          }}
+          estimateSequence={selectedEstimateForProposal.sequence}
+          estimateNumber={selectedEstimateForProposal.estimateNumber}
+          clientName={selectedEstimateForProposal.client?.name || "Client"}
+          clientEmail={selectedEstimateForProposal.clientEmail ?? undefined}
+          requireSignature={selectedEstimateForProposal.requireSignature ?? true}
         />
       )}
 

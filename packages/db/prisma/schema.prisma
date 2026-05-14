@@ -63,6 +63,7 @@ model Workspace {
     workCategories         WorkCategory[]
     expenses               Expense[]
     advances               Advance[]
+    proposals              Proposal[]
 
     // Subscription fields (cached from Stripe - Stripe is source of truth)
     stripeCustomerId     String?             @unique
@@ -90,6 +91,7 @@ model Client {
     address                       String?
     nit                           String?
     businessName                  String?
+    logo                          String?
     sequence                      Int
     // Reminder settings (null = disabled)
     reminderBeforeDueIntervalDays Int? // e.g. 3 = every 3 days while invoice active
@@ -101,6 +103,7 @@ model Client {
     invoices  Invoice[]
     estimates Estimate[]
     advances  Advance[]
+    proposals Proposal[]
 
     @@unique([workspaceId, sequence])
     @@index([workspaceId])
@@ -182,6 +185,7 @@ model WorkspacePaymentMethod {
     workspace            Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
     invoices             Invoice[]
     estimates            Estimate[]
+    proposals            Proposal[]  @relation("ProposalPaymentMethod")
     defaultForWorkspaces Workspace[] @relation("WorkspaceDefaultPaymentMethod")
 
     @@unique([workspaceId, type])
@@ -234,6 +238,7 @@ model Invoice {
     business              Business                @relation(fields: [businessId], references: [id], onDelete: Restrict)
     selectedPaymentMethod WorkspacePaymentMethod? @relation(fields: [selectedPaymentMethodId], references: [id], onDelete: SetNull)
     estimate              Estimate?
+    proposal              Proposal?               @relation("ProposalToInvoice")
 
     items    InvoiceItem[]
     payments Payment[]
@@ -296,6 +301,15 @@ model Payment {
 enum EstimateStatus {
     DRAFT
     SENT
+    VIEWED
+    ACCEPTED
+    REJECTED
+    INVOICED
+    PROPOSAL
+}
+
+enum ProposalStatus {
+    SENT
     ACCEPTED
     REJECTED
     INVOICED
@@ -341,6 +355,7 @@ model Estimate {
     total                   Decimal        @default(0) @db.Decimal(10, 2)
     notes                   Json?
     terms                   Json?
+    exclusions              Json?
     requireSignature        Boolean        @default(false)
     rejectionReason         String?
     sentAt                  DateTime?
@@ -363,6 +378,7 @@ model Estimate {
     attachments           EstimateAttachment[]
     convertedToInvoice    Invoice?                  @relation(fields: [convertedToInvoiceId], references: [id], onDelete: SetNull)
     selectedPaymentMethod WorkspacePaymentMethod?   @relation(fields: [selectedPaymentMethodId], references: [id], onDelete: SetNull)
+    proposal              Proposal?
 
     @@unique([workspaceId, businessId, estimateNumber])
     @@unique([workspaceId, sequence])
@@ -458,6 +474,7 @@ model Business {
     estimates Estimate[]
     catalog   Catalog[]
     advances  Advance[]
+    proposals Proposal[]
 
     @@unique([workspaceId, sequence])
     @@index([workspaceId])
@@ -596,4 +613,89 @@ enum SubscriptionStatus {
     INCOMPLETE
     INCOMPLETE_EXPIRED
     TRIALING
+}
+
+model Proposal {
+    id          Int @id @default(autoincrement())
+    workspaceId Int
+    clientId    Int
+    businessId  Int
+    estimateId  Int @unique  // one estimate → one proposal
+
+    // Snapshot of client info at conversion time
+    clientEmail   String
+    clientPhone   String?
+    clientAddress String?
+
+    // proposalNumber = "PROP-{estimateSequence:03d}" (display)
+    // sequence = own workspace-scoped counter (URL routing)
+    proposalNumber String
+    sequence       Int
+    purchaseOrder  String?
+
+    status   ProposalStatus @default(SENT)
+    currency String         @default("USD")
+    total    Decimal        @db.Decimal(10, 2)
+
+    // Narrative fields (copied from estimate)
+    notes             Json?
+    terms             Json?
+    exclusions        Json?
+    summary           Json?
+    timelineStartDate DateTime? @db.Date
+    timelineEndDate   DateTime? @db.Date
+
+    // Rejection
+    rejectionReason String?
+
+    // Signing flow
+    requireSignature      Boolean   @default(true)
+    signingToken          String?   @unique
+    signingTokenExpiresAt DateTime?
+    signatureData         Json?
+
+    // Status timestamps
+    sentAt     DateTime?
+    acceptedAt DateTime?
+    acceptedBy AcceptedBy?
+
+    // Conversion to invoice
+    convertedToInvoiceId Int? @unique
+
+    // Payment
+    selectedPaymentMethodId Int?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    workspace             Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    client                Client                  @relation(fields: [clientId], references: [id], onDelete: Restrict)
+    business              Business                @relation(fields: [businessId], references: [id], onDelete: Restrict)
+    estimate              Estimate                @relation(fields: [estimateId], references: [id], onDelete: Restrict)
+    convertedToInvoice    Invoice?                @relation("ProposalToInvoice", fields: [convertedToInvoiceId], references: [id], onDelete: SetNull)
+    selectedPaymentMethod WorkspacePaymentMethod? @relation("ProposalPaymentMethod", fields: [selectedPaymentMethodId], references: [id], onDelete: SetNull)
+    descriptiveItems      ProposalDescriptiveItem[]
+
+    @@unique([workspaceId, sequence])
+    @@index([workspaceId])
+    @@index([clientId])
+    @@index([status])
+    @@index([estimateId])
+    @@map("proposals")
+}
+
+model ProposalDescriptiveItem {
+    id         Int      @id @default(autoincrement())
+    proposalId Int
+    title      String
+    description Json
+    sortOrder  Int      @default(0)
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+
+    proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+    @@index([proposalId])
+    @@index([proposalId, sortOrder])
+    @@map("proposal_descriptive_items")
 }

@@ -36,8 +36,10 @@ export interface EstimatePdfDescriptiveItem {
 export interface EstimatePdfInvoice {
   currency: string;
   discount: number;
+  exclusions?: null | Record<string, unknown>;
   invoiceNumber: string;
   notes?: null | Record<string, unknown>;
+  signature?: EstimatePdfSignature | null;
   status: string;
   subtotal: number;
   summary?: null | Record<string, unknown>;
@@ -73,6 +75,12 @@ export interface EstimatePdfPayload {
   descriptiveItems?: EstimatePdfDescriptiveItem[];
   invoice: EstimatePdfInvoice;
   items: EstimatePdfItem[];
+}
+
+export interface EstimatePdfSignature {
+  fullName: string;
+  signatureImageUrl?: string;
+  signedAt: string;
 }
 
 // Backwards compatible type aliases used by the rest of the PDF service.
@@ -149,19 +157,24 @@ export function buildEstimateHtml(payload: EstimatePdfPayload): string {
   <meta charset="UTF-8">
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 40px; font-size: 12px; font-family: Helvetica, Arial, sans-serif; }
-    .page { position: relative; min-height: 85vh; isolation: isolate; }
-    .watermark { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; display: flex; justify-content: center; align-items: center; pointer-events: none; }
+    body { margin: 0; padding: 0; font-size: 12px; font-family: Helvetica, Arial, sans-serif; }
+    .page-table { width: 100%; border-collapse: collapse; }
+    .page-table > thead { display: table-header-group; }
+    .page-table > thead > tr > td,
+    .page-table > tbody > tr > td { padding: 0; vertical-align: top; }
+    .page-header { padding: 14px 40px 10px; background: #fff; }
+    .page-header-inner { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; }
+    .page-header-left { display: flex; flex-direction: column; gap: 2px; }
+    .page-header-title { font-size: 24px; font-weight: bold; color: #111; }
+    .page-header-number { font-size: 11px; color: #888; font-weight: 600; }
+    .page-header-logo { max-height: 50px; width: auto; max-width: 200px; object-fit: contain; display: block; }
+    .page-header-divider { border-bottom: 1px solid #000; }
+    .page-body { padding: 0 40px; min-height: 85vh; }
+    .watermark { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; display: flex; justify-content: center; align-items: center; pointer-events: none; }
     .watermark-inner { transform: rotate(-45deg); transform-origin: center center; }
     .watermark-text { font-size: 100px; font-weight: bold; color: #000; opacity: 0.03; text-align: center; letter-spacing: 2px; }
     .content { position: relative; z-index: 1; }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .company-header { display: flex; align-items: center; gap: 25px; flex: 1; min-width: 0; justify-content: flex-end; }
-    .company-logo-wrap { height: 120px; max-width: 320px; display: flex; align-items: center; flex-shrink: 0; }
-    .company-logo { max-height: 100%; width: auto; max-width: 100%; object-fit: contain; object-position: left center; display: block; }
-    .estimate-header-left { display: flex; flex-direction: column; gap: 4px; }
-    .estimate-title { font-size: 30px; font-weight: bold; color: #111; letter-spacing: 0.02em; }
-    .estimate-number { font-size: 12px; color: #888; font-weight: 600; }
     .divider { border-bottom: 1px solid #000; margin: 20px 0; }
     .bill-to-section { margin-bottom: 20px; }
     .section-title { font-size: 11px; font-weight: bold; margin-bottom: 6px; color: #666; }
@@ -198,15 +211,15 @@ export function buildEstimateHtml(payload: EstimatePdfPayload): string {
     .descriptive-item-description strong { font-weight: 700; }
     .descriptive-item-description em { font-style: italic; }
     .table-wrap { margin-top: 20px; border: 1px solid #000; border-radius: 10px; overflow: hidden; }
-    table { width: 100%; border-collapse: collapse; }
-    thead { background: #f3f7f9; border-bottom: 1px solid #000; }
-    th { padding: 6px; font-size: 11px; font-weight: bold; border-right: 1px solid #000; text-align: right; }
-    th.th-desc { text-align: left; }
-    th.th-last { border-right: none; }
-    td { padding: 6px; font-size: 10px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right; }
-    .cell-desc { text-align: left; }
-    .cell-last { border-right: none; }
-    .cell-num { }
+    .table-wrap table { width: 100%; border-collapse: collapse; }
+    .table-wrap thead { background: #f3f7f9; border-bottom: 1px solid #000; }
+    .table-wrap th { padding: 6px; font-size: 11px; font-weight: bold; border-right: 1px solid #000; text-align: right; }
+    .table-wrap th.th-desc { text-align: left; }
+    .table-wrap th.th-last { border-right: none; }
+    .table-wrap td { padding: 6px; font-size: 10px; border-right: 1px solid #000; border-bottom: 1px solid #000; text-align: right; }
+    .table-wrap .cell-desc { text-align: left; }
+    .table-wrap .cell-last { border-right: none; }
+    .table-wrap .cell-num { }
     .item-name { font-weight: bold; margin-bottom: 2px; }
     .item-desc { font-size: 9px; color: #666; }
     .item-desc p { margin: 0; }
@@ -220,7 +233,7 @@ export function buildEstimateHtml(payload: EstimatePdfPayload): string {
     .total-value { font-weight: bold; color: #000; }
     .total-final { font-size: 14px; font-weight: bold; margin-top: 10px; padding-top: 10px; border-top: 1px solid #000; }
     .total-final-value { color: #00aaab; }
-    .notes-section { margin-top: 30px; padding-top: 10px; border-top: 1px solid #000; font-size: 11px; }
+    .notes-section { margin-top: 30px; padding-top: 10px; font-size: 11px; }
     .notes-title { font-weight: bold; margin-bottom: 4px; }
     .notes-section p { margin: 0 0 4px; }
     .notes-section ul { list-style: disc; padding-left: 16px; margin: 4px 0; }
@@ -230,31 +243,42 @@ export function buildEstimateHtml(payload: EstimatePdfPayload): string {
     .notes-section em { font-style: italic; }
     .notes-section h2 { font-size: 14px; font-weight: 700; margin: 8px 0 4px; color: #111; }
     .notes-section h3 { font-size: 12px; font-weight: 700; margin: 6px 0 4px; color: #111; }
-    .footer { position: fixed; bottom: 30px; left: 32px; right: 32px; text-align: center; font-size: 9px; color: #999; }
+    .signature-section { margin-top: 30px; padding-top: 16px; }
+    .signature-label { font-size: 10px; font-weight: 600; color: #888; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .signature-image { max-width: 200px; max-height: 80px; object-fit: contain; display: block; margin-bottom: 8px; }
+    .signature-line { border-bottom: 1px solid #000; width: 200px; margin-bottom: 6px; }
+    .signature-name { font-size: 12px; font-weight: bold; color: #111; }
+    .signature-date { font-size: 11px; color: #666; margin-top: 2px; }
   </style>
 </head>
 <body>
-  <div class="page">
-    <div class="watermark">
-      <div class="watermark-inner">
-        <div class="watermark-text">${escapeHtml(company.name)}</div>
-      </div>
+  <div class="watermark">
+    <div class="watermark-inner">
+      <div class="watermark-text">${escapeHtml(company.name)}</div>
     </div>
-    <div class="content">
-      <div class="header">
-        <div class="estimate-header-left">
-          <div class="estimate-title">ESTIMATE</div>
-          <div class="estimate-number"># ${escapeHtml(invoice.invoiceNumber)}</div>
-        </div>
-        <div class="company-header">
-          ${
-            company.logo
-              ? `<div class="company-logo-wrap"><img src="${escapeHtml(company.logo)}" alt="Company Logo" class="company-logo" /></div>`
-              : ""
-          }
-        </div>
-      </div>
-      <div class="divider"></div>
+  </div>
+  <table class="page-table">
+    <thead>
+      <tr>
+        <td>
+          <div class="page-header">
+            <div class="page-header-inner">
+              <div class="page-header-left">
+                <div class="page-header-title">ESTIMATE</div>
+                <div class="page-header-number"># ${escapeHtml(invoice.invoiceNumber)}</div>
+              </div>
+              ${company.logo ? `<img src="${escapeHtml(company.logo)}" alt="" class="page-header-logo" />` : ""}
+            </div>
+            <div class="page-header-divider"></div>
+          </div>
+        </td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <div class="page-body">
+            <div class="content">
       <div class="header">
         <div class="bill-to-section">
           <div class="section-title">BILL TO:</div>
@@ -344,6 +368,15 @@ export function buildEstimateHtml(payload: EstimatePdfPayload): string {
       </div>`
           : ""
       }
+      ${
+        invoice.exclusions
+          ? `
+      <div class="summary-section" style="margin-top: 16px;">
+        <div class="summary-title">Exclusions:</div>
+        <div class="summary-text">${generateHTML(invoice.exclusions, [StarterKit])}</div>
+      </div>`
+          : ""
+      }
       <div class="table-wrap">
         <table>
           <thead>
@@ -400,9 +433,24 @@ export function buildEstimateHtml(payload: EstimatePdfPayload): string {
       </div>`
           : ""
       }
-      <div class="footer">Page 1 of 1</div>
-    </div>
-  </div>
+      ${
+        invoice.signature
+          ? `
+      <div class="signature-section">
+        <div class="signature-label">Accepted by</div>
+        ${invoice.signature.signatureImageUrl ? `<img src="${escapeHtml(invoice.signature.signatureImageUrl)}" alt="Signature" class="signature-image" />` : ""}
+        <div class="signature-line"></div>
+        <div class="signature-name">${escapeHtml(invoice.signature.fullName)}</div>
+        <div class="signature-date">Signed: ${escapeHtml(formatDate(invoice.signature.signedAt))}</div>
+      </div>`
+          : ""
+      }
+            </div>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </body>
 </html>`;
 }

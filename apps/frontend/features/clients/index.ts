@@ -20,6 +20,7 @@ export {
   useCreateClientFromVoiceAudio,
   useUpdateClient,
   useDeleteClient,
+  useUploadClientLogo,
   clientKeys,
 } from "./hooks/useClients";
 

@@ -7,6 +7,7 @@ import { runAgenticToolLoop } from "../../lib/agentic-runner.js";
 import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js";
 import {
   normalizeTipTapField,
+  resolveVoiceTiptapOrBusinessDefault,
   TIPTAP_DOC_JSON_SCHEMA_NULLABLE,
   TIPTAP_DOC_JSON_SCHEMA_REQUIRED,
   TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS,
@@ -133,6 +134,7 @@ Rules:
 5. Every line item must include name, description, quantity > 0, unitPrice > 0; quantityUnit defaults to UNITS.
 6. If transcript is vague, infer one reasonable item so the user can edit later.
 7. Descriptive items (no price) are for narrative/scope sections (e.g. "Scope of Work", "Payment Terms breakdown"). Use them when the user describes sections without amounts. Regular items must always have a unitPrice > 0.
+8. Leave notes and terms null unless the user explicitly asked for estimate-specific notes or terms; the server applies the business registered defaults when null.
 
 Extract item and amount details from transcript only.
 
@@ -145,6 +147,8 @@ async function executeCreateEstimate(
   workspaceId: number,
   businessId: number,
   lockedClient: LockedClient,
+  businessDefaultNotes: unknown,
+  businessDefaultTerms: unknown,
   input: unknown,
 ): Promise<unknown> {
   const raw = (input ?? {}) as Record<string, unknown>;
@@ -176,8 +180,8 @@ async function executeCreateEstimate(
     clientId: lockedClient.id,
     createClient: false,
     summary: raw.summary != null ? normalizeTipTapField(raw.summary) : null,
-    notes: raw.notes != null ? normalizeTipTapField(raw.notes) : null,
-    terms: raw.terms != null ? normalizeTipTapField(raw.terms) : null,
+    notes: resolveVoiceTiptapOrBusinessDefault(raw.notes, businessDefaultNotes),
+    terms: resolveVoiceTiptapOrBusinessDefault(raw.terms, businessDefaultTerms),
     items: normalizedItems,
     descriptiveItems: normalizedDescriptiveItems,
   };
@@ -248,7 +252,12 @@ export async function createEstimateFromVoiceTranscript(
 
   const [business, clientRow, workspace] = await Promise.all([
     prisma.business.findFirst({
-      select: { id: true, name: true },
+      select: {
+        defaultNotes: true,
+        defaultTerms: true,
+        id: true,
+        name: true,
+      },
       where: { id: businessId, workspaceId },
     }),
     prisma.client.findFirst({
@@ -322,6 +331,8 @@ export async function createEstimateFromVoiceTranscript(
           workspaceId,
           businessId,
           lockedClient,
+          business.defaultNotes,
+          business.defaultTerms,
           input,
         );
       }

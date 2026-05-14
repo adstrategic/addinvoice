@@ -5,12 +5,14 @@ import { generateInvoicePdf, generateInvoicePdfBatch } from "./invoice-pdf.js";
 import { generateReceiptPdf } from "./receipt-pdf.js";
 import { generateEstimatePdf } from "./estimate-pdf.js";
 import { generateAdvancePdf } from "./advance-pdf.js";
+import { generateProposalPdf } from "./proposal-pdf.js";
 import {
   advancePdfPayloadSchema,
   estimatePdfPayloadSchema,
   invoicePdfBatchSchema,
   type InvoicePdfPayload,
   invoicePdfPayloadSchema,
+  proposalPdfPayloadSchema,
   receiptPdfPayloadSchema,
 } from "./schema.js";
 import { requirePdfServiceSecret } from "./validate-secret.js";
@@ -105,6 +107,37 @@ app.post(
       res.send(pdfBuffer);
     } catch (err) {
       console.error("Estimate PDF generation failed:", err);
+      res.status(500).json({
+        error: "Failed to generate PDF",
+        message: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
+  },
+);
+
+app.post(
+  "/generate-proposal",
+  requirePdfServiceSecret,
+  async (req: Request, res: Response) => {
+    const parsed = proposalPdfPayloadSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        details: parsed.error.flatten(),
+        error: "Invalid payload",
+      });
+      return;
+    }
+    const payload = parsed.data;
+    try {
+      const pdfBuffer = await generateProposalPdf(payload);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="proposal-${payload.document.proposalNumber}.pdf"`,
+      );
+      res.send(pdfBuffer);
+    } catch (err) {
+      console.error("Proposal PDF generation failed:", err);
       res.status(500).json({
         error: "Failed to generate PDF",
         message: err instanceof Error ? err.message : "Unknown error",

@@ -67,3 +67,17 @@ export interface SendAdvanceJobData {
   subject: string;
   workspaceId: number;
 }
+
+export const sendProposalQueue = new Queue("email-proposal", {
+  connection,
+  defaultJobOptions,
+});
+
+export interface SendProposalJobData {
+  email: string;
+  proposalId: number;
+  message: string;
+  sequence: number;
+  subject: string;
+  workspaceId: number;
+}

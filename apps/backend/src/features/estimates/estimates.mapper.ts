@@ -18,16 +18,18 @@ type EstimateRowWithRelations = Prisma.EstimateGetPayload<{
   include: {
     business: true;
     client: true;
-    items: true;
     descriptiveItems: true;
+    items: true;
+    proposal: { select: { sequence: true } };
   };
 }>;
 
 type EstimateRowDashboard = Prisma.EstimateGetPayload<{
   include: {
+    _count: { select: { items: true } };
     business: true;
     client: true;
-    _count: { select: { items: true } };
+    proposal: { select: { sequence: true } };
   };
 }>;
 
@@ -104,6 +106,7 @@ function toEstimateBase(row: EstimateRowFlat) {
     total: Number(row.total),
     notes: toJsonRecord(row.notes),
     terms: toJsonRecord(row.terms),
+    exclusions: toJsonRecord(row.exclusions),
     summary: toJsonRecord(row.summary),
     timelineStartDate: row.timelineStartDate,
     timelineEndDate: row.timelineEndDate,
@@ -135,6 +138,7 @@ export function toEstimateResponse(
     descriptiveItems: row.descriptiveItems.map(
       toEstimateDescriptiveItemResponse,
     ),
+    proposalSequence: row.proposal?.sequence ?? null,
   };
 }
 
@@ -155,9 +159,10 @@ export function toEstimateResponseWithoutItems(
 export function toEstimateDashboardResponse(
   row: EstimateRowDashboard,
 ): EstimateDashboardResponse {
-  const { _count, ...rest } = row;
+  const { _count, proposal, ...rest } = row;
   return {
     ...toEstimateBase(rest),
     itemCount: _count.items,
+    proposalSequence: proposal?.sequence ?? null,
   };
 }

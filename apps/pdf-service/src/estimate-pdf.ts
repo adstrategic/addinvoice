@@ -25,7 +25,7 @@ export async function generateEstimatePdf(
 
     const pdfBuffer = await page.pdf({
       format: "A4",
-      margin: { bottom: "0", left: "0", right: "0", top: "0" },
+      margin: { bottom: "60px", left: "0", right: "0", top: "20px" },
       printBackground: true,
       timeout: PDF_TIMEOUT_MS,
     });

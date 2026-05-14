@@ -12,6 +12,7 @@ import {
   getClientBySequence,
   listClients,
   updateClient,
+  uploadClientLogo,
 } from "./clients.controller.js";
 import {
   createClientSchema,
@@ -37,6 +38,23 @@ const audioUpload = multer({
     cb(null, base.startsWith("audio/"));
   },
 });
+
+const imageUpload = multer({
+  limits: { fileSize: 5 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  fileFilter: (_req, file, cb) => {
+    const base = file.mimetype.split(";")[0]?.trim() ?? "";
+    cb(null, base.startsWith("image/"));
+  },
+});
+
+// POST /api/v1/clients/:id/logo - Upload client logo
+clientsRoutes.post(
+  "/:id/logo",
+  imageUpload.single("logo") as never,
+  processRequest({ params: getClientByIdSchema }),
+  asyncHandler(uploadClientLogo),
+);
 
 // POST /api/v1/clients/from-voice-audio — audio blob → Whisper → Claude → client
 clientsRoutes.post(

@@ -9,9 +9,11 @@ import type { EstimateDashboardResponse } from "@addinvoice/schemas";
 const STATUS_TO_TITLE: Record<string, string> = {
   all: "All Estimates",
   draft: "Draft Estimates",
-  accepted: "Accepted Estimates",
   sent: "Sent Estimates",
+  accepted: "Accepted Estimates",
   rejected: "Rejected Estimates",
+  proposal: "Converted to Proposal",
+  invoiced: "Invoiced Estimates",
 };
 
 interface EstimateListProps {
@@ -22,6 +24,7 @@ interface EstimateListProps {
   onDelete: (estimate: EstimateDashboardResponse) => void;
   onAccept?: (estimate: EstimateDashboardResponse) => void;
   onConvertToInvoice?: (estimate: EstimateDashboardResponse) => void;
+  onConvertToProposal?: (estimate: EstimateDashboardResponse) => void;
   children?: React.ReactNode;
 }
 
@@ -37,6 +40,7 @@ export function EstimateList({
   onDelete,
   onAccept,
   onConvertToInvoice,
+  onConvertToProposal,
   children,
 }: EstimateListProps) {
   const listTitle = STATUS_TO_TITLE[statusFilter] ?? STATUS_TO_TITLE.all;
@@ -75,6 +79,7 @@ export function EstimateList({
                   onDelete={onDelete}
                   onAccept={onAccept}
                   onConvertToInvoice={onConvertToInvoice}
+                  onConvertToProposal={onConvertToProposal}
                 />
               ))}
             </div>

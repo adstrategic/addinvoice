@@ -4,11 +4,11 @@ import {
   useUpdateClient,
   useDeleteClient,
 } from "./useClients";
-import type { CreateClientDTO, UpdateClientDTO } from "@addinvoice/schemas";
+import type { ClientResponse, CreateClientDTO, UpdateClientDTO } from "@addinvoice/schemas";
 
 /** Options passed when invoking an action; UI callbacks run only if component is still mounted. */
 export interface ClientMutationCallbacks {
-  onSuccess?: () => void;
+  onSuccess?: (result?: ClientResponse) => void;
 }
 
 /**

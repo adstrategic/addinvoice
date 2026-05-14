@@ -164,6 +164,49 @@ export async function uploadBusinessLogo(
 }
 
 /**
+ * Upload client logo to Cloudinary.
+ * Uses a fixed public_id per client so overwriting invalidates the CDN automatically.
+ */
+export async function uploadClientLogo(
+  file: Express.Multer.File,
+  workspaceId: number,
+  clientId: number,
+): Promise<UploadApiResponse> {
+  const publicId = `workspaces/${String(workspaceId)}/clients/${String(clientId)}/logo`;
+
+  try {
+    const uploadOptions = {
+      folder: `workspaces/${String(workspaceId)}/clients/${String(clientId)}`,
+      invalidate: true,
+      overwrite: true,
+      public_id: publicId,
+      resource_type: "image" as const,
+      transformation: [
+        {
+          crop: "limit" as const,
+          fetch_format: "auto" as const,
+          height: MAX_DIMENSIONS.height,
+          quality: "auto" as const,
+          width: MAX_DIMENSIONS.width,
+        },
+        {
+          strip_metadata: true,
+        },
+      ],
+    };
+
+    const base64 = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+    const result = await cloudinary.uploader.upload(base64, uploadOptions);
+    return result;
+  } catch (error) {
+    const uploadError = error as UploadApiErrorResponse;
+    throw new Error(
+      `Cloudinary upload failed: ${uploadError.message || "Unknown error"}`,
+    );
+  }
+}
+
+/**
  * Upload expense receipt to Cloudinary.
  * Uses a unique public_id so uploads can happen before an expense exists.
  */
