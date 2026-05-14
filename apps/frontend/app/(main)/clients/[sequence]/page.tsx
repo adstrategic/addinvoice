@@ -258,6 +258,9 @@ export default function ClientDetailPage() {
         isLoading={editClient.isMutating}
         isLoadingClient={editClient.isLoadingClient}
         clientError={editClient.clientError}
+        logoDisplayUrl={editClient.logoDisplayUrl}
+        onLogoSelect={editClient.handleLogoSelect}
+        isUploadingLogo={editClient.isUploadingLogo}
       />
 
       <EntityDeleteModal

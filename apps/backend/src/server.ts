@@ -7,6 +7,7 @@ import helmet from "helmet";
 import asyncHandler from "./core/async-handler.js";
 import { apiRateLimiter, errorHandler } from "./core/middleware.js";
 import { estimatesPublicRoutes } from "./features/estimates/estimates-public.routes.js";
+import { proposalsPublicRoutes } from "./features/proposals/proposals-public.routes.js";
 import { handleClerkWebhook } from "./features/subscriptions/clerk-webhook.handler.js";
 import { handleStripeWebhook } from "./features/subscriptions/stripe-webhook.handler.js";
 import { apiRouter } from "./routes/index.js";
@@ -60,6 +61,7 @@ app.use("/api", apiRateLimiter);
 
 // Public API routes (no auth) - must be before main apiRouter
 app.use("/api/v1/public", estimatesPublicRoutes);
+app.use("/api/v1/public", proposalsPublicRoutes);
 
 // API routes (auth required)
 app.use("/api/v1", apiRouter);

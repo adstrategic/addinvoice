@@ -252,3 +252,24 @@ export function useConvertEstimateToInvoice() {
     onError: (err) => handleMutationError(err),
   });
 }
+
+/**
+ * Hook to convert an accepted estimate to a proposal.
+ * On success invalidates estimates and proposals lists.
+ */
+export function useConvertEstimateToProposal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sequence }: { sequence: number }) =>
+      estimatesService.convertToProposal(sequence),
+    onSuccess: (proposal) => {
+      queryClient.invalidateQueries({ queryKey: estimateKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      toast.success("Estimate converted to proposal", {
+        description: `Proposal ${proposal.proposalNumber} has been created.`,
+      });
+    },
+    onError: (err) => handleMutationError(err),
+  });
+}

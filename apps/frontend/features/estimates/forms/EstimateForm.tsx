@@ -35,6 +35,7 @@ import type {
 import { HeaderSection } from "./form-fields/HeaderSection";
 import { ClientSection } from "./form-fields/ClientSection";
 import { DiscountsVATSection } from "./form-fields/DiscountsVATSection";
+import { ExclusionsSection } from "./form-fields/ExclusionsSection";
 import { NotesSection } from "./form-fields/NotesSection";
 import { TermsSection } from "./form-fields/TermsSection";
 import { ProductsSection } from "./form-fields/ProductsSection";
@@ -535,6 +536,9 @@ export function EstimateForm({
 
               {/* Terms Section */}
               <TermsSection form={form} />
+
+              {/* Exclusions Section */}
+              <ExclusionsSection form={form} />
             </form>
           </>
         </div>

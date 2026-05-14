@@ -139,6 +139,9 @@ export default function ClientsPage() {
         isLoading={clientManager.isMutating}
         isLoadingClient={clientManager.isLoadingClient}
         clientError={clientManager.clientError}
+        logoDisplayUrl={clientManager.logoDisplayUrl}
+        onLogoSelect={clientManager.handleLogoSelect}
+        isUploadingLogo={clientManager.isUploadingLogo}
       />
 
       {/* Client Delete Modal */}

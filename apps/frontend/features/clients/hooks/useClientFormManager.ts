@@ -8,8 +8,9 @@ import {
   type UpdateClientDTO,
   createClientSchema,
 } from "@addinvoice/schemas";
+import { toast } from "sonner";
 import { useClientActions } from "./useClientActions";
-import { useClientBySequence } from "./useClients";
+import { useClientBySequence, useUploadClientLogo } from "./useClients";
 import { useDirtyFields } from "@/hooks/useDirtyValues";
 import { useFormScroll } from "@/hooks/useFormScroll";
 import { handleMutationError } from "@/lib/errors/handle-error";
@@ -21,7 +22,7 @@ interface UseClientManagerOptions {
 }
 
 export function useClientManager(options?: UseClientManagerOptions) {
-  // === ESTADO UI ===
+  // === UI STATE ===
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<"create" | "edit">(
     options?.mode ?? "create",
@@ -31,6 +32,10 @@ export function useClientManager(options?: UseClientManagerOptions) {
       ? options.sequence
       : null,
   );
+
+  // === LOGO STATE ===
+  const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   // === DATA FETCHING ===
   const {
@@ -58,12 +63,10 @@ export function useClientManager(options?: UseClientManagerOptions) {
     defaultValues,
   });
   const actions = useClientActions(form.setError);
+  const uploadLogoMutation = useUploadClientLogo();
 
-  // Transform validated ClientResponse to form format
-  // No need to parse again - service already validated the data
   const getFormValues = (): CreateClientDTO | undefined => {
     if (mode === "edit" && existingClient) {
-      // existingClient is already validated by the service layer
       return {
         name: existingClient.name,
         email: existingClient.email,
@@ -89,20 +92,45 @@ export function useClientManager(options?: UseClientManagerOptions) {
   const { getDirtyValues } = useDirtyFields(form);
   const { scrollToField } = useFormScroll();
 
-  // === HANDLERS ===
+  // === LOGO HANDLERS ===
 
-  // Abrir modal en modo Crear
+  const handleLogoSelect = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Invalid file type", {
+        description: "Please upload an image file",
+      });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large", {
+        description: "Please upload a file smaller than 5MB",
+      });
+      return;
+    }
+    setSelectedLogoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // === FORM HANDLERS ===
+
   const openCreate = () => {
     setMode("create");
     setClientSequence(null);
+    setSelectedLogoFile(null);
+    setLogoPreview(null);
     form.reset(defaultValues);
     setIsOpen(true);
   };
 
-  // Abrir modal en modo Editar
   const openEdit = (sequence: number) => {
     setMode("edit");
     setClientSequence(sequence);
+    setSelectedLogoFile(null);
+    setLogoPreview(null);
     setIsOpen(true);
   };
 
@@ -110,9 +138,7 @@ export function useClientManager(options?: UseClientManagerOptions) {
     setIsOpen(false);
   };
 
-  // Envío del formulario
   const processFormData = (data: CreateClientDTO) => {
-    // En modo edición, solo enviamos campos modificados
     return mode === "edit" ? getDirtyValues(data) : data;
   };
 
@@ -131,11 +157,29 @@ export function useClientManager(options?: UseClientManagerOptions) {
           return;
         }
         actions.handleUpdate(existingClient.id, apiData as UpdateClientDTO, {
-          onSuccess: onSuccessCallback,
+          onSuccess: () => {
+            if (selectedLogoFile) {
+              uploadLogoMutation.mutate(
+                { id: existingClient.id, file: selectedLogoFile },
+                { onSuccess: onSuccessCallback },
+              );
+            } else {
+              onSuccessCallback();
+            }
+          },
         });
       } else {
         actions.handleCreate(apiData as CreateClientDTO, {
-          onSuccess: onSuccessCallback,
+          onSuccess: (createdClient) => {
+            if (selectedLogoFile && createdClient) {
+              uploadLogoMutation.mutate(
+                { id: createdClient.id, file: selectedLogoFile },
+                { onSuccess: onSuccessCallback },
+              );
+            } else {
+              onSuccessCallback();
+            }
+          },
         });
       }
     },
@@ -147,22 +191,32 @@ export function useClientManager(options?: UseClientManagerOptions) {
     },
   );
 
+  // Display URL: local preview takes priority over the server logo
+  const logoDisplayUrl =
+    logoPreview ?? (mode === "edit" ? (existingClient?.logo ?? null) : null);
+
   return {
-    // Modal Formulario
+    // Modal
     isOpen,
     mode,
     openCreate,
     openEdit,
     close,
 
-    // Datos del cliente
+    // Client data
     client: existingClient,
     isLoadingClient,
     clientError,
 
-    // Formulario
+    // Form
     form,
     onSubmit,
-    isMutating: actions.isMutating,
+    isMutating: actions.isMutating || uploadLogoMutation.isPending,
+
+    // Logo
+    logoDisplayUrl,
+    selectedLogoFile,
+    handleLogoSelect,
+    isUploadingLogo: uploadLogoMutation.isPending,
   };
 }

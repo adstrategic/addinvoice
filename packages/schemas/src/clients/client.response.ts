@@ -9,6 +9,7 @@ export const clientResponseSchema = ClientBase.extend({
   id: z.number().int().positive(),
   sequence: z.number().int().positive(),
   workspaceId: z.number().int().positive(),
+  logo: z.string().url().nullable().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });

@@ -53,10 +53,12 @@ export function EstimateFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="overdue">Overdue</SelectItem>
-            <SelectItem value="issued">Issued</SelectItem>
             <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="accepted">Accepted</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="proposal">Proposal</SelectItem>
+            <SelectItem value="invoiced">Invoiced</SelectItem>
           </SelectContent>
         </Select>
       </div>

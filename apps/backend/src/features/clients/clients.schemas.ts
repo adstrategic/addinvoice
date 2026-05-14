@@ -44,6 +44,7 @@ export const getClientByIdSchema = z.object({
 export const clientEntitySchema = createClientSchema.extend({
   createdAt: z.date(),
   id: z.number().int().positive(),
+  logo: z.string().url().nullable().optional(),
   sequence: z.number().int().positive(),
   updatedAt: z.date(),
   workspaceId: z.number().int().positive(),

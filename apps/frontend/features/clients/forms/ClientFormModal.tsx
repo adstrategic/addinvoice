@@ -23,6 +23,10 @@ interface ClientFormModalProps {
   isLoading?: boolean;
   isLoadingClient?: boolean;
   clientError?: Error | null;
+  // Logo
+  logoDisplayUrl?: string | null;
+  onLogoSelect?: (file: File) => void;
+  isUploadingLogo?: boolean;
 }
 
 export function ClientFormModal({
@@ -35,6 +39,9 @@ export function ClientFormModal({
   isLoading = false,
   isLoadingClient = false,
   clientError = null,
+  logoDisplayUrl = null,
+  onLogoSelect,
+  isUploadingLogo = false,
 }: ClientFormModalProps) {
   const modalTitle = mode === "create" ? "Create New Client" : "Edit Client";
 
@@ -87,10 +94,12 @@ export function ClientFormModal({
             <ClientForm
               form={form}
               mode={mode}
-              initialData={initialData}
               onSubmit={onSubmit}
               onCancel={onClose}
               isLoading={isLoading}
+              logoDisplayUrl={logoDisplayUrl}
+              onLogoSelect={onLogoSelect ?? (() => {})}
+              isUploadingLogo={isUploadingLogo}
             />
           </div>
         </ScrollArea>

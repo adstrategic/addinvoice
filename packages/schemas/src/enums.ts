@@ -6,12 +6,22 @@
 export const EstimateStatus = {
   DRAFT: "DRAFT",
   SENT: "SENT",
+  VIEWED: "VIEWED",
+  ACCEPTED: "ACCEPTED",
+  REJECTED: "REJECTED",
+  INVOICED: "INVOICED",
+  PROPOSAL: "PROPOSAL",
+} as const;
+export type EstimateStatus =
+  (typeof EstimateStatus)[keyof typeof EstimateStatus];
+
+export const ProposalStatus = {
+  SENT: "SENT",
   ACCEPTED: "ACCEPTED",
   REJECTED: "REJECTED",
   INVOICED: "INVOICED",
 } as const;
-export type EstimateStatus =
-  (typeof EstimateStatus)[keyof typeof EstimateStatus];
+export type ProposalStatus = (typeof ProposalStatus)[keyof typeof ProposalStatus];
 
 export const TaxMode = {
   BY_PRODUCT: "BY_PRODUCT",

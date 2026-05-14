@@ -103,6 +103,33 @@ async function updateClient(
 }
 
 /**
+ * Upload a client logo
+ */
+async function uploadClientLogo(
+  id: number,
+  file: File,
+): Promise<ClientResponse> {
+  try {
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    const { data } = await apiClient.post<ApiSuccessResponse<ClientResponse>>(
+      `${BASE_URL}/${id}/logo`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+
+    return clientResponseSchema.parse(data.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+/**
  * Delete a client (soft delete)
  */
 async function deleteClient(id: number): Promise<void> {
@@ -161,4 +188,5 @@ export const clientsService = {
   createFromVoiceAudio,
   update: updateClient,
   delete: deleteClient,
+  uploadLogo: uploadClientLogo,
 };

@@ -5,6 +5,7 @@ import {
   useUpdateEstimate,
   useDeleteEstimate,
   useConvertEstimateToInvoice,
+  useConvertEstimateToProposal,
 } from "./useEstimates";
 import type { CreateEstimateDTO, UpdateEstimateDTO } from "@addinvoice/schemas";
 import type { EstimateResponse } from "@addinvoice/schemas";
@@ -36,6 +37,7 @@ export function useEstimateActions(
   const updateMutation = useUpdateEstimate(setError);
   const deleteMutation = useDeleteEstimate();
   const convertToInvoiceMutation = useConvertEstimateToInvoice();
+  const convertToProposalMutation = useConvertEstimateToProposal();
 
   const handleCreate = (
     data: CreateEstimateDTO,
@@ -63,17 +65,24 @@ export function useEstimateActions(
     );
   };
 
-  const handleConvertToInvoice = (estimate: {
-    sequence: number;
-  }) => {
+  const handleConvertToInvoice = (estimate: { sequence: number }) => {
     convertToInvoiceMutation.mutate(
+      { sequence: estimate.sequence },
       {
-        sequence: estimate.sequence,
+        onSuccess: (invoice) => {
+          router.push(`/invoices/${invoice.sequence}`);
+        },
       },
+    );
+  };
+
+  const handleConvertToProposal = (estimate: { sequence: number }) => {
+    convertToProposalMutation.mutate(
+      { sequence: estimate.sequence },
       {
-      onSuccess: (invoice) => {
-        router.push(`/invoices/${invoice.sequence}`);
-      },
+        onSuccess: (proposal) => {
+          router.push(`/proposals/${proposal.sequence}`);
+        },
       },
     );
   };
@@ -83,13 +92,16 @@ export function useEstimateActions(
     handleUpdate,
     handleDelete,
     handleConvertToInvoice,
+    handleConvertToProposal,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
     isConvertingToInvoice: convertToInvoiceMutation.isPending,
+    isConvertingToProposal: convertToProposalMutation.isPending,
     isMutating:
       createMutation.isPending ||
       updateMutation.isPending ||
-      convertToInvoiceMutation.isPending,
+      convertToInvoiceMutation.isPending ||
+      convertToProposalMutation.isPending,
   };
 }

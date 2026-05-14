@@ -1,0 +1,208 @@
+"use client";
+
+import { useState } from "react";
+import {
+  ProposalFilters,
+  ProposalList,
+  useProposals,
+  useProposalDelete,
+  useMarkProposalAsAccepted,
+  useProposalActions,
+} from "@/features/proposals";
+import { TablePagination } from "@/components/TablePagination";
+import { useDebouncedTableParams } from "@/hooks/useDebouncedTableParams";
+import { Card, CardContent } from "@/components/ui/card";
+import LoadingComponent from "@/components/loading-component";
+import { motion } from "framer-motion";
+import { SendProposalDialog } from "@/components/send-proposal-dialog";
+import type { ProposalDashboardResponse } from "@addinvoice/schemas";
+import { statusFilterToApiParam } from "../types/api";
+import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { toast } from "sonner";
+import { useDownloadProposalPdf } from "../hooks/useDownloadProposalPDF";
+const VALID_STATUSES = ["all", "sent", "accepted", "rejected", "invoiced"] as const;
+
+function parseStatusParam(value: string | null): string {
+  if (!value) return "all";
+  return VALID_STATUSES.includes(value as (typeof VALID_STATUSES)[number])
+    ? value
+    : "all";
+}
+
+/**
+ * Proposals page component
+ * Displays proposal list with server-side search, pagination, stats, and management actions
+ */
+export default function ProposalsContent() {
+  const { currentPage, setPage, debouncedSearch, searchTerm, setSearch } =
+    useDebouncedTableParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const statusFilter = parseStatusParam(searchParams.get("status"));
+  const setStatusFilter = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value === "all") {
+      params.delete("status");
+    } else {
+      params.set("status", value);
+    }
+    params.set("page", "1");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [selectedProposalForSend, setSelectedProposalForSend] = useState<
+    ProposalDashboardResponse | undefined
+  >(undefined);
+  // Fetch proposals with pagination, search, and status (server-side)
+  const {
+    data: proposalsData,
+    isLoading,
+    error,
+  } = useProposals({
+    page: currentPage,
+    search: debouncedSearch || undefined,
+    status: statusFilterToApiParam(statusFilter),
+  });
+
+  const downloadPdf = useDownloadProposalPdf();
+
+  const proposalDelete = useProposalDelete();
+  const markAsAccepted = useMarkProposalAsAccepted();
+  const proposalActions = useProposalActions();
+
+  const handleAccept = (proposal: ProposalDashboardResponse) => {
+    markAsAccepted.mutate(proposal.id);
+  };
+
+  const handleDownloadPDF = async (proposal: ProposalDashboardResponse) => {
+    try {
+      await downloadPdf(proposal);
+      toast.success("PDF downloaded");
+    } catch (error) {
+      toast.error("Failed to download PDF", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
+
+  const handleSendProposal = (proposal: ProposalDashboardResponse) => {
+    setSelectedProposalForSend(proposal);
+    setSendDialogOpen(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <Card className="bg-card border-border">
+          <CardContent className="pt-6">
+            <LoadingComponent variant="dashboard" rows={8} />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error || !proposalsData) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <Card className="bg-card border-border">
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <p className="text-destructive">
+                Error loading proposals. Please try again.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Extract proposals and pagination info (already filtered by server)
+  const proposals = proposalsData.data;
+  const pagination = proposalsData.pagination;
+
+  return (
+    <>
+      <div className="mt-16 sm:mt-0 container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* Header */}
+        <motion.div
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              Proposals
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              Manage and track all your proposals
+            </p>
+          </div>
+        </motion.div>
+
+        {/* <ProposalStats stats={proposalsData.stats} /> */}
+
+        <ProposalFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearch}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+        />
+
+        {/* Proposals List */}
+        <ProposalList
+          proposals={proposals}
+          statusFilter={statusFilter}
+          onDownload={handleDownloadPDF}
+          onSend={handleSendProposal}
+          onDelete={proposalDelete.openDeleteModal}
+          onAccept={handleAccept}
+          onConvertToInvoice={proposalActions.handleConvertToInvoice}
+        >
+          {pagination && (
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={pagination.totalPages}
+              totalItems={pagination.total}
+              onPageChange={setPage}
+              emptyMessage="No proposals found"
+              itemLabel="proposals"
+            />
+          )}
+        </ProposalList>
+      </div>
+
+      {/* Delete Confirmation Modal - Separate logic */}
+      <EntityDeleteModal
+        isOpen={proposalDelete.isDeleteModalOpen}
+        onClose={proposalDelete.closeDeleteModal}
+        onConfirm={proposalDelete.handleDeleteConfirm}
+        entity="proposal"
+        entityName={proposalDelete.proposalToDelete?.proposalNumber || ""}
+        isDeleting={proposalDelete.isDeleting}
+      />
+
+      {selectedProposalForSend && (
+        <SendProposalDialog
+          open={sendDialogOpen}
+          onOpenChange={(open) => {
+            setSendDialogOpen(open);
+            if (!open) {
+              setSelectedProposalForSend(undefined);
+            }
+          }}
+          proposalSequence={selectedProposalForSend?.sequence}
+          proposalNumber={selectedProposalForSend?.proposalNumber}
+          clientName={selectedProposalForSend?.client?.name || "Client"}
+          clientEmail={selectedProposalForSend?.clientEmail}
+        />
+      )}
+    </>
+  );
+}

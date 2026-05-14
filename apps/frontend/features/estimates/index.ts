@@ -35,6 +35,7 @@ export {
   useMarkEstimateAsAccepted,
   useDeleteEstimate,
   useConvertEstimateToInvoice,
+  useConvertEstimateToProposal,
   estimateKeys,
 } from "./hooks/useEstimates";
 

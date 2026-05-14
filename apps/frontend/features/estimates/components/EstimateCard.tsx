@@ -19,6 +19,8 @@ import {
   FileText,
   CheckCircle,
   Receipt,
+  ScrollText,
+  ExternalLink,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -61,6 +63,10 @@ const statusConfig = {
     label: "Invoiced",
     className: "bg-primary/20 text-primary hover:bg-primary/30",
   },
+  proposal: {
+    label: "Proposal",
+    className: "bg-chart-5/20 text-chart-5 hover:bg-chart-5/30",
+  },
 };
 
 interface EstimateCardProps {
@@ -71,6 +77,7 @@ interface EstimateCardProps {
   onDelete: (estimate: EstimateDashboardResponse) => void;
   onAccept?: (estimate: EstimateDashboardResponse) => void;
   onConvertToInvoice?: (estimate: EstimateDashboardResponse) => void;
+  onConvertToProposal?: (estimate: EstimateDashboardResponse) => void;
   linkOnly?: boolean;
 }
 
@@ -85,6 +92,7 @@ export function EstimateCard({
   onDelete,
   onAccept,
   onConvertToInvoice,
+  onConvertToProposal,
   linkOnly = false,
 }: EstimateCardProps) {
   const router = useRouter();
@@ -157,6 +165,16 @@ export function EstimateCard({
                 <Eye className="h-4 w-4 mr-2" />
                 View
               </DropdownMenuItem>
+              {estimate.status === "PROPOSAL" && estimate.proposalSequence && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    router.push(`/proposals/${estimate.proposalSequence}`)
+                  }
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View Proposal
+                </DropdownMenuItem>
+              )}
               {(estimate.status === "DRAFT" || estimate.status === "REJECTED") && (
                 <DropdownMenuItem
                   onClick={() =>
@@ -171,16 +189,24 @@ export function EstimateCard({
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
               </DropdownMenuItem>
-              {(estimate.itemCount ?? 0) > 0 && (
-                <DropdownMenuItem onClick={() => onSend(estimate)}>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send
-                </DropdownMenuItem>
-              )}
+              {(estimate.itemCount ?? 0) > 0 &&
+                estimate.status !== "PROPOSAL" &&
+                estimate.status !== "INVOICED" && (
+                  <DropdownMenuItem onClick={() => onSend(estimate)}>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send
+                  </DropdownMenuItem>
+                )}
               {estimate.status === "SENT" && onAccept && (
                 <DropdownMenuItem onClick={() => onAccept(estimate)}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Mark as accepted
+                </DropdownMenuItem>
+              )}
+              {estimate.status === "ACCEPTED" && onConvertToProposal && (
+                <DropdownMenuItem onClick={() => onConvertToProposal(estimate)}>
+                  <ScrollText className="h-4 w-4 mr-2" />
+                  Convert to Proposal
                 </DropdownMenuItem>
               )}
               {estimate.status === "ACCEPTED" && onConvertToInvoice && (
