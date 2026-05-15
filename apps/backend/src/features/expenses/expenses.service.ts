@@ -6,7 +6,7 @@ import type {
   UpdateExpenseDTO,
 } from "@addinvoice/schemas";
 
-import { prisma } from "@addinvoice/db";
+import { assertCanCreate, prisma } from "@addinvoice/db";
 
 import type { ExpenseEntity } from "./expenses.schemas.js";
 
@@ -122,6 +122,7 @@ export async function createExpense(
     data.image != null && data.image.trim() !== "" ? data.image.trim() : null;
 
   return await prisma.$transaction(async (tx) => {
+    await assertCanCreate(tx, workspaceId, "expenses");
     let merchantId: null | number = null;
     const rawMid = data.merchantId;
     if (rawMid != null && rawMid > 0) {

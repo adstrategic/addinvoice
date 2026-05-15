@@ -1,6 +1,5 @@
 import type React from "react";
 import type { Metadata, Viewport } from "next";
-import dynamic from "next/dynamic";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
@@ -10,6 +9,7 @@ import { ClerkTokenProvider } from "@/components/providers/clerk-token-provider"
 import "./globals.css";
 import { TourProvider } from "@/components/tour/TourContext";
 import { TourOverlay } from "@/components/tour/TourOverlay";
+import { UpgradeDialogProvider } from "@/components/providers/upgrade-dialog-provider";
 import { Toaster } from "sonner";
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -83,8 +83,10 @@ export default function RootLayout({
             <QueryProvider>
               <ClerkTokenProvider>
                 <TourProvider>
-                  <TourOverlay />
-                  {children}
+                  <UpgradeDialogProvider>
+                    <TourOverlay />
+                    {children}
+                  </UpgradeDialogProvider>
                 </TourProvider>
               </ClerkTokenProvider>
             </QueryProvider>

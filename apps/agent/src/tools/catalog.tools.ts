@@ -1,6 +1,7 @@
 import { llm } from '@livekit/agents';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
+import { guardCreateOrExplain } from '../lib/limits';
 import type { InvoiceSessionData } from '../types/session-data';
 
 export function createCreateCatalogTool() {
@@ -25,6 +26,8 @@ export function createCreateCatalogTool() {
         if (!businessId) {
           throw new llm.ToolError('No business selected. Please select a business first.');
         }
+
+        await guardCreateOrExplain(sessionData.workspaceId, 'catalog');
 
         const last = await prisma.catalog.findFirst({
           where: { workspaceId: sessionData.workspaceId },

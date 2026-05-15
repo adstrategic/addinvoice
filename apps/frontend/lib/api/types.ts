@@ -16,7 +16,12 @@ export type ApiErrorCode =
   | "BUSINESS_REQUIRED"
   | "SUBSCRIPTION_REQUIRED"
   | "INTERNAL_ERROR"
-  | "NETWORK_ERROR";
+  | "NETWORK_ERROR"
+  | "TRIAL_MODULE_LIMIT"
+  | "TRIAL_EMAIL_LIMIT"
+  | "VOICE_MONTHLY_LIMIT"
+  | "ADVANCES_PLAN_REQUIRED"
+  | "TRIAL_NOT_AVAILABLE";
 
 /**
  * Unified error contract from backend global error handler.

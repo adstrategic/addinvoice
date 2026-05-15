@@ -2,6 +2,8 @@ import type { bulkLinkAdvancesToInvoiceBodySchema } from "@addinvoice/schemas";
 import type { Request, Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
+import { assertCanSendEmail, prisma } from "@addinvoice/db";
+
 import type {
   createInvoiceItemSchema,
   createInvoiceSchema,
@@ -280,6 +282,7 @@ export async function enqueueSendInvoice(
     sequence,
   );
 
+  await assertCanSendEmail(prisma, workspaceId);
   await invoicesService.markInvoiceAsSent(workspaceId, invoice.id);
 
   await sendInvoiceQueue.add("send-invoice", {

@@ -1,11 +1,11 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   subscriptionsService,
-  type SubscriptionPlan,
+  type PaidSubscriptionPlan,
 } from "@/features/subscriptions/service/subscriptions.service";
 
 export interface CreateCheckoutParams {
-  planType: SubscriptionPlan;
+  planType: PaidSubscriptionPlan;
   priceId: string;
 }
 
@@ -32,14 +32,19 @@ export function useSubscription() {
   });
 }
 
+export interface UseSubscriptionPlansOptions {
+  enabled?: boolean;
+}
+
 /**
  * Hook to fetch available subscription plans
  */
-export function useSubscriptionPlans() {
+export function useSubscriptionPlans(options?: UseSubscriptionPlansOptions) {
   return useQuery({
     queryKey: subscriptionKeys.plans(),
     queryFn: () => subscriptionsService.getPlans(),
     staleTime: 5 * 60 * 1000, // 5 minutes - plans don't change often
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -70,6 +75,20 @@ export function useCreatePortalSession() {
       if (typeof window !== "undefined") {
         window.location.href = url;
       }
+    },
+  });
+}
+
+/**
+ * Hook to activate the free trial on the current workspace.
+ */
+export function useActivateTrial() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => subscriptionsService.activateTrial(),
+    onSuccess: (status) => {
+      queryClient.setQueryData(subscriptionKeys.status(), status);
+      queryClient.invalidateQueries({ queryKey: subscriptionKeys.status() });
     },
   });
 }

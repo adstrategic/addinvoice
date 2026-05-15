@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
+import { assertCanSendEmail, prisma } from "@addinvoice/db";
 import {
   createEstimateDescriptiveItemSchema,
   createEstimateItemSchema,
@@ -12,8 +13,8 @@ import {
 
 import type {
   getEstimateByIdSchema,
-  getEstimateDescriptiveItemByIdSchema,
   getEstimateBySequenceSchema,
+  getEstimateDescriptiveItemByIdSchema,
   getEstimateItemByIdSchema,
   sendEstimateBodySchema,
 } from "./estimates.schemas.js";
@@ -237,6 +238,7 @@ export async function enqueueSendEstimate(
     sequence,
   );
 
+  await assertCanSendEmail(prisma, workspaceId);
   await estimatesService.markEstimateAsSent(workspaceId, estimate.id);
 
   await sendEstimateQueue.add("send-estimate", {

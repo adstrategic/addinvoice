@@ -1,6 +1,7 @@
 import { llm } from '@livekit/agents';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
+import { guardCreateOrExplain } from '../lib/limits';
 import type { InvoiceSessionData } from '../types/session-data';
 
 function parseDateOnlyUtc(dateStr: string): Date {
@@ -171,6 +172,8 @@ export function createCreatePaymentTool() {
         }
 
         const paidAt = paymentDate ? parseDateOnlyUtc(paymentDate) : new Date();
+
+        await guardCreateOrExplain(sessionData.workspaceId, 'payments');
 
         const payment = await prisma.payment.create({
           data: {

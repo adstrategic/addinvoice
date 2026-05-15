@@ -1,6 +1,8 @@
 import type { Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
+import { assertCanSendEmail, prisma } from "@addinvoice/db";
+
 import type {
   getPaymentByIdSchema,
   sendReceiptBodySchema,
@@ -28,6 +30,8 @@ export async function enqueueSendReceipt(
   const { email, message, subject } = req.body;
 
   const payment = await paymentsService.getPaymentById(workspaceId, paymentId);
+
+  await assertCanSendEmail(prisma, workspaceId);
 
   await sendReceiptQueue.add("send-receipt", {
     email,

@@ -9,12 +9,14 @@ import type {
   unlinkAdvanceFromInvoiceBodySchema,
   updateAdvanceSchema,
 } from "@addinvoice/schemas";
+import type { Response } from "express";
+import type { TypedRequest } from "zod-express-middleware";
+
+import { assertCanSendEmail, prisma } from "@addinvoice/db";
 import {
   getAdvanceByIdSchema,
   syncAdvanceAttachmentsMetaSchema,
 } from "@addinvoice/schemas";
-import type { Response } from "express";
-import type { TypedRequest } from "zod-express-middleware";
 
 import { getWorkspaceId } from "../../core/auth.js";
 import { sendAdvanceQueue } from "../../queue/queues.js";
@@ -116,7 +118,11 @@ export async function getAdvancePdf(
 }
 
 export async function updateAdvance(
-  req: TypedRequest<typeof getAdvanceByIdSchema, never, typeof updateAdvanceSchema>,
+  req: TypedRequest<
+    typeof getAdvanceByIdSchema,
+    never,
+    typeof updateAdvanceSchema
+  >,
   res: Response,
 ): Promise<void> {
   const workspaceId = getWorkspaceId(req);
@@ -155,10 +161,15 @@ export async function generateAdvanceReport(
 }
 
 export async function sendAdvance(
-  req: TypedRequest<typeof getAdvanceByIdSchema, never, typeof sendAdvanceBodySchema>,
+  req: TypedRequest<
+    typeof getAdvanceByIdSchema,
+    never,
+    typeof sendAdvanceBodySchema
+  >,
   res: Response,
 ): Promise<void> {
   const workspaceId = getWorkspaceId(req);
+  await assertCanSendEmail(prisma, workspaceId);
   const advance = await advancesService.sendAdvance(
     workspaceId,
     req.params.advanceId,
@@ -248,8 +259,8 @@ export async function syncAdvanceAttachments(
   const workspaceId = getWorkspaceId(req);
   const { advanceId } = req.params;
 
-  const body = ((req as unknown as { body?: Record<string, unknown> }).body ??
-    {}) as Record<string, unknown>;
+  const body =
+    (req as unknown as { body?: Record<string, unknown> }).body ?? {};
   const keptRaw = body.keptAttachmentIds;
   const orderRaw = body.orderTokens;
 
@@ -277,9 +288,7 @@ export async function syncAdvanceAttachments(
     return;
   }
 
-  const files = Array.isArray(req.files)
-    ? (req.files as Express.Multer.File[])
-    : [];
+  const files = Array.isArray(req.files) ? req.files : [];
 
   const result = await advancesService.syncAdvanceAttachments(
     workspaceId,

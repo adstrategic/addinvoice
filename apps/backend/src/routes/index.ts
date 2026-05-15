@@ -1,6 +1,7 @@
 import { requireAuth } from "@clerk/express";
 import { Router } from "express";
 
+import { requireAdvancesAccess } from "../core/advances-guard.js";
 import { verifyWorkspaceAccess } from "../core/auth.js";
 import { requireBusiness } from "../core/business-required.js";
 import { requireSubscription } from "../core/subscription-guard.js";
@@ -10,11 +11,11 @@ import { catalogRoutes } from "../features/catalog/catalog.routes.js";
 import { clientsRoutes } from "../features/clients/clients.routes.js";
 import { dashboardRoutes } from "../features/dashboard/dashboard.routes.js";
 import { estimatesRoutes } from "../features/estimates/estimates.routes.js";
-import { proposalsRoutes } from "../features/proposals/proposals.routes.js";
 import { expensesRoutes } from "../features/expenses/expenses.routes.js";
 import { invoicesRoutes } from "../features/invoices/invoices.routes.js";
 import { merchantsRoutes } from "../features/merchants/merchants.routes.js";
 import { paymentsRoutes } from "../features/payments/payments.routes.js";
+import { proposalsRoutes } from "../features/proposals/proposals.routes.js";
 import { subscriptionsRoutes } from "../features/subscriptions/subscriptions.routes.js";
 import { workCategoriesRoutes } from "../features/work-categories/work-categories.routes.js";
 import { workspaceRoutes } from "../features/workspace/workspace.routes.js";
@@ -60,7 +61,7 @@ apiRouter.use((req, res, next) => {
 
 // Feature routes
 apiRouter.use("/clients", clientsRoutes);
-apiRouter.use("/advances", advancesRoutes);
+apiRouter.use("/advances", requireAdvancesAccess, advancesRoutes);
 apiRouter.use("/invoices", invoicesRoutes);
 apiRouter.use("/estimates", estimatesRoutes);
 apiRouter.use("/proposals", proposalsRoutes);
