@@ -32,12 +32,21 @@ import {
   Sun,
   FilePen
 } from "lucide-react";
+import { useSubscription } from "@/hooks/use-subscription";
+import { planAllowsAdvances } from "@/features/subscriptions/lib/subscription-access";
 
-const navigation = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  requiresAdvances?: boolean;
+}
+
+const navigation: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Voice Assistant", href: "/voice", icon: Mic },
   { name: "Invoices", href: "/invoices", icon: FileText },
-  { name: "Advances", href: "/advances", icon: FileCheck },
+  { name: "Advances", href: "/advances", icon: FileCheck, requiresAdvances: true },
   { name: "Payments", href: "/payments", icon: CreditCard },
   // { name: "Reminders", href: "/reminders", icon: Bell },
   { name: "Clients", href: "/clients", icon: Users },
@@ -53,12 +62,23 @@ export function Sidebar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { isMobile, setOpenMobile } = useSidebar();
+  const { data: subscription } = useSubscription();
 
   const handleNavigate = React.useCallback(() => {
     if (isMobile) {
       setOpenMobile(false);
     }
   }, [isMobile, setOpenMobile]);
+
+  const visibleNavigation = React.useMemo(
+    () =>
+      navigation.filter((item) =>
+        item.requiresAdvances
+          ? planAllowsAdvances(subscription?.plan)
+          : true,
+      ),
+    [subscription?.plan],
+  );
 
   return (
     <SidebarRoot side="left" variant="sidebar" collapsible="offcanvas">
@@ -77,7 +97,7 @@ export function Sidebar() {
 
       <ShadcnSidebarContent className="px-3 py-4">
         <SidebarMenu className="gap-0.5">
-          {navigation.map((item) => {
+          {visibleNavigation.map((item) => {
             const isActive = pathname === item.href;
             const tourId =
               item.href === "/"

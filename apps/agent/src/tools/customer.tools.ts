@@ -2,6 +2,7 @@ import { PHONE_REGEX, nullableOptional } from '@addinvoice/schemas';
 import { llm } from '@livekit/agents';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
+import { guardCreateOrExplain } from '../lib/limits';
 import type { InvoiceSessionData } from '../types/session-data';
 
 /**
@@ -327,6 +328,8 @@ export function createCreateCustomerTool() {
       }
 
       const validated = parsed.data;
+
+      await guardCreateOrExplain(sessionData.workspaceId, 'clients');
 
       // Get next sequence number
       const lastClient = await prisma.client.findFirst({

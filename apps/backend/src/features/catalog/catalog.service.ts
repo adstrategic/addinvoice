@@ -1,6 +1,6 @@
 import type { Prisma } from "@addinvoice/db";
 
-import { prisma } from "@addinvoice/db";
+import { assertCanCreate, prisma } from "@addinvoice/db";
 
 import type {
   CatalogEntity,
@@ -24,6 +24,7 @@ export async function createCatalog(
   data: CreateCatalogDto,
 ): Promise<CatalogEntity> {
   return await prisma.$transaction(async (tx) => {
+    await assertCanCreate(tx, workspaceId, "catalog");
     const sequence = await getNextSequence(tx, workspaceId);
 
     const catalog = await tx.catalog.create({

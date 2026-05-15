@@ -1,6 +1,7 @@
 import { llm } from '@livekit/agents';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
+import { guardCreateOrExplain } from '../lib/limits';
 import type { InvoiceSessionData } from '../types/session-data';
 
 function parseDateOnlyUtc(dateStr: string): Date {
@@ -47,6 +48,8 @@ export function createCreateExpenseTool() {
           resolvedExpenseDate ??
           new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
         expenseDay.setUTCHours(0, 0, 0, 0);
+
+        await guardCreateOrExplain(sessionData.workspaceId, 'expenses');
 
         const last = await prisma.expense.findFirst({
           where: { workspaceId: sessionData.workspaceId },

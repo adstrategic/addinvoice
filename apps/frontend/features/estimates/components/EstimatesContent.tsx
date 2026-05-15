@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { useDownloadEstimatePdf } from "../hooks/useDownloadEstimatePDF";
 import { Button } from "@/components/ui/button";
 import { Mic } from "lucide-react";
+import { useLimitGuard } from "@/hooks/use-limit-guard";
 
 const VALID_STATUSES = ["all", "draft", "sent", "accepted", "rejected", "proposal", "invoiced"] as const;
 
@@ -87,6 +88,17 @@ export default function EstimatesContent() {
   const estimateDelete = useEstimateDelete();
   const markAsAccepted = useMarkEstimateAsAccepted();
   const estimateActions = useEstimateActions();
+  const { guardCreate } = useLimitGuard();
+
+  const handleCreateEstimate = () => {
+    if (guardCreate("estimates")) return;
+    estimateManager.handleCreateEstimate();
+  };
+
+  const handleCreateEstimateByVoice = () => {
+    if (guardCreate("estimates", { viaVoice: true })) return;
+    estimateManager.handleCreateEstimateByVoice();
+  };
 
   const handleAccept = (estimate: EstimateDashboardResponse) => {
     markAsAccepted.mutate(estimate.id);
@@ -200,8 +212,8 @@ export default function EstimatesContent() {
             </p>
           </div>
           <EstimateActions
-            onCreateEstimate={estimateManager.handleCreateEstimate}
-            onCreateByVoice={estimateManager.handleCreateEstimateByVoice}
+            onCreateEstimate={handleCreateEstimate}
+            onCreateByVoice={handleCreateEstimateByVoice}
           />
         </motion.div>
 
@@ -302,7 +314,7 @@ export default function EstimatesContent() {
         type="button"
         size="icon-lg"
         className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
-        onClick={estimateManager.handleCreateEstimateByVoice}
+        onClick={handleCreateEstimateByVoice}
         aria-label="Create estimate by voice"
       >
         <Mic className="size-8" />

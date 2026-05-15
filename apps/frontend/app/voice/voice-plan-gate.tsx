@@ -1,14 +1,20 @@
 "use client";
 
 import type React from "react";
-import { useEffect } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCreatePortalSession, useSubscription } from "@/hooks/use-subscription";
-import { hasVoiceAccess } from "@/features/subscriptions/lib/subscription-access";
+import {
+	useCreateCheckout,
+	useCreatePortalSession,
+	useSubscription,
+	useSubscriptionPlans,
+} from "@/hooks/use-subscription";
+import { hasConversationalVoiceAccess } from "@/features/subscriptions/lib/subscription-access";
+import type { PlanPricesRecurring } from "@/features/subscriptions/service/subscriptions.service";
 
 interface VoicePlanGateProps {
 	children: React.ReactNode;
@@ -16,22 +22,18 @@ interface VoicePlanGateProps {
 
 export function VoicePlanGate({ children }: VoicePlanGateProps) {
 	const { data: subscription, isLoading, isError, error, refetch } = useSubscription();
+
+	const needsUpgrade =
+		Boolean(subscription?.isActive) &&
+		!hasConversationalVoiceAccess(subscription?.plan);
+
+	const { data: plans, isLoading: isLoadingPlans } = useSubscriptionPlans({
+		enabled: needsUpgrade,
+	});
 	const openPortal = useCreatePortalSession();
+	const createCheckout = useCreateCheckout();
 
-	useEffect(() => {
-		const handleVisibility = () => {
-			if (document.visibilityState === "visible") {
-				void refetch();
-			}
-		};
-
-		document.addEventListener("visibilitychange", handleVisibility);
-		return () => {
-			document.removeEventListener("visibilitychange", handleVisibility);
-		};
-	}, [refetch]);
-
-	if (isLoading) {
+	if (isLoading && !subscription) {
 		return (
 			<div className="min-h-screen flex items-center justify-center p-4">
 				<div className="w-full max-w-md space-y-3">
@@ -63,7 +65,28 @@ export function VoicePlanGate({ children }: VoicePlanGateProps) {
 		);
 	}
 
-	if (subscription?.isActive && !hasVoiceAccess(subscription.plan)) {
+	if (needsUpgrade) {
+		const isFreeTrial = subscription!.plan === "FREE_TRIAL";
+
+		const handleUpgrade = async () => {
+			if (isFreeTrial) {
+				const essential = plans?.find((p) => p.id === "ESSENTIAL");
+				if (!essential || !("monthly" in essential.prices)) return;
+				const { priceId } = (essential.prices as PlanPricesRecurring).monthly;
+				try {
+					await createCheckout.mutateAsync({ planType: "ESSENTIAL", priceId });
+				} catch (err) {
+					toast.error("Could not start checkout", {
+						description: err instanceof Error ? err.message : "Please try again.",
+					});
+				}
+			} else {
+				openPortal.mutate("/voice");
+			}
+		};
+
+		const isPending = createCheckout.isPending || openPortal.isPending || isLoadingPlans;
+
 		return (
 			<div className="min-h-screen flex items-center justify-center p-4 bg-[#162135]">
 				<Card className="w-full max-w-lg">
@@ -71,22 +94,33 @@ export function VoicePlanGate({ children }: VoicePlanGateProps) {
 						<div className="flex items-center gap-2 text-primary">
 							<Sparkles className="h-5 w-5" />
 							<span className="text-sm font-medium uppercase tracking-wide">
-								Voice is a Pro feature
+								Essential feature
 							</span>
 						</div>
-						<CardTitle>Upgrade to AI Pro to unlock voice assistant</CardTitle>
+						<CardTitle>Upgrade to Essential to unlock the AI bookkeeper</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<p className="text-sm text-muted-foreground">
-							Your current plan does not include voice access. Upgrade your
-							subscription and this page unlocks automatically after checkout.
+							{isFreeTrial
+								? "The conversational AI bookkeeper is available on the Essential and Lifetime plans. Voice creation in each module is still available on your free trial."
+								: "Your current plan does not include the conversational AI bookkeeper. Upgrade to Essential and this page unlocks automatically after checkout."}
 						</p>
 						<Button
-							className="w-full"
-							disabled={openPortal.isPending}
-							onClick={() => openPortal.mutate("/voice")}
+							className="w-full gap-2"
+							disabled={isPending}
+							onClick={handleUpgrade}
 						>
-							{openPortal.isPending ? "Redirecting to billing..." : "Upgrade plan"}
+							{isPending ? (
+								<>
+									<Loader2 className="h-4 w-4 animate-spin" />
+									Redirecting...
+								</>
+							) : (
+								<>
+									<Sparkles className="h-4 w-4" />
+									{isFreeTrial ? "Upgrade to Essential" : "Upgrade plan"}
+								</>
+							)}
 						</Button>
 					</CardContent>
 				</Card>

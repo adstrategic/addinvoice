@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import asyncHandler from "../../core/async-handler.js";
 import {
+  activateTrial,
   createCheckout,
   createPortalSession,
   getPlans,
@@ -19,3 +20,4 @@ subscriptionsRoutes.get("/status", asyncHandler(getSubscriptionStatus));
 subscriptionsRoutes.post("/checkout", asyncHandler(createCheckout));
 subscriptionsRoutes.post("/portal", asyncHandler(createPortalSession));
 subscriptionsRoutes.get("/plans", asyncHandler(getPlans));
+subscriptionsRoutes.post("/trial/activate", asyncHandler(activateTrial));

@@ -6,7 +6,7 @@ import type {
   BulkLinkAdvancesToInvoiceDTO,
 } from "@addinvoice/schemas";
 
-import { prisma } from "@addinvoice/db";
+import { assertCanCreate, prisma } from "@addinvoice/db";
 
 import type {
   CreatePaymentDto,
@@ -62,6 +62,8 @@ export async function createInvoiceFromEstimate(
   selectedPaymentMethodId?: null | number,
 ): Promise<InvoiceEntityWithRelations> {
   const client = tx ?? prisma;
+
+  await assertCanCreate(client, workspaceId, "invoices");
 
   const business = await client.business.findFirst({
     where: { id: estimate.businessId, workspaceId },
@@ -393,6 +395,7 @@ export async function addPayment(
   const { sendReceipt, ...paymentData } = data;
 
   const { payment, receiptJobData } = await prisma.$transaction(async (tx) => {
+    await assertCanCreate(tx, workspaceId, "payments");
     // Verify invoice exists and belongs to workspace
     const invoice = await tx.invoice.findUnique({
       include: { _count: { select: { items: true } } },
@@ -680,6 +683,7 @@ export async function createInvoice(
   data: CreateInvoiceDto,
 ): Promise<InvoiceEntityWithRelations> {
   return await prisma.$transaction(async (tx) => {
+    await assertCanCreate(tx, workspaceId, "invoices");
     // Check if workspace has at least one business
     const businessCount = await tx.business.count({
       where: {

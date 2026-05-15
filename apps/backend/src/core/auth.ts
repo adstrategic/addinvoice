@@ -54,11 +54,13 @@ export async function verifyWorkspaceAccess(
     });
 
     // If workspace doesn't exist (first time user), create it automatically
+    // along with its usage row so limit guards always have a row to update.
     workspace ??= await prisma.workspace.create({
       data: {
         clerkId: userId,
         name: "My Workspace",
         language: "en",
+        usage: { create: {} },
       },
     });
 
