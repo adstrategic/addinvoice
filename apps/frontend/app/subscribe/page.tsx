@@ -46,8 +46,9 @@ export default function SubscribePage() {
   const activateTrial = useActivateTrial();
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("month");
-  const [selectedPlan, setSelectedPlan] =
-    useState<PaidSubscriptionPlan | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<PaidSubscriptionPlan | null>(
+    null,
+  );
 
   const canStartTrial =
     subscription != null &&
@@ -94,7 +95,7 @@ export default function SubscribePage() {
       await activateTrial.mutateAsync();
       toast.success("Free trial activated!");
       if (typeof window !== "undefined") {
-        window.location.href = "/";
+        window.location.href = "/onboarding";
       }
     } catch (error: unknown) {
       toast.error("Could not start free trial", {
@@ -328,7 +329,9 @@ export default function SubscribePage() {
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-primary" />
-                      <span>Voice creation enabled (counts toward module caps)</span>
+                      <span>
+                        Voice creation enabled (counts toward module caps)
+                      </span>
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-primary" />
