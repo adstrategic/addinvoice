@@ -18,6 +18,7 @@ import { TablePagination } from "@/components/TablePagination";
 import { SendAdvanceDialog } from "@/components/send-advance-dialog";
 import type { AdvanceListItemResponse } from "@addinvoice/schemas";
 import { useSendAdvance } from "../hooks/useAdvances";
+import { useLimitGuard } from "@/hooks/use-limit-guard";
 
 export default function AdvancesContent() {
   const { currentPage, setPage, debouncedSearch, searchTerm, setSearch } =
@@ -37,6 +38,12 @@ export default function AdvancesContent() {
   const advanceManager = useAdvanceManager();
   const deleteAdvance = useAdvanceDelete();
   const sendAdvance = useSendAdvance();
+  const { guardCreate } = useLimitGuard();
+
+  const handleCreateAdvance = () => {
+    if (guardCreate("advances")) return;
+    advanceManager.handleCreateAdvance();
+  };
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedAdvanceForSend, setSelectedAdvanceForSend] =
     useState<AdvanceListItemResponse | null>(null);
@@ -98,7 +105,7 @@ export default function AdvancesContent() {
             </p>
           </div>
           <AdvanceActions
-            onCreateAdvance={advanceManager.handleCreateAdvance}
+            onCreateAdvance={handleCreateAdvance}
             onCreateByVoice={() => toast.info("Voice creation is coming soon")}
           />
         </div>

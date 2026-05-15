@@ -2,6 +2,7 @@ import { llm } from '@livekit/agents';
 import { createHash } from 'crypto';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
+import { guardCreateOrExplain } from '../lib/limits';
 import type {
   EstimateDraft,
   InvoiceSessionData,
@@ -317,6 +318,8 @@ export function createCreateEstimateTool() {
 
         const subtotal = draft.items.reduce((sum, i) => sum + i.total, 0);
         const total = subtotal + totalTax;
+
+        await guardCreateOrExplain(sessionData.workspaceId, 'estimates');
 
         const lastEstimate = await prisma.estimate.findFirst({
           where: { workspaceId: sessionData.workspaceId },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Sparkles } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -12,16 +12,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  useSubscriptionPlans,
+  useActivateTrial,
   useCreateCheckout,
+  useSubscription,
+  useSubscriptionPlans,
 } from "@/hooks/use-subscription";
 import { SubscriptionGuard } from "@/components/guards/subscription-guard";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
   BillingInterval,
+  PaidSubscriptionPlan,
   PlanPricesLifetime,
   PlanPricesRecurring,
-  SubscriptionPlan,
   SubscriptionPlanResponse,
 } from "@/features/subscriptions/service/subscriptions.service";
 import { toast } from "sonner";
@@ -39,12 +41,18 @@ function getDisplayPrice(
 
 export default function SubscribePage() {
   const { data: plans, isLoading } = useSubscriptionPlans();
+  const { data: subscription } = useSubscription();
   const createCheckout = useCreateCheckout();
+  const activateTrial = useActivateTrial();
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("month");
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(
-    null,
-  );
+  const [selectedPlan, setSelectedPlan] =
+    useState<PaidSubscriptionPlan | null>(null);
+
+  const canStartTrial =
+    subscription != null &&
+    subscription.plan == null &&
+    subscription.hasEverPaid === false;
 
   const yearlySavePercent = useMemo(() => {
     const recurring = plans?.find(
@@ -60,7 +68,7 @@ export default function SubscribePage() {
     );
   }, [plans]);
 
-  const handleSelectPlan = async (planId: SubscriptionPlan) => {
+  const handleSelectPlan = async (planId: PaidSubscriptionPlan) => {
     const plan = plans?.find((p) => p.id === planId);
     if (!plan) return;
     setSelectedPlan(planId);
@@ -78,6 +86,23 @@ export default function SubscribePage() {
             : "An error occurred while creating the checkout session",
       });
       setSelectedPlan(null);
+    }
+  };
+
+  const handleStartTrial = async () => {
+    try {
+      await activateTrial.mutateAsync();
+      toast.success("Free trial activated!");
+      if (typeof window !== "undefined") {
+        window.location.href = "/";
+      }
+    } catch (error: unknown) {
+      toast.error("Could not start free trial", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please try again or contact support",
+      });
     }
   };
 
@@ -275,6 +300,60 @@ export default function SubscribePage() {
               );
             })}
           </div>
+
+          {canStartTrial && (
+            <div className="mt-8">
+              <Card className="border-dashed">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-xl">
+                      Not ready to commit? Try AddInvoice free
+                    </CardTitle>
+                  </div>
+                  <CardDescription>
+                    Explore every module — including voice creation and the
+                    Advances module — without entering payment details.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="grid gap-2 md:grid-cols-2 mb-6 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-primary" />
+                      <span>4 items per module (cumulative — no resets)</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-primary" />
+                      <span>4 emails total across all modules</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-primary" />
+                      <span>Voice creation enabled (counts toward module caps)</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-primary" />
+                      <span>One-time activation — upgrade anytime</span>
+                    </li>
+                  </ul>
+                  <Button
+                    className="w-full sm:w-auto"
+                    variant="secondary"
+                    onClick={handleStartTrial}
+                    disabled={activateTrial.isPending}
+                  >
+                    {activateTrial.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Activating trial...
+                      </>
+                    ) : (
+                      "Start Free Trial"
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </SubscriptionGuard>

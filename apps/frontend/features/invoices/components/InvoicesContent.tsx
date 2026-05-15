@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { useDownloadInvoicePdf } from "../hooks/useDownloadInvoicePDF";
 import { Button } from "@/components/ui/button";
 import { Mic } from "lucide-react";
+import { useLimitGuard } from "@/hooks/use-limit-guard";
 
 const VALID_STATUSES = ["all", "paid", "overdue", "issued", "draft"] as const;
 
@@ -81,6 +82,17 @@ export default function InvoicesContent() {
   const invoiceManager = useInvoiceManager();
   const invoiceDelete = useInvoiceDelete();
   const downloadPdf = useDownloadInvoicePdf();
+  const { guardCreate } = useLimitGuard();
+
+  const handleCreateInvoice = () => {
+    if (guardCreate("invoices")) return;
+    invoiceManager.handleCreateInvoice();
+  };
+
+  const handleCreateInvoiceByVoice = () => {
+    if (guardCreate("invoices", { viaVoice: true })) return;
+    invoiceManager.handleCreateInvoiceByVoice();
+  };
 
   const handleDownloadPDF = async (invoice: InvoiceResponse) => {
     try {
@@ -173,8 +185,8 @@ export default function InvoicesContent() {
             </p>
           </div>
           <InvoiceActions
-            onCreateInvoice={invoiceManager.handleCreateInvoice}
-            onCreateByVoice={invoiceManager.handleCreateInvoiceByVoice}
+            onCreateInvoice={handleCreateInvoice}
+            onCreateByVoice={handleCreateInvoiceByVoice}
           />
         </motion.div>
 
@@ -263,7 +275,7 @@ export default function InvoicesContent() {
         type="button"
         size="icon-lg"
         className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
-        onClick={invoiceManager.handleCreateInvoiceByVoice}
+        onClick={handleCreateInvoiceByVoice}
         aria-label="Create invoice by voice"
       >
         <Mic className="size-8" />

@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { DashboardBusinessFilter } from "@/components/dashboard-business-filter";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";

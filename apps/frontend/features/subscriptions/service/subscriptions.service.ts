@@ -7,7 +7,8 @@ import type { ApiSuccessResponse } from "@/lib/api/types";
  */
 const BASE_URL = "/subscription";
 
-export type SubscriptionPlan = "MINIMUM" | "ESSENTIAL" | "LIFETIME";
+export type PaidSubscriptionPlan = "MINIMUM" | "ESSENTIAL" | "LIFETIME";
+export type SubscriptionPlan = PaidSubscriptionPlan | "FREE_TRIAL";
 export type SubscriptionStatus =
   | "ACTIVE"
   | "CANCELED"
@@ -17,10 +18,36 @@ export type SubscriptionStatus =
   | "INCOMPLETE_EXPIRED"
   | "TRIALING";
 
+export interface TrialModuleUsage {
+  used: number;
+  limit: number;
+}
+
+export interface TrialUsageSummary {
+  invoices: TrialModuleUsage;
+  estimates: TrialModuleUsage;
+  proposals: TrialModuleUsage;
+  expenses: TrialModuleUsage;
+  advances: TrialModuleUsage;
+  catalog: TrialModuleUsage;
+  clients: TrialModuleUsage;
+  payments: TrialModuleUsage;
+  emails: TrialModuleUsage;
+}
+
+export interface VoiceUsageSummary {
+  used: number;
+  limit: number;
+  windowEnd: string | null;
+}
+
 export interface SubscriptionStatusResponse {
   isActive: boolean;
   plan: SubscriptionPlan | null;
   status: SubscriptionStatus | null;
+  hasEverPaid: boolean;
+  trialUsage?: TrialUsageSummary;
+  voiceUsage?: VoiceUsageSummary;
 }
 
 export type BillingInterval = "month" | "year";
@@ -43,7 +70,7 @@ export interface PlanPricesLifetime {
 export type PlanPrices = PlanPricesRecurring | PlanPricesLifetime;
 
 export interface SubscriptionPlanResponse {
-  id: SubscriptionPlan;
+  id: PaidSubscriptionPlan;
   name: string;
   description: string;
   prices: PlanPrices;
@@ -76,7 +103,7 @@ async function getSubscriptionStatus(): Promise<SubscriptionStatusResponse> {
  * Create Stripe Checkout session
  */
 async function createCheckout(
-  planType: SubscriptionPlan,
+  planType: PaidSubscriptionPlan,
   priceId: string,
 ): Promise<string> {
   try {
@@ -123,6 +150,21 @@ async function getPlans(): Promise<SubscriptionPlanResponse[]> {
 }
 
 /**
+ * Activate the free trial on the current workspace.
+ */
+async function activateTrial(): Promise<SubscriptionStatusResponse> {
+  try {
+    const { data } = await apiClient.post<
+      ApiSuccessResponse<SubscriptionStatusResponse>
+    >(`${BASE_URL}/trial/activate`);
+
+    return data.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+/**
  * Service object for subscriptions
  */
 export const subscriptionsService = {
@@ -130,4 +172,5 @@ export const subscriptionsService = {
   createCheckout,
   createPortalSession,
   getPlans,
+  activateTrial,
 };

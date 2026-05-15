@@ -1,3 +1,4 @@
+import "@livekit/components-styles";
 import {
   useAgent,
   useSession,
@@ -33,7 +34,6 @@ export function VoiceContent({
 }: VoiceContentProps) {
   const [connectionError, setConnectionError] = useState<Error | null>(null);
   const [isVoicePlanRequired, setIsVoicePlanRequired] = useState(false);
-  const retry_after_token_ref = useRef(false);
   const openPortal = useCreatePortalSession();
 
   // useSession expects camelCase; we use snake_case internally and map at the SDK boundary
@@ -54,15 +54,21 @@ export function VoiceContent({
   );
 
   const session = useSession(tokenSource, sessionOptions);
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
-  // Start session on mount (token is guaranteed by parent); cleanup on unmount
+  // Key lifecycle on token only — `session` from useSession gets a new reference each render.
   useEffect(() => {
+    const sessionHandle = sessionRef.current;
+    let cancelled = false;
+
     const startSession = async () => {
       try {
         setConnectionError(null);
         setIsVoicePlanRequired(false);
-        await session.start();
+        await sessionHandle.start();
       } catch (err) {
+        if (cancelled) return;
         setIsVoicePlanRequired(hasVoicePlanError(err));
         setConnectionError(
           err instanceof Error
@@ -72,31 +78,16 @@ export function VoiceContent({
       }
     };
 
-    startSession();
+    void startSession();
 
     return () => {
-      session.end();
+      cancelled = true;
+      void sessionHandle.end();
     };
-  }, []);
-
-  // After retry: parent updated token -> new tokenSource -> start session
-  useEffect(() => {
-    if (!retry_after_token_ref.current) return;
-    retry_after_token_ref.current = false;
-    session.start().catch((err) => {
-      console.error("Failed to start session on retry:", err);
-      setIsVoicePlanRequired(hasVoicePlanError(err));
-      setConnectionError(
-        err instanceof Error
-          ? err
-          : new Error("Failed to connect to voice assistant"),
-      );
-    });
-  }, [token, session]);
+  }, [token]);
 
   const handleRetry = async () => {
     setConnectionError(null);
-    retry_after_token_ref.current = true;
     await refreshToken();
   };
 
@@ -126,7 +117,7 @@ export function VoiceContent({
               </AlertTitle>
               <AlertDescription>
                 {isVoicePlanRequired
-                  ? "Your current plan does not include voice access. Upgrade to AI Pro to unlock this page."
+                  ? "Your current plan does not include the conversational AI bookkeeper. Upgrade to Essential to unlock this page."
                   : connectionError.message ||
                     "Failed to connect to voice assistant. Please try again."}
               </AlertDescription>

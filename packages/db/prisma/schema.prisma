@@ -70,6 +70,10 @@ model Workspace {
     stripeSubscriptionId String?             @unique
     subscriptionPlan     SubscriptionPlan?
     subscriptionStatus   SubscriptionStatus?
+    // True once the workspace has ever had a Stripe-backed plan set (paid or attempted).
+    // Used to permanently block re-claiming the free trial.
+    hasEverPaid          Boolean             @default(false)
+    usage                WorkspaceUsage?
     // TODO: AI CREDITS - Add fields for AI credit tracking
     // aiCreditBalance      Decimal?@db.Decimal(10,2)           @default(0)
     // aiCreditResetDate    DateTime?
@@ -600,9 +604,38 @@ model Expense {
 }
 
 enum SubscriptionPlan {
+    FREE_TRIAL
     MINIMUM
     ESSENTIAL
     LIFETIME
+}
+
+// Per-workspace usage counters. Used to enforce free-trial caps (cumulative,
+// never decrement on delete) and the MINIMUM plan's 25 voice-created-items
+// per month limit (anchored to billing day-of-month).
+model WorkspaceUsage {
+    id          Int @id @default(autoincrement())
+    workspaceId Int @unique
+
+    // FREE_TRIAL cumulative counters (only ever increment)
+    invoicesCreated  Int @default(0)
+    estimatesCreated Int @default(0)
+    proposalsCreated Int @default(0)
+    expensesCreated  Int @default(0)
+    advancesCreated  Int @default(0)
+    catalogCreated   Int @default(0)
+    clientsCreated   Int @default(0)
+    paymentsCreated  Int @default(0)
+    emailsSent       Int @default(0)
+
+    // MINIMUM plan voice quota (per-month rolling window)
+    voiceItemsCreated Int       @default(0)
+    voiceWindowStart  DateTime?
+    voiceWindowEnd    DateTime?
+
+    workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+    @@map("workspace_usage")
 }
 
 enum SubscriptionStatus {

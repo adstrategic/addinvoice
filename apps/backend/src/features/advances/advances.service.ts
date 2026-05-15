@@ -12,7 +12,7 @@ import type {
   UpdateAdvanceDTO,
 } from "@addinvoice/schemas";
 
-import { prisma } from "@addinvoice/db";
+import { assertCanCreate, prisma } from "@addinvoice/db";
 
 import {
   deleteAdvanceAttachmentByPublicId,
@@ -95,6 +95,7 @@ export async function createAdvance(
   data: CreateAdvanceDTO,
 ): Promise<AdvanceResponse> {
   return await prisma.$transaction(async (tx) => {
+    await assertCanCreate(tx, workspaceId, "advances");
     const clientId = await resolveClientId(tx, workspaceId, data);
     const sequence = await getNextSequence(tx, workspaceId);
 

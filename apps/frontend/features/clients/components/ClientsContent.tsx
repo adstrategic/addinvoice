@@ -20,6 +20,7 @@ import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Mic } from "lucide-react";
+import { useLimitGuard } from "@/hooks/use-limit-guard";
 
 /**
  * Clients page component
@@ -31,10 +32,18 @@ export default function ClientsPage() {
     useDebouncedTableParams();
 
   const clientManager = useClientManager();
+  const { guardCreate } = useLimitGuard();
   const [voicePromptOpen, setVoicePromptOpen] = useState(false);
+
   const openVoicePrompt = useCallback(() => {
+    if (guardCreate("clients", { viaVoice: true })) return;
     setVoicePromptOpen(true);
-  }, []);
+  }, [guardCreate]);
+
+  const handleOpenCreateClient = () => {
+    if (guardCreate("clients")) return;
+    clientManager.openCreate();
+  };
 
   // Fetch clients with pagination and search
   const {
@@ -95,7 +104,7 @@ export default function ClientsPage() {
           </div>
           <ClientActions
             onCreateByVoice={openVoicePrompt}
-            onOpenCreateModal={clientManager.openCreate}
+            onOpenCreateModal={handleOpenCreateClient}
           />
         </div>
 

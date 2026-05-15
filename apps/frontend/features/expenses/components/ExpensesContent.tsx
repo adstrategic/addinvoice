@@ -17,6 +17,7 @@ import LoadingComponent from "@/components/loading-component";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
+import { useLimitGuard } from "@/hooks/use-limit-guard";
 
 const CATEGORY_PARAM = "category";
 const DATE_FROM_PARAM = "dateFrom";
@@ -62,6 +63,12 @@ export default function ExpensesContent() {
   );
 
   const expenseManager = useExpenseManager();
+  const { guardCreate } = useLimitGuard();
+
+  const handleOpenCreateExpense = () => {
+    if (guardCreate("expenses")) return;
+    expenseManager.openCreate();
+  };
 
   const {
     data: expensesData,
@@ -123,7 +130,7 @@ export default function ExpensesContent() {
               Track and manage your expenses
             </p>
           </div>
-          <ExpenseActions onOpenCreateModal={expenseManager.openCreate} />
+          <ExpenseActions onOpenCreateModal={handleOpenCreateExpense} />
         </div>
 
         <ExpenseDashboard workCategoryId={workCategoryIdFilter} />

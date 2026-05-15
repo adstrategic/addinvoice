@@ -4,6 +4,7 @@ import type { ApiErrorCode } from "@/lib/api/types";
 import type { FieldValues, Path, UseFormSetError } from "react-hook-form";
 import { toast } from "sonner";
 import { ApiError } from "./handler";
+import { upgradeDialogStore } from "@/lib/upgrade-dialog/store";
 
 function normalizeToApiError(err: unknown): ApiError {
   if (err instanceof ApiError) return err;
@@ -65,6 +66,17 @@ export function handleMutationError<T extends FieldValues>(
     case "SUBSCRIPTION_REQUIRED":
       toast.error(apiError.message ?? "Active subscription required.");
       // Redirect is handled in apiClient response interceptor
+      break;
+
+    case "TRIAL_MODULE_LIMIT":
+    case "TRIAL_EMAIL_LIMIT":
+    case "VOICE_MONTHLY_LIMIT":
+    case "ADVANCES_PLAN_REQUIRED":
+      upgradeDialogStore.show({ code, message: apiError.message });
+      break;
+
+    case "TRIAL_NOT_AVAILABLE":
+      toast.error(apiError.message);
       break;
 
     case "NETWORK_ERROR":

@@ -8,7 +8,7 @@ import type {
   UpdateProposalDTO,
 } from "@addinvoice/schemas";
 
-import { prisma } from "@addinvoice/db";
+import { assertCanCreate, assertCanSendEmail, prisma } from "@addinvoice/db";
 import { randomUUID } from "node:crypto";
 
 import type { ListProposalsQuery } from "./proposals.schemas.js";
@@ -22,12 +22,10 @@ import {
 } from "../../errors/EntityErrors.js";
 import { normalizeTipTapField } from "../../lib/tiptap.js";
 import { sendInvoiceQueue, sendProposalQueue } from "../../queue/queues.js";
-import { resolveSelectedPaymentMethodId } from "../workspace/payment-method-resolver.service.js";
 import {
   toProposalDashboardResponse,
   toProposalDescriptiveItemResponse,
   toProposalResponse,
-  toProposalResponseWithoutItems,
 } from "./proposals.mapper.js";
 
 // ===== HELPER FUNCTIONS =====
@@ -132,6 +130,7 @@ export async function convertEstimateToProposal(
   },
 ): Promise<ProposalResponse> {
   const proposal = await prisma.$transaction(async (tx) => {
+    await assertCanCreate(tx, workspaceId, "proposals");
     const estimate = await tx.estimate.findUnique({
       where: {
         workspaceId_sequence: {
@@ -230,6 +229,7 @@ export async function convertEstimateToProposal(
     return created;
   });
 
+  await assertCanSendEmail(prisma, workspaceId);
   await sendProposalQueue.add("send-proposal", {
     email: emailData?.email ?? proposal.clientEmail,
     proposalId: proposal.id,
@@ -500,6 +500,7 @@ export async function resendProposal(
     where: { id: existing.id },
   });
 
+  await assertCanSendEmail(prisma, workspaceId);
   await sendProposalQueue.add("send-proposal", {
     email: updated.clientEmail,
     proposalId: updated.id,
@@ -703,6 +704,7 @@ export async function convertProposalToInvoice(
   sequence: number,
 ): Promise<{ id: number; invoiceNumber: string; sequence: number }> {
   const conversion = await prisma.$transaction(async (tx) => {
+    await assertCanCreate(tx, workspaceId, "invoices");
     const proposal = await tx.proposal.findUnique({
       where: {
         workspaceId_sequence: {

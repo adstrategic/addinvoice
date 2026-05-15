@@ -11,7 +11,7 @@ import type {
   UpdateEstimateItemDTO,
 } from "@addinvoice/schemas";
 
-import { prisma, type Prisma } from "@addinvoice/db";
+import { assertCanCreate, prisma, type Prisma } from "@addinvoice/db";
 import { randomUUID } from "node:crypto";
 
 import type { ListEstimatesQuery } from "./estimates.schemas.js";
@@ -714,6 +714,7 @@ export async function createEstimate(
   data: CreateEstimateDTO,
 ): Promise<EstimateResponse> {
   return await prisma.$transaction(async (tx) => {
+    await assertCanCreate(tx, workspaceId, "estimates");
     // Check if workspace has at least one business
     const businessCount = await tx.business.count({
       where: {

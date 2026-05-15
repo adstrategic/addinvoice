@@ -73,7 +73,7 @@ export async function createPortalSession(
   res: Response,
 ): Promise<void> {
   const workspaceId = getWorkspaceId(req);
-  const body = req.body as { returnUrl?: unknown } | undefined;
+  const body = req.body as undefined | { returnUrl?: unknown };
   const returnUrl = body?.returnUrl;
 
   if (returnUrl !== undefined && !isSafeRelativeReturnUrl(returnUrl)) {
@@ -119,5 +119,20 @@ export async function getSubscriptionStatus(
 
   const status = await subscriptionService.getSubscriptionStatus(workspaceId);
 
+  res.json({ data: status });
+}
+
+/**
+ * POST /subscription/trial/activate - Activate the free trial for the workspace
+ */
+export async function activateTrial(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+
+  await subscriptionService.activateTrial(workspaceId);
+
+  const status = await subscriptionService.getSubscriptionStatus(workspaceId);
   res.json({ data: status });
 }

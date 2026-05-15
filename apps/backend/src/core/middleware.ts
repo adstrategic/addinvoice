@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 
-import { Prisma } from "@addinvoice/db";
+import { LimitExceededError, Prisma } from "@addinvoice/db";
 import rateLimit from "express-rate-limit";
 
 import CustomError from "../errors/CustomError.js";
@@ -30,6 +30,18 @@ export function errorHandler(
   next: NextFunction,
 ): void {
   console.error(err);
+
+  // Limit-exceeded errors thrown by the shared @addinvoice/db guards
+  if (err instanceof LimitExceededError) {
+    res.status(err.statusCode).json({
+      code: err.code,
+      message: err.message,
+      statusCode: err.statusCode,
+      details: err.details,
+    });
+    return;
+  }
+
   // Handle our custom errors (CustomError and subclasses including FieldValidationError)
   if (err instanceof CustomError) {
     const payload: {

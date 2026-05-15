@@ -1,6 +1,12 @@
 import type Stripe from "stripe";
 
-import { prisma } from "@addinvoice/db";
+import {
+  assertCanClaimTrial,
+  MINIMUM_VOICE_MONTHLY_LIMIT,
+  MODULE_TRIAL_LIMIT,
+  prisma,
+  TRIAL_EMAIL_LIMIT,
+} from "@addinvoice/db";
 
 import { PLAN_PRODUCT_IDS, stripe } from "../../core/stripe.js";
 
@@ -18,7 +24,8 @@ export interface PlanPricesRecurring {
   yearly: PlanPriceInfo;
 }
 
-export type SubscriptionPlan = "ESSENTIAL" | "LIFETIME" | "MINIMUM";
+export type PaidSubscriptionPlan = "ESSENTIAL" | "LIFETIME" | "MINIMUM";
+export type SubscriptionPlan = "FREE_TRIAL" | PaidSubscriptionPlan;
 
 export type SubscriptionStatus =
   | "ACTIVE"
@@ -29,10 +36,31 @@ export type SubscriptionStatus =
   | "TRIALING"
   | "UNPAID";
 
+export interface TrialUsageSummary {
+  advances: { limit: number; used: number };
+  catalog: { limit: number; used: number };
+  clients: { limit: number; used: number };
+  emails: { limit: number; used: number };
+  estimates: { limit: number; used: number };
+  expenses: { limit: number; used: number };
+  invoices: { limit: number; used: number };
+  payments: { limit: number; used: number };
+  proposals: { limit: number; used: number };
+}
+
+export interface VoiceUsageSummary {
+  limit: number;
+  used: number;
+  windowEnd: null | string;
+}
+
 export interface SubscriptionStatusResponse {
+  hasEverPaid: boolean;
   isActive: boolean;
   plan: null | SubscriptionPlan;
   status: null | SubscriptionStatus;
+  trialUsage?: TrialUsageSummary;
+  voiceUsage?: VoiceUsageSummary;
 }
 
 /**
@@ -232,14 +260,26 @@ export async function getSubscriptionStatus(
 ): Promise<SubscriptionStatusResponse> {
   const workspace = await prisma.workspace.findUnique({
     select: {
+      hasEverPaid: true,
       subscriptionPlan: true,
       subscriptionStatus: true,
+      usage: true,
     },
     where: { id: workspaceId },
   });
 
-  if (!workspace?.subscriptionPlan || !workspace.subscriptionStatus) {
+  if (!workspace) {
     return {
+      hasEverPaid: false,
+      isActive: false,
+      plan: null,
+      status: null,
+    };
+  }
+
+  if (!workspace.subscriptionPlan || !workspace.subscriptionStatus) {
+    return {
+      hasEverPaid: workspace.hasEverPaid,
       isActive: false,
       plan: null,
       status: null,
@@ -250,11 +290,61 @@ export async function getSubscriptionStatus(
     workspace.subscriptionStatus === "ACTIVE" ||
     workspace.subscriptionStatus === "TRIALING";
 
-  return {
+  const response: SubscriptionStatusResponse = {
+    hasEverPaid: workspace.hasEverPaid,
     isActive,
     plan: workspace.subscriptionPlan,
     status: workspace.subscriptionStatus,
   };
+
+  const usage = workspace.usage;
+  if (workspace.subscriptionPlan === "FREE_TRIAL" && usage) {
+    response.trialUsage = {
+      invoices: { used: usage.invoicesCreated, limit: MODULE_TRIAL_LIMIT },
+      estimates: { used: usage.estimatesCreated, limit: MODULE_TRIAL_LIMIT },
+      proposals: { used: usage.proposalsCreated, limit: MODULE_TRIAL_LIMIT },
+      expenses: { used: usage.expensesCreated, limit: MODULE_TRIAL_LIMIT },
+      advances: { used: usage.advancesCreated, limit: MODULE_TRIAL_LIMIT },
+      catalog: { used: usage.catalogCreated, limit: MODULE_TRIAL_LIMIT },
+      clients: { used: usage.clientsCreated, limit: MODULE_TRIAL_LIMIT },
+      payments: { used: usage.paymentsCreated, limit: MODULE_TRIAL_LIMIT },
+      emails: { used: usage.emailsSent, limit: TRIAL_EMAIL_LIMIT },
+    };
+  }
+  if (workspace.subscriptionPlan === "MINIMUM" && usage) {
+    response.voiceUsage = {
+      limit: MINIMUM_VOICE_MONTHLY_LIMIT,
+      used: usage.voiceItemsCreated,
+      windowEnd: usage.voiceWindowEnd
+        ? usage.voiceWindowEnd.toISOString()
+        : null,
+    };
+  }
+
+  return response;
+}
+
+/**
+ * Activate the free trial for a workspace.
+ * Caller must have an authenticated workspace; guard rejects if hasEverPaid
+ * or already on FREE_TRIAL.
+ */
+export async function activateTrial(workspaceId: number): Promise<void> {
+  await assertCanClaimTrial(prisma, workspaceId);
+  await prisma.$transaction([
+    prisma.workspace.update({
+      data: {
+        subscriptionPlan: "FREE_TRIAL",
+        subscriptionStatus: "ACTIVE",
+      },
+      where: { id: workspaceId },
+    }),
+    prisma.workspaceUsage.upsert({
+      create: { workspaceId },
+      update: {},
+      where: { workspaceId },
+    }),
+  ]);
 }
 
 /**
@@ -264,7 +354,9 @@ export async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
 ): Promise<void> {
   const workspaceId = parseInt(session.metadata?.workspaceId ?? "0", 10);
-  const planType = session.metadata?.planType as SubscriptionPlan | undefined;
+  const planType = session.metadata?.planType as
+    | PaidSubscriptionPlan
+    | undefined;
 
   if (!workspaceId || !planType) {
     throw new Error("Missing metadata in checkout session");
@@ -273,6 +365,7 @@ export async function handleCheckoutCompleted(
   // Get subscription from Stripe if it's a subscription (not one-time payment)
   let subscriptionId: null | string = null;
   let status: SubscriptionStatus = "INCOMPLETE";
+  let voiceWindowStart: Date | null = null;
 
   if (session.mode === "subscription" && session.subscription) {
     const subscription = await stripe.subscriptions.retrieve(
@@ -280,14 +373,17 @@ export async function handleCheckoutCompleted(
     );
     subscriptionId = subscription.id;
     status = mapStripeStatusToDbStatus(subscription.status);
+    voiceWindowStart = new Date(subscription.current_period_start * 1000);
   } else if (session.mode === "payment") {
     // For one-time payments (LIFETIME), mark as active immediately
     status = "ACTIVE";
   }
 
-  // Update workspace with subscription info (cache from Stripe)
+  // Update workspace with subscription info (cache from Stripe) and flip
+  // hasEverPaid so the free trial cannot be re-claimed later.
   await prisma.workspace.update({
     data: {
+      hasEverPaid: true,
       stripeCustomerId: session.customer as string,
       stripeSubscriptionId: subscriptionId,
       subscriptionPlan: planType,
@@ -295,6 +391,8 @@ export async function handleCheckoutCompleted(
     },
     where: { id: workspaceId },
   });
+
+  await syncVoiceWindow(workspaceId, planType, voiceWindowStart);
 
   // TODO: AI CREDITS - Purchase AI credits here based on plan
   // MINIMUM: $3 worth of credits
@@ -417,9 +515,9 @@ async function updateSubscriptionFromStripe(
   const status = mapStripeStatusToDbStatus(subscription.status);
 
   // Extract plan type from subscription metadata or price
-  let planType: null | SubscriptionPlan = null;
+  let planType: null | PaidSubscriptionPlan = null;
   if (subscription.metadata.planType) {
-    planType = subscription.metadata.planType as SubscriptionPlan;
+    planType = subscription.metadata.planType as PaidSubscriptionPlan;
   } else {
     // Fallback: try to determine from price's product ID
     const price = subscription.items.data[0]?.price;
@@ -437,6 +535,7 @@ async function updateSubscriptionFromStripe(
 
   await prisma.workspace.update({
     data: {
+      hasEverPaid: true,
       stripeSubscriptionId: subscription.id,
       subscriptionPlan: planType,
       subscriptionStatus: status,
@@ -444,9 +543,57 @@ async function updateSubscriptionFromStripe(
     where: { id: workspaceId },
   });
 
+  const voiceWindowStart = new Date(subscription.current_period_start * 1000);
+  await syncVoiceWindow(workspaceId, planType, voiceWindowStart);
+
   // TODO: AI CREDITS - Handle subscription renewal
   // When subscription renews (status becomes ACTIVE again), allocate new AI credits
   // MINIMUM: $3 worth of credits
   // ESSENTIAL: $8 worth of credits
   // LIFETIME: Monthly credit allocation (if applicable)
+}
+
+/**
+ * Initialize or clear the voice usage window depending on plan.
+ * For MINIMUM, anchors the first window to the Stripe period start (always one
+ * month long, regardless of monthly vs. yearly billing). For other plans, the
+ * window is cleared so it doesn't leak into MINIMUM voice counting later.
+ */
+async function syncVoiceWindow(
+  workspaceId: number,
+  plan: null | PaidSubscriptionPlan,
+  voiceWindowStart: Date | null,
+): Promise<void> {
+  if (plan === "MINIMUM" && voiceWindowStart) {
+    const voiceWindowEnd = new Date(voiceWindowStart);
+    voiceWindowEnd.setUTCMonth(voiceWindowEnd.getUTCMonth() + 1);
+
+    await prisma.workspaceUsage.upsert({
+      create: {
+        voiceItemsCreated: 0,
+        voiceWindowEnd,
+        voiceWindowStart,
+        workspaceId,
+      },
+      update: {
+        voiceItemsCreated: 0,
+        voiceWindowEnd,
+        voiceWindowStart,
+      },
+      where: { workspaceId },
+    });
+    return;
+  }
+
+  // Non-MINIMUM plans: keep counters but clear the voice window so it isn't
+  // mistakenly reused if the user later downgrades to MINIMUM.
+  await prisma.workspaceUsage.upsert({
+    create: { workspaceId },
+    update: {
+      voiceItemsCreated: 0,
+      voiceWindowEnd: null,
+      voiceWindowStart: null,
+    },
+    where: { workspaceId },
+  });
 }

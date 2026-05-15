@@ -2,6 +2,7 @@ import { llm } from '@livekit/agents';
 import { createHash } from 'crypto';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
+import { guardCreateOrExplain } from '../lib/limits';
 import type { InvoiceSessionData } from '../types/session-data';
 
 /**
@@ -265,6 +266,8 @@ export function createCreateInvoiceTool() {
         if (invoiceData.items.length === 0) {
           throw new llm.ToolError('Cannot create invoice without line items.');
         }
+
+        await guardCreateOrExplain(sessionData.workspaceId, 'invoices');
 
         // Parse and validate issue date when provided (treat as date-only in UTC)
         let parsedIssueDate: Date;

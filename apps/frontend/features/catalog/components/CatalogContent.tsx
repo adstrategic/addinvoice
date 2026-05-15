@@ -20,6 +20,7 @@ import { Mic, Package } from "lucide-react";
 import type { CatalogSortBy } from "./CatalogFilters";
 import { VoiceCatalogPromptDialog } from "./VoiceCatalogPromptDialog";
 import { Button } from "@/components/ui/button";
+import { useLimitGuard } from "@/hooks/use-limit-guard";
 
 /**
  * Catalog page component
@@ -34,6 +35,17 @@ export default function CatalogContent() {
   const sortOrder = "asc" as const;
 
   const catalogManager = useCatalogFormManager();
+  const { guardCreate } = useLimitGuard();
+
+  const handleOpenCreateCatalog = () => {
+    if (guardCreate("catalog")) return;
+    catalogManager.openCreate();
+  };
+
+  const handleCreateCatalogByVoice = () => {
+    if (guardCreate("catalog", { viaVoice: true })) return;
+    catalogManager.handleCreateCatalogByVoice();
+  };
 
   const handleBusinessIdChange = useCallback(
     (value: string) => {
@@ -115,8 +127,8 @@ export default function CatalogContent() {
             </p>
           </div>
           <CatalogActions
-            onOpenCreateModal={catalogManager.openCreate}
-            onCreateByVoice={catalogManager.handleCreateCatalogByVoice}
+            onOpenCreateModal={handleOpenCreateCatalog}
+            onCreateByVoice={handleCreateCatalogByVoice}
           />
         </div>
 
@@ -134,7 +146,7 @@ export default function CatalogContent() {
           catalogs={catalogs}
           onEdit={catalogManager.openEdit}
           onDelete={catalogDelete.openDeleteModal}
-          onAddNew={catalogManager.openCreate}
+          onAddNew={handleOpenCreateCatalog}
         >
           {pagination && (
             <div className="mt-6">
@@ -196,7 +208,7 @@ export default function CatalogContent() {
         type="button"
         size="icon-lg"
         className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
-        onClick={catalogManager.handleCreateCatalogByVoice}
+        onClick={handleCreateCatalogByVoice}
         aria-label="Create product by voice"
       >
         <Mic className="size-8" />

@@ -85,7 +85,8 @@ export function SubscriptionGuard({
   }
 
   // Default guard: no subscription, show redirecting to /subscribe
-  if (!redirectIfSubscribed && subscription && !subscription.isActive) {
+  // Using !subscription?.isActive covers both `isActive: false` and `subscription: undefined`
+  if (!redirectIfSubscribed && !subscription?.isActive) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
