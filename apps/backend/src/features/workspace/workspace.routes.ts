@@ -4,6 +4,7 @@ import { processRequest } from "zod-express-middleware";
 import asyncHandler from "../../core/async-handler.js";
 import {
   completeOnboarding,
+  completeOnboardingTour,
   getOnboarding,
   getWorkspaceLanguage,
   listPaymentMethods,
@@ -34,6 +35,11 @@ workspaceRoutes.post(
     body: upsertOnboardingSchema,
   }),
   asyncHandler(completeOnboarding),
+);
+
+workspaceRoutes.patch(
+  "/onboarding-tour/complete",
+  asyncHandler(completeOnboardingTour),
 );
 
 // GET /api/v1/workspace/payment-methods - List all payment methods

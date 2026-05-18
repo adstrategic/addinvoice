@@ -7,12 +7,10 @@ import {
   FileCheck,
   CreditCard,
   Receipt,
-  File,
+  FilePen,
   Users,
   Package,
-  Bell,
   Settings,
-  Sparkles,
 } from "lucide-react";
 
 export type TourStep = {
@@ -20,6 +18,10 @@ export type TourStep = {
   title: string;
   content: string;
   position?: "top" | "bottom" | "left" | "right" | "center";
+  /** CustomEvent name — tour auto-advances when this event fires on window */
+  autoAdvanceOn?: string;
+  /** Route to navigate to when the user clicks Next on this step; tour resumes at next step on arrival */
+  navigateTo?: string;
 };
 
 export type TourModule = {
@@ -30,13 +32,106 @@ export type TourModule = {
   icon: LucideIcon;
 };
 
-// General tour (full app overview) - only steps whose targets exist in app
+// ─── Onboarding tour (new-user first experience) ──────────────────────────────
+
+export const ONBOARDING_TOUR_ID = "onboarding";
+
+export const ONBOARDING_TOUR_STEPS: TourStep[] = [
+  {
+    targetId: "clients-create-btn",
+    title: "Add Your First Client",
+    content:
+      "Start by creating a client manually. They'll be linked to your invoices.",
+    position: "bottom",
+    autoAdvanceOn: "tour:client-created",
+  },
+  {
+    targetId: "sidebar-nav-estimates",
+    title: "Estimates",
+    content:
+      "Create quotes for clients here. Once accepted, convert them to proposals with one click.",
+    position: "right",
+  },
+  {
+    targetId: "sidebar-nav-proposals",
+    title: "Proposals",
+    content:
+      "Accepted estimates become proposals. Send them, mark them accepted, or convert to invoices.",
+    position: "right",
+  },
+  {
+    targetId: "sidebar-nav-invoices",
+    title: "Go to Invoices",
+    content:
+      "Now let's create your first invoice. Click Invoices in the sidebar to continue.",
+    position: "right",
+    navigateTo: "/invoices",
+  },
+  {
+    targetId: "invoices-voice-btn",
+    title: "Create by Voice",
+    content:
+      "Tap Add by voice and describe your invoice out loud — we'll handle the rest.",
+    position: "bottom",
+    autoAdvanceOn: "tour:invoice-voice-clicked",
+  },
+];
+
+export const ONBOARDING_TOUR_MOBILE_STEPS: TourStep[] = [
+  {
+    targetId: "clients-create-btn",
+    title: "Add Your First Client",
+    content:
+      "Start by creating a client manually. They'll be linked to your invoices.",
+    position: "bottom",
+    autoAdvanceOn: "tour:client-created",
+  },
+  {
+    targetId: "sidebar-mobile-trigger",
+    title: "Open the Navigation",
+    content: "Tap the menu icon to open the navigation sidebar.",
+    position: "bottom",
+    autoAdvanceOn: "tour:sidebar-opened",
+  },
+  {
+    targetId: "sidebar-nav-estimates",
+    title: "Estimates",
+    content:
+      "Create quotes for clients here. Once accepted, convert them to proposals with one click.",
+    position: "right",
+  },
+  {
+    targetId: "sidebar-nav-proposals",
+    title: "Proposals",
+    content:
+      "Accepted estimates become proposals. Send them, mark them accepted, or convert to invoices.",
+    position: "right",
+  },
+  {
+    targetId: "sidebar-nav-invoices",
+    title: "Go to Invoices",
+    content: "Now tap Invoices to continue.",
+    position: "right",
+    navigateTo: "/invoices",
+  },
+  {
+    targetId: "invoices-voice-btn",
+    title: "Create by Voice",
+    content:
+      "Tap Add by voice and describe your invoice out loud — we'll handle the rest.",
+    position: "bottom",
+    autoAdvanceOn: "tour:invoice-voice-clicked",
+  },
+];
+
+// ─── General tour ─────────────────────────────────────────────────────────────
+
 export const GENERAL_TOUR_STEPS: TourStep[] = [
   {
-    targetId: "dashboard-total-invoices",
+    targetId: "dashboard-total-earned",
     title: "Dashboard Overview",
     content:
-      "Welcome to ADDINVOICES! This dashboard gives you a quick snapshot of your business health, including total, paid, and overdue invoices.",
+      "Welcome to ADDINVOICES! This dashboard gives you a quick snapshot of your business health.",
     position: "bottom",
   },
   {
@@ -47,76 +142,71 @@ export const GENERAL_TOUR_STEPS: TourStep[] = [
     position: "top",
   },
   {
-    targetId: "dashboard-create-invoice-btn",
-    title: "Create Invoice",
+    targetId: "sidebar-nav-estimates",
+    title: "Estimates",
     content:
-      "Ready to get paid? Click this button to create a new invoice instantly. You can also use our 'Invoice by Voice' feature inside!",
-    position: "left",
+      "Create quotes for clients here. Once accepted, convert them to proposals with one click.",
+    position: "right",
+  },
+  {
+    targetId: "sidebar-nav-proposals",
+    title: "Proposals",
+    content:
+      "Accepted estimates become proposals. Send them, mark them accepted, or convert to invoices.",
+    position: "right",
   },
   {
     targetId: "sidebar-nav-configuration",
     title: "Companies & Settings",
     content:
-      "Set up your company details, logo, and taxes here. You can manage multiple companies from a single account.",
-    position: "right",
-  },
-  {
-    targetId: "sidebar-nav-catalog",
-    title: "Product Catalog",
-    content:
-      "Add your products and services here once, and they'll be ready to auto-fill in your invoices.",
-    position: "right",
-  },
-  {
-    targetId: "sidebar-nav-payments",
-    title: "Payments",
-    content:
-      "Keep track of all incoming payments. You can also set up Stripe integration for automatic payments.",
+      "Set up your company details, logo, and taxes here. You can manage multiple companies.",
     position: "right",
   },
   {
     targetId: "sidebar-nav-ask-me-how",
     title: "Need Help?",
     content:
-      "Visit the 'Ask Me How' section anytime to watch tutorials, restart this tour, or chat with our help assistant.",
+      "Visit 'Ask Me How' anytime to restart a tour, watch tutorials, or chat with the help assistant.",
     position: "right",
   },
 ];
 
+// ─── Module-specific tours ────────────────────────────────────────────────────
+
 const DASHBOARD_TOUR_STEPS: TourStep[] = [
   {
-    targetId: "dashboard-total-invoices",
-    title: "Total Invoices",
+    targetId: "dashboard-total-earned",
+    title: "Total Earned",
     content:
-      "See your total number of invoices at a glance. This includes all invoices regardless of status.",
+      "Your total revenue from paid invoices. This is the money that's already in your pocket.",
     position: "bottom",
   },
   {
-    targetId: "dashboard-paid-invoices",
-    title: "Paid Invoices",
+    targetId: "dashboard-total-spent",
+    title: "Total Spent",
     content:
-      "Track how many invoices have been paid. The completion rate shows your payment collection efficiency.",
+      "Track your total business expenses here. Keeping an eye on spending helps you manage profitability.",
     position: "bottom",
   },
   {
-    targetId: "dashboard-pending-invoices",
-    title: "Pending Invoices",
+    targetId: "dashboard-customers-owe",
+    title: "Customers Owe",
     content:
-      "Monitor invoices awaiting payment. Keep an eye on these to follow up with clients.",
+      "The total outstanding amount clients still owe you. Follow up on these to improve cash flow.",
     position: "bottom",
   },
   {
     targetId: "dashboard-revenue-chart",
     title: "Revenue Analytics",
     content:
-      "Visualize your monthly revenue trends. This chart helps you understand your business growth patterns.",
+      "Visualize your monthly revenue trends. This chart helps you understand your business growth.",
     position: "top",
   },
   {
     targetId: "dashboard-recent-invoices",
     title: "Recent Activity",
     content:
-      "Quick access to your latest invoices. Click on any invoice to view details or take actions.",
+      "Quick access to your latest invoices. Click any invoice to view details or take actions.",
     position: "top",
   },
   {
@@ -133,14 +223,14 @@ const INVOICES_TOUR_STEPS: TourStep[] = [
     targetId: "invoices-create-btn",
     title: "Create Invoice",
     content:
-      "Start creating a new invoice manually. Fill in client details, add items, and send it to your client.",
+      "Start creating a new invoice manually. Fill in client details, add items, and send it.",
     position: "bottom",
   },
   {
-    targetId: "invoices-search",
-    title: "Search Invoices",
+    targetId: "invoices-voice-btn",
+    title: "Voice Invoice",
     content:
-      "Quickly find invoices by number, client name, or amount. Type to filter your results instantly.",
+      "Tap Add by voice and describe your invoice — client, items, amounts. We'll fill it in.",
     position: "bottom",
   },
   {
@@ -154,22 +244,51 @@ const INVOICES_TOUR_STEPS: TourStep[] = [
     targetId: "invoices-list",
     title: "Invoice List",
     content:
-      "All your invoices in one place. Click the menu on each invoice to view, edit, download, send, or delete.",
+      "All your invoices in one place. Click the menu on each row to view, download, send, or delete.",
     position: "top",
   },
 ];
 
-// const QUOTES_TOUR_STEPS: TourStep[] = [
-// 	{ targetId: "quotes-create-btn", title: "Create Quote", content: "Generate professional quotes for potential clients. Once accepted, you can convert them to invoices.", position: "bottom" },
-// 	{ targetId: "quotes-search", title: "Search Quotes", content: "Find quotes by client name, quote number, or amount.", position: "bottom" },
-// 	{ targetId: "quotes-filter", title: "Filter Quotes", content: "Filter by status: pending, accepted, rejected, or expired.", position: "bottom" },
-// 	{ targetId: "quotes-list", title: "Quote Management", content: "View all your quotes here. Send them to clients, convert accepted quotes to invoices, or archive old ones.", position: "top" },
-// ]
+const ESTIMATES_TOUR_STEPS: TourStep[] = [
+  {
+    targetId: "estimates-create-btn",
+    title: "Create Estimate",
+    content:
+      "Draft a professional quote for a client. Set items, prices, and terms before sending.",
+    position: "bottom",
+  },
+  {
+    targetId: "estimates-voice-btn",
+    title: "Voice Estimate",
+    content:
+      "Describe your estimate by voice — client, line items, and amounts — and we'll generate it.",
+    position: "left",
+  },
+  {
+    targetId: "estimates-list",
+    title: "Convert to Proposal",
+    content:
+      "Once a client accepts, use the action menu on any estimate to convert it to a proposal.",
+    position: "top",
+  },
+];
 
-// const REMINDERS_TOUR_STEPS: TourStep[] = [
-// 	{ targetId: "reminders-create-btn", title: "Mass Reminders", content: "Send payment reminders to all overdue clients at once with a single click.", position: "bottom" },
-// 	{ targetId: "reminders-list", title: "Reminder Lists", content: "Switch between Pending, Scheduled, and History tabs to manage your different reminder queues.", position: "top" },
-// ]
+const PROPOSALS_TOUR_STEPS: TourStep[] = [
+  {
+    targetId: "proposals-filter",
+    title: "Proposals",
+    content:
+      "Proposals come from estimates your client has accepted. Filter by status to manage them.",
+    position: "bottom",
+  },
+  {
+    targetId: "proposals-list",
+    title: "Manage Proposals",
+    content:
+      "Send proposals, mark them accepted, or convert to an invoice — all from the action menu.",
+    position: "top",
+  },
+];
 
 const PAYMENTS_TOUR_STEPS: TourStep[] = [
   {
@@ -221,10 +340,11 @@ const CLIENTS_TOUR_STEPS: TourStep[] = [
     position: "bottom",
   },
   {
-    targetId: "clients-search",
-    title: "Search Clients",
-    content: "Quickly find clients by name, email, or phone number.",
-    position: "bottom",
+    targetId: "clients-voice-btn",
+    title: "Voice Creation",
+    content:
+      "Add clients hands-free — tap the mic and describe who they are. We'll create the record.",
+    position: "left",
   },
   {
     targetId: "clients-list",
@@ -240,20 +360,13 @@ const CATALOG_TOUR_STEPS: TourStep[] = [
     targetId: "catalog-create-btn",
     title: "Add Product/Service",
     content:
-      "Add items to your catalog. These will auto-complete when creating invoices, saving you time.",
+      "Add items to your catalog. They'll auto-complete when creating invoices, saving you time.",
     position: "bottom",
   },
   {
     targetId: "catalog-search",
     title: "Search Catalog",
     content: "Find items in your catalog by name or description.",
-    position: "bottom",
-  },
-  {
-    targetId: "catalog-filter",
-    title: "Filter by Company",
-    content:
-      "If you manage multiple companies, filter catalog items by company.",
     position: "bottom",
   },
   {
@@ -270,7 +383,7 @@ const CONFIGURATION_TOUR_STEPS: TourStep[] = [
     targetId: "config-company",
     title: "Company Settings",
     content:
-      "Set up your company details: name, logo, address, NIT, and contact information. This appears on all your invoices.",
+      "Set up your company details: name, logo, address, NIT, and contact info. Appears on all invoices.",
     position: "bottom",
   },
   {
@@ -286,21 +399,17 @@ const CONFIGURATION_TOUR_STEPS: TourStep[] = [
       "Manage your subscription plan and payment methods for the application.",
     position: "bottom",
   },
-  {
-    targetId: "config-notifications",
-    title: "General Settings",
-    content:
-      "Configure default tax rates, notifications, and other application preferences.",
-    position: "bottom",
-  },
 ];
+
+// ─── Registry & lookup maps ───────────────────────────────────────────────────
 
 export const STEPS_BY_TOUR_ID: Record<string, TourStep[]> = {
   general: GENERAL_TOUR_STEPS,
+  onboarding: ONBOARDING_TOUR_STEPS,
   dashboard: DASHBOARD_TOUR_STEPS,
   invoices: INVOICES_TOUR_STEPS,
-  //   quotes: QUOTES_TOUR_STEPS,
-  //   reminders: REMINDERS_TOUR_STEPS,
+  estimates: ESTIMATES_TOUR_STEPS,
+  proposals: PROPOSALS_TOUR_STEPS,
   payments: PAYMENTS_TOUR_STEPS,
   expenses: EXPENSES_TOUR_STEPS,
   clients: CLIENTS_TOUR_STEPS,
@@ -310,10 +419,11 @@ export const STEPS_BY_TOUR_ID: Record<string, TourStep[]> = {
 
 export const ROUTE_BY_TOUR_ID: Record<string, string> = {
   general: "/",
+  onboarding: "/clients",
   dashboard: "/",
   invoices: "/invoices",
-  //   quotes: "/quotes",
-  //   reminders: "/reminders",
+  estimates: "/estimates",
+  proposals: "/proposals",
   payments: "/payments",
   expenses: "/expenses",
   clients: "/clients",
@@ -321,7 +431,7 @@ export const ROUTE_BY_TOUR_ID: Record<string, string> = {
   configuration: "/configuration",
 };
 
-/** Module tours only (excludes "general"). Used by TourSelectionModal for "Choose Module". */
+/** Module tours shown in TourSelectionModal. Excludes "general" and "onboarding". */
 export const TOUR_REGISTRY: TourModule[] = [
   {
     id: "dashboard",
@@ -337,33 +447,33 @@ export const TOUR_REGISTRY: TourModule[] = [
     route: "/invoices",
     icon: FileText,
   },
-  //   {
-  //     id: "quotes",
-  //     name: "Quotes",
-  //     description: "Generate quotes for clients",
-  //     route: "/quotes",
-  //     icon: FileCheck,
-  //   },
-  //   {
-  // 	id: "expenses",
-  // 	name: "Expenses",
-  // 	description: "Record business expenses",
-  // 	route: "/expenses",
-  // 	icon: Receipt,
-  //   },
-  //   {
-  // 	id: "reminders",
-  // 	name: "Reminders",
-  // 	description: "Set up payment reminders",
-  // 	route: "/reminders",
-  // 	icon: Bell,
-  //   },
+  {
+    id: "estimates",
+    name: "Estimates",
+    description: "Create quotes and convert to proposals",
+    route: "/estimates",
+    icon: FileCheck,
+  },
+  {
+    id: "proposals",
+    name: "Proposals",
+    description: "Manage accepted estimates",
+    route: "/proposals",
+    icon: FilePen,
+  },
   {
     id: "payments",
     name: "Payments",
     description: "Track payment history",
     route: "/payments",
     icon: CreditCard,
+  },
+  {
+    id: "expenses",
+    name: "Expenses",
+    description: "Record business expenses",
+    route: "/expenses",
+    icon: Receipt,
   },
   {
     id: "clients",

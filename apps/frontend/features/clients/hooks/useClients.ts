@@ -101,6 +101,7 @@ export function useCreateClient(setError?: UseFormSetError<CreateClientDTO>) {
       toast.success("Client created", {
         description: "The client has been added successfully.",
       });
+      window.dispatchEvent(new CustomEvent("tour:client-created"));
     },
     onError: (err) => {
       handleMutationError(err, setError);

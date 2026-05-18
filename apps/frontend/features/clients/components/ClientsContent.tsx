@@ -174,6 +174,7 @@ export default function ClientsPage() {
         className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
         onClick={openVoicePrompt}
         aria-label="Create client by voice"
+        data-tour-id="clients-voice-btn"
       >
         <Mic className="size-8" />
       </Button>

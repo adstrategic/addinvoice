@@ -194,6 +194,10 @@ function Sidebar({
             } as React.CSSProperties
           }
           side={side}
+          onPointerDownOutside={(e) => {
+            // Prevent the sidebar from closing when the user clicks tour overlay elements
+            if (document.body.dataset.tourActive) e.preventDefault();
+          }}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>

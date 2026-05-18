@@ -92,6 +92,10 @@ export default function InvoicesContent() {
   const handleCreateInvoiceByVoice = () => {
     if (guardCreate("invoices", { viaVoice: true })) return;
     invoiceManager.handleCreateInvoiceByVoice();
+    // Let voice modal state commit before the tour ends on the last onboarding step.
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent("tour:invoice-voice-clicked"));
+    });
   };
 
   const handleDownloadPDF = async (invoice: InvoiceResponse) => {

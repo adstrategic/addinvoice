@@ -11,11 +11,12 @@ export const onboardingKeys = {
   status: () => [...onboardingKeys.all, "status"] as const,
 };
 
-export function useOnboardingStatus() {
+export function useOnboardingStatus(options?: { enabled?: boolean }) {
   return useQuery<OnboardingStatus>({
     queryKey: onboardingKeys.status(),
     queryFn: () => onboardingService.getStatus(),
-    staleTime: 60 * 1000,
+    staleTime: Infinity,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -30,3 +31,24 @@ export function useCompleteOnboarding() {
   });
 }
 
+export function useCompleteOnboardingTour() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, unknown, void>({
+    mutationFn: () => onboardingService.completeTour(),
+    onSuccess: () => {
+      // Patch cache in place — invalidating refetches and FunnelGuard unmounts the
+      // dashboard tree (e.g. while the voice-invoice dialog is opening).
+      queryClient.setQueryData<OnboardingStatus>(
+        onboardingKeys.status(),
+        (prev) =>
+          prev
+            ? {
+                ...prev,
+                onboardingTourCompletedAt: new Date().toISOString(),
+              }
+            : prev,
+      );
+    },
+  });
+}

@@ -177,3 +177,13 @@
     opacity: 1;
   }
 }
+
+/* Applied to tour targets so the highlight stacks correctly inside sheets/dialogs */
+.tour-target-active {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 20px color-mix(in oklch, var(--primary) 50%, transparent);
+}

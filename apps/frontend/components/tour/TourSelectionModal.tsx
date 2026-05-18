@@ -16,7 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
 import { LayoutDashboard, Sparkles, ArrowLeft } from "lucide-react";
 import { TOUR_REGISTRY } from "./tour-config";
@@ -50,9 +49,14 @@ export function TourSelectionModal({
     setView("main");
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen);
+    if (!nextOpen) setView("main");
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] p-0 flex flex-col overflow-hidden">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-4xl gap-0 p-0 flex flex-col overflow-hidden h-[min(85dvh,85vh)] max-h-[min(85dvh,85vh)] sm:h-auto sm:max-h-[85vh]">
         {view === "main" ? (
           <>
             <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
@@ -154,7 +158,7 @@ export function TourSelectionModal({
               </div>
             </DialogHeader>
 
-            <ScrollArea className="flex-1 min-h-0 px-6 py-4">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-6 py-4 touch-pan-y [-webkit-overflow-scrolling:touch]">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pb-4">
                 {TOUR_REGISTRY.map((module, index) => {
                   const Icon = module.icon;
@@ -187,7 +191,7 @@ export function TourSelectionModal({
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
           </>
         )}
       </DialogContent>

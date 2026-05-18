@@ -41,8 +41,9 @@ model Workspace {
     invoiceColor        String? // Brand color for invoices
 
     // Onboarding
-    onboardingCompletedAt DateTime?
-    onboardingAnswers     Json?
+    onboardingCompletedAt     DateTime?
+    onboardingAnswers         Json?
+    onboardingTourCompletedAt DateTime?
 
     // Preferred language for the voice agent
     language AgentLanguage @default(en)
