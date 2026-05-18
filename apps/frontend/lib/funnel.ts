@@ -10,7 +10,7 @@ export const FUNNEL_PATHS: Record<FunnelStep, string> = {
   onboarding: "/onboarding",
   subscribe: "/subscribe",
   setup: "/setup",
-  dashboard: "/",
+  dashboard: "/clients",
 };
 
 const STEP_ORDER: FunnelStep[] = [

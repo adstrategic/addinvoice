@@ -316,6 +316,7 @@ export default function EstimatesContent() {
         className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
         onClick={handleCreateEstimateByVoice}
         aria-label="Create estimate by voice"
+        data-tour-id="estimates-voice-btn"
       >
         <Mic className="size-8" />
       </Button>

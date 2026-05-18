@@ -14,154 +14,219 @@ import {
 } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight, ChevronLeft } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+
+const TOUR_TARGET_ACTIVE_CLASS = "tour-target-active";
+
+function isSidebarTarget(targetId: string | null): boolean {
+  if (!targetId) return false;
+  return (
+    targetId.startsWith("sidebar-nav-") || targetId === "sidebar-mobile-trigger"
+  );
+}
+
+/** True when a Radix dialog is open (client form, delete modal, etc.) */
+function useDialogOpen(): boolean {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      setOpen(
+        !!document.querySelector(
+          '[data-slot="dialog-content"][data-state="open"]',
+        ),
+      );
+    };
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-state"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  return open;
+}
 
 export function TourOverlay() {
   const { isOpen, currentStepIndex, steps, nextStep, prevStep, skipTour } =
     useTour();
+  const isMobile = useIsMobile();
+  const isDialogOpen = useDialogOpen();
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [pollExhausted, setPollExhausted] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const warnedMissingRef = useRef<string | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const observerRef = useRef<ResizeObserver | null>(null);
+  const highlightedElRef = useRef<Element | null>(null);
 
   const currentStep = steps[currentStepIndex];
   const targetId = currentStep?.targetId ?? null;
   const isLastStep = currentStepIndex === steps.length - 1;
+  const suppressNext = !!currentStep?.navigateTo || !!currentStep?.autoAdvanceOn;
+  const isAutoAdvanceStep = !!currentStep?.autoAdvanceOn;
+  const isInteractionStep =
+    suppressNext || (isMobile && isSidebarTarget(targetId));
+  const shouldShowBackdrop = !isAutoAdvanceStep && !isInteractionStep;
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Resize, scroll (passive), and step change: update target rect
   useEffect(() => {
-    if (!isOpen || !targetId) return;
+    if (!isOpen || !targetId) {
+      setTargetRect(null);
+      return;
+    }
 
-    const runUpdate = () => {
-      if (!targetId) return;
-      const el = getTourTargetElement(targetId);
-      if (el) {
-        setTargetRect(el.getBoundingClientRect());
-        warnedMissingRef.current = null;
-      } else {
-        setTargetRect(null);
-        if (warnedMissingRef.current !== targetId) {
-          warnedMissingRef.current = targetId;
-        }
+    if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    if (observerRef.current) observerRef.current.disconnect();
+    setTargetRect(null);
+    setPollExhausted(false);
+
+    let attempts = 0;
+    const MAX_ATTEMPTS = 25;
+
+    const clearHighlight = () => {
+      if (highlightedElRef.current) {
+        highlightedElRef.current.classList.remove(TOUR_TARGET_ACTIVE_CLASS);
+        highlightedElRef.current = null;
       }
     };
 
-    window.addEventListener("resize", runUpdate);
-    window.addEventListener("scroll", runUpdate, {
+    const applyHighlight = (el: Element) => {
+      clearHighlight();
+      el.classList.add(TOUR_TARGET_ACTIVE_CLASS);
+      highlightedElRef.current = el;
+    };
+
+    const tryFind = () => {
+      const el = getTourTargetElement(targetId);
+      if (el) {
+        setTargetRect(el.getBoundingClientRect());
+        applyHighlight(el);
+        const scrollBlock =
+          isMobile && isSidebarTarget(targetId) ? "nearest" : "center";
+        el.scrollIntoView({
+          behavior: "smooth",
+          block: scrollBlock,
+          inline: "nearest",
+        });
+        observerRef.current = new ResizeObserver(() => {
+          setTargetRect(el.getBoundingClientRect());
+        });
+        observerRef.current.observe(el);
+      } else if (attempts < MAX_ATTEMPTS) {
+        attempts++;
+        pollTimerRef.current = setTimeout(tryFind, 150);
+      } else {
+        setPollExhausted(true);
+      }
+    };
+
+    tryFind();
+
+    const handlePositionUpdate = () => {
+      const el = getTourTargetElement(targetId);
+      if (el) setTargetRect(el.getBoundingClientRect());
+    };
+    window.addEventListener("resize", handlePositionUpdate);
+    window.addEventListener("scroll", handlePositionUpdate, {
       capture: true,
       passive: true,
     });
 
-    runUpdate();
     return () => {
-      window.removeEventListener("resize", runUpdate);
-      window.removeEventListener("scroll", runUpdate, { capture: true });
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+      if (observerRef.current) observerRef.current.disconnect();
+      clearHighlight();
+      window.removeEventListener("resize", handlePositionUpdate);
+      window.removeEventListener("scroll", handlePositionUpdate, {
+        capture: true,
+      });
     };
-  }, [isOpen, currentStepIndex, targetId]);
-
-  // On step change: scroll target into view and observe resize
-  useEffect(() => {
-    if (!isOpen || !targetId) return;
-
-    let observer: ResizeObserver | null = null;
-    const timer = setTimeout(() => {
-      const el = getTourTargetElement(targetId);
-      if (el) {
-        setTargetRect(el.getBoundingClientRect());
-        el.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "center",
-        });
-        observer = new ResizeObserver(() => {
-          setTargetRect(el.getBoundingClientRect());
-        });
-        observer.observe(el);
-      } else {
-        setTargetRect(null);
-      }
-    }, 300);
-    return () => {
-      clearTimeout(timer);
-      observer?.disconnect();
-    };
-  }, [isOpen, currentStepIndex, targetId]);
+  }, [isOpen, currentStepIndex, targetId, isMobile]);
 
   if (!isMounted || !isOpen || !currentStep) return null;
-
-  // Portal to body to ensure it's on top of everything
+  if (isDialogOpen) return null;
+  if (!targetRect && !pollExhausted) return null;
   if (typeof document === "undefined") return null;
 
+  const tooltipStyle = targetRect
+    ? getTooltipStyle(targetRect, currentStep.position)
+    : { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
+
   return createPortal(
-    <div className="fixed inset-0 z-[9999] overflow-hidden">
-      {/* Backdrop with "hole" using 4 divs strategy (guillotine) */}
-      {targetRect && (
-        <>
-          {/* Top */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-            exit={{ opacity: 0 }}
-            className="absolute bg-black/50 transition-all duration-300 ease-out"
-            style={{ top: 0, left: 0, right: 0, height: targetRect.top }}
-          />
-          {/* Bottom */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-            exit={{ opacity: 0 }}
-            className="absolute bg-black/50 transition-all duration-300 ease-out"
-            style={{ top: targetRect.bottom, left: 0, right: 0, bottom: 0 }}
-          />
-          {/* Left */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-            exit={{ opacity: 0 }}
-            className="absolute bg-black/50 transition-all duration-300 ease-out"
-            style={{
-              top: targetRect.top,
-              left: 0,
-              width: targetRect.left,
-              height: targetRect.height,
-            }}
-          />
-          {/* Right */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-            exit={{ opacity: 0 }}
-            className="absolute bg-black/50 transition-all duration-300 ease-out"
-            style={{
-              top: targetRect.top,
-              left: targetRect.right,
-              right: 0,
-              height: targetRect.height,
-            }}
-          />
-
-          {/* Highlight Border/Glow around the target */}
-          <div
-            className="absolute border-2 border-primary rounded-md shadow-[0_0_20px_rgba(30,202,211,0.5)] pointer-events-none transition-all duration-300 ease-out"
-            style={{
-              top: targetRect.top - 4,
-              left: targetRect.left - 4,
-              width: targetRect.width + 8,
-              height: targetRect.height + 8,
-            }}
-          />
-        </>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className={cn(
+        "fixed inset-0 overflow-hidden pointer-events-none",
+        isMobile ? "z-[55]" : "z-30",
       )}
+    >
+      {shouldShowBackdrop &&
+        (targetRect ? (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              className="absolute bg-black/50 transition-all duration-300 ease-out pointer-events-auto"
+              style={{ top: 0, left: 0, right: 0, height: targetRect.top }}
+            />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              className="absolute bg-black/50 transition-all duration-300 ease-out pointer-events-auto"
+              style={{ top: targetRect.bottom, left: 0, right: 0, bottom: 0 }}
+            />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              className="absolute bg-black/50 transition-all duration-300 ease-out pointer-events-auto"
+              style={{
+                top: targetRect.top,
+                left: 0,
+                width: targetRect.left,
+                height: targetRect.height,
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              className="absolute bg-black/50 transition-all duration-300 ease-out pointer-events-auto"
+              style={{
+                top: targetRect.top,
+                left: targetRect.right,
+                right: 0,
+                height: targetRect.height,
+              }}
+            />
+          </>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.5 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
+          />
+        ))}
 
-      {/* If target not found, full backdrop */}
-      {!targetRect && (
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      )}
-
-      {/* Tooltip Card */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center sm:block">
+      <div
+        className={cn(
+          "pointer-events-none",
+          isMobile ? "fixed inset-x-0 bottom-0 z-[35] p-4" : "absolute inset-0",
+        )}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStepIndex}
@@ -169,17 +234,13 @@ export function TourOverlay() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.3 }}
-            className="pointer-events-auto absolute w-[350px] max-w-[90vw]"
-            style={{
-              // Simple positioning logic
-              ...(targetRect
-                ? getTooltipStyle(targetRect, currentStep.position)
-                : {
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                  }),
-            }}
+            className={cn(
+              "pointer-events-auto",
+              isMobile
+                ? "w-full"
+                : "absolute w-[350px] max-w-[90vw]",
+            )}
+            style={isMobile ? undefined : tooltipStyle}
           >
             <Card className="shadow-2xl border-primary/20 bg-background/95 backdrop-blur">
               <CardHeader className="pb-2">
@@ -212,26 +273,27 @@ export function TourOverlay() {
                       <ChevronLeft className="h-4 w-4 mr-1" /> Back
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    onClick={nextStep}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    {isLastStep ? "Finish" : "Next"}{" "}
-                    {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}
-                  </Button>
+                  {!suppressNext && (
+                    <Button
+                      size="sm"
+                      onClick={nextStep}
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      {isLastStep ? "Finish" : "Next"}{" "}
+                      {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}
+                    </Button>
+                  )}
                 </div>
               </CardFooter>
             </Card>
           </motion.div>
         </AnimatePresence>
       </div>
-    </div>,
+    </motion.div>,
     document.body,
   );
 }
 
-// Helper to position tooltip around target. Use a conservative height so the card never goes off-screen.
 const TOOLTIP_PADDING = 16;
 const TOOLTIP_CARD_WIDTH = 350;
 const TOOLTIP_CARD_HEIGHT = 280;
@@ -269,6 +331,11 @@ function getTooltipStyle(
     case "right":
       top = rect.top + rect.height / 2 - TOOLTIP_CARD_HEIGHT / 2;
       left = rect.right + TOOLTIP_PADDING;
+      if ((left as number) + TOOLTIP_CARD_WIDTH > windowWidth - TOOLTIP_PADDING) {
+        top = rect.bottom + TOOLTIP_PADDING;
+        left = rect.left + rect.width / 2 - TOOLTIP_CARD_WIDTH / 2;
+        transform = "";
+      }
       break;
     default:
       top = rect.top + rect.height / 2;
@@ -277,7 +344,6 @@ function getTooltipStyle(
       return { top, left, transform };
   }
 
-  // Clamp horizontally
   if ((left as number) + TOOLTIP_CARD_WIDTH > windowWidth) {
     left = windowWidth - TOOLTIP_CARD_WIDTH - TOOLTIP_PADDING;
   }
@@ -285,13 +351,45 @@ function getTooltipStyle(
     left = TOOLTIP_PADDING;
   }
 
-  // Clamp vertically so the full card stays on screen
   if ((top as number) + TOOLTIP_CARD_HEIGHT > windowHeight - TOOLTIP_PADDING) {
-    top = windowHeight - TOOLTIP_CARD_HEIGHT - TOOLTIP_PADDING;
+    const aboveTop = rect.top - TOOLTIP_CARD_HEIGHT - TOOLTIP_PADDING;
+    if (aboveTop >= TOOLTIP_PADDING) {
+      top = aboveTop;
+    } else {
+      top = windowHeight - TOOLTIP_CARD_HEIGHT - TOOLTIP_PADDING;
+    }
   }
   if ((top as number) < TOOLTIP_PADDING) {
     top = TOOLTIP_PADDING;
   }
 
-  return { top, left };
+  if (rectsOverlap(
+    { top: top as number, left: left as number, width: TOOLTIP_CARD_WIDTH, height: TOOLTIP_CARD_HEIGHT },
+    rect,
+  )) {
+    top = rect.bottom + TOOLTIP_PADDING;
+    left = Math.max(
+      TOOLTIP_PADDING,
+      Math.min(
+        rect.left + rect.width / 2 - TOOLTIP_CARD_WIDTH / 2,
+        windowWidth - TOOLTIP_CARD_WIDTH - TOOLTIP_PADDING,
+      ),
+    );
+  }
+
+  return { top, left, transform };
+}
+
+function rectsOverlap(
+  a: { top: number; left: number; width: number; height: number },
+  b: DOMRect,
+): boolean {
+  const aRight = a.left + a.width;
+  const aBottom = a.top + a.height;
+  return !(
+    aRight < b.left ||
+    a.left > b.right ||
+    aBottom < b.top ||
+    a.top > b.bottom
+  );
 }

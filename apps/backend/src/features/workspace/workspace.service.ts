@@ -283,11 +283,12 @@ async function clearDefaultPaymentMethodIfMatches(
  */
 export async function getOnboarding(
   workspaceId: number,
-): Promise<{ answers: unknown; completedAt: Date | null }> {
+): Promise<{ answers: unknown; completedAt: Date | null; onboardingTourCompletedAt: Date | null }> {
   const workspace = await prisma.workspace.findUnique({
     select: {
       onboardingCompletedAt: true,
       onboardingAnswers: true,
+      onboardingTourCompletedAt: true,
     },
     where: { id: workspaceId },
   });
@@ -299,7 +300,15 @@ export async function getOnboarding(
   return {
     completedAt: workspace.onboardingCompletedAt ?? null,
     answers: workspace.onboardingAnswers ?? null,
+    onboardingTourCompletedAt: workspace.onboardingTourCompletedAt ?? null,
   };
+}
+
+export async function completeOnboardingTour(workspaceId: number): Promise<void> {
+  await prisma.workspace.update({
+    data: { onboardingTourCompletedAt: new Date() },
+    where: { id: workspaceId },
+  });
 }
 
 /**

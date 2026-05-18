@@ -77,6 +77,7 @@ export async function getOnboarding(
     data: {
       completedAt: onboarding.completedAt,
       answers: onboarding.answers,
+      onboardingTourCompletedAt: onboarding.onboardingTourCompletedAt,
     },
   });
 }
@@ -111,6 +112,18 @@ export async function completeOnboarding(
     }
     throw error;
   }
+}
+
+/**
+ * PATCH /workspace/onboarding-tour/complete - Mark onboarding tour as completed
+ */
+export async function completeOnboardingTour(
+  req: TypedRequest<never, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  await workspaceService.completeOnboardingTour(workspaceId);
+  res.status(204).send();
 }
 
 /**

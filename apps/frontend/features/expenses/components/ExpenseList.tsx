@@ -21,7 +21,7 @@ export function ExpenseList({
   onDelete,
 }: ExpenseListProps) {
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-card border-border" data-tour-id="expenses-list">
       <CardHeader>
         <CardTitle className="text-lg sm:text-xl font-bold text-foreground">
           All Expenses

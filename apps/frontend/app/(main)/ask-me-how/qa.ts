@@ -1,34 +1,36 @@
-/** Static keyword → answer map for the Ask Me How help assistant. */
-export const QA_DB: Record<string, string> = {
+const QA_DB: Record<string, string> = {
   invoice:
-    "To create an invoice, click the '+' button on the dashboard or go to the Invoices page. You can also use 'Invoice by Voice' to dictate it!",
+    "You can create invoices manually from the Invoices page, or use the voice button (mic icon) to describe your invoice out loud. Once created, you can download it as PDF, send it by email, or record a payment.",
   voice:
-    "Our Voice features allow you to create invoices, add expenses, and manage your catalog just by speaking. Look for the microphone icon in relevant sections.",
+    "The voice assistant lets you create invoices, estimates, clients, and catalog items by simply speaking. Look for the mic button on each module page — tap it and describe what you need.",
   payment:
-    "Payments are tracked in the Payments module. You can mark invoices as paid manually or connect Stripe for automatic processing.",
+    "Go to Payments to track all incoming payments. You can also set up Stripe, PayPal, Zelle, or Nequi in Configuration → Payments to let clients pay directly.",
   product:
-    "Add products in the Catalog section. Once added, they will auto-complete when you type their name in an invoice.",
+    "Add products and services in the Catalog section. Once added, they auto-complete when you create invoices or estimates, saving you time.",
   catalog:
-    "Add products and services in the Catalog page. They will auto-complete when creating invoices. You can filter by company if you manage multiple businesses.",
+    "The Catalog is your library of products and services. Add items once and they'll be available to select whenever you create invoices or estimates.",
   company:
-    "You can manage multiple companies in Configuration > Company Settings.",
+    "Go to Configuration to set up your company details including name, logo, address, and tax ID. This information appears on all your invoices.",
   clients:
-    "Manage clients in the Clients section. Add contact info, addresses, and use them when creating invoices.",
+    "Manage your clients in the Clients section. You can add them manually or use the voice button. Once added, clients are linked to your invoices and estimates.",
   quotes:
-    "Generate quotes for potential clients from the Quotes page. Once accepted, you can convert them to invoices.",
+    "Create estimates (quotes) in the Estimates section. You can do it manually or by voice. Once a client accepts, use the action menu to convert the estimate into a proposal.",
+  estimates:
+    "Create estimates in the Estimates section — manually or by voice. After a client accepts, convert the estimate to a proposal using the action menu on the estimate row.",
+  proposals:
+    "Proposals are created from accepted estimates. Go to Estimates, find an accepted estimate, and use the action menu to convert it to a proposal. From the Proposals section you can send it, mark it accepted, or convert it to an invoice.",
   expenses:
-    "Record business expenses in the Expenses section. Track spending by category and date.",
+    "Track your business expenses in the Expenses section. Add them manually with the create button. You can filter and search your expense history for accounting purposes.",
   configuration:
-    "Configure your companies, user profile, billing, and notification preferences in Configuration.",
-  hello:
-    "Hi there! I'm here to help you use ADDINVOICES. Ask me anything about creating invoices, payments, or voice features.",
-  help: "I can help with Invoices, Payments, Catalog, Clients, Quotes, Expenses, and Configuration. What do you need to know?",
+    "The Configuration page lets you manage your company info, user profile, subscription plan, and payment methods. You can also set the language for the voice assistant.",
+  hello: "Hello! I'm here to help. Ask me anything about ADDINVOICES.",
+  help: "You can ask me about invoices, estimates, proposals, expenses, clients, payments, the catalog, your company settings, or the voice assistant. What would you like to know?",
 };
 
-export function findAnswer(query: string): string {
-  const lowerQuery = query.toLowerCase();
-  for (const [key, answer] of Object.entries(QA_DB)) {
-    if (lowerQuery.includes(key)) return answer;
+export function findAnswer(query: string): string | null {
+  const lower = query.toLowerCase();
+  for (const [keyword, answer] of Object.entries(QA_DB)) {
+    if (lower.includes(keyword)) return answer;
   }
-  return "I'm not sure about that yet, but I'm learning! You can try asking about 'invoices', 'payments', 'catalog', or 'configuration'.";
+  return null;
 }
