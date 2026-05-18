@@ -17,7 +17,8 @@ import {
   useSubscription,
   useSubscriptionPlans,
 } from "@/hooks/use-subscription";
-import { SubscriptionGuard } from "@/components/guards/subscription-guard";
+import { FunnelGuard } from "@/components/guards/funnel-guard";
+import { FUNNEL_PATHS } from "@/lib/funnel";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
   BillingInterval,
@@ -94,7 +95,7 @@ export default function SubscribePage() {
       await activateTrial.mutateAsync();
       toast.success("Free trial activated!");
       if (typeof window !== "undefined") {
-        window.location.href = "/";
+        window.location.href = FUNNEL_PATHS.setup;
       }
     } catch (error: unknown) {
       toast.error("Could not start free trial", {
@@ -108,7 +109,7 @@ export default function SubscribePage() {
 
   if (isLoading) {
     return (
-      <SubscriptionGuard redirectIfSubscribed>
+      <FunnelGuard requiredStep="subscribe">
         <div className="min-h-screen flex items-center justify-center bg-background">
           <div className="w-full max-w-6xl px-4 py-12">
             <div className="text-center mb-12">
@@ -122,12 +123,12 @@ export default function SubscribePage() {
             </div>
           </div>
         </div>
-      </SubscriptionGuard>
+      </FunnelGuard>
     );
   }
 
   return (
-    <SubscriptionGuard redirectIfSubscribed>
+    <FunnelGuard requiredStep="subscribe">
       <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
         <div className="w-full max-w-6xl">
           <div className="text-center mb-12">
@@ -356,6 +357,6 @@ export default function SubscribePage() {
           )}
         </div>
       </div>
-    </SubscriptionGuard>
+    </FunnelGuard>
   );
 }

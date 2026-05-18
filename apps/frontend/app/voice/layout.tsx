@@ -1,13 +1,13 @@
 import type React from "react";
-import { SubscriptionGuard } from "@/components/guards/subscription-guard";
+import { FunnelGuard } from "@/components/guards/funnel-guard";
 import { VoicePlanGate } from "./voice-plan-gate";
 
 export default function VoiceLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <SubscriptionGuard>
+    <FunnelGuard requiredStep="dashboard">
       <VoicePlanGate>{children}</VoicePlanGate>
-    </SubscriptionGuard>
+    </FunnelGuard>
   );
 }

@@ -57,7 +57,12 @@ const createApiClient = (): AxiosInstance => {
     (error: AxiosError) => {
       const status = error.response?.status;
       const data = error.response?.data as
-        | { code?: string; error?: string; redirectTo?: string }
+        | {
+            code?: string;
+            error?: string;
+            redirectTo?: string;
+            readOnly?: boolean;
+          }
         | undefined;
       const code = data?.code ?? data?.error;
 
@@ -66,7 +71,11 @@ const createApiClient = (): AxiosInstance => {
           window.location.href = "/sign-in";
         } else if (status === 403 && code === "BUSINESS_REQUIRED") {
           window.location.href = data?.redirectTo ?? "/setup";
-        } else if (status === 402 && code === "SUBSCRIPTION_REQUIRED") {
+        } else if (
+          status === 402 &&
+          code === "SUBSCRIPTION_REQUIRED" &&
+          !data?.readOnly
+        ) {
           window.location.href = data?.redirectTo ?? "/subscribe";
         }
       }

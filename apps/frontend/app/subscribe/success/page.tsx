@@ -6,31 +6,34 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useOnboardingFunnel } from "@/hooks/use-onboarding-funnel";
 import Link from "next/link";
 
 function SubscribeSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
-  const { data: subscription, isLoading, refetch } = useSubscription();
+  const { data: subscription, refetch } = useSubscription();
+
+  useOnboardingFunnel({
+    requiredStep: "subscribe",
+    enabled: !subscription?.isActive,
+  });
 
   useEffect(() => {
-    // Refetch subscription status after successful payment
     if (sessionId) {
-      // Wait a moment for webhook to process, then refetch
       const timer = setTimeout(() => {
-        refetch();
+        void refetch();
       }, 2000);
 
       return () => clearTimeout(timer);
     }
   }, [sessionId, refetch]);
 
-  // Redirect to onboarding if subscription is active
   useEffect(() => {
     if (subscription?.isActive) {
       const timer = setTimeout(() => {
-        router.push("/onboarding");
+        router.push("/setup");
       }, 3000);
 
       return () => clearTimeout(timer);
@@ -48,7 +51,7 @@ function SubscribeSuccessContent() {
               </div>
               <CardTitle className="text-2xl">Payment Successful!</CardTitle>
               <CardDescription>
-                Your subscription is now active. Redirecting to dashboard...
+                Your subscription is now active. Redirecting to setup...
               </CardDescription>
             </>
           ) : (
@@ -66,11 +69,11 @@ function SubscribeSuccessContent() {
         <CardContent className="text-center">
           {subscription?.isActive ? (
             <Button asChild className="w-full">
-              <Link href="/onboarding">Continue to Onboarding</Link>
+              <Link href="/setup">Continue to Setup</Link>
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground">
-              This may take a few moments. If you don't see a confirmation soon,
+              This may take a few moments. If you don&apos;t see a confirmation soon,
               please contact support.
             </p>
           )}
@@ -94,9 +97,7 @@ function SubscribeSuccessFallback() {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center">
-          <p className="text-sm text-muted-foreground">
-            Loading...
-          </p>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </CardContent>
       </Card>
     </div>
