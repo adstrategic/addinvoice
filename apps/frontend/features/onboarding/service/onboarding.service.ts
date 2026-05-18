@@ -7,30 +7,23 @@ const BASE_URL = "/workspace/onboarding";
 export interface OnboardingStatus {
   completedAt: string | null;
   answers: Record<string, unknown> | null;
+  onboardingTourCompletedAt: string | null;
 }
 
 export interface CompleteOnboardingRequest {
   answers: Record<string, unknown>;
 }
 
-/**
- * Get current workspace onboarding status
- */
 async function getOnboardingStatus(): Promise<OnboardingStatus> {
   try {
     const { data } =
       await apiClient.get<ApiSuccessResponse<OnboardingStatus>>(BASE_URL);
-
     return data.data;
   } catch (error) {
     handleApiError(error);
   }
 }
 
-/**
- * Complete onboarding for current workspace.
- * This is one-time – backend will reject if already completed.
- */
 async function completeOnboarding(
   payload: CompleteOnboardingRequest,
 ): Promise<OnboardingStatus> {
@@ -40,8 +33,15 @@ async function completeOnboarding(
         BASE_URL,
         payload,
       );
-
     return data.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+async function completeTour(): Promise<void> {
+  try {
+    await apiClient.patch(`${BASE_URL}-tour/complete`);
   } catch (error) {
     handleApiError(error);
   }
@@ -50,5 +50,5 @@ async function completeOnboarding(
 export const onboardingService = {
   getStatus: getOnboardingStatus,
   complete: completeOnboarding,
+  completeTour,
 };
-

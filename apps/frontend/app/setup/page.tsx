@@ -130,7 +130,7 @@ function SetupPageContent() {
       toast.success("Setup complete!", {
         description: "The business has been created successfully.",
       });
-      router.push("/");
+      router.push("/clients");
     };
     createBusinessMutation.mutate(data, {
       onSuccess: (business) => {

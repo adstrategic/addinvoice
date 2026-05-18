@@ -21,6 +21,7 @@ export function InvoiceActions({
         variant="outline"
         className="gap-2 flex-1 md:flex-none cursor-pointer"
         onClick={onCreateByVoice}
+        data-tour-id="invoices-voice-btn"
       >
         <Mic className="h-4 w-4" />
         Add by voice

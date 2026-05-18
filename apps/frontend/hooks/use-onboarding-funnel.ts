@@ -24,18 +24,14 @@ export function useOnboardingFunnel({
   enabled = true,
 }: UseOnboardingFunnelOptions) {
   const router = useRouter();
-  const {
-    data: onboarding,
-    isLoading: isLoadingOnboarding,
-    isFetching: isFetchingOnboarding,
-  } = useOnboardingStatus();
+  const { data: onboarding, isLoading: isLoadingOnboarding } =
+    useOnboardingStatus();
   const { data: subscription, isLoading: isLoadingSubscription } =
     useSubscription();
   const { hasBusiness, isLoading: isLoadingBusiness } = useHasBusiness();
 
   const isLoading =
     isLoadingOnboarding ||
-    isFetchingOnboarding ||
     isLoadingSubscription ||
     isLoadingBusiness;
 

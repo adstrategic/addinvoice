@@ -15,7 +15,16 @@ function MobileTopBar() {
 
   return (
     <div className="fixed top-0 left-0 z-40 flex h-16 w-full items-center border-b border-border bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/60 md:hidden">
-      <Button variant="ghost" size="icon" type="button" onClick={toggleSidebar}>
+      <Button
+        variant="ghost"
+        size="icon"
+        type="button"
+        data-tour-id="sidebar-mobile-trigger"
+        onClick={() => {
+          toggleSidebar();
+          window.dispatchEvent(new CustomEvent("tour:sidebar-opened"));
+        }}
+      >
         <Menu className="h-5 w-5" />
         <span className="sr-only">Toggle menu</span>
       </Button>
