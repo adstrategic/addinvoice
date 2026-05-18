@@ -6,13 +6,23 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import {
-  useCompleteOnboarding,
-  useOnboardingStatus,
-} from "@/features/onboarding/hooks/useOnboarding";
-import { useHasBusiness } from "@/hooks/useHasBusiness";
+import { Input } from "@/components/ui/input";
+import { useCompleteOnboarding } from "@/features/onboarding/hooks/useOnboarding";
+import { useOnboardingFunnel } from "@/hooks/use-onboarding-funnel";
+import { cn } from "@/lib/utils";
 
-const ONBOARDING_QUESTIONS = [
+type OnboardingOption = {
+  id: string;
+  text: string;
+  isOther?: boolean;
+};
+
+type OnboardingQuestion = {
+  question: string;
+  options: OnboardingOption[];
+};
+
+const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
   {
     question:
       "How much time do invoices and admin tasks take away from your real work?",
@@ -41,21 +51,28 @@ const ONBOARDING_QUESTIONS = [
       { id: "D", text: "All of the above" },
     ],
   },
+  {
+    question: "What is your business about?",
+    options: [
+      { id: "A", text: "Construction" },
+      { id: "B", text: "Contractor" },
+      { id: "C", text: "Cleaning services" },
+      { id: "D", text: "Other", isOther: true },
+    ],
+  },
 ];
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { hasBusiness, isLoading: isLoadingBusiness } = useHasBusiness();
-  const {
-    data: onboarding,
-    isLoading: isLoadingOnboarding,
-    isFetching: isFetchingOnboarding,
-  } = useOnboardingStatus();
   const completeOnboardingMutation = useCompleteOnboarding();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [selections, setSelections] = useState<Record<number, string>>({});
+  const [customAnswers, setCustomAnswers] = useState<Record<number, string>>(
+    {},
+  );
+  const [pendingOtherStep, setPendingOtherStep] = useState<number | null>(null);
   const [isFinishing, setIsFinishing] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
 
@@ -67,36 +84,28 @@ export default function OnboardingPage() {
     return () => clearInterval(timer);
   }, []);
 
-
   // Wait a little before showing first question for smooth entrance
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // If onboarding already completed, redirect forward
-  useEffect(() => {
-    if (!mounted) return;
-    if (isLoadingOnboarding || isFetchingOnboarding) return;
-
-    if (onboarding?.completedAt) {
-      if (!isLoadingBusiness && !hasBusiness) {
-        router.replace("/setup");
-      } else {
-        router.replace("/");
-      }
-    }
-  }, [
-    hasBusiness,
-    isFetchingOnboarding,
-    isLoadingBusiness,
-    isLoadingOnboarding,
-    mounted,
-    onboarding?.completedAt,
-    router,
-  ]);
+  const { isLoading: isFunnelLoading } = useOnboardingFunnel({
+    requiredStep: "onboarding",
+    enabled: mounted && !isFinishing,
+  });
 
   const handleOptionSelect = (optionId: string) => {
+    const question = ONBOARDING_QUESTIONS[currentStep];
+    const option = question?.options.find((o) => o.id === optionId);
+
+    if (option?.isOther) {
+      setSelections((prev) => ({ ...prev, [currentStep]: optionId }));
+      setPendingOtherStep(currentStep);
+      return;
+    }
+
+    setPendingOtherStep(null);
     const updatedSelections = {
       ...selections,
       [currentStep]: optionId,
@@ -107,12 +116,38 @@ export default function OnboardingPage() {
       setDirection(1);
       setCurrentStep(currentStep + 1);
     } else {
-      void handleFinish(updatedSelections);
+      void handleFinish(updatedSelections, customAnswers);
+    }
+  };
+
+  const handleOtherContinue = () => {
+    const trimmed = customAnswers[currentStep]?.trim() ?? "";
+    if (!trimmed) return;
+
+    const updatedCustomAnswers = {
+      ...customAnswers,
+      [currentStep]: trimmed,
+    };
+    setCustomAnswers(updatedCustomAnswers);
+    setPendingOtherStep(null);
+
+    const updatedSelections = {
+      ...selections,
+      [currentStep]: selections[currentStep] ?? "D",
+    };
+    setSelections(updatedSelections);
+
+    if (currentStep < ONBOARDING_QUESTIONS.length - 1) {
+      setDirection(1);
+      setCurrentStep(currentStep + 1);
+    } else {
+      void handleFinish(updatedSelections, updatedCustomAnswers);
     }
   };
 
   const handleFinish = async (
     finalSelections: Record<number, string> = selections,
+    finalCustomAnswers: Record<number, string> = customAnswers,
   ) => {
     setIsFinishing(true);
 
@@ -124,13 +159,18 @@ export default function OnboardingPage() {
         const selectedOption =
           selectedOptionId == null
             ? null
-            : q.options.find((o) => o.id === selectedOptionId) ?? null;
+            : (q.options.find((o) => o.id === selectedOptionId) ?? null);
+        const customText = finalCustomAnswers[index]?.trim() || null;
 
         return {
           index,
           question: q.question,
           selectedOptionId,
-          selectedOptionText: selectedOption?.text ?? null,
+          selectedOptionText:
+            selectedOption?.isOther && customText
+              ? customText
+              : (selectedOption?.text ?? null),
+          ...(customText ? { customText } : {}),
         };
       }),
     };
@@ -143,9 +183,8 @@ export default function OnboardingPage() {
       // If backend says already completed, just continue forward
     }
 
-    // Smooth transition to business setup
     setTimeout(() => {
-      router.push("/setup");
+      router.push("/subscribe");
     }, 1500);
   };
 
@@ -172,13 +211,14 @@ export default function OnboardingPage() {
     }),
   };
 
-  if (!mounted || isLoadingOnboarding) return null;
+  if (!mounted || isFunnelLoading) return null;
 
   const safeIndex = Math.min(
     Math.max(currentStep, 0),
     ONBOARDING_QUESTIONS.length - 1,
   );
   const currentQuestion = ONBOARDING_QUESTIONS[safeIndex]!;
+  const isOtherPending = pendingOtherStep === currentStep;
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center p-4 sm:p-6 lg:p-8 relative overflow-hidden bg-primary">
@@ -238,8 +278,8 @@ export default function OnboardingPage() {
               You’re exactly where you need to be.
             </h2>
             <p className="text-white/90 text-lg max-w-md mx-auto drop-shadow-md">
-              Let’s get your business set up so you never have to worry about this
-              again.
+              Let’s get your business set up so you never have to worry about
+              this again.
             </p>
           </motion.div>
         </div>
@@ -283,7 +323,14 @@ export default function OnboardingPage() {
                   {currentQuestion.options.map((option) => (
                     <Card
                       key={option.id}
-                      className="group relative cursor-pointer border border-white/20 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg hover:shadow-xl"
+                      className={cn(
+                        "group relative cursor-pointer border border-white/20 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg hover:shadow-xl",
+                        selections[currentStep] === option.id &&
+                          "border-white/60 bg-white/20",
+                        option.isOther &&
+                          isOtherPending &&
+                          "ring-2 ring-white border-white/60",
+                      )}
                       onClick={() => handleOptionSelect(option.id)}
                     >
                       <CardContent className="py-2.5 px-4 sm:py-3 sm:px-5 flex items-center gap-3 sm:gap-4">
@@ -297,6 +344,37 @@ export default function OnboardingPage() {
                     </Card>
                   ))}
                 </div>
+
+                {isOtherPending && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-3 pt-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-xl p-4 sm:p-5 shadow-lg"
+                  >
+                    <Input
+                      autoFocus
+                      placeholder="Please specify your business type"
+                      value={customAnswers[currentStep] ?? ""}
+                      onChange={(e) =>
+                        setCustomAnswers((prev) => ({
+                          ...prev,
+                          [currentStep]: e.target.value,
+                        }))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleOtherContinue();
+                      }}
+                      className="h-11 border-white/30 bg-white/10 text-white placeholder:text-white/80 focus-visible:border-white focus-visible:ring-white/30"
+                    />
+                    <Button
+                      className="w-full bg-white text-primary hover:bg-white/90"
+                      onClick={handleOtherContinue}
+                      disabled={!customAnswers[currentStep]?.trim()}
+                    >
+                      Continue
+                    </Button>
+                  </motion.div>
+                )}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -309,6 +387,7 @@ export default function OnboardingPage() {
                 className="text-white/80 hover:text-white hover:bg-white/20"
                 onClick={() => {
                   setDirection(-1);
+                  setPendingOtherStep(null);
                   setCurrentStep(currentStep - 1);
                 }}
               >

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, ArrowRight } from "lucide-react";
 import {
@@ -20,7 +19,7 @@ import {
 import { CreateCompanyForm } from "@/features/businesses/components/CreateCompanyForm";
 import { toast } from "sonner";
 import type { CreateBusinessDTO } from "@addinvoice/schemas";
-import { useOnboardingStatus } from "@/features/onboarding/hooks/useOnboarding";
+import { FunnelGuard } from "@/components/guards/funnel-guard";
 
 /** TipTap JSON — defaults for new businesses created from /setup only */
 const setupDefaultNotes: Record<string, unknown> = {
@@ -119,29 +118,12 @@ const setupDefaultTerms: Record<string, unknown> = {
   ],
 };
 
-export default function SetupPage() {
+function SetupPageContent() {
   const router = useRouter();
   const createBusinessMutation = useCreateBusiness();
   const setDefaultBusinessMutation = useSetDefaultBusiness();
   const uploadLogoMutation = useUploadLogo();
-  const { data: businessesData, isLoading: isLoadingBusinesses } =
-    useBusinesses();
-  const { data: onboarding, isLoading: isLoadingOnboarding } =
-    useOnboardingStatus();
-
-  // If onboarding not completed yet, send user to onboarding first
-  useEffect(() => {
-    if (isLoadingOnboarding) return;
-
-    if (!onboarding?.completedAt) {
-      router.push("/onboarding");
-    }
-  }, [isLoadingOnboarding, onboarding?.completedAt, router]);
-  useEffect(() => {
-    if (!isLoadingBusinesses && (businessesData?.data?.length ?? 0) > 0) {
-      router.push("/");
-    }
-  }, [businessesData, isLoadingBusinesses, router]);
+  const { isLoading: isLoadingBusinesses } = useBusinesses();
 
   const handleSubmit = (data: CreateBusinessDTO, logoFile: File | null) => {
     const done = () => {
@@ -168,7 +150,7 @@ export default function SetupPage() {
     });
   };
 
-  if (isLoadingBusinesses || isLoadingOnboarding) {
+  if (isLoadingBusinesses) {
     return (
       <div className="container mx-auto px-6 py-12 max-w-2xl">
         <div className="flex items-center justify-center h-64">
@@ -179,10 +161,6 @@ export default function SetupPage() {
         </div>
       </div>
     );
-  }
-
-  if ((businessesData?.data?.length ?? 0) > 0) {
-    return null;
   }
 
   return (
@@ -243,5 +221,13 @@ export default function SetupPage() {
         </Card>
       </div>
     </>
+  );
+}
+
+export default function SetupPage() {
+  return (
+    <FunnelGuard requiredStep="setup">
+      <SetupPageContent />
+    </FunnelGuard>
   );
 }

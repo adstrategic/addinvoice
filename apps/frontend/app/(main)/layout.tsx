@@ -1,13 +1,13 @@
 import type React from "react";
 import { AppLayout } from "@/components/app-layout";
-import { SubscriptionGuard } from "@/components/guards/subscription-guard";
+import { FunnelGuard } from "@/components/guards/funnel-guard";
 
 export default function MainLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <SubscriptionGuard>
+    <FunnelGuard requiredStep="dashboard">
       <AppLayout>{children}</AppLayout>
-    </SubscriptionGuard>
+    </FunnelGuard>
   );
 }

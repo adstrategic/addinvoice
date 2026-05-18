@@ -35,7 +35,10 @@ apiRouter.use("/subscription", subscriptionsRoutes);
 // Apply subscription guard to all routes EXCEPT subscription routes
 // This allows read-only access without subscription
 apiRouter.use((req, res, next) => {
-  if (req.path.startsWith("/subscription")) {
+  if (
+    req.path.startsWith("/subscription") ||
+    req.path.startsWith("/workspace/onboarding")
+  ) {
     next();
     return;
   }
