@@ -7,13 +7,19 @@ import type { FunnelStep } from "@/lib/funnel";
 interface FunnelGuardProps {
   children: React.ReactNode;
   requiredStep: FunnelStep;
+  /** When false, skips redirect logic (e.g. while setup submit is in flight) */
+  enabled?: boolean;
 }
 
 /**
  * Redirects users to the earliest incomplete funnel step when they are not on the required step.
  */
-export function FunnelGuard({ children, requiredStep }: FunnelGuardProps) {
-  const { isLoading, isReady } = useOnboardingFunnel({ requiredStep });
+export function FunnelGuard({
+  children,
+  requiredStep,
+  enabled = true,
+}: FunnelGuardProps) {
+  const { isLoading, isReady } = useOnboardingFunnel({ requiredStep, enabled });
 
   if (isLoading || !isReady) {
     return (
