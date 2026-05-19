@@ -162,7 +162,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     if (pathname !== "/" && pathname !== "/dashboard") return;
 
     const timer = setTimeout(() => {
-      const el = getTourTargetElement(GENERAL_TOUR_STEPS[0].targetId);
+      const el = getTourTargetElement(GENERAL_TOUR_STEPS[0]!.targetId);
       if (el) {
         setCurrentTourType(GENERAL_TOUR_ID);
         setCurrentStepIndex(0);
@@ -181,8 +181,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
     const timer = setTimeout(() => {
       const firstStepId = isMobile
-        ? ONBOARDING_TOUR_MOBILE_STEPS[0].targetId
-        : ONBOARDING_TOUR_STEPS[0].targetId;
+        ? ONBOARDING_TOUR_MOBILE_STEPS[0]!.targetId
+        : ONBOARDING_TOUR_STEPS[0]!.targetId;
       const el = getTourTargetElement(firstStepId);
       if (el) {
         setCurrentTourType(ONBOARDING_TOUR_ID);
@@ -204,6 +204,36 @@ export function TourProvider({ children }: { children: ReactNode }) {
     if (currentPath !== targetPath) return;
     setCurrentStepIndex((prev) => prev + 1);
   }, [pathname, isOpen, currentStepIndex, currentSteps]);
+
+  // Close the overlay when the user navigates outside the tour's expected route.
+  // Steps with navigateTo must go to that exact route; steps without one must stay
+  // on the tour's base route (or the last navigateTo destination already reached).
+  useEffect(() => {
+    if (!isOpen) return;
+    const step = currentSteps[currentStepIndex];
+    const currentPath = pathname?.replace(/\/$/, "") || "/";
+
+    if (step?.navigateTo) {
+      const targetPath = step.navigateTo.replace(/\/$/, "");
+      // If user reached the right route, the advance effect above handles it.
+      if (currentPath === targetPath) return;
+      setIsOpen(false);
+      return;
+    }
+
+    // Determine the expected route: start from the tour base route, then apply
+    // any navigateTo from steps already passed.
+    let expectedPath = (ROUTE_BY_TOUR_ID[currentTourType] ?? "/").replace(/\/$/, "") || "/";
+    for (let i = 0; i < currentStepIndex; i++) {
+      if (currentSteps[i]?.navigateTo) {
+        expectedPath = currentSteps[i]!.navigateTo!.replace(/\/$/, "");
+      }
+    }
+
+    if (currentPath !== expectedPath) {
+      setIsOpen(false);
+    }
+  }, [pathname, isOpen, currentStepIndex, currentSteps, currentTourType]);
 
   // Handle pending tour start after navigation (startTour cross-page).
   // No fixed delay — TourOverlay polls for the element itself.

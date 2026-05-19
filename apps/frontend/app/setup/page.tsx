@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, ArrowRight } from "lucide-react";
 import {
@@ -118,36 +119,41 @@ const setupDefaultTerms: Record<string, unknown> = {
   ],
 };
 
-function SetupPageContent() {
+interface SetupPageContentProps {
+  onSetupInProgressChange: (inProgress: boolean) => void;
+}
+
+function SetupPageContent({ onSetupInProgressChange }: SetupPageContentProps) {
   const router = useRouter();
   const createBusinessMutation = useCreateBusiness();
   const setDefaultBusinessMutation = useSetDefaultBusiness();
   const uploadLogoMutation = useUploadLogo();
   const { isLoading: isLoadingBusinesses } = useBusinesses();
+  const [isCompletingSetup, setIsCompletingSetup] = useState(false);
 
-  const handleSubmit = (data: CreateBusinessDTO, logoFile: File | null) => {
-    const done = () => {
+  const handleSubmit = async (
+    data: CreateBusinessDTO,
+    logoFile: File | null,
+  ) => {
+    setIsCompletingSetup(true);
+    onSetupInProgressChange(true);
+    try {
+      const business = await createBusinessMutation.mutateAsync(data);
+      await setDefaultBusinessMutation.mutateAsync(business.id);
+      if (logoFile) {
+        await uploadLogoMutation.mutateAsync({
+          id: business.id,
+          file: logoFile,
+        });
+      }
       toast.success("Setup complete!", {
         description: "The business has been created successfully.",
       });
       router.push("/clients");
-    };
-    createBusinessMutation.mutate(data, {
-      onSuccess: (business) => {
-        setDefaultBusinessMutation.mutate(business.id, {
-          onSuccess: () => {
-            if (logoFile) {
-              uploadLogoMutation.mutate(
-                { id: business.id, file: logoFile },
-                { onSuccess: done },
-              );
-            } else {
-              done();
-            }
-          },
-        });
-      },
-    });
+    } finally {
+      setIsCompletingSetup(false);
+      onSetupInProgressChange(false);
+    }
   };
 
   if (isLoadingBusinesses) {
@@ -201,18 +207,10 @@ function SetupPageContent() {
                 <Button
                   type="submit"
                   form="setup-company-form"
-                  disabled={
-                    createBusinessMutation.isPending ||
-                    setDefaultBusinessMutation.isPending ||
-                    uploadLogoMutation.isPending
-                  }
+                  disabled={isCompletingSetup}
                   className="gap-2"
                 >
-                  {createBusinessMutation.isPending ||
-                  setDefaultBusinessMutation.isPending ||
-                  uploadLogoMutation.isPending
-                    ? "Setting up..."
-                    : "Complete Setup"}
+                  {isCompletingSetup ? "Setting up..." : "Complete Setup"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -225,9 +223,11 @@ function SetupPageContent() {
 }
 
 export default function SetupPage() {
+  const [isSetupInProgress, setIsSetupInProgress] = useState(false);
+
   return (
-    <FunnelGuard requiredStep="setup">
-      <SetupPageContent />
+    <FunnelGuard requiredStep="setup" enabled={!isSetupInProgress}>
+      <SetupPageContent onSetupInProgressChange={setIsSetupInProgress} />
     </FunnelGuard>
   );
 }
