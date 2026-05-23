@@ -28,6 +28,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { DetailPageLoading } from "@/components/loading-component";
 
 export default function ClientDetailPage() {
   const params = useParams();
@@ -45,19 +46,11 @@ export default function ClientDetailPage() {
 
   const client = editClient.client;
 
-  if (editClient.isLoadingClient) {
-    return (
-      <div className="container mx-auto px-6 py-8 max-w-5xl">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading client...</p>
-        </div>
-      </div>
-    );
-  }
+  if (editClient.isLoadingClient) return <DetailPageLoading />
 
   if (editClient.clientError || !client) {
     return (
-      <div className="container mx-auto px-6 py-8 max-w-5xl">
+      <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Client not found</p>
         </div>
@@ -71,7 +64,7 @@ export default function ClientDetailPage() {
 
   return (
     <>
-      <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 max-w-5xl">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">

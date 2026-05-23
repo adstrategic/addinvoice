@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useDownloadProposalPdf } from "@/features/proposals/hooks/useDownloadProposalPDF";
+import { DetailPageLoading } from "@/components/loading-component";
 
 const ProposalPdfPreview = dynamic(
   () =>
@@ -83,19 +84,11 @@ export default function ProposalDetailPage() {
 
   const downloadPdf = useDownloadProposalPdf();
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-5xl">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading proposal...</p>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <DetailPageLoading />
 
   if (error || !proposal) {
     return (
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-5xl">
+      <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Proposal not found</p>
         </div>
@@ -122,7 +115,7 @@ export default function ProposalDetailPage() {
 
   return (
     <>
-      <div className="mt-16 sm:mt-0 container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-5xl">
+      <div className="max-w-5xl mx-auto">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
           <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
             <Link href="/proposals" className="shrink-0">

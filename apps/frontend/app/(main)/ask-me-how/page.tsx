@@ -16,7 +16,7 @@ export default function AskMeHowPage() {
 
   return (
     <>
-      <div className="mt-16 sm:mt-0 container mx-auto px-4 py-8 max-w-6xl space-y-8">
+      <div className="max-w-6xl mx-auto space-y-8">
         <AskMeHowHeader onStartTour={handleStartTour} />
         <div className="grid gap-8">
           <TutorialsSection onStartTour={handleStartTour} />

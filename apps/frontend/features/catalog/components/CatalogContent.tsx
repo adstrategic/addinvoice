@@ -79,31 +79,19 @@ export default function CatalogContent() {
 
   const catalogDelete = useCatalogDelete();
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-6 py-8 max-w-6xl">
-        <Card className="bg-card border-border">
-          <CardContent className="pt-6">
-            <LoadingComponent variant="dashboard" rows={8} />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingComponent variant="dashboard" />;
 
   if (error || !catalogsData) {
     return (
-      <div className="container mx-auto px-6 py-8 max-w-6xl">
-        <Card className="bg-card border-border">
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <p className="text-destructive">
-                Error loading catalog items. Please try again.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="bg-card border-border">
+        <CardContent className="pt-6">
+          <div className="text-center py-12">
+            <p className="text-destructive">
+              Error loading catalog items. Please try again.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -113,7 +101,7 @@ export default function CatalogContent() {
 
   return (
     <>
-      <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 max-w-6xl">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>

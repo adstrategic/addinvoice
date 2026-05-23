@@ -121,7 +121,7 @@ function StatCard({
 
 function DashboardEntryFallback() {
   return (
-    <div className="container mx-auto mt-16 sm:mt-0 px-4 sm:px-6 py-6 sm:py-8">
+    <div>
       <div className="mb-8 space-y-2">
         <div className="h-8 w-48 animate-pulse rounded-md bg-muted" />
         <div className="h-4 w-72 animate-pulse rounded-md bg-muted/80" />
@@ -235,7 +235,7 @@ function DashboardHome() {
           Gradient B (dark navy): bg-gradient-to-br from-[#0c1524] via-[#111e35] to-[#0c1520]
       */}
       {/* <div className="min-h-screen bg-gradient-to-br from-teal-50/80 via-slate-50 to-sky-100/60"> */}
-      <div className="container mx-auto mt-16 sm:mt-0 px-4 sm:px-6 py-6 sm:py-8">
+      <div>
         {/* Header with Business Filter */}
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

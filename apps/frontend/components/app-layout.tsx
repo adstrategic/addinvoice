@@ -41,7 +41,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         className="min-h-screen w-full bg-cover bg-center bg-fixed bg-no-repeat bg-[url('/images/bg_phone_dos.png')] dark:bg-[url('/images/bg_phone_dos_darkmode.png')] md:bg-[url('/images/background_app_dos.png')] dark:md:bg-[url('/images/background_app_dos_darkmode.png')]"
       >
         <MobileTopBar />
-        <div className="flex min-h-screen w-full flex-col">{children}</div>
+        <main className="mt-16 sm:mt-0 container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );
