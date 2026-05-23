@@ -26,6 +26,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { DetailPageLoading } from "@/components/loading-component";
 import { formatCurrency, formatDateOnly } from "@/lib/utils";
 
 export default function ExpenseDetailPage() {
@@ -43,19 +44,11 @@ export default function ExpenseDetailPage() {
 
   const expense = editExpense.expense;
 
-  if (editExpense.isLoadingExpense) {
-    return (
-      <div className="container mx-auto px-6 py-8 max-w-5xl">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading expense...</p>
-        </div>
-      </div>
-    );
-  }
+  if (editExpense.isLoadingExpense) return <DetailPageLoading />
 
   if (editExpense.expenseError || !expense) {
     return (
-      <div className="container mx-auto px-6 py-8 max-w-5xl">
+      <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Expense not found</p>
         </div>
@@ -65,7 +58,7 @@ export default function ExpenseDetailPage() {
 
   return (
     <>
-      <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 max-w-5xl">
+      <div className="max-w-5xl mx-auto">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <Link href="/expenses">

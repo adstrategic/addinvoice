@@ -207,7 +207,7 @@ export default function PaymentMethodsPage() {
 
   return (
     <>
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div>
         <motion.div
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8"
           initial={{ opacity: 0, y: -20 }}

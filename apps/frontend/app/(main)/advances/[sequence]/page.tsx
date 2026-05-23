@@ -25,6 +25,7 @@ import { AdvancePdfPreview } from "@/features/advances/components/AdvancePdfPrev
 import { useAdvanceDelete } from "@/features/advances/hooks/useAdvanceDelete";
 import { mapStatusToUI } from "@/features/advances";
 import { useDownloadAdvancePdf } from "@/features/advances/hooks/useDownloadAdvancePDF";
+import { DetailPageLoading } from "@/components/loading-component";
 
 const statusConfig = {
   draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
@@ -52,19 +53,11 @@ export default function AdvanceDetailPage() {
   const downloadPdf = useDownloadAdvancePdf();
   const sendAdvance = useSendAdvance();
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-5xl">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading advance...</p>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <DetailPageLoading />
 
   if (error || !advance) {
     return (
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-5xl">
+      <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Advance not found</p>
         </div>
@@ -85,7 +78,7 @@ export default function AdvanceDetailPage() {
 
   return (
     <>
-      <div className="mt-16 sm:mt-0 container mx-auto px-4 sm:px-6 py-6 sm:py-8 max-w-5xl">
+      <div className="max-w-5xl mx-auto">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
           <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
             <Link href="/advances" className="shrink-0">

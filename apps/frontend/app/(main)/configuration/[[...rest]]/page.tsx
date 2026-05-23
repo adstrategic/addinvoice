@@ -408,7 +408,7 @@ export default function ConfigurationPage() {
 
   return (
     <>
-      <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 max-w-6xl">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Configuration</h1>

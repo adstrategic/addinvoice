@@ -145,7 +145,7 @@ export function InvoiceForm({
   // Show error state if invoice failed to load
   if (mode === "edit" && invoiceError && !existingInvoice) {
     return (
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
+      <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Button
@@ -189,7 +189,7 @@ export function InvoiceForm({
   }
 
   return (
-    <div className="mt-16 sm:mt-0 container mx-auto px-6 py-8 pb-28 max-w-7xl">
+    <div className="max-w-7xl mx-auto pb-28">
       {/* Header */}
       <div className="sm:flex items-center justify-between mb-8">
         <div className="flex mb-4 sm:mb-0 items-center gap-4">

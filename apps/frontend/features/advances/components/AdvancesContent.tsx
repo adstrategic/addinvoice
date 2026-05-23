@@ -51,27 +51,15 @@ export default function AdvancesContent() {
   const pagination = advancesData?.pagination;
   const advances = advancesData?.data ?? [];
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="pt-6">
-            <LoadingComponent variant="dashboard" rows={8} />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingComponent variant="dashboard" />;
 
   if (error || !advancesData) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-destructive">Error loading advances.</p>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="bg-card border-border">
+        <CardContent className="pt-6">
+          <p className="text-destructive">Error loading advances.</p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -94,7 +82,7 @@ export default function AdvancesContent() {
 
   return (
     <>
-      <div className="container mx-auto px-4 py-8">
+      <div>
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">
