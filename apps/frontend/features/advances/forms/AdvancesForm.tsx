@@ -128,13 +128,11 @@ export function AdvanceForm({
 
   if (isLoadingAdvance) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="pt-6 text-sm text-muted-foreground">
-            Loading advance...
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="bg-card border-border">
+        <CardContent className="pt-6 text-sm text-muted-foreground">
+          Loading advance...
+        </CardContent>
+      </Card>
     );
   }
 
@@ -168,7 +166,7 @@ export function AdvanceForm({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 pb-28">
+    <div className="pb-28">
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <Button

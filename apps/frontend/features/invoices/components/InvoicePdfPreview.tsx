@@ -161,7 +161,7 @@ export function InvoicePdfPreview({
     >
       <div
         ref={containerCallbackRef}
-        className="min-h-0 flex-1 overflow-auto p-4 flex flex-col items-center gap-4"
+        className="min-h-0 flex-1 overflow-auto flex flex-col items-center gap-4"
         style={{ touchAction: "pan-x pan-y pinch-zoom" }}
       >
         {pdfDoc &&

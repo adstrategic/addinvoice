@@ -71,7 +71,6 @@ async function listEstimates(
 
     return estimateResponseListSchema.parse(data);
   } catch (error) {
-    console.error(error);
     handleApiError(error);
   }
 }
@@ -113,7 +112,9 @@ async function getEstimateBySequence(
 /**
  * Create a new estimate
  */
-async function createEstimate(dto: CreateEstimateDTO): Promise<EstimateResponse> {
+async function createEstimate(
+  dto: CreateEstimateDTO,
+): Promise<EstimateResponse> {
   try {
     const { data } = await apiClient.post<ApiSuccessResponse<EstimateResponse>>(
       BASE_URL,
@@ -285,10 +286,7 @@ async function updateEstimateDescriptiveItem(
   try {
     const { data } = await apiClient.patch<
       ApiSuccessResponse<EstimateDescriptiveItemResponse>
-    >(
-      `${BASE_URL}/${estimateId}/descriptive-items/${descriptiveItemId}`,
-      dto,
-    );
+    >(`${BASE_URL}/${estimateId}/descriptive-items/${descriptiveItemId}`, dto);
 
     return estimateDescriptiveItemResponseSchema.parse(data.data);
   } catch (error) {

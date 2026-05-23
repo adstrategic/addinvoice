@@ -6,6 +6,7 @@ import { ArrowLeft, DollarSign, FileText, User, Building2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { usePaymentById } from "@/features/payments";
+import { DetailPageLoading } from "@/components/loading-component";
 
 export default function PaymentDetailPage() {
   const params = useParams();
@@ -13,30 +14,18 @@ export default function PaymentDetailPage() {
 
   const { data: payment, isLoading, error } = usePaymentById(id, id !== null);
 
-  if (isLoading) {
-    return (
-      <>
-        <div className="container mx-auto px-6 py-8 max-w-3xl">
-          <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">Loading payment...</p>
-          </div>
-        </div>
-      </>
-    );
-  }
+  if (isLoading) return <DetailPageLoading />
 
   if (error || !payment) {
     return (
-      <>
-        <div className="container mx-auto px-6 py-8 max-w-3xl">
-          <div className="flex flex-col items-center justify-center h-64 gap-2">
-            <p className="text-muted-foreground">Payment not found</p>
-            <Link href="/payments">
-              <Button variant="link">Back to payments</Button>
-            </Link>
-          </div>
+      <div className="max-w-3xl mx-auto">
+        <div className="flex flex-col items-center justify-center h-64 gap-2">
+          <p className="text-muted-foreground">Payment not found</p>
+          <Link href="/payments">
+            <Button variant="link">Back to payments</Button>
+          </Link>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -48,7 +37,7 @@ export default function PaymentDetailPage() {
 
   return (
     <>
-      <div className="container mx-auto px-6 py-8 max-w-3xl">
+      <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           <Link href="/payments">
             <Button variant="ghost" size="icon">

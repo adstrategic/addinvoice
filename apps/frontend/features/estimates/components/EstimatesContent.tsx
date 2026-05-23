@@ -31,7 +31,15 @@ import { Button } from "@/components/ui/button";
 import { Mic } from "lucide-react";
 import { useLimitGuard } from "@/hooks/use-limit-guard";
 
-const VALID_STATUSES = ["all", "draft", "sent", "accepted", "rejected", "proposal", "invoiced"] as const;
+const VALID_STATUSES = [
+  "all",
+  "draft",
+  "sent",
+  "accepted",
+  "rejected",
+  "proposal",
+  "invoiced",
+] as const;
 
 function parseStatusParam(value: string | null): string {
   if (!value) return "all";
@@ -67,10 +75,10 @@ export default function EstimatesContent() {
   const [selectedEstimateForSend, setSelectedEstimateForSend] = useState<
     EstimateDashboardResponse | undefined
   >(undefined);
-  const [convertToProposalDialogOpen, setConvertToProposalDialogOpen] = useState(false);
-  const [selectedEstimateForProposal, setSelectedEstimateForProposal] = useState<
-    EstimateDashboardResponse | undefined
-  >(undefined);
+  const [convertToProposalDialogOpen, setConvertToProposalDialogOpen] =
+    useState(false);
+  const [selectedEstimateForProposal, setSelectedEstimateForProposal] =
+    useState<EstimateDashboardResponse | undefined>(undefined);
   // Fetch estimates with pagination, search, and status (server-side)
   const {
     data: estimatesData,
@@ -125,31 +133,19 @@ export default function EstimatesContent() {
     setConvertToProposalDialogOpen(true);
   };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <Card className="bg-card border-border">
-          <CardContent className="pt-6">
-            <LoadingComponent variant="dashboard" rows={8} />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingComponent variant="dashboard" />;
 
   if (error || !estimatesData) {
     return (
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <Card className="bg-card border-border">
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <p className="text-destructive">
-                Error loading estimates. Please try again.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="bg-card border-border">
+        <CardContent className="pt-6">
+          <div className="text-center py-12">
+            <p className="text-destructive">
+              Error loading estimates. Please try again.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -195,7 +191,7 @@ export default function EstimatesContent() {
 
   return (
     <>
-      <div className="mt-16 sm:mt-0 container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div>
         {/* Header */}
         <motion.div
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8"
@@ -289,7 +285,9 @@ export default function EstimatesContent() {
           estimateNumber={selectedEstimateForProposal.estimateNumber}
           clientName={selectedEstimateForProposal.client?.name || "Client"}
           clientEmail={selectedEstimateForProposal.clientEmail ?? undefined}
-          requireSignature={selectedEstimateForProposal.requireSignature ?? true}
+          requireSignature={
+            selectedEstimateForProposal.requireSignature ?? true
+          }
         />
       )}
 

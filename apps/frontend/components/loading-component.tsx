@@ -117,7 +117,7 @@ export function LoadingComponent({
   );
 
   const renderDashboardSkeleton = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-card rounded-lg">
       {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }, (_, index) => (
@@ -195,7 +195,7 @@ export function SuspenseFallback() {
 // Componente para páginas completas
 export function PageLoading() {
   return (
-    <div className="min-h-screen p-6 space-y-6">
+    <div className="min-h-screen p-6 space-y-6 bg-card">
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-4 w-96" />
@@ -236,6 +236,28 @@ export function PageLoading() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Standardized loading for list/index pages (invoices, estimates, expenses, etc.)
+export function ListPageLoading() {
+  return (
+    <Card className="bg-card border-border">
+      <CardContent className="pt-6">
+        <LoadingComponent variant="table" rows={8} />
+      </CardContent>
+    </Card>
+  );
+}
+
+// Standardized loading for detail/edit pages (invoice detail, expense detail, etc.)
+export function DetailPageLoading() {
+  return (
+    <Card className="bg-card border-border">
+      <CardContent className="pt-6">
+        <LoadingComponent variant="form" />
+      </CardContent>
+    </Card>
   );
 }
 
