@@ -370,6 +370,7 @@ export const invoiceEntitySchema = baseInvoiceSchema
     totalTax: z.number(),
     updatedAt: z.date(),
     viewedAt: z.date().nullable(),
+    publicSlug: z.string().nullable(),
     workspaceId: z.number().int().positive(),
   })
   .omit({

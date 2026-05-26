@@ -195,6 +195,8 @@ export default function ProposalsContent() {
           proposalNumber={selectedProposalForSend?.proposalNumber}
           clientName={selectedProposalForSend?.client?.name || "Client"}
           clientEmail={selectedProposalForSend?.clientEmail}
+          publicSlug={selectedProposalForSend?.publicSlug}
+          enableEmailTab={selectedProposalForSend?.status === "REJECTED"}
         />
       )}
     </>

@@ -662,6 +662,7 @@ export function EstimateForm({
           estimateNumber={existingEstimate.estimateNumber}
           clientName={existingEstimate.client?.name ?? "Client"}
           clientEmail={existingEstimate.clientEmail}
+          publicSlug={existingEstimate.publicSlug}
         />
       )}
     </div>

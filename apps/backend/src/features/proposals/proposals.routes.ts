@@ -18,6 +18,7 @@ import {
   listProposals,
   markProposalAsAccepted,
   resendProposal,
+  shareProposalPublicLink,
   updateProposal,
   updateProposalDescriptiveItem,
 } from "./proposals.controller.js";
@@ -66,6 +67,13 @@ proposalsRoutes.post(
   "/:sequence/send",
   processRequest({ params: getProposalBySequenceSchema }),
   asyncHandler(resendProposal),
+);
+
+// POST /api/v1/proposals/:sequence/share-link - Issue via public link
+proposalsRoutes.post(
+  "/:sequence/share-link",
+  processRequest({ params: getProposalBySequenceSchema }),
+  asyncHandler(shareProposalPublicLink),
 );
 
 // GET /api/v1/proposals/:sequence - Get proposal by sequence

@@ -236,6 +236,7 @@ export default function InvoicesContent() {
           invoiceNumber={selectedInvoiceForSend?.invoiceNumber}
           clientName={selectedInvoiceForSend?.client?.name || "Client"}
           clientEmail={selectedInvoiceForSend?.clientEmail}
+          publicSlug={selectedInvoiceForSend?.publicSlug}
         />
       )}
 

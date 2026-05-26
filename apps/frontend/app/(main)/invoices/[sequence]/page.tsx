@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import { useDownloadInvoicePdf } from "@/features/invoices/hooks/useDownloadInvoicePDF";
 import { InvoicePdfPreview } from "@/features/invoices/components/InvoicePdfPreview";
 import { DetailPageLoading } from "@/components/loading-component";
+import { CopyPublicLinkButton } from "@/components/shared/copy-public-link-button";
+import { isInvoicePublicIssued } from "@/lib/is-document-public-issued";
 
 const statusConfig = {
   paid: { label: "Paid", className: "bg-primary/20 text-primary" },
@@ -115,6 +117,10 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            <CopyPublicLinkButton
+              publicSlug={invoice.publicSlug}
+              isIssued={isInvoicePublicIssued(invoice.status)}
+            />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -256,6 +262,7 @@ export default function InvoiceDetailPage() {
         invoiceNumber={invoice.invoiceNumber}
         clientName={client?.name || "Client"}
         clientEmail={invoice.clientEmail}
+        publicSlug={invoice.publicSlug}
       />
 
       <EntityDeleteModal

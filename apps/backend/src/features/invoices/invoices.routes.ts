@@ -25,6 +25,7 @@ import {
   getPendingAdvancesForInvoice,
   listInvoices,
   sendInvoice,
+  shareInvoicePublicLink,
   updateInvoice,
   updateInvoiceItem,
   updatePayment,
@@ -96,6 +97,13 @@ invoicesRoutes.post(
     params: getInvoiceBySequenceSchema,
   }),
   asyncHandler(enqueueSendInvoice),
+);
+
+// POST /api/v1/invoices/:sequence/share-link - Issue via public link
+invoicesRoutes.post(
+  "/:sequence/share-link",
+  processRequest({ params: getInvoiceBySequenceSchema }),
+  asyncHandler(shareInvoicePublicLink),
 );
 
 // GET /api/v1/invoices/:id - Get invoice by ID

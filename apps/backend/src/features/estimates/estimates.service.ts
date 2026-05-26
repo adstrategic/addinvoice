@@ -28,6 +28,7 @@ import {
   FieldValidationError,
   GoneError,
 } from "../../errors/EntityErrors.js";
+import { buildPublicSlug } from "../../lib/public-slug.js";
 import { sendInvoiceQueue } from "../../queue/queues.js";
 import {
   createInvoiceFromEstimate,
@@ -1463,6 +1464,29 @@ export async function markEstimateAsSent(
   });
 
   return toEstimateResponseWithoutItems(updatedEstimate);
+}
+
+/**
+ * Issue estimate via public link: mark as sent and ensure a publicSlug exists.
+ */
+export async function shareEstimatePublicLink(
+  workspaceId: number,
+  sequence: number,
+): Promise<{ publicSlug: string }> {
+  const estimate = await getEstimateBySequence(workspaceId, sequence);
+  const sent = await markEstimateAsSent(workspaceId, estimate.id);
+
+  if (sent.publicSlug) {
+    return { publicSlug: sent.publicSlug };
+  }
+
+  const publicSlug = buildPublicSlug("estimate");
+  await prisma.estimate.update({
+    data: { publicSlug },
+    where: { id: estimate.id },
+  });
+
+  return { publicSlug };
 }
 
 /**

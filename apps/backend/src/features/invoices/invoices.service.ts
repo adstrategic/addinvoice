@@ -34,14 +34,15 @@ import {
   EntityValidationError,
   FieldValidationError,
 } from "../../errors/EntityErrors.js";
+import { buildPublicSlug } from "../../lib/public-slug.js";
 import {
   bulkLinkAdvancesToInvoice as bulkLinkAdvancesToInvoiceService,
   listPendingAdvancesByClient,
 } from "../advances/advances.service.js";
-import { toBusinessEntity } from "../businesses/businesses.mapper.js";
 import { type BusinessEntity } from "../businesses/businesses.schemas.js";
 import { type ClientEntity } from "../clients/clients.schemas.js";
 import { resolveSelectedPaymentMethodId } from "../workspace/payment-method-resolver.service.js";
+import { ensureInvoiceStripePaymentLink } from "./invoice-stripe-payment-link.service.js";
 import {
   toInvoiceEntityWithRelations,
   toInvoiceItemEntity,
@@ -1343,6 +1344,32 @@ export async function markInvoiceAsSent(
   });
 
   return toInvoiceEntityWithRelations(updatedInvoice);
+}
+
+/**
+ * Issue invoice via public link: mark as sent and ensure a publicSlug exists.
+ */
+export async function shareInvoicePublicLink(
+  workspaceId: number,
+  sequence: number,
+): Promise<{ publicSlug: string }> {
+  const invoice = await getInvoiceBySequence(workspaceId, sequence);
+  const sent = await markInvoiceAsSent(workspaceId, invoice.id);
+
+  const publicSlug = sent.publicSlug ?? buildPublicSlug("invoice");
+  if (!sent.publicSlug) {
+    await prisma.invoice.update({
+      data: { publicSlug },
+      where: { id: invoice.id },
+    });
+  }
+
+  await ensureInvoiceStripePaymentLink(workspaceId, {
+    ...sent,
+    publicSlug,
+  });
+
+  return { publicSlug };
 }
 
 /**

@@ -20,6 +20,7 @@ import {
   EntityValidationError,
   GoneError,
 } from "../../errors/EntityErrors.js";
+import { buildPublicSlug } from "../../lib/public-slug.js";
 import { normalizeTipTapField } from "../../lib/tiptap.js";
 import { sendInvoiceQueue, sendProposalQueue } from "../../queue/queues.js";
 import {
@@ -454,6 +455,70 @@ export async function deleteProposal(
       where: { id: proposalId },
     });
   });
+}
+
+/**
+ * Issue proposal via public link: ensure SENT (e.g. after rejection) and set publicSlug.
+ */
+export async function shareProposalPublicLink(
+  workspaceId: number,
+  sequence: number,
+): Promise<{ publicSlug: string }> {
+  const existing = await prisma.proposal.findUnique({
+    where: { workspaceId_sequence: { workspaceId, sequence } },
+    include: {
+      business: true,
+      client: true,
+      descriptiveItems: {
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      },
+    },
+  });
+
+  if (!existing) {
+    throw new EntityNotFoundError("Proposal not found");
+  }
+
+  const now = new Date();
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+  let proposal = existing;
+
+  if (existing.status === "REJECTED") {
+    proposal = await prisma.proposal.update({
+      data: {
+        status: "SENT",
+        sentAt: now,
+        rejectionReason: null,
+        ...(existing.requireSignature
+          ? {
+              signingToken: randomUUID(),
+              signingTokenExpiresAt: new Date(now.getTime() + thirtyDaysMs),
+            }
+          : {}),
+      },
+      include: {
+        business: true,
+        client: true,
+        descriptiveItems: {
+          orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        },
+      },
+      where: { id: existing.id },
+    });
+  }
+
+  if (proposal.publicSlug) {
+    return { publicSlug: proposal.publicSlug };
+  }
+
+  const publicSlug = buildPublicSlug("proposal");
+  await prisma.proposal.update({
+    data: { publicSlug },
+    where: { id: proposal.id },
+  });
+
+  return { publicSlug };
 }
 
 /**

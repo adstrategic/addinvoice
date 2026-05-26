@@ -1,4 +1,3 @@
-import { PaymentMethodType, prisma } from "@addinvoice/db";
 import { Worker } from "bullmq";
 
 import type {
@@ -11,13 +10,10 @@ import type {
 
 import * as advancesService from "../features/advances/advances.service.js";
 import * as estimatesService from "../features/estimates/estimates.service.js";
+import { ensureInvoiceStripePaymentLink } from "../features/invoices/invoice-stripe-payment-link.service.js";
 import * as invoicesService from "../features/invoices/invoices.service.js";
 import * as paymentsService from "../features/payments/payments.service.js";
 import * as proposalsService from "../features/proposals/proposals.service.js";
-import {
-  createCheckoutSession,
-  createPerWorkspaceStripeClient,
-} from "../features/stripe/stripe-integration.service.js";
 import { sendEmailWithPdf } from "../lib/email.js";
 import { getWorkerConnectionOptions } from "./connection.js";
 
@@ -36,34 +32,10 @@ export function startSendInvoiceWorker(): Worker<SendInvoiceJobData> {
         sequence,
       );
 
-      // If Stripe is selected as payment method, create a Checkout Session
-      let paymentLink: null | string = null;
-      if (invoice.selectedPaymentMethod?.type === "STRIPE") {
-        const pm = await prisma.workspacePaymentMethod.findFirst({
-          where: { type: PaymentMethodType.STRIPE, workspaceId },
-        });
-
-        if (pm?.stripeSecretKey) {
-          const frontendUrl =
-            process.env.FRONTEND_URL?.trim() || "http://localhost:3000";
-          const successUrl = `${frontendUrl}/invoices/${invoice.sequence}?paid=true`;
-          const cancelUrl = `${frontendUrl}/invoices/${invoice.sequence}`;
-          const stripeClient = createPerWorkspaceStripeClient(
-            pm.stripeSecretKey,
-          );
-          paymentLink = await createCheckoutSession(
-            stripeClient,
-            invoice,
-            successUrl,
-            cancelUrl,
-          );
-
-          await prisma.invoice.update({
-            data: { paymentLink, paymentProvider: "stripe" },
-            where: { id: invoice.id },
-          });
-        }
-      }
+      const paymentLink = await ensureInvoiceStripePaymentLink(
+        workspaceId,
+        invoice,
+      );
 
       const payload = invoicesService.buildInvoicePdfPayload(invoice);
       const pdfBuffer = await fetchInvoicePdfFromService(payload);
@@ -130,7 +102,7 @@ export function startSendEstimateWorker(): Worker<SendEstimateJobData> {
         estimatesService.buildEstimatePdfPayload(estimate);
       const pdfBuffer = await fetchEstimatePdfFromService(estimatePayload);
       const frontendUrl =
-        process.env.FRONTEND_URL?.trim() || "http://localhost:3000";
+        process.env.FRONTEND_URL?.trim() ?? "http://localhost:3000";
       const signingLink =
         estimate.requireSignature && estimate.signingToken
           ? `<p style="margin-top: 20px; padding: 12px; background: #f5f5f5; border-radius: 6px;">
@@ -189,7 +161,7 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
       const pdfBuffer = await fetchAdvancePdfFromService(payload);
 
       const attachmentFiles = await Promise.all(
-        (advance.attachments ?? []).map(async (attachment, index) => {
+        advance.attachments.map(async (attachment, index) => {
           try {
             const response = await fetch(attachment.url);
             if (!response.ok) {
@@ -197,8 +169,8 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
             }
             const arrayBuffer = await response.arrayBuffer();
             const mimeType =
-              attachment.mimeType?.trim() ||
-              response.headers.get("content-type") ||
+              attachment.mimeType?.trim() ??
+              response.headers.get("content-type") ??
               "image/jpeg";
             const extension = mimeType.includes("png")
               ? "png"
@@ -207,9 +179,9 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
                 : "jpg";
 
             return {
-              content: Buffer.from(arrayBuffer),
+              content: Buffer.from(arrayBuffer) as Buffer,
               filename:
-                attachment.fileName?.trim() ||
+                attachment.fileName?.trim() ??
                 `advance-photo-${String(index + 1)}.${extension}`,
             };
           } catch (error) {
@@ -227,7 +199,7 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
           .map(tiptapToHtml)
           .join("");
         if (type === "text") {
-          const text = String(node.text ?? "")
+          const text = String(node.text)
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
@@ -271,7 +243,7 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
           </div>
           <h3 style="color: #333; margin-top: 20px;">Work Completed</h3>
           <p style="line-height: 1.6; color: #666;">
-            ${advance.workCompleted ? tiptapToHtml(advance.workCompleted as Record<string, unknown>) : "No work notes provided."}
+            ${advance.workCompleted ? tiptapToHtml(advance.workCompleted) : "No work notes provided."}
           </p>
           <p style="margin-top: 20px; color: #999; font-size: 12px;">
             Attached files include the PDF report and site images.
@@ -285,9 +257,7 @@ export function startSendAdvanceWorker(): Worker<SendAdvanceJobData> {
         pdfBuffer,
         subject: subject.trim(),
         to: email,
-        attachments: attachmentFiles.filter(
-          (item): item is { content: Buffer; filename: string } => item != null,
-        ),
+        attachments: attachmentFiles.flatMap((item) => (item ? [item] : [])),
       });
     },
     { connection },
@@ -379,11 +349,15 @@ export function startSendProposalWorker(): Worker<SendProposalJobData> {
     "email-proposal",
     async (job) => {
       const { email, proposalId, message, subject, workspaceId } = job.data;
-      const proposal = await proposalsService.getProposalById(workspaceId, proposalId);
-      const proposalPayload = proposalsService.buildProposalPdfPayload(proposal);
+      const proposal = await proposalsService.getProposalById(
+        workspaceId,
+        proposalId,
+      );
+      const proposalPayload =
+        proposalsService.buildProposalPdfPayload(proposal);
       const pdfBuffer = await fetchProposalPdfFromService(proposalPayload);
       const frontendUrl =
-        process.env.FRONTEND_URL?.trim() || "http://localhost:3000";
+        process.env.FRONTEND_URL?.trim() ?? "http://localhost:3000";
       const signingLink =
         proposal.requireSignature && proposal.signingToken
           ? `<p style="margin-top: 20px; padding: 12px; background: #f5f5f5; border-radius: 6px;">
@@ -443,7 +417,13 @@ export function startWorkers(): {
   console.log(
     "[queue] Workers started: email-invoice, email-receipt, email-estimate, email-advance, email-proposal",
   );
-  return { advanceWorker, invoiceWorker, receiptWorker, estimateWorker, proposalWorker };
+  return {
+    advanceWorker,
+    invoiceWorker,
+    receiptWorker,
+    estimateWorker,
+    proposalWorker,
+  };
 }
 
 async function fetchInvoicePdfFromService(

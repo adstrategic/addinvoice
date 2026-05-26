@@ -1,13 +1,14 @@
 import type { Prisma } from "@addinvoice/db";
 
-import { toJsonRecord } from "../../core/prisma-json.js";
-import { toBusinessEntity } from "../businesses/businesses.mapper.js";
+import type { PaymentEntity } from "../payments/payments.schemas.js";
 import type {
   InvoiceEntity,
   InvoiceEntityWithRelations,
   InvoiceItemEntity,
 } from "./invoices.schemas.js";
-import type { PaymentEntity } from "../payments/payments.schemas.js";
+
+import { toJsonRecord } from "../../core/prisma-json.js";
+import { toBusinessEntity } from "../businesses/businesses.mapper.js";
 
 type InvoiceItemRow = Prisma.InvoiceItemGetPayload<Record<string, never>>;
 type PaymentRow = Prisma.PaymentGetPayload<Record<string, never>>;
@@ -90,8 +91,7 @@ function toInvoiceBase(row: InvoiceRowFlat): InvoiceEntity {
     discountType: row.discountType,
     taxMode: row.taxMode,
     taxName: row.taxName,
-    taxPercentage:
-      row.taxPercentage != null ? Number(row.taxPercentage) : null,
+    taxPercentage: row.taxPercentage != null ? Number(row.taxPercentage) : null,
     total: Number(row.total),
     balance: Number(row.balance),
     notes: toJsonRecord(row.notes),
@@ -103,6 +103,7 @@ function toInvoiceBase(row: InvoiceRowFlat): InvoiceEntity {
     paidAt: row.paidAt,
     lastReminderSentAt: row.lastReminderSentAt,
     selectedPaymentMethodId: row.selectedPaymentMethodId,
+    publicSlug: row.publicSlug,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

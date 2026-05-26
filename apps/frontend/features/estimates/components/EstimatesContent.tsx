@@ -269,6 +269,7 @@ export default function EstimatesContent() {
           estimateNumber={selectedEstimateForSend?.estimateNumber}
           clientName={selectedEstimateForSend?.client?.name || "Client"}
           clientEmail={selectedEstimateForSend?.clientEmail}
+          publicSlug={selectedEstimateForSend?.publicSlug}
         />
       )}
 

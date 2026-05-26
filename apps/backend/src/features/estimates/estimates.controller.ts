@@ -256,6 +256,22 @@ export async function enqueueSendEstimate(
 }
 
 /**
+ * POST /estimates/:sequence/share-link - Issue estimate and return public share slug
+ */
+export async function shareEstimatePublicLink(
+  req: TypedRequest<typeof getEstimateBySequenceSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence } = req.params;
+  const data = await estimatesService.shareEstimatePublicLink(
+    workspaceId,
+    sequence,
+  );
+  res.json({ data });
+}
+
+/**
  * GET /estimates/:id - Get estimate by ID
  * No error handling needed - middleware handles it
  */

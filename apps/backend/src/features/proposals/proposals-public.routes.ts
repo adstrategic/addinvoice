@@ -22,21 +22,21 @@ export const proposalsPublicRoutes: Router = Router();
 
 // GET /api/v1/public/proposals/accept/:token
 proposalsPublicRoutes.get(
-  "/proposals/accept/:token",
+  "/accept/:token",
   processRequest({ params: getProposalByTokenParamsSchema }),
   asyncHandler(getProposalByToken),
 );
 
 // GET /api/v1/public/proposals/accept/:token/pdf
 proposalsPublicRoutes.get(
-  "/proposals/accept/:token/pdf",
+  "/accept/:token/pdf",
   processRequest({ params: getProposalByTokenParamsSchema }),
   asyncHandler(getProposalPdfByToken),
 );
 
 // POST /api/v1/public/proposals/accept/:token
 proposalsPublicRoutes.post(
-  "/proposals/accept/:token",
+  "/accept/:token",
   processRequest({
     body: acceptProposalBodySchema,
     params: getProposalByTokenParamsSchema,
@@ -46,7 +46,7 @@ proposalsPublicRoutes.post(
 
 // POST /api/v1/public/proposals/reject/:token
 proposalsPublicRoutes.post(
-  "/proposals/reject/:token",
+  "/reject/:token",
   processRequest({
     body: rejectProposalBodySchema,
     params: getProposalByTokenParamsSchema,

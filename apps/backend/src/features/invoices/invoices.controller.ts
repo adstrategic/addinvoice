@@ -300,6 +300,22 @@ export async function enqueueSendInvoice(
 }
 
 /**
+ * POST /invoices/:sequence/share-link - Issue invoice and return public share slug
+ */
+export async function shareInvoicePublicLink(
+  req: TypedRequest<typeof getInvoiceBySequenceSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence } = req.params;
+  const data = await invoicesService.shareInvoicePublicLink(
+    workspaceId,
+    sequence,
+  );
+  res.json({ data });
+}
+
+/**
  * GET /invoices/:id - Get invoice by ID
  * No error handling needed - middleware handles it
  */

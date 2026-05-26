@@ -32,6 +32,8 @@ import {
 import { toast } from "sonner";
 import { useDownloadProposalPdf } from "@/features/proposals/hooks/useDownloadProposalPDF";
 import { DetailPageLoading } from "@/components/loading-component";
+import { CopyPublicLinkButton } from "@/components/shared/copy-public-link-button";
+import { isProposalPublicIssued } from "@/lib/is-document-public-issued";
 
 const ProposalPdfPreview = dynamic(
   () =>
@@ -142,6 +144,10 @@ export default function ProposalDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            <CopyPublicLinkButton
+              publicSlug={proposal.publicSlug}
+              isIssued={isProposalPublicIssued(proposal.status)}
+            />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -181,7 +187,7 @@ export default function ProposalDetailPage() {
               </Tooltip>
             )}
 
-            {proposal.status === "REJECTED" && (
+            {(proposal.status === "SENT" || proposal.status === "REJECTED") && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -195,7 +201,11 @@ export default function ProposalDetailPage() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Resend proposal</p>
+                  <p>
+                    {proposal.status === "REJECTED"
+                      ? "Resend proposal"
+                      : "Share or send proposal"}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -273,6 +283,8 @@ export default function ProposalDetailPage() {
         proposalNumber={proposal.proposalNumber}
         clientName={client.name || client.businessName || "Client"}
         clientEmail={proposal.clientEmail}
+        publicSlug={proposal.publicSlug}
+        enableEmailTab={proposal.status === "REJECTED"}
       />
 
       <EntityDeleteModal

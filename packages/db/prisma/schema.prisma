@@ -235,6 +235,7 @@ model Invoice {
     paidAt                  DateTime?
     lastReminderSentAt      DateTime? // When we last sent a reminder (for interval enforcement)
     selectedPaymentMethodId Int?
+    publicSlug              String?       @unique // e.g. inv-{uuid} for /public share link
     createdAt               DateTime      @default(now())
     updatedAt               DateTime      @updatedAt
 
@@ -255,6 +256,7 @@ model Invoice {
     @@index([clientId])
     @@index([status])
     @@index([createdAt])
+    @@index([publicSlug])
     @@map("invoices")
 }
 
@@ -371,6 +373,7 @@ model Estimate {
     signatureData           Json? // fullName, IP, timestamp, optional signature image URL
     convertedToInvoiceId    Int?           @unique
     selectedPaymentMethodId Int?
+    publicSlug              String?        @unique // e.g. est-{uuid} for /public share link
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -392,6 +395,7 @@ model Estimate {
     @@index([status])
     @@index([createdAt])
     @@index([signingToken])
+    @@index([publicSlug])
     @@map("estimates")
 }
 
@@ -698,6 +702,7 @@ model Proposal {
 
     // Payment
     selectedPaymentMethodId Int?
+    publicSlug              String?   @unique // e.g. prop-{uuid} for /public share link
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -715,6 +720,7 @@ model Proposal {
     @@index([clientId])
     @@index([status])
     @@index([estimateId])
+    @@index([publicSlug])
     @@map("proposals")
 }
 

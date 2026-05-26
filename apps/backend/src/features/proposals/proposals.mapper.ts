@@ -77,6 +77,7 @@ function toProposalBase(row: ProposalRowFlat) {
     requireSignature: row.requireSignature,
     rejectionReason: row.rejectionReason,
     signingToken: row.signingToken,
+    publicSlug: row.publicSlug,
     signatureData: row.signatureData as unknown,
     sentAt: row.sentAt,
     acceptedAt: row.acceptedAt,

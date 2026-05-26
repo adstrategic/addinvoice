@@ -35,6 +35,8 @@ import { toast } from "sonner";
 import { useDownloadEstimatePdf } from "@/features/estimates/hooks/useDownloadEstimatePDF";
 import { EstimatePdfPreview } from "@/features/estimates/components/EstimatePdfPreview";
 import { DetailPageLoading } from "@/components/loading-component";
+import { CopyPublicLinkButton } from "@/components/shared/copy-public-link-button";
+import { isEstimatePublicIssued } from "@/lib/is-document-public-issued";
 
 const statusConfig = {
   paid: { label: "Paid", className: "bg-primary/20 text-primary" },
@@ -137,6 +139,10 @@ export default function EstimateDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            <CopyPublicLinkButton
+              publicSlug={estimate.publicSlug}
+              isIssued={isEstimatePublicIssued(estimate.status)}
+            />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -301,6 +307,7 @@ export default function EstimateDetailPage() {
         estimateNumber={estimate.estimateNumber}
         clientName={client.name || "Client"}
         clientEmail={estimate.clientEmail}
+        publicSlug={estimate.publicSlug}
       />
 
       <ConvertToProposalDialog

@@ -568,6 +568,7 @@ export function InvoiceForm({
           invoiceNumber={existingInvoice.invoiceNumber}
           clientName={existingInvoice.client?.name ?? "Client"}
           clientEmail={existingInvoice.clientEmail}
+          publicSlug={existingInvoice.publicSlug}
         />
       )}
     </div>

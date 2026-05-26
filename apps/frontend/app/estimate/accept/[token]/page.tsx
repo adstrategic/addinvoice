@@ -1,10 +1,9 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
-import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
-import * as pdfjsLib from "pdfjs-dist";
+import { PdfDocumentViewer } from "@/components/pdf/pdf-document-viewer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,12 +42,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.mjs",
-  import.meta.url,
-).toString();
 
 const makeAcceptFormSchema = (requireSignature: boolean) =>
   z
@@ -67,61 +60,6 @@ const makeAcceptFormSchema = (requireSignature: boolean) =>
     });
 
 type AcceptFormValues = z.infer<ReturnType<typeof makeAcceptFormSchema>>;
-
-interface PdfPageProps {
-  pdf: PDFDocumentProxy;
-  pageNumber: number;
-  containerWidth: number;
-}
-
-function PdfPage({ pdf, pageNumber, containerWidth }: PdfPageProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || containerWidth <= 0) return;
-
-    let cancelled = false;
-    let renderTask: ReturnType<PDFPageProxy["render"]> | null = null;
-    let page: PDFPageProxy | null = null;
-
-    (async () => {
-      try {
-        page = await pdf.getPage(pageNumber);
-        if (cancelled) return;
-
-        const dpr = window.devicePixelRatio || 1;
-        const baseViewport = page.getViewport({ scale: 1 });
-        const scale = (containerWidth / baseViewport.width) * dpr;
-        const viewport = page.getViewport({ scale });
-
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
-        canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
-
-        const ctx = canvas.getContext("2d");
-        if (!ctx || cancelled) return;
-
-        renderTask = page.render({ canvas, canvasContext: ctx, viewport });
-        await renderTask.promise;
-      } catch (err) {
-        if ((err as { name?: string }).name !== "RenderingCancelledException") {
-          console.error(`PDF page ${pageNumber} render error:`, err);
-        }
-      } finally {
-        page?.cleanup();
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      renderTask?.cancel();
-    };
-  }, [pdf, pageNumber, containerWidth]);
-
-  return <canvas ref={canvasRef} className="shrink-0 bg-white shadow-sm" />;
-}
 
 export default function EstimateAcceptPage() {
   const params = useParams();
@@ -146,8 +84,6 @@ export default function EstimateAcceptPage() {
   const acceptMutation = useAcceptEstimateByToken(token);
   const rejectMutation = useRejectEstimateByToken(token);
   const requireSignature = !!estimate?.requireSignature;
-  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
 
   const form = useForm<AcceptFormValues>({
     resolver: zodResolver(makeAcceptFormSchema(requireSignature)),
@@ -157,37 +93,6 @@ export default function EstimateAcceptPage() {
     },
     mode: "onChange",
   });
-
-  useEffect(() => {
-    if (!pdfBytes) {
-      setPdfDoc(null);
-      return;
-    }
-
-    let doc: PDFDocumentProxy | null = null;
-    const task = pdfjsLib.getDocument({ data: pdfBytes });
-
-    task.promise.then((loaded) => {
-      doc = loaded;
-      setPdfDoc(loaded);
-    });
-
-    return () => {
-      task.destroy();
-      doc?.destroy();
-      setPdfDoc(null);
-    };
-  }, [pdfBytes]);
-
-  const previewContainerRef = useCallback((el: HTMLDivElement | null) => {
-    if (!el) return;
-    setContainerWidth(el.getBoundingClientRect().width);
-
-    const ro = new ResizeObserver(([entry]) => {
-      setContainerWidth(entry?.contentRect.width ?? 0);
-    });
-    ro.observe(el);
-  }, []);
 
   const handleAcceptSubmit = useCallback(
     async (values: AcceptFormValues) => {
@@ -430,47 +335,13 @@ export default function EstimateAcceptPage() {
             </CardHeader>
 
             <CardContent className="pt-4 sm:pt-6 space-y-6 p-4 sm:p-6">
-              {isPdfPending || (pdfBytes && !pdfDoc) ? (
-                <div className="h-[70vh] rounded-lg border border-border bg-card flex items-center justify-center">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Loading PDF preview...</span>
-                  </div>
-                </div>
-              ) : null}
-
-              {!isPdfPending && (isPdfError || !pdfBytes) ? (
-                <div className="h-[70vh] rounded-lg border border-border bg-card flex items-center justify-center px-4">
-                  <div className="text-center space-y-3">
-                    <p className="text-sm text-muted-foreground">
-                      {pdfError instanceof Error
-                        ? pdfError.message
-                        : "Could not load PDF preview."}
-                    </p>
-                    <Button variant="outline" onClick={() => void refetchPdf()}>
-                      Retry
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-
-              {pdfDoc && !isPdfPending && !isPdfError ? (
-                <div
-                  ref={previewContainerRef}
-                  className="h-[80vh] overflow-auto p-4 flex flex-col items-center gap-4 border border-border rounded-lg"
-                  style={{ touchAction: "pan-x pan-y pinch-zoom" }}
-                >
-                  {containerWidth > 0 &&
-                    Array.from({ length: pdfDoc.numPages }, (_, i) => (
-                      <PdfPage
-                        key={i}
-                        pdf={pdfDoc}
-                        pageNumber={i + 1}
-                        containerWidth={containerWidth}
-                      />
-                    ))}
-                </div>
-              ) : null}
+              <PdfDocumentViewer
+                pdfBytes={pdfBytes}
+                isLoading={isPdfPending}
+                isError={isPdfError || !pdfBytes}
+                error={pdfError}
+                onRetry={() => void refetchPdf()}
+              />
 
               <Separator />
 

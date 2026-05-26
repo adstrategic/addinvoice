@@ -28,6 +28,7 @@ export const proposalResponseSchema = baseProposalSchema.extend({
     .nullable(),
   rejectionReason: z.string().nullable().optional(),
   signingToken: z.string().nullable().optional(),
+  publicSlug: z.string().nullable().optional(),
   signatureData: z.unknown().nullable().optional(),
   sentAt: z.coerce.date().nullable(),
   acceptedAt: z.coerce.date().nullable().optional(),

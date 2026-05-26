@@ -131,6 +131,22 @@ export async function deleteProposal(
 }
 
 /**
+ * POST /proposals/:sequence/share-link - Issue proposal and return public share slug
+ */
+export async function shareProposalPublicLink(
+  req: TypedRequest<typeof getProposalBySequenceSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence } = req.params;
+  const data = await proposalsService.shareProposalPublicLink(
+    workspaceId,
+    sequence,
+  );
+  res.json({ data });
+}
+
+/**
  * POST /proposals/:sequence/send - Resend a rejected proposal (returns 202)
  */
 export async function resendProposal(
