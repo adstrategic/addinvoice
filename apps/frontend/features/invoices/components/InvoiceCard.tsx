@@ -26,7 +26,6 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { mapStatusToUI } from "../types/api";
-import { canSendInvoice } from "@/lib/is-document-public-issued";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
@@ -88,7 +87,6 @@ export function InvoiceCard({
     label: uiStatus,
     className: "bg-muted text-muted-foreground",
   };
-  const hasItems = (invoice.items?.length ?? 0) > 0;
   const hasBalance = (invoice.balance ?? 0) > 0;
   const isVoided = invoice.status === "VOIDED";
   const showSend = canSendInvoice(invoice);

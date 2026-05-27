@@ -21,8 +21,14 @@ export function canSendEstimate(estimate: {
   return !["PROPOSAL", "INVOICED", "VOIDED"].includes(estimate.status);
 }
 
-export function canSendInvoice(invoice: { status: string }): boolean {
-  return invoice.status !== "VOIDED";
+export function canSendInvoice(invoice: {
+  status: string;
+  items?: readonly unknown[] | null;
+}): boolean {
+  if (invoice.status === "VOIDED") {
+    return false;
+  }
+  return (invoice.items?.length ?? 0) > 0;
 }
 
 /** Resend email from list (rejected proposals only). */
