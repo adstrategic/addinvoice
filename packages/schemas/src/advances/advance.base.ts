@@ -7,6 +7,7 @@ export const AdvanceStatus = {
   DRAFT: "DRAFT",
   ISSUED: "ISSUED",
   INVOICED: "INVOICED",
+  VOIDED: "VOIDED",
 } as const;
 export type AdvanceStatus = (typeof AdvanceStatus)[keyof typeof AdvanceStatus];
 

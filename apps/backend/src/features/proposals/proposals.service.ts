@@ -458,6 +458,46 @@ export async function deleteProposal(
 }
 
 /**
+ * Mark a proposal as voided (irreversible; linked estimate stays in PROPOSAL status).
+ */
+export async function voidProposal(
+  workspaceId: number,
+  proposalId: number,
+): Promise<ProposalResponse> {
+  return await prisma.$transaction(async (tx) => {
+    const proposal = await tx.proposal.findFirst({
+      where: { id: proposalId, workspaceId },
+    });
+
+    if (!proposal) {
+      throw new EntityNotFoundError("Proposal not found");
+    }
+
+    if (proposal.status === "INVOICED") {
+      throw new EntityValidationError("Cannot void an invoiced proposal");
+    }
+
+    if (proposal.status === "VOIDED") {
+      throw new EntityValidationError("Proposal is already voided");
+    }
+
+    const updated = await tx.proposal.update({
+      data: { status: "VOIDED", voidedAt: new Date() },
+      include: {
+        business: true,
+        client: true,
+        descriptiveItems: {
+          orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        },
+      },
+      where: { id: proposalId },
+    });
+
+    return toProposalResponse(updated);
+  });
+}
+
+/**
  * Issue proposal via public link: ensure SENT (e.g. after rejection) and set publicSlug.
  */
 export async function shareProposalPublicLink(

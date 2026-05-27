@@ -1,14 +1,20 @@
 import { randomUUID } from "node:crypto";
 
-export type PublicDocumentType = "estimate" | "invoice" | "proposal";
+export type PublicDocumentType =
+  | "advance"
+  | "estimate"
+  | "invoice"
+  | "proposal";
 
 const PREFIX_BY_TYPE: Record<PublicDocumentType, string> = {
+  advance: "adv",
   invoice: "inv",
   estimate: "est",
   proposal: "prop",
 };
 
 const TYPE_BY_PREFIX: Record<string, PublicDocumentType> = {
+  adv: "advance",
   inv: "invoice",
   est: "estimate",
   prop: "proposal",

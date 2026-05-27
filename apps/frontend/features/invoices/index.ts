@@ -39,11 +39,13 @@ export {
   useCreateInvoiceFromVoiceAudio,
   useUpdateInvoice,
   useDeleteInvoice,
+  useVoidInvoice,
   invoiceKeys,
 } from "./hooks/useInvoices";
 
 export { useInvoiceActions } from "./hooks/useInvoiceActions";
 export { useInvoiceDelete } from "./hooks/useInvoiceDelete";
+export { useInvoiceVoid } from "./hooks/useInvoiceVoid";
 export {
   useCreateInvoiceItem,
   useUpdateInvoiceItem,

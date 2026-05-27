@@ -17,6 +17,7 @@ import {
   createInvoiceFromVoiceTranscript,
   deleteInvoice,
   deleteInvoiceItem,
+  voidInvoice,
   deletePayment,
   enqueueSendInvoice,
   getInvoiceBySequence,
@@ -167,6 +168,13 @@ invoicesRoutes.delete(
   "/:invoiceId",
   processRequest({ params: getInvoiceByIdSchema }),
   asyncHandler(deleteInvoice),
+);
+
+// POST /api/v1/invoices/:invoiceId/void - Mark invoice as voided
+invoicesRoutes.post(
+  "/:invoiceId/void",
+  processRequest({ params: getInvoiceByIdSchema }),
+  asyncHandler(voidInvoice),
 );
 
 // POST /api/v1/invoices/:invoiceId/items - Add an invoice item

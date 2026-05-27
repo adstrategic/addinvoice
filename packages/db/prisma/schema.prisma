@@ -145,6 +145,7 @@ enum InvoiceStatus {
     VIEWED
     PAID
     OVERDUE
+    VOIDED
 }
 
 enum TaxMode {
@@ -233,6 +234,7 @@ model Invoice {
     sentAt                  DateTime?
     viewedAt                DateTime?
     paidAt                  DateTime?
+    voidedAt                DateTime?
     lastReminderSentAt      DateTime? // When we last sent a reminder (for interval enforcement)
     selectedPaymentMethodId Int?
     publicSlug              String?       @unique // e.g. inv-{uuid} for /public share link
@@ -313,6 +315,7 @@ enum EstimateStatus {
     REJECTED
     INVOICED
     PROPOSAL
+    VOIDED
 }
 
 enum ProposalStatus {
@@ -320,6 +323,7 @@ enum ProposalStatus {
     ACCEPTED
     REJECTED
     INVOICED
+    VOIDED
 }
 
 enum AcceptedBy {
@@ -367,6 +371,7 @@ model Estimate {
     rejectionReason         String?
     sentAt                  DateTime?
     acceptedAt              DateTime?
+    voidedAt                DateTime?
     acceptedBy              AcceptedBy?
     signingToken            String?        @unique // UUID for public accept link
     signingTokenExpiresAt   DateTime?
@@ -495,6 +500,7 @@ enum AdvanceStatus {
     DRAFT
     ISSUED
     INVOICED
+    VOIDED
 }
 
 model Advance {
@@ -511,6 +517,8 @@ model Advance {
     workCompleted Json?
     status        AdvanceStatus @default(DRAFT)
     sentAt        DateTime?
+    voidedAt      DateTime?
+    publicSlug    String?       @unique // e.g. adv-{uuid} for /public share link
     createdAt     DateTime      @default(now())
     updatedAt     DateTime      @updatedAt
 
@@ -525,6 +533,7 @@ model Advance {
     @@index([workspaceId, invoiceId])
     @@index([workspaceId, status, createdAt])
     @@index([clientId, createdAt])
+    @@index([publicSlug])
     @@map("advances")
 }
 
@@ -695,6 +704,7 @@ model Proposal {
     // Status timestamps
     sentAt     DateTime?
     acceptedAt DateTime?
+    voidedAt   DateTime?
     acceptedBy AcceptedBy?
 
     // Conversion to invoice

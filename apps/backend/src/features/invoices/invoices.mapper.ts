@@ -101,6 +101,7 @@ function toInvoiceBase(row: InvoiceRowFlat): InvoiceEntity {
     sentAt: row.sentAt,
     viewedAt: row.viewedAt,
     paidAt: row.paidAt,
+    voidedAt: row.voidedAt,
     lastReminderSentAt: row.lastReminderSentAt,
     selectedPaymentMethodId: row.selectedPaymentMethodId,
     publicSlug: row.publicSlug,

@@ -21,7 +21,10 @@ import {
   Receipt,
   ScrollText,
   ExternalLink,
+  Ban,
 } from "lucide-react";
+import { canVoidEstimate } from "@/lib/document-void";
+import { canSendEstimate } from "@/lib/is-document-public-issued";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import type { EstimateDashboardResponse } from "@addinvoice/schemas";
@@ -67,6 +70,10 @@ const statusConfig = {
     label: "Proposal",
     className: "bg-chart-5/20 text-chart-5 hover:bg-chart-5/30",
   },
+  voided: {
+    label: "Voided",
+    className: "bg-destructive/15 text-destructive hover:bg-destructive/20",
+  },
 };
 
 interface EstimateCardProps {
@@ -75,6 +82,7 @@ interface EstimateCardProps {
   onDownload: (estimate: EstimateDashboardResponse) => void;
   onSend: (estimate: EstimateDashboardResponse) => void;
   onDelete: (estimate: EstimateDashboardResponse) => void;
+  onVoid: (estimate: EstimateDashboardResponse) => void;
   onAccept?: (estimate: EstimateDashboardResponse) => void;
   onConvertToInvoice?: (estimate: EstimateDashboardResponse) => void;
   onConvertToProposal?: (estimate: EstimateDashboardResponse) => void;
@@ -90,6 +98,7 @@ export function EstimateCard({
   onDownload,
   onSend,
   onDelete,
+  onVoid,
   onAccept,
   onConvertToInvoice,
   onConvertToProposal,
@@ -189,9 +198,7 @@ export function EstimateCard({
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
               </DropdownMenuItem>
-              {(estimate.itemCount ?? 0) > 0 &&
-                estimate.status !== "PROPOSAL" &&
-                estimate.status !== "INVOICED" && (
+              {canSendEstimate(estimate) && (
                   <DropdownMenuItem onClick={() => onSend(estimate)}>
                     <Send className="h-4 w-4 mr-2" />
                     Send
@@ -225,6 +232,18 @@ export function EstimateCard({
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
+                  </DropdownMenuItem>
+                </>
+              )}
+              {canVoidEstimate(estimate) && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onVoid(estimate)}
+                    className="text-destructive"
+                  >
+                    <Ban className="h-4 w-4 mr-2" />
+                    Mark as voided
                   </DropdownMenuItem>
                 </>
               )}

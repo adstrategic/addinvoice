@@ -19,20 +19,24 @@ export async function getDashboardStats(
 ): Promise<DashboardStatsResponse> {
   const { businessId, period } = query;
 
-  // Base where clause
-  const where: Prisma.InvoiceWhereInput = {
+  const listWhere: Prisma.InvoiceWhereInput = {
     workspaceId,
     ...(businessId && { businessId }),
   };
 
-  // Get all invoices for calculations
+  const statsWhere: Prisma.InvoiceWhereInput = {
+    ...listWhere,
+    status: { not: "VOIDED" },
+  };
+
+  // Non-voided invoices only — used for stat counts and outstanding
   const invoices = await prisma.invoice.findMany({
     include: {
       business: true,
       client: true,
     },
     orderBy: { createdAt: "desc" },
-    where,
+    where: statsWhere,
   });
 
   // Calculate stats
@@ -68,9 +72,10 @@ export async function getDashboardStats(
     )
     .reduce((sum, inv) => sum + Number(inv.balance), 0);
 
-  // Payment filter: non-deleted payments for non-deleted invoices (optional businessId)
+  // Payments on non-voided invoices only (optional businessId)
   const paymentWhere: Prisma.PaymentWhereInput = {
     invoice: {
+      status: { not: "VOIDED" },
       ...(businessId && { businessId }),
     },
     workspaceId,
@@ -89,9 +94,7 @@ export async function getDashboardStats(
     period ?? "30d",
   );
 
-  // Get recent invoices (last 5, ordered by creation date)
-  // Fetch items and payments for recent invoices
-  const recentInvoicesIds = invoices.slice(0, 5).map((inv) => inv.id);
+  // Recent invoices include voided (display only; not included in stats above)
   const recentInvoicesWithDetails = await prisma.invoice.findMany({
     include: {
       business: true,
@@ -105,9 +108,8 @@ export async function getDashboardStats(
       selectedPaymentMethod: true,
     },
     orderBy: { createdAt: "desc" },
-    where: {
-      id: { in: recentInvoicesIds },
-    },
+    take: 5,
+    where: listWhere,
   });
 
   const recentInvoicesData: InvoiceEntityWithRelations[] =

@@ -19,7 +19,7 @@ interface ProposalListProps {
   statusFilter: string;
   onDownload: (proposal: ProposalDashboardResponse) => void;
   onSend: (proposal: ProposalDashboardResponse) => void;
-  onDelete: (proposal: ProposalDashboardResponse) => void;
+  onVoid: (proposal: ProposalDashboardResponse) => void;
   onAccept?: (proposal: ProposalDashboardResponse) => void;
   onConvertToInvoice?: (proposal: ProposalDashboardResponse) => void;
   children?: React.ReactNode;
@@ -34,7 +34,7 @@ export function ProposalList({
   statusFilter,
   onDownload,
   onSend,
-  onDelete,
+  onVoid,
   onAccept,
   onConvertToInvoice,
   children,
@@ -72,7 +72,7 @@ export function ProposalList({
                   index={index}
                   onDownload={onDownload}
                   onSend={onSend}
-                  onDelete={onDelete}
+                  onVoid={onVoid}
                   onAccept={onAccept}
                   onConvertToInvoice={onConvertToInvoice}
                 />

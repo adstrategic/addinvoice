@@ -4,7 +4,11 @@ import {
   type SharePublicLinkResponse,
 } from "@addinvoice/schemas";
 
-export type SharePublicLinkResource = "invoices" | "estimates" | "proposals";
+export type SharePublicLinkResource =
+  | "advances"
+  | "invoices"
+  | "estimates"
+  | "proposals";
 
 export async function sharePublicLink(
   resource: SharePublicLinkResource,

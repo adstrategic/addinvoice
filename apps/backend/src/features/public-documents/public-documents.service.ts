@@ -8,6 +8,8 @@ import { toEstimateResponse } from "../estimates/estimates.mapper.js";
 import { buildEstimatePdfPayload } from "../estimates/estimates.service.js";
 import { toInvoiceEntityWithRelations } from "../invoices/invoices.mapper.js";
 import { buildInvoicePdfPayload } from "../invoices/invoices.service.js";
+import { toAdvanceResponse } from "../advances/advances.mapper.js";
+import { buildAdvancePdfPayload } from "../advances/advances.service.js";
 import { toProposalResponse } from "../proposals/proposals.mapper.js";
 import { buildProposalPdfPayload } from "../proposals/proposals.service.js";
 
@@ -18,7 +20,7 @@ function clientDisplayName(client: Client): string {
 }
 
 function assertInvoicePublicAccess(status: string): void {
-  if (status === "DRAFT") {
+  if (status === "DRAFT" || status === "VOIDED") {
     throw new GoneError("This document is not available for public viewing");
   }
   if (!INVOICE_PUBLIC_STATUSES.has(status)) {
@@ -27,13 +29,19 @@ function assertInvoicePublicAccess(status: string): void {
 }
 
 function assertEstimatePublicAccess(status: string): void {
-  if (status === "DRAFT") {
+  if (status === "DRAFT" || status === "VOIDED") {
     throw new GoneError("This document is not available for public viewing");
   }
 }
 
 function assertProposalPublicAccess(status: string): void {
-  if (status === "DRAFT") {
+  if (status === "VOIDED") {
+    throw new GoneError("This document is not available for public viewing");
+  }
+}
+
+function assertAdvancePublicAccess(status: string): void {
+  if (status === "DRAFT" || status === "VOIDED") {
     throw new GoneError("This document is not available for public viewing");
   }
 }
@@ -102,30 +110,57 @@ export async function getPublicDocumentBySlug(
     };
   }
 
-  const proposal = await prisma.proposal.findFirst({
+  if (parsed.type === "proposal") {
+    const proposal = await prisma.proposal.findFirst({
+      where: { publicSlug: slug },
+      include: {
+        business: true,
+        client: true,
+        descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+      },
+    });
+    if (!proposal) throw new EntityNotFoundError("Document not found");
+    assertProposalPublicAccess(proposal.status);
+
+    return {
+      type: "proposal",
+      status: proposal.status,
+      proposalNumber: proposal.proposalNumber,
+      total: Number(proposal.total),
+      currency: proposal.currency,
+      requireSignature: proposal.requireSignature,
+      signingToken: proposal.signingToken,
+      client: {
+        name: clientDisplayName(proposal.client),
+        email: proposal.clientEmail,
+      },
+      business: { name: proposal.business.name },
+    };
+  }
+
+  const advance = await prisma.advance.findFirst({
     where: { publicSlug: slug },
     include: {
+      attachments: { orderBy: { sequence: "asc" } },
       business: true,
       client: true,
-      descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
     },
   });
-  if (!proposal) throw new EntityNotFoundError("Document not found");
-  assertProposalPublicAccess(proposal.status);
+  if (!advance) throw new EntityNotFoundError("Document not found");
+  assertAdvancePublicAccess(advance.status);
 
   return {
-    type: "proposal",
-    status: proposal.status,
-    proposalNumber: proposal.proposalNumber,
-    total: Number(proposal.total),
-    currency: proposal.currency,
-    requireSignature: proposal.requireSignature,
-    signingToken: proposal.signingToken,
+    type: "advance",
+    status: advance.status,
+    sequence: advance.sequence,
+    projectName: advance.projectName,
+    advanceDate: advance.advanceDate,
+    location: advance.location,
     client: {
-      name: clientDisplayName(proposal.client),
-      email: proposal.clientEmail,
+      name: clientDisplayName(advance.client),
+      email: advance.client.email,
     },
-    business: { name: proposal.business.name },
+    business: { name: advance.business?.name ?? "Business" },
   };
 }
 
@@ -250,21 +285,55 @@ export async function getPublicDocumentPdfBySlug(
     };
   }
 
-  const proposal = await prisma.proposal.findFirst({
+  if (parsed.type === "proposal") {
+    const proposal = await prisma.proposal.findFirst({
+      where: { publicSlug: slug },
+      include: {
+        business: true,
+        client: true,
+        descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+      },
+    });
+    if (!proposal) throw new EntityNotFoundError("Document not found");
+    assertProposalPublicAccess(proposal.status);
+
+    const proposalResponse = toProposalResponse(proposal);
+    const payload = buildProposalPdfPayload(proposalResponse);
+    const pdfResponse = await fetch(
+      `${pdfServiceUrl.replace(/\/$/, "")}/generate-proposal`,
+      {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+          "X-PDF-Service-Key": pdfServiceSecret,
+        },
+        method: "POST",
+      },
+    );
+    if (!pdfResponse.ok) {
+      throw new Error(`PDF service error: ${String(pdfResponse.status)}`);
+    }
+    return {
+      buffer: Buffer.from(await pdfResponse.arrayBuffer()),
+      filename: `proposal-${proposal.proposalNumber}.pdf`,
+    };
+  }
+
+  const advance = await prisma.advance.findFirst({
     where: { publicSlug: slug },
     include: {
+      attachments: { orderBy: { sequence: "asc" } },
       business: true,
       client: true,
-      descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
     },
   });
-  if (!proposal) throw new EntityNotFoundError("Document not found");
-  assertProposalPublicAccess(proposal.status);
+  if (!advance) throw new EntityNotFoundError("Document not found");
+  assertAdvancePublicAccess(advance.status);
 
-  const proposalResponse = toProposalResponse(proposal);
-  const payload = buildProposalPdfPayload(proposalResponse);
+  const advanceResponse = toAdvanceResponse(advance);
+  const payload = buildAdvancePdfPayload(advanceResponse);
   const pdfResponse = await fetch(
-    `${pdfServiceUrl.replace(/\/$/, "")}/generate-proposal`,
+    `${pdfServiceUrl.replace(/\/$/, "")}/generate-advance`,
     {
       body: JSON.stringify(payload),
       headers: {
@@ -279,6 +348,6 @@ export async function getPublicDocumentPdfBySlug(
   }
   return {
     buffer: Buffer.from(await pdfResponse.arrayBuffer()),
-    filename: `proposal-${proposal.proposalNumber}.pdf`,
+    filename: `advance-${String(advance.sequence)}.pdf`,
   };
 }

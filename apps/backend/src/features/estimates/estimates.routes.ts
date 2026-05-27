@@ -20,6 +20,7 @@ import {
   deleteEstimate,
   deleteEstimateDescriptiveItem,
   deleteEstimateItem,
+  voidEstimate,
   enqueueSendEstimate,
   getEstimateBySequence,
   getEstimatePdf,
@@ -156,6 +157,13 @@ estimatesRoutes.delete(
   "/:estimateId",
   processRequest({ params: getEstimateByIdSchema }),
   asyncHandler(deleteEstimate),
+);
+
+// POST /api/v1/estimates/:estimateId/void - Mark estimate as voided
+estimatesRoutes.post(
+  "/:estimateId/void",
+  processRequest({ params: getEstimateByIdSchema }),
+  asyncHandler(voidEstimate),
 );
 
 // POST /api/v1/estimates/:estimateId/items - Add an estimate item

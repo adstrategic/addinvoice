@@ -18,6 +18,11 @@ describe("public-slug", () => {
       const slug = buildPublicSlug("proposal");
       expect(slug.startsWith("prop-")).toBe(true);
     });
+
+    it("builds adv- prefixed slug for advance", () => {
+      const slug = buildPublicSlug("advance");
+      expect(slug.startsWith("adv-")).toBe(true);
+    });
   });
 
   describe("parsePublicSlug", () => {
@@ -34,6 +39,14 @@ describe("public-slug", () => {
       expect(parsePublicSlug(slug)).toEqual({
         type: "estimate",
         idPart: "abc-def",
+      });
+    });
+
+    it("parses valid advance slug", () => {
+      const slug = "adv-550e8400-e29b-41d4-a716-446655440000";
+      expect(parsePublicSlug(slug)).toEqual({
+        type: "advance",
+        idPart: "550e8400-e29b-41d4-a716-446655440000",
       });
     });
 

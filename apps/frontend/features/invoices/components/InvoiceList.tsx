@@ -21,6 +21,7 @@ interface InvoiceListProps {
   onSend: (invoice: InvoiceResponse) => void;
   onAddPayment: (invoice: InvoiceResponse) => void;
   onDelete: (invoice: InvoiceResponse) => void;
+  onVoid: (invoice: InvoiceResponse) => void;
   children?: React.ReactNode;
 }
 
@@ -35,6 +36,7 @@ export function InvoiceList({
   onSend,
   onAddPayment,
   onDelete,
+  onVoid,
   children,
 }: InvoiceListProps) {
   const listTitle = STATUS_TO_TITLE[statusFilter] ?? STATUS_TO_TITLE.all;
@@ -72,6 +74,7 @@ export function InvoiceList({
                   onSend={onSend}
                   onAddPayment={onAddPayment}
                   onDelete={onDelete}
+                  onVoid={onVoid}
                 />
               ))}
             </div>

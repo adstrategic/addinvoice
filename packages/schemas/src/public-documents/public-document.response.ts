@@ -1,4 +1,5 @@
 import z from "zod";
+import { AdvanceStatusEnum } from "../advances/advance.base.js";
 import { EstimateStatusEnum } from "../estimates/estimate.base.js";
 import { ProposalStatusEnum } from "../proposals/proposal.base.js";
 import { fixedDateFromPrisma } from "../shared/date.js";
@@ -54,10 +55,24 @@ export const publicDocumentProposalSummarySchema = z.object({
   business: publicBusinessSummarySchema,
 });
 
+export const publicAdvanceSummarySchema = z.object({
+  type: z.literal("advance"),
+  status: AdvanceStatusEnum,
+  sequence: z.number().int().positive(),
+  projectName: z.string(),
+  advanceDate: z
+    .string()
+    .transform((val) => fixedDateFromPrisma(new Date(val))),
+  location: z.string().nullable(),
+  client: publicClientSummarySchema,
+  business: publicBusinessSummarySchema,
+});
+
 export const publicDocumentSummarySchema = z.discriminatedUnion("type", [
   publicInvoiceSummarySchema,
   publicDocumentEstimateSummarySchema,
   publicDocumentProposalSummarySchema,
+  publicAdvanceSummarySchema,
 ]);
 
 export type PublicInvoiceSummary = z.infer<typeof publicInvoiceSummarySchema>;
@@ -67,4 +82,5 @@ export type PublicDocumentEstimateSummary = z.infer<
 export type PublicDocumentProposalSummary = z.infer<
   typeof publicDocumentProposalSummarySchema
 >;
+export type PublicAdvanceSummary = z.infer<typeof publicAdvanceSummarySchema>;
 export type PublicDocumentSummary = z.infer<typeof publicDocumentSummarySchema>;

@@ -31,6 +31,7 @@ export const proposalResponseSchema = baseProposalSchema.extend({
   publicSlug: z.string().nullable().optional(),
   signatureData: z.unknown().nullable().optional(),
   sentAt: z.coerce.date().nullable(),
+  voidedAt: z.coerce.date().nullable().optional(),
   acceptedAt: z.coerce.date().nullable().optional(),
   acceptedBy: z.nativeEnum(AcceptedBy).nullable().optional(),
   convertedToInvoiceId: z.number().int().positive().nullable().optional(),

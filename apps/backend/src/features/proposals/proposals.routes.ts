@@ -13,6 +13,7 @@ import {
   convertProposalToInvoice,
   deleteProposal,
   deleteProposalDescriptiveItem,
+  voidProposal,
   getProposalBySequence,
   getProposalPdf,
   listProposals,
@@ -112,6 +113,13 @@ proposalsRoutes.delete(
   "/:proposalId",
   processRequest({ params: getProposalByIdSchema }),
   asyncHandler(deleteProposal),
+);
+
+// POST /api/v1/proposals/:proposalId/void - Mark proposal as voided
+proposalsRoutes.post(
+  "/:proposalId/void",
+  processRequest({ params: getProposalByIdSchema }),
+  asyncHandler(voidProposal),
 );
 
 // POST /api/v1/proposals/:proposalId/descriptive-items - Add a descriptive item

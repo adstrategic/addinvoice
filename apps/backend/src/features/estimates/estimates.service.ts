@@ -283,6 +283,10 @@ export async function convertEstimateToInvoice(
       throw new EntityNotFoundError("Estimate not found");
     }
 
+    if (estimate.status === "VOIDED") {
+      throw new EntityValidationError("Cannot convert a voided estimate");
+    }
+
     if (estimate.status === "PROPOSAL") {
       throw new EntityValidationError(
         "This estimate has been converted to a proposal. Convert the proposal to an invoice instead.",
@@ -1039,6 +1043,58 @@ export async function deleteEstimate(
 }
 
 /**
+ * Mark an estimate as voided (irreversible; record kept for audit).
+ */
+export async function voidEstimate(
+  workspaceId: number,
+  id: number,
+): Promise<EstimateResponse> {
+  return await prisma.$transaction(async (tx) => {
+    const existingEstimate = await tx.estimate.findUnique({
+      where: { id },
+    });
+
+    if (existingEstimate?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError("Estimate not found");
+    }
+
+    if (existingEstimate.status === "DRAFT") {
+      throw new EntityValidationError(
+        "Cannot void a draft estimate; delete it instead",
+      );
+    }
+
+    if (existingEstimate.status === "VOIDED") {
+      throw new EntityValidationError("Estimate is already voided");
+    }
+
+    if (existingEstimate.status === "INVOICED") {
+      throw new EntityValidationError("Cannot void an invoiced estimate");
+    }
+
+    if (existingEstimate.status === "PROPOSAL") {
+      throw new EntityValidationError(
+        "Cannot void an estimate with an active proposal",
+      );
+    }
+
+    const updated = await tx.estimate.update({
+      data: { status: "VOIDED", voidedAt: new Date() },
+      include: {
+        business: true,
+        client: true,
+        items: { orderBy: { name: "asc" } },
+        descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+        proposal: { select: { sequence: true } },
+      },
+      where: { id },
+    });
+
+    return toEstimateResponse(updated);
+  });
+}
+
+/**
  * Delete an estimate item
  */
 export async function deleteEstimateItem(
@@ -1423,6 +1479,10 @@ export async function markEstimateAsSent(
 
   if (estimate._count.items === 0) {
     throw new EntityValidationError("Cannot send an estimate with no items");
+  }
+
+  if (estimate.status === "VOIDED") {
+    throw new EntityValidationError("Cannot send a voided estimate");
   }
 
   // Idempotent: if already sent (SENT, VIEWED, or PAID), don't overwrite status—return current state

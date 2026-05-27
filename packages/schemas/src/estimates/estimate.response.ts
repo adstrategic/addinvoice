@@ -58,6 +58,7 @@ export const estimateResponseSchema = baseEstimateSchema.extend({
   acceptedAt: z.coerce.date().nullable().optional(),
   acceptedBy: z.nativeEnum(AcceptedBy).nullable().optional(),
   sentAt: z.coerce.date().nullable(),
+  voidedAt: z.coerce.date().nullable().optional(),
   viewedAt: z.coerce.date().nullable().optional(),
   paidAt: z.coerce.date().nullable().optional(),
   paymentLink: z.string().nullable().optional(),

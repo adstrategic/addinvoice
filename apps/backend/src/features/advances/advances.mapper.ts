@@ -36,6 +36,8 @@ export function toAdvanceResponse(
     businessId: row.businessId,
     clientId: row.clientId,
     sentAt: row.sentAt,
+    voidedAt: row.voidedAt,
+    publicSlug: row.publicSlug,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     attachments: row.attachments.map((attachment) => ({
@@ -72,6 +74,8 @@ export function toAdvanceListItem(
     businessId: row.businessId,
     clientId: row.clientId,
     sentAt: row.sentAt,
+    voidedAt: row.voidedAt,
+    publicSlug: row.publicSlug,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     business: row.business ? toBusinessEntity(row.business) : null,

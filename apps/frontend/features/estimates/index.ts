@@ -34,6 +34,7 @@ export {
   useUpdateEstimate,
   useMarkEstimateAsAccepted,
   useDeleteEstimate,
+  useVoidEstimate,
   useConvertEstimateToInvoice,
   useConvertEstimateToProposal,
   estimateKeys,
@@ -51,6 +52,7 @@ export { PublicEstimateError } from "./service/public-estimates.service";
 
 export { useEstimateActions } from "./hooks/useEstimateActions";
 export { useEstimateDelete } from "./hooks/useEstimateDelete";
+export { useEstimateVoid } from "./hooks/useEstimateVoid";
 export {
   useCreateEstimateItem,
   useUpdateEstimateItem,

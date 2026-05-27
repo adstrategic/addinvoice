@@ -7,7 +7,13 @@
 /**
  * Invoice status enum matching backend
  */
-export type InvoiceStatus = "DRAFT" | "SENT" | "VIEWED" | "PAID" | "OVERDUE";
+export type InvoiceStatus =
+  | "DRAFT"
+  | "SENT"
+  | "VIEWED"
+  | "PAID"
+  | "OVERDUE"
+  | "VOIDED";
 
 /**
  * Tax mode enum matching backend
@@ -43,6 +49,7 @@ export function mapStatusToUI(status: InvoiceStatus): string {
     VIEWED: "issued",
     PAID: "paid",
     OVERDUE: "overdue",
+    VOIDED: "voided",
   };
   return statusMap[status] || "draft";
 }
@@ -56,6 +63,7 @@ export function mapUIToStatus(uiStatus: string): InvoiceStatus | null {
     issued: "SENT",
     overdue: "OVERDUE",
     paid: "PAID",
+    voided: "VOIDED",
   };
   return statusMap[uiStatus] || null;
 }

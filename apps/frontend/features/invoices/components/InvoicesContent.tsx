@@ -8,6 +8,7 @@ import {
   InvoiceActions,
   useInvoices,
   useInvoiceDelete,
+  useInvoiceVoid,
 } from "@/features/invoices";
 import { PaymentFormDialog } from "./PaymentFormDialog";
 import { usePaymentDialog } from "../hooks/usePaymentDialog";
@@ -24,6 +25,7 @@ import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { statusFilterToApiParam } from "../types/api";
 import { useInvoiceManager } from "../hooks/useInvoiceFormManager";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
+import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useDownloadInvoicePdf } from "../hooks/useDownloadInvoicePDF";
@@ -81,6 +83,7 @@ export default function InvoicesContent() {
 
   const invoiceManager = useInvoiceManager();
   const invoiceDelete = useInvoiceDelete();
+  const invoiceVoid = useInvoiceVoid();
   const downloadPdf = useDownloadInvoicePdf();
   const { guardCreate } = useLimitGuard();
 
@@ -199,6 +202,7 @@ export default function InvoicesContent() {
           onSend={handleSendInvoice}
           onAddPayment={paymentDialog.openPaymentDialog}
           onDelete={invoiceDelete.openDeleteModal}
+          onVoid={invoiceVoid.openVoidModal}
         >
           {pagination && (
             <TablePagination
@@ -221,6 +225,15 @@ export default function InvoicesContent() {
         entity="invoice"
         entityName={invoiceDelete.invoiceToDelete?.invoiceNumber || ""}
         isDeleting={invoiceDelete.isDeleting}
+      />
+
+      <EntityVoidModal
+        isOpen={invoiceVoid.isVoidModalOpen}
+        onClose={invoiceVoid.closeVoidModal}
+        onConfirm={invoiceVoid.handleVoidConfirm}
+        entity="invoice"
+        entityName={invoiceVoid.invoiceToVoid?.invoiceNumber || ""}
+        isVoiding={invoiceVoid.isVoiding}
       />
 
       {selectedInvoiceForSend && (

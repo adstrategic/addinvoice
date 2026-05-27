@@ -17,6 +17,7 @@ export function mapStatusToUI(status: ProposalStatus): string {
     ACCEPTED: "accepted",
     REJECTED: "rejected",
     INVOICED: "invoiced",
+    VOIDED: "voided",
   };
   return map[status] || "sent";
 }
@@ -27,6 +28,7 @@ export function mapUIToStatus(uiStatus: string): ProposalStatus | null {
     accepted: "ACCEPTED",
     rejected: "REJECTED",
     invoiced: "INVOICED",
+    voided: "VOIDED",
   };
   return map[uiStatus] || null;
 }

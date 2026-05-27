@@ -413,6 +413,10 @@ export async function addPayment(
       );
     }
 
+    if (invoice.status === "VOIDED") {
+      throw new EntityValidationError("Cannot add payment to a voided invoice");
+    }
+
     if (Number(invoice.balance) <= 0) {
       throw new EntityValidationError(
         "Cannot add payment: invoice balance is zero or already paid",
@@ -999,6 +1003,59 @@ export async function deleteInvoice(
 }
 
 /**
+ * Mark an invoice as voided (irreversible; record kept for audit).
+ */
+export async function voidInvoice(
+  workspaceId: number,
+  id: number,
+): Promise<InvoiceEntityWithRelations> {
+  return await prisma.$transaction(async (tx) => {
+    const existingInvoice = await tx.invoice.findUnique({
+      include: { payments: true },
+      where: { id },
+    });
+
+    if (existingInvoice?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError("Invoice not found");
+    }
+
+    if (existingInvoice.status === "DRAFT") {
+      throw new EntityValidationError(
+        "Cannot void a draft invoice; delete it instead",
+      );
+    }
+
+    if (existingInvoice.status === "VOIDED") {
+      throw new EntityValidationError("Invoice is already voided");
+    }
+
+    if (existingInvoice.status === "PAID") {
+      throw new EntityValidationError("Cannot void a paid invoice");
+    }
+
+    if (existingInvoice.payments.length > 0) {
+      throw new EntityValidationError(
+        "Cannot void an invoice with recorded payments",
+      );
+    }
+
+    const updated = await tx.invoice.update({
+      data: { status: "VOIDED", voidedAt: new Date() },
+      include: {
+        business: true,
+        client: true,
+        items: true,
+        payments: true,
+        selectedPaymentMethod: true,
+      },
+      where: { id },
+    });
+
+    return toInvoiceEntityWithRelations(updated);
+  });
+}
+
+/**
  * Delete an invoice item
  */
 export async function deleteInvoiceItem(
@@ -1215,9 +1272,8 @@ export async function listInvoices(
   } = query;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.InvoiceWhereInput = {
+  const baseWhere: Prisma.InvoiceWhereInput = {
     workspaceId,
-
     ...(search && {
       OR: [
         { invoiceNumber: { contains: search, mode: "insensitive" } },
@@ -1225,21 +1281,42 @@ export async function listInvoices(
         { client: { businessName: { contains: search, mode: "insensitive" } } },
       ],
     }),
-    // Only allowed statuses (DRAFT, SENT, PAID, OVERDUE); VIEWED excluded from filter
-    ...(statusParam && { status: statusParam }),
     ...(clientId && { clientId }),
     ...(businessId && { businessId }),
   };
 
-  const wherePaid: Prisma.InvoiceWhereInput = { ...where, status: "PAID" };
-  const whereOverdue: Prisma.InvoiceWhereInput = {
-    ...where,
-    status: "OVERDUE",
+  // Paginated list: includes voided invoices (stats exclude them separately)
+  const where: Prisma.InvoiceWhereInput = {
+    ...baseWhere,
+    ...(statusParam && { status: statusParam }),
   };
+
+  const buildStatsWhere = (
+    status?: Prisma.EnumInvoiceStatusFilter | Prisma.InvoiceStatus,
+  ): Prisma.InvoiceWhereInput => {
+    // Metric-specific stats use an explicit status (PAID, OVERDUE, etc.) and ignore
+    // the list tab filter. Enum values are mutually exclusive, so a single `status`
+    // field is enough — no AND with `{ not: VOIDED }`.
+    if (status !== undefined) {
+      return { ...baseWhere, status };
+    }
+    if (statusParam) {
+      return { ...baseWhere, status: statusParam };
+    }
+    return { ...baseWhere, status: { not: "VOIDED" } };
+  };
+
+  const statsWhere = buildStatsWhere();
+  const wherePaid = buildStatsWhere("PAID");
+  const whereOverdue = buildStatsWhere("OVERDUE");
+  const whereOutstanding = buildStatsWhere({
+    in: ["SENT", "VIEWED", "OVERDUE"],
+  });
 
   const [
     invoices,
     total,
+    statsTotal,
     paidCount,
     pendingCount,
     revenueAgg,
@@ -1260,14 +1337,18 @@ export async function listInvoices(
       where,
     }),
     prisma.invoice.count({ where }),
+    prisma.invoice.count({ where: statsWhere }),
     prisma.invoice.count({ where: wherePaid }),
     prisma.invoice.count({ where: whereOverdue }),
     prisma.payment.aggregate({
       _sum: { amount: true },
-      where: { invoice: where },
+      where: { workspaceId, invoice: statsWhere },
     }),
-    prisma.invoice.aggregate({ _sum: { total: true }, where }),
-    prisma.invoice.aggregate({ _sum: { balance: true }, where }),
+    prisma.invoice.aggregate({ _sum: { total: true }, where: statsWhere }),
+    prisma.invoice.aggregate({
+      _sum: { balance: true },
+      where: whereOutstanding,
+    }),
   ]);
 
   return {
@@ -1279,7 +1360,7 @@ export async function listInvoices(
       paidCount,
       pendingCount,
       revenue: Number(revenueAgg._sum.amount ?? 0),
-      total,
+      total: statsTotal,
       totalInvoiced: Number(totalInvoicedAgg._sum.total ?? 0),
     },
     total,
@@ -1307,6 +1388,10 @@ export async function markInvoiceAsSent(
 
   if (invoice._count.items === 0) {
     throw new EntityValidationError("Cannot send an invoice with no items");
+  }
+
+  if (invoice.status === "VOIDED") {
+    throw new EntityValidationError("Cannot send a voided invoice");
   }
 
   // Idempotent: if already sent (SENT, VIEWED, or PAID), don't overwrite status—return current state
@@ -2317,6 +2402,10 @@ async function updateInvoiceBalanceAndStatus(
 
   if (!invoice) {
     return; // Should not happen, but guard against it
+  }
+
+  if (invoice.status === "VOIDED") {
+    return;
   }
 
   // Prepare update data

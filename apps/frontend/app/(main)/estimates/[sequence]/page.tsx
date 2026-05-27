@@ -12,6 +12,7 @@ import {
   Loader2,
   CheckCircle,
   ScrollText,
+  Ban,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -21,11 +22,15 @@ import { ConvertToProposalDialog } from "@/components/convert-to-proposal-dialog
 import {
   useEstimateBySequence,
   useEstimateDelete,
+  useEstimateVoid,
   useEstimateActions,
   useMarkEstimateAsAccepted,
   mapStatusToUI,
 } from "@/features/estimates";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
+import { canSendEstimate } from "@/lib/is-document-public-issued";
+import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
+import { canVoidEstimate } from "@/lib/document-void";
 import {
   Tooltip,
   TooltipTrigger,
@@ -50,6 +55,7 @@ const statusConfig = {
   sent: { label: "Sent", className: "bg-chart-3/20 text-chart-3" },
   rejected: { label: "Rejected", className: "bg-chart-4/20 text-chart-4" },
   invoiced: { label: "Invoiced", className: "bg-primary/20 text-primary" },
+  voided: { label: "Voided", className: "bg-destructive/15 text-destructive" },
 };
 
 export default function EstimateDetailPage() {
@@ -63,6 +69,7 @@ export default function EstimateDetailPage() {
       router.push("/estimates");
     },
   });
+  const estimateVoid = useEstimateVoid();
   const estimateActions = useEstimateActions();
   const markAsAccepted = useMarkEstimateAsAccepted();
 
@@ -197,9 +204,10 @@ export default function EstimateDetailPage() {
                 </TooltipContent>
               </Tooltip>
             )}
-            {items.length > 0 &&
-              estimate.status !== "PROPOSAL" &&
-              estimate.status !== "INVOICED" && (
+            {canSendEstimate({
+              status: estimate.status,
+              itemCount: items.length,
+            }) && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -289,6 +297,23 @@ export default function EstimateDetailPage() {
                 </Tooltip>
               </>
             )}
+            {canVoidEstimate(estimate) && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="text-destructive hover:text-destructive bg-transparent"
+                    onClick={() => estimateVoid.openVoidModal(estimate)}
+                  >
+                    <Ban className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Mark as voided</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
 
@@ -327,6 +352,15 @@ export default function EstimateDetailPage() {
         entity="estimate"
         entityName={estimateDelete.estimateToDelete?.estimateNumber || ""}
         isDeleting={estimateDelete.isDeleting}
+      />
+
+      <EntityVoidModal
+        isOpen={estimateVoid.isVoidModalOpen}
+        onClose={estimateVoid.closeVoidModal}
+        onConfirm={estimateVoid.handleVoidConfirm}
+        entity="estimate"
+        entityName={estimateVoid.estimateToVoid?.estimateNumber || ""}
+        isVoiding={estimateVoid.isVoiding}
       />
     </>
   );

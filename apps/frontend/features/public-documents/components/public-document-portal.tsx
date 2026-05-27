@@ -69,7 +69,9 @@ export function PublicDocumentPortal({ slug }: PublicDocumentPortalProps) {
           ? `estimate-${document.estimateNumber}.pdf`
           : document.type === "proposal"
             ? `proposal-${document.proposalNumber}.pdf`
-            : "document.pdf";
+            : document.type === "advance"
+              ? `advance-${String(document.sequence)}.pdf`
+              : "document.pdf";
     anchor.download = filename;
     anchor.click();
     URL.revokeObjectURL(url);
@@ -134,22 +136,13 @@ function PublicDocumentLayout({
   const isInvoice = document.type === "invoice";
   const isEstimate = document.type === "estimate";
   const isProposal = document.type === "proposal";
+  const isAdvance = document.type === "advance";
 
   const isPaid = isInvoice && document.status === "PAID";
   const isAccepted =
     (isEstimate && document.status === "ACCEPTED") ||
     (isProposal && document.status === "ACCEPTED");
-
-  const docNumber = isInvoice
-    ? document.invoiceNumber
-    : isEstimate
-      ? document.estimateNumber
-      : document.proposalNumber;
-
-  const total = document.total;
-  const currency = document.currency;
-
-  const dueLabel = isInvoice ? `Due ${document.dueDate}` : null;
+  const isInvoiced = isAdvance && document.status === "INVOICED";
 
   const acceptHref =
     isEstimate && document.signingToken
@@ -165,7 +158,36 @@ function PublicDocumentLayout({
     ? "Invoice Summary"
     : isEstimate
       ? "Estimate Summary"
-      : "Proposal Summary";
+      : isProposal
+        ? "Proposal Summary"
+        : "Work Advance";
+
+  const headline = isAdvance
+    ? document.projectName
+    : formatMoney(
+        document.total,
+        isInvoice || isEstimate || isProposal ? document.currency : "USD",
+      );
+
+  const metaLine = isAdvance
+    ? [
+        document.advanceDate,
+        document.location,
+        `#${String(document.sequence)}`,
+      ]
+        .filter(Boolean)
+        .join(" • ")
+    : isInvoice
+      ? `${document.invoiceNumber} • Due ${document.dueDate}`
+      : isEstimate
+        ? document.estimateNumber
+        : document.proposalNumber;
+
+  const clientSectionTitle = isAdvance ? "Prepared For" : "Billed To";
+
+  const securityCopy = isAdvance
+    ? "This is a secure link powered by ADDINVOICES. Only people with this link can view this work advance."
+    : "This is a secure link powered by ADDINVOICES. Your payment details are encrypted and securely processed.";
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row relative">
@@ -174,10 +196,10 @@ function PublicDocumentLayout({
           <div className="font-black text-2xl tracking-tight text-slate-900">
             {document.business.name}
           </div>
-          {(isPaid || isAccepted) && (
+          {(isPaid || isAccepted || isInvoiced) && (
             <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase flex items-center">
               <CheckCircle2 className="w-4 h-4 mr-1" />
-              {isPaid ? "Paid" : "Accepted"}
+              {isPaid ? "Paid" : isInvoiced ? "Invoiced" : "Accepted"}
             </div>
           )}
         </div>
@@ -187,18 +209,21 @@ function PublicDocumentLayout({
             <p className="text-sm text-slate-500 font-medium uppercase tracking-wider mb-1">
               {summaryTitle}
             </p>
-            <h1 className="text-4xl font-black text-slate-900 mb-1">
-              {formatMoney(total, currency)}
+            <h1
+              className={
+                isAdvance
+                  ? "text-2xl sm:text-3xl font-black text-slate-900 mb-1 leading-tight"
+                  : "text-4xl font-black text-slate-900 mb-1"
+              }
+            >
+              {headline}
             </h1>
-            <p className="text-slate-500 text-sm">
-              {docNumber}
-              {dueLabel ? ` • ${dueLabel}` : ""}
-            </p>
+            <p className="text-slate-500 text-sm">{metaLine}</p>
           </div>
 
           <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
             <h3 className="font-bold text-slate-800 mb-3 text-sm uppercase">
-              Billed To
+              {clientSectionTitle}
             </h3>
             <p className="font-semibold text-slate-900 wrap-break-word">
               {document.client.name}
@@ -212,10 +237,7 @@ function PublicDocumentLayout({
 
           <div className="bg-blue-50 text-blue-800 p-4 rounded-2xl flex items-start gap-3">
             <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5 opacity-80" />
-            <p className="text-xs leading-relaxed font-medium">
-              This is a secure link powered by ADDINVOICES. Your payment details
-              are encrypted and securely processed.
-            </p>
+            <p className="text-xs leading-relaxed font-medium">{securityCopy}</p>
           </div>
         </div>
 

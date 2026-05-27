@@ -16,12 +16,14 @@ export {
 	useAdvanceById,
 	useCreateAdvance,
 	useDeleteAdvance,
+	useVoidAdvance,
 	useAdvancePdfBytes,
 	useSyncAdvanceAttachments,
 	useSendAdvance,
 	useUpdateAdvance,
 } from './hooks/useAdvances'
 export { useAdvanceDelete } from './hooks/useAdvanceDelete'
+export { useAdvanceVoid } from './hooks/useAdvanceVoid'
 
 export { advanceResponseListSchema, type AdvanceResponseList } from './schemas/advances.schema'
 export { mapStatusToUI, mapUIToStatus, statusFilterToApiParam } from './types/api'

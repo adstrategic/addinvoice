@@ -5,6 +5,7 @@ const { prismaMock } = vi.hoisted(() => ({
     invoice: { findFirst: vi.fn(), update: vi.fn() },
     estimate: { findFirst: vi.fn() },
     proposal: { findFirst: vi.fn() },
+    advance: { findFirst: vi.fn() },
   },
 }));
 
@@ -87,6 +88,17 @@ describe("public-documents.service", () => {
       ).rejects.toThrow(GoneError);
     });
 
+    it("throws GoneError for voided invoice", async () => {
+      prismaMock.invoice.findFirst.mockResolvedValue({
+        ...invoiceRow,
+        status: "VOIDED",
+      });
+
+      await expect(
+        getPublicDocumentBySlug("inv-550e8400-e29b-41d4-a716-446655440000"),
+      ).rejects.toThrow(GoneError);
+    });
+
     it("throws EntityNotFoundError for invalid slug prefix", async () => {
       await expect(getPublicDocumentBySlug("bad-slug")).rejects.toThrow(
         EntityNotFoundError,
@@ -116,6 +128,47 @@ describe("public-documents.service", () => {
         signingToken: "token-abc",
         client: { name: "Jane LLC" },
       });
+    });
+
+    it("returns advance summary for valid adv slug", async () => {
+      prismaMock.advance.findFirst.mockResolvedValue({
+        status: "ISSUED",
+        sequence: 12,
+        projectName: "Kitchen remodel",
+        advanceDate: new Date("2026-02-01"),
+        location: "123 Main St",
+        client: { name: "Jane Doe", businessName: null, email: "jane@example.com" },
+        business: { name: "Acme Co" },
+      });
+
+      const result = await getPublicDocumentBySlug(
+        "adv-550e8400-e29b-41d4-a716-446655440000",
+      );
+
+      expect(result).toMatchObject({
+        type: "advance",
+        sequence: 12,
+        projectName: "Kitchen remodel",
+        location: "123 Main St",
+        client: { name: "Jane Doe", email: "jane@example.com" },
+        business: { name: "Acme Co" },
+      });
+    });
+
+    it("throws GoneError for draft advance", async () => {
+      prismaMock.advance.findFirst.mockResolvedValue({
+        status: "DRAFT",
+        sequence: 1,
+        projectName: "Draft project",
+        advanceDate: new Date("2026-02-01"),
+        location: null,
+        client: { name: "Jane", businessName: null, email: "jane@example.com" },
+        business: { name: "Acme Co" },
+      });
+
+      await expect(
+        getPublicDocumentBySlug("adv-550e8400-e29b-41d4-a716-446655440000"),
+      ).rejects.toThrow(GoneError);
     });
   });
 

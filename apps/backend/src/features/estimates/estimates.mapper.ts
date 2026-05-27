@@ -116,6 +116,7 @@ function toEstimateBase(row: EstimateRowFlat) {
     publicSlug: row.publicSlug,
     signatureData: row.signatureData as unknown,
     sentAt: row.sentAt,
+    voidedAt: row.voidedAt,
     acceptedAt: row.acceptedAt,
     acceptedBy: row.acceptedBy,
     selectedPaymentMethodId: row.selectedPaymentMethodId,

@@ -5,7 +5,7 @@ import {
   ProposalFilters,
   ProposalList,
   useProposals,
-  useProposalDelete,
+  useProposalVoid,
   useMarkProposalAsAccepted,
   useProposalActions,
 } from "@/features/proposals";
@@ -17,7 +17,7 @@ import { motion } from "framer-motion";
 import { SendProposalDialog } from "@/components/send-proposal-dialog";
 import type { ProposalDashboardResponse } from "@addinvoice/schemas";
 import { statusFilterToApiParam } from "../types/api";
-import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
+import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useDownloadProposalPdf } from "../hooks/useDownloadProposalPDF";
@@ -76,7 +76,7 @@ export default function ProposalsContent() {
 
   const downloadPdf = useDownloadProposalPdf();
 
-  const proposalDelete = useProposalDelete();
+  const proposalVoid = useProposalVoid();
   const markAsAccepted = useMarkProposalAsAccepted();
   const proposalActions = useProposalActions();
 
@@ -100,7 +100,7 @@ export default function ProposalsContent() {
     setSendDialogOpen(true);
   };
 
-  if (isLoading) return <LoadingComponent variant="list" rows={10} />;
+  if (isLoading) return <LoadingComponent variant="dashboard" />;
 
   if (error || !proposalsData) {
     return (
@@ -155,7 +155,7 @@ export default function ProposalsContent() {
           statusFilter={statusFilter}
           onDownload={handleDownloadPDF}
           onSend={handleSendProposal}
-          onDelete={proposalDelete.openDeleteModal}
+          onVoid={proposalVoid.openVoidModal}
           onAccept={handleAccept}
           onConvertToInvoice={proposalActions.handleConvertToInvoice}
         >
@@ -173,13 +173,13 @@ export default function ProposalsContent() {
       </div>
 
       {/* Delete Confirmation Modal - Separate logic */}
-      <EntityDeleteModal
-        isOpen={proposalDelete.isDeleteModalOpen}
-        onClose={proposalDelete.closeDeleteModal}
-        onConfirm={proposalDelete.handleDeleteConfirm}
+      <EntityVoidModal
+        isOpen={proposalVoid.isVoidModalOpen}
+        onClose={proposalVoid.closeVoidModal}
+        onConfirm={proposalVoid.handleVoidConfirm}
         entity="proposal"
-        entityName={proposalDelete.proposalToDelete?.proposalNumber || ""}
-        isDeleting={proposalDelete.isDeleting}
+        entityName={proposalVoid.proposalToVoid?.proposalNumber || ""}
+        isVoiding={proposalVoid.isVoiding}
       />
 
       {selectedProposalForSend && (

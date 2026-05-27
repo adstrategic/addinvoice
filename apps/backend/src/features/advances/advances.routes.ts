@@ -2,6 +2,7 @@ import {
   createAdvanceSchema,
   generateAdvanceReportBodySchema,
   getAdvanceByIdSchema,
+  getAdvanceBySequenceSchema,
   linkAdvanceToInvoiceBodySchema,
   listAdvancesQuerySchema,
   sendAdvanceBodySchema,
@@ -16,12 +17,14 @@ import asyncHandler from "../../core/async-handler.js";
 import {
   createAdvance,
   deleteAdvance,
+  voidAdvance,
   generateAdvanceReport,
-  getAdvanceById,
+  getAdvanceBySequence,
   getAdvancePdf,
   linkAdvanceToInvoice,
   listAdvances,
   sendAdvance,
+  shareAdvancePublicLink,
   syncAdvanceAttachments,
   unlinkAdvanceFromInvoice,
   updateAdvance,
@@ -46,15 +49,30 @@ advancesRoutes.post(
 );
 
 advancesRoutes.get(
-  "/:advanceId/pdf",
-  processRequest({ params: getAdvanceByIdSchema }),
+  "/:sequence/pdf",
+  processRequest({ params: getAdvanceBySequenceSchema }),
   asyncHandler(getAdvancePdf),
 );
 
+advancesRoutes.post(
+  "/:sequence/send",
+  processRequest({
+    body: sendAdvanceBodySchema,
+    params: getAdvanceBySequenceSchema,
+  }),
+  asyncHandler(sendAdvance),
+);
+
+advancesRoutes.post(
+  "/:sequence/share-link",
+  processRequest({ params: getAdvanceBySequenceSchema }),
+  asyncHandler(shareAdvancePublicLink),
+);
+
 advancesRoutes.get(
-  "/:advanceId",
-  processRequest({ params: getAdvanceByIdSchema }),
-  asyncHandler(getAdvanceById),
+  "/:sequence",
+  processRequest({ params: getAdvanceBySequenceSchema }),
+  asyncHandler(getAdvanceBySequence),
 );
 
 advancesRoutes.patch(
@@ -73,21 +91,18 @@ advancesRoutes.delete(
 );
 
 advancesRoutes.post(
+  "/:advanceId/void",
+  processRequest({ params: getAdvanceByIdSchema }),
+  asyncHandler(voidAdvance),
+);
+
+advancesRoutes.post(
   "/:advanceId/generate",
   processRequest({
     body: generateAdvanceReportBodySchema,
     params: getAdvanceByIdSchema,
   }),
   asyncHandler(generateAdvanceReport),
-);
-
-advancesRoutes.post(
-  "/:advanceId/send",
-  processRequest({
-    body: sendAdvanceBodySchema,
-    params: getAdvanceByIdSchema,
-  }),
-  asyncHandler(sendAdvance),
 );
 
 advancesRoutes.post(

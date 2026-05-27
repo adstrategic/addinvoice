@@ -11,6 +11,7 @@ export const EstimateStatus = {
   REJECTED: "REJECTED",
   INVOICED: "INVOICED",
   PROPOSAL: "PROPOSAL",
+  VOIDED: "VOIDED",
 } as const;
 export type EstimateStatus =
   (typeof EstimateStatus)[keyof typeof EstimateStatus];
@@ -20,6 +21,7 @@ export const ProposalStatus = {
   ACCEPTED: "ACCEPTED",
   REJECTED: "REJECTED",
   INVOICED: "INVOICED",
+  VOIDED: "VOIDED",
 } as const;
 export type ProposalStatus = (typeof ProposalStatus)[keyof typeof ProposalStatus];
 
