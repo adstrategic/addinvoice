@@ -25,7 +25,14 @@ import {
   EntityNotFoundError,
   EntityValidationError,
 } from "../../errors/EntityErrors.js";
+import { buildPublicSlug } from "../../lib/public-slug.js";
 import { toAdvanceListItem, toAdvanceResponse } from "./advances.mapper.js";
+
+const advanceDetailInclude = {
+  attachments: { orderBy: { sequence: "asc" as const } },
+  business: true,
+  client: true,
+} satisfies Prisma.AdvanceInclude;
 
 const deleteAdvanceAttachmentByPublicIdSafe =
   deleteAdvanceAttachmentByPublicId as (
@@ -176,6 +183,99 @@ export async function getAdvanceById(
   return toAdvanceResponse(advance);
 }
 
+export async function getAdvanceBySequence(
+  workspaceId: number,
+  sequence: number,
+): Promise<AdvanceResponse> {
+  const advance = await prisma.advance.findUnique({
+    where: {
+      workspaceId_sequence: {
+        workspaceId,
+        sequence,
+      },
+    },
+    include: advanceDetailInclude,
+  });
+
+  if (!advance) {
+    throw new EntityNotFoundError("Advance not found");
+  }
+
+  return toAdvanceResponse(advance);
+}
+
+export async function resolveAdvanceIdFromSequence(
+  workspaceId: number,
+  sequence: number,
+): Promise<number> {
+  const advance = await prisma.advance.findUnique({
+    where: {
+      workspaceId_sequence: {
+        workspaceId,
+        sequence,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!advance) {
+    throw new EntityNotFoundError("Advance not found");
+  }
+
+  return advance.id;
+}
+
+export async function markAdvanceAsIssued(
+  workspaceId: number,
+  advanceId: number,
+): Promise<AdvanceResponse> {
+  const existing = await prisma.advance.findFirst({
+    include: advanceDetailInclude,
+    where: { id: advanceId, workspaceId },
+  });
+
+  if (!existing) {
+    throw new EntityNotFoundError("Advance not found");
+  }
+
+  if (existing.status === "VOIDED") {
+    throw new EntityValidationError("Cannot issue a voided advance");
+  }
+
+  if (existing.status === "ISSUED" || existing.status === "INVOICED") {
+    return toAdvanceResponse(existing);
+  }
+
+  const updated = await prisma.advance.update({
+    data: {
+      sentAt: new Date(),
+      status: "ISSUED",
+    },
+    include: advanceDetailInclude,
+    where: { id: advanceId },
+  });
+
+  return toAdvanceResponse(updated);
+}
+
+export async function shareAdvancePublicLink(
+  workspaceId: number,
+  sequence: number,
+): Promise<{ publicSlug: string }> {
+  const advance = await getAdvanceBySequence(workspaceId, sequence);
+  const issued = await markAdvanceAsIssued(workspaceId, advance.id);
+
+  const publicSlug = issued.publicSlug ?? buildPublicSlug("advance");
+  if (!issued.publicSlug) {
+    await prisma.advance.update({
+      data: { publicSlug },
+      where: { id: advance.id },
+    });
+  }
+
+  return { publicSlug };
+}
+
 export async function listAdvances(
   workspaceId: number,
   query: ListAdvancesQuery,
@@ -313,8 +413,52 @@ export async function deleteAdvance(
     throw new EntityNotFoundError("Advance not found");
   }
 
+  if (existing.status !== "DRAFT") {
+    throw new EntityValidationError("Cannot delete a non-draft advance");
+  }
+
   await prisma.advance.delete({
     where: { id: advanceId },
+  });
+}
+
+export async function voidAdvance(
+  workspaceId: number,
+  advanceId: number,
+): Promise<AdvanceResponse> {
+  return await prisma.$transaction(async (tx) => {
+    const existing = await tx.advance.findFirst({
+      where: { id: advanceId, workspaceId },
+    });
+    if (!existing) {
+      throw new EntityNotFoundError("Advance not found");
+    }
+
+    if (existing.status === "DRAFT") {
+      throw new EntityValidationError(
+        "Cannot void a draft advance; delete it instead",
+      );
+    }
+
+    if (existing.status === "VOIDED") {
+      throw new EntityValidationError("Advance is already voided");
+    }
+
+    if (existing.status === "INVOICED") {
+      throw new EntityValidationError("Cannot void an invoiced advance");
+    }
+
+    const updated = await tx.advance.update({
+      data: { status: "VOIDED", voidedAt: new Date() },
+      include: {
+        attachments: true,
+        business: true,
+        client: true,
+      },
+      where: { id: advanceId },
+    });
+
+    return toAdvanceResponse(updated);
   });
 }
 
@@ -355,32 +499,22 @@ export async function sendAdvance(
   data: SendAdvanceDTO,
 ): Promise<AdvanceResponse> {
   const existing = await prisma.advance.findFirst({
-    include: {
-      client: true,
-    },
     where: { id: advanceId, workspaceId },
   });
   if (!existing) {
     throw new EntityNotFoundError("Advance not found");
   }
-  if (data.email.trim().length === 0) {
+
+  if (existing.status === "VOIDED") {
+    throw new EntityValidationError("Cannot send a voided advance");
+  }
+
+  const email = typeof data.email === "string" ? data.email.trim() : "";
+  if (!email) {
     throw new EntityValidationError("Recipient email is required");
   }
 
-  const updated = await prisma.advance.update({
-    data: {
-      sentAt: new Date(),
-      status: "ISSUED",
-    },
-    include: {
-      attachments: true,
-      business: true,
-      client: true,
-    },
-    where: { id: advanceId },
-  });
-
-  return toAdvanceResponse(updated);
+  return markAdvanceAsIssued(workspaceId, advanceId);
 }
 
 export async function linkAdvanceToInvoice(
@@ -463,6 +597,7 @@ export async function listPendingAdvancesByClient(
     where: {
       clientId,
       invoiceId: null,
+      status: "ISSUED",
       workspaceId,
     },
   });

@@ -15,10 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Mail, CheckCircle2 } from "lucide-react";
+import { Send, Mail, CheckCircle2, Link2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiClient } from "@/lib/api/client";
 import { estimateKeys } from "@/features/estimates";
+import { SendLinkTab } from "@/components/send-document/send-link-tab";
 import { toast } from "sonner";
 
 interface SendEstimateDialogProps {
@@ -28,6 +29,7 @@ interface SendEstimateDialogProps {
   estimateNumber?: string;
   clientName: string;
   clientEmail?: string;
+  publicSlug?: string | null;
 }
 
 export function SendEstimateDialog({
@@ -37,6 +39,7 @@ export function SendEstimateDialog({
   estimateNumber,
   clientName,
   clientEmail,
+  publicSlug,
 }: SendEstimateDialogProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -45,10 +48,9 @@ export function SendEstimateDialog({
   const [email, setEmail] = useState(clientEmail || "");
   const [subject, setSubject] = useState(`Estimate ${estimateNumber}`);
   const [message, setMessage] = useState(
-    `Dear ${clientName},\n\nPlease find attached estimate ${estimateNumber}. Payment is due within 30 days.\n\nThank you for your business!`,
+    `Dear ${clientName},\n\nPlease find attached estimate ${estimateNumber}.`,
   );
 
-  // Sync form state when dialog opens or estimate props change (state is only set on first mount otherwise)
   useEffect(() => {
     if (!open) {
       setEmail("");
@@ -65,13 +67,11 @@ export function SendEstimateDialog({
         `Dear ${clientName},\n\nPlease find attached estimate ${estimateNumber}. If you have any questions, please contact us.`,
       );
     }
-  }, [open]);
+  }, [open, clientEmail, clientName, estimateNumber]);
 
   const handleSendEmail = async () => {
     if (!email.trim()) {
-      toast.error("Please enter a recipient email address", {
-        description: "Please enter a recipient email address",
-      });
+      toast.error("Please enter a recipient email address");
       return;
     }
 
@@ -109,27 +109,18 @@ export function SendEstimateDialog({
       }, 2000);
     } catch (error: unknown) {
       setSending(false);
-      const message =
+      const errMessage =
         error && typeof error === "object" && "response" in error
           ? (error as { response?: { data?: { message?: string } } }).response
               ?.data?.message
           : null;
       toast.error("Failed to send estimate", {
         description:
-          message ||
+          errMessage ??
           (error instanceof Error ? error.message : "Failed to send estimate"),
       });
     }
   };
-
-  // const handleCopyLink = () => {
-  //   const link = `${window.location.origin}/estimates/${estimateSequence}`;
-  //   navigator.clipboard.writeText(link);
-  //   toast({
-  //     title: "Link copied",
-  //     description: "Estimate link has been copied to clipboard",
-  //   });
-  // };
 
   if (sent) {
     return (
@@ -143,13 +134,16 @@ export function SendEstimateDialog({
               Estimate Sent Successfully!
             </h3>
             <p className="text-sm text-muted-foreground text-center">
-              The estimate is being sent to {clientName}. It will arrive
-              shortly.
+              The estimate is being sent to {clientName}. It will arrive shortly.
             </p>
           </div>
         </DialogContent>
       </Dialog>
     );
+  }
+
+  if (estimateSequence == null) {
+    return null;
   }
 
   return (
@@ -162,17 +156,31 @@ export function SendEstimateDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="email" className="mt-4">
-          <TabsList className="grid w-full grid-cols-1">
+        <Tabs defaultValue="link" className="mt-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="link" className="gap-2">
+              <Link2 className="h-4 w-4" />
+              Link
+            </TabsTrigger>
             <TabsTrigger value="email" className="gap-2">
               <Mail className="h-4 w-4" />
               Email
             </TabsTrigger>
-            {/* <TabsTrigger value="link" className="gap-2">
-              <LinkIcon className="h-4 w-4" />
-              Link
-            </TabsTrigger> */}
           </TabsList>
+
+          <TabsContent value="link">
+            <SendLinkTab
+              resource="estimates"
+              sequence={estimateSequence}
+              documentLabel="Estimate"
+              initialPublicSlug={publicSlug}
+              queryKeysToInvalidate={[
+                estimateKeys.detail(estimateSequence),
+                estimateKeys.lists(),
+              ]}
+              onClose={() => onOpenChange(false)}
+            />
+          </TabsContent>
 
           <TabsContent value="email" className="space-y-4 mt-4">
             <div>
@@ -214,7 +222,7 @@ export function SendEstimateDialog({
                 Cancel
               </Button>
               <Button
-                onClick={handleSendEmail}
+                onClick={() => void handleSendEmail()}
                 disabled={sending}
                 className="gap-2"
               >
@@ -229,40 +237,6 @@ export function SendEstimateDialog({
               </Button>
             </DialogFooter>
           </TabsContent>
-
-          {/* <TabsContent value="link" className="space-y-4 mt-4">
-            <div>
-              <Label>Shareable Link</Label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  readOnly
-                  value={`${
-                    typeof window !== "undefined" ? window.location.origin : ""
-                  }/estimates/${estimateSequence}`}
-                  className="font-mono text-sm"
-                />
-                <Button
-                  onClick={handleCopyLink}
-                  variant="outline"
-                  className="bg-transparent"
-                >
-                  Copy
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Share this link with your client to view the estimate online
-              </p>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="bg-transparent"
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </TabsContent> */}
         </Tabs>
       </DialogContent>
     </Dialog>

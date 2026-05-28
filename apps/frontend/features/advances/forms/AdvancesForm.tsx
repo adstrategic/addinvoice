@@ -46,6 +46,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { ClientSection } from "./form-fields/ClientSection";
 import type { AdvanceImageDraft } from "../types/api";
 import { SendAdvanceDialog } from "@/components/send-advance-dialog";
+import { canSendAdvance } from "@/lib/is-document-public-issued";
 import { useDownloadAdvancePdf } from "../hooks/useDownloadAdvancePDF";
 import { useSendAdvance } from "../hooks/useAdvances";
 import type { AdvanceMutationCallbacks } from "../hooks/useAdvanceActions";
@@ -522,19 +523,21 @@ export function AdvanceForm({
                 )}
                 <span className="text-xs">Save</span>
               </Button>
-              <Button
-                type="button"
-                onClick={handleSendClick}
-                disabled={isSavingBeforeSend}
-                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
-              >
-                {isSavingBeforeSend ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                <span className="text-xs">Send</span>
-              </Button>
+              {canSendAdvance(existingAdvance) && (
+                <Button
+                  type="button"
+                  onClick={handleSendClick}
+                  disabled={isSavingBeforeSend}
+                  className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+                >
+                  {isSavingBeforeSend ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  <span className="text-xs">Send</span>
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -592,17 +595,18 @@ export function AdvanceForm({
         </div>
       </div>
 
-      {mode === "edit" && existingAdvance ? (
+      {mode === "edit" && existingAdvance && canSendAdvance(existingAdvance) ? (
         <SendAdvanceDialog
           open={sendDialogOpen}
           onOpenChange={setSendDialogOpen}
-          advanceId={existingAdvance.id}
+          advanceSequence={existingAdvance.sequence}
           clientEmail={existingAdvance.client?.email}
           clientName={existingAdvance.client?.name ?? "Client"}
           projectName={existingAdvance.projectName}
+          publicSlug={existingAdvance.publicSlug}
           sending={sendAdvance.isPending}
-          onSend={({ advanceId, payload }) =>
-            sendAdvance.mutateAsync({ advanceId, payload })
+          onSend={({ sequence, payload }) =>
+            sendAdvance.mutateAsync({ sequence, payload })
           }
         />
       ) : null}

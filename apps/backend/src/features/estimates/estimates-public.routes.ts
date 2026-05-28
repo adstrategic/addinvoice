@@ -22,21 +22,21 @@ export const estimatesPublicRoutes: Router = Router();
 
 // GET /api/v1/public/estimates/accept/:token
 estimatesPublicRoutes.get(
-  "/estimates/accept/:token",
+  "/accept/:token",
   processRequest({ params: getEstimateByTokenParamsSchema }),
   asyncHandler(getEstimateByToken),
 );
 
 // GET /api/v1/public/estimates/accept/:token/pdf
 estimatesPublicRoutes.get(
-  "/estimates/accept/:token/pdf",
+  "/accept/:token/pdf",
   processRequest({ params: getEstimateByTokenParamsSchema }),
   asyncHandler(getEstimatePdfByToken),
 );
 
 // POST /api/v1/public/estimates/accept/:token
 estimatesPublicRoutes.post(
-  "/estimates/accept/:token",
+  "/accept/:token",
   processRequest({
     body: acceptEstimateBodySchema,
     params: getEstimateByTokenParamsSchema,
@@ -46,7 +46,7 @@ estimatesPublicRoutes.post(
 
 // POST /api/v1/public/estimates/reject/:token
 estimatesPublicRoutes.post(
-  "/estimates/reject/:token",
+  "/reject/:token",
   processRequest({
     body: rejectEstimateBodySchema,
     params: getEstimateByTokenParamsSchema,

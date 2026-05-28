@@ -14,11 +14,13 @@ import {
   Eye,
   Download,
   Send,
-  Trash2,
   FileText,
   CheckCircle,
   Receipt,
+  Ban,
 } from "lucide-react";
+import { canVoidProposal } from "@/lib/document-void";
+import { canSendProposalFromList } from "@/lib/is-document-public-issued";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import type { ProposalDashboardResponse } from "@addinvoice/schemas";
@@ -43,6 +45,10 @@ const statusConfig = {
     label: "Invoiced",
     className: "bg-primary/20 text-primary hover:bg-primary/30",
   },
+  voided: {
+    label: "Voided",
+    className: "bg-destructive/15 text-destructive hover:bg-destructive/20",
+  },
 };
 
 interface ProposalCardProps {
@@ -50,7 +56,7 @@ interface ProposalCardProps {
   index: number;
   onDownload: (proposal: ProposalDashboardResponse) => void;
   onSend: (proposal: ProposalDashboardResponse) => void;
-  onDelete: (proposal: ProposalDashboardResponse) => void;
+  onVoid: (proposal: ProposalDashboardResponse) => void;
   onAccept?: (proposal: ProposalDashboardResponse) => void;
   onConvertToInvoice?: (proposal: ProposalDashboardResponse) => void;
   linkOnly?: boolean;
@@ -64,7 +70,7 @@ export function ProposalCard({
   index,
   onDownload,
   onSend,
-  onDelete,
+  onVoid,
   onAccept,
   onConvertToInvoice,
   linkOnly = false,
@@ -146,7 +152,7 @@ export function ProposalCard({
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
               </DropdownMenuItem>
-              {proposal.status === "REJECTED" && (
+              {canSendProposalFromList(proposal) && (
                 <DropdownMenuItem onClick={() => onSend(proposal)}>
                   <Send className="h-4 w-4 mr-2" />
                   Send
@@ -164,15 +170,15 @@ export function ProposalCard({
                   Convert to Invoice
                 </DropdownMenuItem>
               )}
-              {proposal.status !== "INVOICED" && (
+              {canVoidProposal(proposal) && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => onDelete(proposal)}
+                    onClick={() => onVoid(proposal)}
                     className="text-destructive"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
+                    <Ban className="h-4 w-4 mr-2" />
+                    Mark as voided
                   </DropdownMenuItem>
                 </>
               )}

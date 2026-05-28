@@ -1,3 +1,4 @@
+import { prisma } from "@addinvoice/db";
 import { Router } from "express";
 import {
   AccessToken,
@@ -6,7 +7,7 @@ import {
 } from "livekit-server-sdk";
 import { z } from "zod";
 import { validateRequest } from "zod-express-middleware";
-import { prisma } from "@addinvoice/db";
+
 import {
   hasVoiceAccess,
   isSubscriptionActive,

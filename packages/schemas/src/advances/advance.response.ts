@@ -26,8 +26,10 @@ export const advanceResponseSchema = baseAdvanceSchema.extend({
   id: z.number().int().positive(),
   invoiceId: z.number().int().positive().nullable(),
   sentAt: z.coerce.date().nullable(),
+  voidedAt: z.coerce.date().nullable().optional(),
   sequence: z.number().int().positive(),
   status: AdvanceStatusEnum,
+  publicSlug: z.string().nullable(),
   updatedAt: z.coerce.date(),
   workspaceId: z.number().int().positive(),
 });

@@ -147,6 +147,25 @@ export function useDeleteProposal() {
   });
 }
 
+export function useVoidProposal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, sequence }: { id: number; sequence: number }) =>
+      proposalsService.void(id),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: proposalKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: proposalKeys.detail(variables.sequence),
+      });
+      toast.success("Proposal voided", {
+        description: "The proposal has been marked as voided.",
+      });
+    },
+    onError: (err) => handleMutationError(err, undefined),
+  });
+}
+
 export function useConvertProposalToInvoice() {
   const queryClient = useQueryClient();
 

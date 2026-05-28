@@ -28,6 +28,7 @@ import {
   FieldValidationError,
   GoneError,
 } from "../../errors/EntityErrors.js";
+import { buildPublicSlug } from "../../lib/public-slug.js";
 import { sendInvoiceQueue } from "../../queue/queues.js";
 import {
   createInvoiceFromEstimate,
@@ -280,6 +281,10 @@ export async function convertEstimateToInvoice(
     // Extra safety if unique constraint isn't used in some environments/mocks
     if (estimate.workspaceId !== workspaceId) {
       throw new EntityNotFoundError("Estimate not found");
+    }
+
+    if (estimate.status === "VOIDED") {
+      throw new EntityValidationError("Cannot convert a voided estimate");
     }
 
     if (estimate.status === "PROPOSAL") {
@@ -1038,6 +1043,58 @@ export async function deleteEstimate(
 }
 
 /**
+ * Mark an estimate as voided (irreversible; record kept for audit).
+ */
+export async function voidEstimate(
+  workspaceId: number,
+  id: number,
+): Promise<EstimateResponse> {
+  return await prisma.$transaction(async (tx) => {
+    const existingEstimate = await tx.estimate.findUnique({
+      where: { id },
+    });
+
+    if (existingEstimate?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError("Estimate not found");
+    }
+
+    if (existingEstimate.status === "DRAFT") {
+      throw new EntityValidationError(
+        "Cannot void a draft estimate; delete it instead",
+      );
+    }
+
+    if (existingEstimate.status === "VOIDED") {
+      throw new EntityValidationError("Estimate is already voided");
+    }
+
+    if (existingEstimate.status === "INVOICED") {
+      throw new EntityValidationError("Cannot void an invoiced estimate");
+    }
+
+    if (existingEstimate.status === "PROPOSAL") {
+      throw new EntityValidationError(
+        "Cannot void an estimate with an active proposal",
+      );
+    }
+
+    const updated = await tx.estimate.update({
+      data: { status: "VOIDED", voidedAt: new Date() },
+      include: {
+        business: true,
+        client: true,
+        items: { orderBy: { name: "asc" } },
+        descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+        proposal: { select: { sequence: true } },
+      },
+      where: { id },
+    });
+
+    return toEstimateResponse(updated);
+  });
+}
+
+/**
  * Delete an estimate item
  */
 export async function deleteEstimateItem(
@@ -1424,6 +1481,10 @@ export async function markEstimateAsSent(
     throw new EntityValidationError("Cannot send an estimate with no items");
   }
 
+  if (estimate.status === "VOIDED") {
+    throw new EntityValidationError("Cannot send a voided estimate");
+  }
+
   // Idempotent: if already sent (SENT, VIEWED, or PAID), don't overwrite status—return current state
   if (["PAID", "SENT", "VIEWED"].includes(estimate.status) && estimate.sentAt) {
     const existing = await prisma.estimate.findUnique({
@@ -1463,6 +1524,29 @@ export async function markEstimateAsSent(
   });
 
   return toEstimateResponseWithoutItems(updatedEstimate);
+}
+
+/**
+ * Issue estimate via public link: mark as sent and ensure a publicSlug exists.
+ */
+export async function shareEstimatePublicLink(
+  workspaceId: number,
+  sequence: number,
+): Promise<{ publicSlug: string }> {
+  const estimate = await getEstimateBySequence(workspaceId, sequence);
+  const sent = await markEstimateAsSent(workspaceId, estimate.id);
+
+  if (sent.publicSlug) {
+    return { publicSlug: sent.publicSlug };
+  }
+
+  const publicSlug = buildPublicSlug("estimate");
+  await prisma.estimate.update({
+    data: { publicSlug },
+    where: { id: estimate.id },
+  });
+
+  return { publicSlug };
 }
 
 /**

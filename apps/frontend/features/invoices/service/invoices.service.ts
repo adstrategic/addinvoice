@@ -177,6 +177,17 @@ async function deleteInvoice(id: number): Promise<void> {
   }
 }
 
+async function voidInvoice(id: number): Promise<InvoiceResponse> {
+  try {
+    const { data } = await apiClient.post<ApiSuccessResponse<InvoiceResponse>>(
+      `${BASE_URL}/${id}/void`,
+    );
+    return invoiceResponseSchema.parse(data.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 /**
  * Create an invoice item
  */
@@ -330,6 +341,7 @@ export const invoicesService = {
   create: createInvoice,
   update: updateInvoice,
   delete: deleteInvoice,
+  void: voidInvoice,
   createItem: createInvoiceItem,
   updateItem: updateInvoiceItem,
   deleteItem: deleteInvoiceItem,

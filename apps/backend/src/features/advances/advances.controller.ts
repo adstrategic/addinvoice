@@ -15,6 +15,7 @@ import type { TypedRequest } from "zod-express-middleware";
 import { assertCanSendEmail, prisma } from "@addinvoice/db";
 import {
   getAdvanceByIdSchema,
+  getAdvanceBySequenceSchema,
   syncAdvanceAttachmentsMetaSchema,
 } from "@addinvoice/schemas";
 
@@ -48,25 +49,27 @@ export async function listAdvances(
   });
 }
 
-export async function getAdvanceById(
-  req: TypedRequest<typeof getAdvanceByIdSchema, never, never>,
+export async function getAdvanceBySequence(
+  req: TypedRequest<typeof getAdvanceBySequenceSchema, never, never>,
   res: Response,
 ): Promise<void> {
   const workspaceId = getWorkspaceId(req);
-  const advance = await advancesService.getAdvanceById(
+  const advance = await advancesService.getAdvanceBySequence(
     workspaceId,
-    req.params.advanceId,
+    req.params.sequence,
   );
   res.json({ data: advance });
 }
 
 export async function getAdvancePdf(
-  req: TypedRequest<typeof getAdvanceByIdSchema, never, never>,
+  req: TypedRequest<typeof getAdvanceBySequenceSchema, never, never>,
   res: Response,
 ): Promise<void> {
   const workspaceId = getWorkspaceId(req);
-  const { advanceId } = req.params;
-  const advance = await advancesService.getAdvanceById(workspaceId, advanceId);
+  const advance = await advancesService.getAdvanceBySequence(
+    workspaceId,
+    req.params.sequence,
+  );
 
   const pdfServiceUrl = process.env.PDF_SERVICE_URL?.trim();
   const pdfServiceSecret = process.env.PDF_SERVICE_SECRET?.trim();
@@ -143,6 +146,18 @@ export async function deleteAdvance(
   res.status(204).send();
 }
 
+export async function voidAdvance(
+  req: TypedRequest<typeof getAdvanceByIdSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const advance = await advancesService.voidAdvance(
+    workspaceId,
+    req.params.advanceId,
+  );
+  res.json({ data: advance, message: "Advance voided successfully" });
+}
+
 export async function generateAdvanceReport(
   req: TypedRequest<
     typeof getAdvanceByIdSchema,
@@ -162,7 +177,7 @@ export async function generateAdvanceReport(
 
 export async function sendAdvance(
   req: TypedRequest<
-    typeof getAdvanceByIdSchema,
+    typeof getAdvanceBySequenceSchema,
     never,
     typeof sendAdvanceBodySchema
   >,
@@ -170,9 +185,13 @@ export async function sendAdvance(
 ): Promise<void> {
   const workspaceId = getWorkspaceId(req);
   await assertCanSendEmail(prisma, workspaceId);
+  const advanceId = await advancesService.resolveAdvanceIdFromSequence(
+    workspaceId,
+    req.params.sequence,
+  );
   const advance = await advancesService.sendAdvance(
     workspaceId,
-    req.params.advanceId,
+    advanceId,
     req.body,
   );
 
@@ -187,6 +206,18 @@ export async function sendAdvance(
   res.status(202).json({
     message: "Advance is being sent",
   });
+}
+
+export async function shareAdvancePublicLink(
+  req: TypedRequest<typeof getAdvanceBySequenceSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const data = await advancesService.shareAdvancePublicLink(
+    workspaceId,
+    req.params.sequence,
+  );
+  res.json({ data });
 }
 
 export async function linkAdvanceToInvoice(

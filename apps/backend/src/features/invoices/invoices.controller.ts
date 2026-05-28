@@ -226,6 +226,24 @@ export async function deleteInvoice(
 }
 
 /**
+ * POST /invoices/:id/void - Mark an invoice as voided
+ */
+export async function voidInvoice(
+  req: TypedRequest<typeof getInvoiceByIdSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { invoiceId } = req.params;
+
+  const invoice = await invoicesService.voidInvoice(workspaceId, invoiceId);
+
+  res.json({
+    data: invoice,
+    message: "Invoice voided successfully",
+  });
+}
+
+/**
  * DELETE /invoices/:invoiceId/items/:itemId - Delete an invoice item
  * No error handling needed - middleware handles it
  */
@@ -297,6 +315,22 @@ export async function enqueueSendInvoice(
   res.status(202).json({
     message: "Invoice is being sent",
   });
+}
+
+/**
+ * POST /invoices/:sequence/share-link - Issue invoice and return public share slug
+ */
+export async function shareInvoicePublicLink(
+  req: TypedRequest<typeof getInvoiceBySequenceSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence } = req.params;
+  const data = await invoicesService.shareInvoicePublicLink(
+    workspaceId,
+    sequence,
+  );
+  res.json({ data });
 }
 
 /**

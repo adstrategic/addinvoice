@@ -7,6 +7,7 @@ import {
   EstimateActions,
   useEstimates,
   useEstimateDelete,
+  useEstimateVoid,
   useMarkEstimateAsAccepted,
   useEstimateActions,
 } from "@/features/estimates";
@@ -24,6 +25,7 @@ import type { EstimateDashboardResponse } from "@addinvoice/schemas";
 import { statusFilterToApiParam } from "../types/api";
 import { useEstimateManager } from "../hooks/useEstimateFormManager";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
+import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useDownloadEstimatePdf } from "../hooks/useDownloadEstimatePDF";
@@ -94,6 +96,7 @@ export default function EstimatesContent() {
 
   const estimateManager = useEstimateManager();
   const estimateDelete = useEstimateDelete();
+  const estimateVoid = useEstimateVoid();
   const markAsAccepted = useMarkEstimateAsAccepted();
   const estimateActions = useEstimateActions();
   const { guardCreate } = useLimitGuard();
@@ -229,6 +232,7 @@ export default function EstimatesContent() {
           onDownload={handleDownloadPDF}
           onSend={handleSendEstimate}
           onDelete={estimateDelete.openDeleteModal}
+          onVoid={estimateVoid.openVoidModal}
           onAccept={handleAccept}
           onConvertToInvoice={estimateActions.handleConvertToInvoice}
           onConvertToProposal={handleConvertToProposal}
@@ -256,6 +260,15 @@ export default function EstimatesContent() {
         isDeleting={estimateDelete.isDeleting}
       />
 
+      <EntityVoidModal
+        isOpen={estimateVoid.isVoidModalOpen}
+        onClose={estimateVoid.closeVoidModal}
+        onConfirm={estimateVoid.handleVoidConfirm}
+        entity="estimate"
+        entityName={estimateVoid.estimateToVoid?.estimateNumber || ""}
+        isVoiding={estimateVoid.isVoiding}
+      />
+
       {selectedEstimateForSend && (
         <SendEstimateDialog
           open={sendDialogOpen}
@@ -269,6 +282,7 @@ export default function EstimatesContent() {
           estimateNumber={selectedEstimateForSend?.estimateNumber}
           clientName={selectedEstimateForSend?.client?.name || "Client"}
           clientEmail={selectedEstimateForSend?.clientEmail}
+          publicSlug={selectedEstimateForSend?.publicSlug}
         />
       )}
 

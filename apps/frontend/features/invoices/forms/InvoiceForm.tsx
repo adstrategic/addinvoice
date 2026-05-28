@@ -17,6 +17,7 @@ import { useWorkspacePaymentMethods } from "@/features/workspace";
 import Image from "next/image";
 import type { BusinessResponse } from "@addinvoice/schemas";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
+import { canSendInvoice } from "@/lib/is-document-public-issued";
 import type {
   CreateInvoiceDTO,
   InvoiceItemCreateInput,
@@ -487,22 +488,24 @@ export function InvoiceForm({
                 )}
                 <span className="text-xs">Save</span>
               </Button>
-              <Button
-                type="button"
-                onClick={handleSendClick}
-                disabled={!hasItems || isSavingBeforeSend}
-                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
-                aria-label={
-                  !hasItems ? "Add at least one item to send" : "Send Invoice"
-                }
-              >
-                {isSavingBeforeSend ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                <span className="text-xs">Send</span>
-              </Button>
+              {canSendInvoice(existingInvoice) && (
+                <Button
+                  type="button"
+                  onClick={handleSendClick}
+                  disabled={!hasItems || isSavingBeforeSend}
+                  className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+                  aria-label={
+                    !hasItems ? "Add at least one item to send" : "Send Invoice"
+                  }
+                >
+                  {isSavingBeforeSend ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  <span className="text-xs">Send</span>
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -560,7 +563,7 @@ export function InvoiceForm({
         </div>
       </div>
 
-      {mode === "edit" && existingInvoice && (
+      {mode === "edit" && existingInvoice && canSendInvoice(existingInvoice) && (
         <SendInvoiceDialog
           open={sendDialogOpen}
           onOpenChange={setSendDialogOpen}
@@ -568,6 +571,7 @@ export function InvoiceForm({
           invoiceNumber={existingInvoice.invoiceNumber}
           clientName={existingInvoice.client?.name ?? "Client"}
           clientEmail={existingInvoice.clientEmail}
+          publicSlug={existingInvoice.publicSlug}
         />
       )}
     </div>

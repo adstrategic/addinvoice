@@ -1,3 +1,21 @@
+/**
+ * Extracts human-readable text from TipTap/ProseMirror JSON (or plain strings).
+ */
+export function plainTextFromTipTapJson(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value !== "object") return "";
+  const node = value as Record<string, unknown>;
+  if (typeof node.text === "string") return node.text;
+  if (Array.isArray(node.content)) {
+    return node.content
+      .map(plainTextFromTipTapJson)
+      .filter((segment) => segment.length > 0)
+      .join(" ");
+  }
+  return "";
+}
+
 function isValidTipTapDoc(value: unknown): value is Record<string, unknown> {
   return (
     typeof value === "object" &&

@@ -6,7 +6,7 @@ import {
   ArrowLeft,
   Download,
   Send,
-  Trash2,
+  Ban,
   Receipt,
   CheckCircle,
   Loader2,
@@ -18,12 +18,14 @@ import { useParams, useRouter } from "next/navigation";
 import { SendProposalDialog } from "@/components/send-proposal-dialog";
 import {
   useProposalBySequence,
-  useProposalDelete,
+  useProposalVoid,
   useProposalActions,
   useMarkProposalAsAccepted,
   mapStatusToUI,
 } from "@/features/proposals";
-import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
+import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
+import { canVoidProposal } from "@/lib/document-void";
+import { canSendProposalFromDetail } from "@/lib/is-document-public-issued";
 import {
   Tooltip,
   TooltipTrigger,
@@ -32,6 +34,8 @@ import {
 import { toast } from "sonner";
 import { useDownloadProposalPdf } from "@/features/proposals/hooks/useDownloadProposalPDF";
 import { DetailPageLoading } from "@/components/loading-component";
+import { CopyPublicLinkButton } from "@/components/shared/copy-public-link-button";
+import { isProposalPublicIssued } from "@/lib/is-document-public-issued";
 
 const ProposalPdfPreview = dynamic(
   () =>
@@ -56,6 +60,7 @@ const statusConfig = {
   accepted: { label: "Accepted", className: "bg-chart-2/20 text-chart-2" },
   rejected: { label: "Rejected", className: "bg-chart-4/20 text-chart-4" },
   invoiced: { label: "Invoiced", className: "bg-primary/20 text-primary" },
+  voided: { label: "Voided", className: "bg-destructive/15 text-destructive" },
 };
 
 export default function ProposalDetailPage() {
@@ -64,11 +69,7 @@ export default function ProposalDetailPage() {
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const proposalDelete = useProposalDelete({
-    onAfterDelete: () => {
-      router.push("/proposals");
-    },
-  });
+  const proposalVoid = useProposalVoid();
   const proposalActions = useProposalActions();
   const markAsAccepted = useMarkProposalAsAccepted();
 
@@ -142,6 +143,10 @@ export default function ProposalDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            <CopyPublicLinkButton
+              publicSlug={proposal.publicSlug}
+              isIssued={isProposalPublicIssued(proposal.status)}
+            />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -163,25 +168,25 @@ export default function ProposalDetailPage() {
               </TooltipContent>
             </Tooltip>
 
-            {proposal.status !== "INVOICED" && (
+            {canVoidProposal(proposal) && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
                     size="icon"
                     className="text-destructive hover:text-destructive bg-transparent"
-                    onClick={() => proposalDelete.openDeleteModal(proposal)}
+                    onClick={() => proposalVoid.openVoidModal(proposal)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Ban className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Delete proposal</p>
+                  <p>Mark as voided</p>
                 </TooltipContent>
               </Tooltip>
             )}
 
-            {proposal.status === "REJECTED" && (
+            {canSendProposalFromDetail(proposal.status) && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -195,7 +200,11 @@ export default function ProposalDetailPage() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Resend proposal</p>
+                  <p>
+                    {proposal.status === "REJECTED"
+                      ? "Resend proposal"
+                      : "Share or send proposal"}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -273,15 +282,17 @@ export default function ProposalDetailPage() {
         proposalNumber={proposal.proposalNumber}
         clientName={client.name || client.businessName || "Client"}
         clientEmail={proposal.clientEmail}
+        publicSlug={proposal.publicSlug}
+        enableEmailTab={proposal.status === "REJECTED"}
       />
 
-      <EntityDeleteModal
-        isOpen={proposalDelete.isDeleteModalOpen}
-        onClose={proposalDelete.closeDeleteModal}
-        onConfirm={proposalDelete.handleDeleteConfirm}
+      <EntityVoidModal
+        isOpen={proposalVoid.isVoidModalOpen}
+        onClose={proposalVoid.closeVoidModal}
+        onConfirm={proposalVoid.handleVoidConfirm}
         entity="proposal"
-        entityName={proposalDelete.proposalToDelete?.proposalNumber || ""}
-        isDeleting={proposalDelete.isDeleting}
+        entityName={proposalVoid.proposalToVoid?.proposalNumber || ""}
+        isVoiding={proposalVoid.isVoiding}
       />
     </>
   );
