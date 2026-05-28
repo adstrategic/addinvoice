@@ -58,6 +58,10 @@ const statusConfig = {
     label: "Sent",
     className: "bg-chart-3/20 text-chart-3 hover:bg-chart-3/30",
   },
+  viewed: {
+    label: "Viewed",
+    className: "bg-blue-500/15 text-blue-600 hover:bg-blue-500/20",
+  },
   rejected: {
     label: "Rejected",
     className: "bg-chart-4/20 text-chart-4 hover:bg-chart-4/30",

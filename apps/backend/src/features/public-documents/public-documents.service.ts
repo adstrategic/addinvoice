@@ -170,28 +170,75 @@ export async function markPublicDocumentViewed(slug: string): Promise<void> {
     throw new EntityNotFoundError("Document not found");
   }
 
-  if (parsed.type !== "invoice") {
+  const now = new Date();
+
+  if (parsed.type === "invoice") {
+    const invoice = await prisma.invoice.findFirst({
+      where: { publicSlug: slug },
+      select: { id: true, status: true, viewedAt: true },
+    });
+    if (!invoice) throw new EntityNotFoundError("Document not found");
+    assertInvoicePublicAccess(invoice.status);
+    if (invoice.viewedAt || invoice.status === "PAID") return;
+    await prisma.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        viewedAt: now,
+        status: invoice.status === "SENT" ? "VIEWED" : invoice.status,
+      },
+    });
     return;
   }
 
-  const invoice = await prisma.invoice.findFirst({
-    where: { publicSlug: slug },
-    select: { id: true, status: true, viewedAt: true },
-  });
-  if (!invoice) throw new EntityNotFoundError("Document not found");
-  assertInvoicePublicAccess(invoice.status);
-
-  if (invoice.viewedAt || invoice.status === "PAID") {
+  if (parsed.type === "estimate") {
+    const estimate = await prisma.estimate.findFirst({
+      where: { publicSlug: slug },
+      select: { id: true, status: true, viewedAt: true },
+    });
+    if (!estimate) throw new EntityNotFoundError("Document not found");
+    if (estimate.viewedAt) return;
+    await prisma.estimate.update({
+      where: { id: estimate.id },
+      data: {
+        viewedAt: now,
+        status: estimate.status === "SENT" ? "VIEWED" : estimate.status,
+      },
+    });
     return;
   }
 
-  await prisma.invoice.update({
-    where: { id: invoice.id },
-    data: {
-      viewedAt: new Date(),
-      status: invoice.status === "SENT" ? "VIEWED" : invoice.status,
-    },
-  });
+  if (parsed.type === "proposal") {
+    const proposal = await prisma.proposal.findFirst({
+      where: { publicSlug: slug },
+      select: { id: true, status: true, viewedAt: true },
+    });
+    if (!proposal) throw new EntityNotFoundError("Document not found");
+    if (proposal.viewedAt) return;
+    await prisma.proposal.update({
+      where: { id: proposal.id },
+      data: {
+        viewedAt: now,
+        status: proposal.status === "SENT" ? "VIEWED" : proposal.status,
+      },
+    });
+    return;
+  }
+
+  if (parsed.type === "advance") {
+    const advance = await prisma.advance.findFirst({
+      where: { publicSlug: slug },
+      select: { id: true, status: true, viewedAt: true },
+    });
+    if (!advance) throw new EntityNotFoundError("Document not found");
+    if (advance.viewedAt) return;
+    await prisma.advance.update({
+      where: { id: advance.id },
+      data: {
+        viewedAt: now,
+        status: advance.status === "ISSUED" ? "VIEWED" : advance.status,
+      },
+    });
+  }
 }
 
 export interface PublicDocumentPdfResult {

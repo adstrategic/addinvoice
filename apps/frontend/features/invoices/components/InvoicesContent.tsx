@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Mic } from "lucide-react";
 import { useLimitGuard } from "@/hooks/use-limit-guard";
 
-const VALID_STATUSES = ["all", "paid", "overdue", "issued", "draft"] as const;
+const VALID_STATUSES = ["all", "paid", "overdue", "issued", "viewed", "draft"] as const;
 
 function parseStatusParam(value: string | null): string {
   if (!value) return "all";

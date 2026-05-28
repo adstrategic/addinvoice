@@ -55,6 +55,7 @@ export function EstimateFilters({
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="draft">Draft</SelectItem>
             <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="viewed">Viewed</SelectItem>
             <SelectItem value="accepted">Accepted</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
             <SelectItem value="proposal">Proposal</SelectItem>

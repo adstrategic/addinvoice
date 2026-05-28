@@ -33,6 +33,10 @@ const statusConfig = {
     label: "Sent",
     className: "bg-chart-3/20 text-chart-3 hover:bg-chart-3/30",
   },
+  viewed: {
+    label: "Viewed",
+    className: "bg-blue-500/15 text-blue-600 hover:bg-blue-500/20",
+  },
   accepted: {
     label: "Accepted",
     className: "bg-chart-2/20 text-chart-2 hover:bg-chart-2/30",

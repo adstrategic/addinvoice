@@ -11,6 +11,7 @@ const STATUS_TO_TITLE: Record<string, string> = {
   paid: "Paid Invoices",
   overdue: "Overdue Invoices",
   issued: "Issued Invoices",
+  viewed: "Viewed Invoices",
   draft: "Draft Invoices",
 };
 

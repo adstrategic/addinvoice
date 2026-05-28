@@ -37,6 +37,7 @@ const VALID_STATUSES = [
   "all",
   "draft",
   "sent",
+  "viewed",
   "accepted",
   "rejected",
   "proposal",

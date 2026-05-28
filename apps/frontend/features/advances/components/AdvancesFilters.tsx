@@ -52,6 +52,7 @@ export function AdvanceFilters({
 						<SelectItem value="all">All statuses</SelectItem>
 						<SelectItem value="draft">Draft</SelectItem>
 						<SelectItem value="issued">Issued</SelectItem>
+						<SelectItem value="viewed">Viewed</SelectItem>
 						<SelectItem value="invoiced">Invoiced</SelectItem>
 					</SelectContent>
 				</Select>

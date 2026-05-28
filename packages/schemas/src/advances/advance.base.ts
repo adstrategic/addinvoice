@@ -6,6 +6,7 @@ import { nullableOptional } from "../shared/nullable.js";
 export const AdvanceStatus = {
   DRAFT: "DRAFT",
   ISSUED: "ISSUED",
+  VIEWED: "VIEWED",
   INVOICED: "INVOICED",
   VOIDED: "VOIDED",
 } as const;

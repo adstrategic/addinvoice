@@ -320,6 +320,7 @@ enum EstimateStatus {
 
 enum ProposalStatus {
     SENT
+    VIEWED
     ACCEPTED
     REJECTED
     INVOICED
@@ -370,6 +371,7 @@ model Estimate {
     requireSignature        Boolean        @default(false)
     rejectionReason         String?
     sentAt                  DateTime?
+    viewedAt                DateTime?
     acceptedAt              DateTime?
     voidedAt                DateTime?
     acceptedBy              AcceptedBy?
@@ -499,6 +501,7 @@ model Business {
 enum AdvanceStatus {
     DRAFT
     ISSUED
+    VIEWED
     INVOICED
     VOIDED
 }
@@ -517,6 +520,7 @@ model Advance {
     workCompleted Json?
     status        AdvanceStatus @default(DRAFT)
     sentAt        DateTime?
+    viewedAt      DateTime?
     voidedAt      DateTime?
     publicSlug    String?       @unique // e.g. adv-{uuid} for /public share link
     createdAt     DateTime      @default(now())
@@ -703,6 +707,7 @@ model Proposal {
 
     // Status timestamps
     sentAt     DateTime?
+    viewedAt   DateTime?
     acceptedAt DateTime?
     voidedAt   DateTime?
     acceptedBy AcceptedBy?

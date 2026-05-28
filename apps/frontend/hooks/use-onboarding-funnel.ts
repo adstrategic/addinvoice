@@ -34,17 +34,35 @@ export function useOnboardingFunnel({
   const { isLoaded: isAuthLoaded } = useAuth();
 
   // Only fetch once Clerk is ready so requests always carry a valid token.
-  const { data: onboarding, isLoading: isLoadingOnboarding } =
-    useOnboardingStatus({ enabled: isAuthLoaded });
-  const { data: subscription, isLoading: isLoadingSubscription } =
-    useSubscription();
-  const { hasBusiness, isLoading: isLoadingBusiness } = useHasBusiness();
+  const {
+    data: onboarding,
+    isLoading: isLoadingOnboarding,
+    isError: isErrorOnboarding,
+    refetch: refetchOnboarding,
+  } = useOnboardingStatus({ enabled: isAuthLoaded });
+  const {
+    data: subscription,
+    isLoading: isLoadingSubscription,
+    isError: isErrorSubscription,
+    refetch: refetchSubscription,
+  } = useSubscription();
+  const {
+    hasBusiness,
+    isLoading: isLoadingBusiness,
+    isError: isErrorBusiness,
+    refetch: refetchBusiness,
+  } = useHasBusiness();
 
   const isLoading =
     !isAuthLoaded ||          // block until Clerk has initialized
     isLoadingOnboarding ||
     isLoadingSubscription ||
     isLoadingBusiness;
+
+  const hasQueryError = isErrorOnboarding || isErrorSubscription || isErrorBusiness;
+
+  const refetchAll = () =>
+    Promise.all([refetchOnboarding(), refetchSubscription(), refetchBusiness()]);
 
   const actualStep = resolveFunnelStep({
     onboardingCompleted: Boolean(onboarding?.completedAt),
@@ -55,14 +73,16 @@ export function useOnboardingFunnel({
   const redirectPath = getFunnelRedirectPath(actualStep, requiredStep);
 
   useEffect(() => {
-    if (!enabled || isLoading || !redirectPath) return;
+    if (!enabled || isLoading || hasQueryError || !redirectPath) return;
     router.replace(redirectPath);
-  }, [enabled, isLoading, redirectPath, router]);
+  }, [enabled, isLoading, hasQueryError, redirectPath, router]);
 
   return {
     actualStep,
     redirectPath,
     isLoading,
+    hasQueryError,
+    refetchAll,
     isReady: !isLoading && !redirectPath,
   };
 }
