@@ -24,6 +24,7 @@ export function mapStatusToUI(status: EstimateStatus): string {
     REJECTED: "rejected",
     INVOICED: "invoiced",
     PROPOSAL: "proposal",
+    VOIDED: "voided",
   };
   return statusMap[status] || "draft";
 }
@@ -39,6 +40,7 @@ export function mapUIToStatus(uiStatus: string): EstimateStatus | null {
     rejected: "REJECTED",
     invoiced: "INVOICED",
     proposal: "PROPOSAL",
+    voided: "VOIDED",
   };
   return statusMap[uiStatus] || null;
 }

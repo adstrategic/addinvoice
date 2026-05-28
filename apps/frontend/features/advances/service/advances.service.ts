@@ -115,6 +115,17 @@ async function deleteById(advanceId: number): Promise<void> {
   }
 }
 
+async function voidById(advanceId: number): Promise<AdvanceResponse> {
+  try {
+    const { data } = await apiClient.post<ApiSuccessResponse<AdvanceResponse>>(
+      `${BASE_URL}/${advanceId}/void`,
+    );
+    return advanceResponseSchema.parse(data.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 async function syncAttachments(
   advanceId: number,
   input: SyncAttachmentsInput,
@@ -145,12 +156,12 @@ async function syncAttachments(
 }
 
 async function sendAdvance(
-  advanceId: number,
+  sequence: number,
   payload: SendAdvanceDTO,
 ): Promise<void> {
   try {
     const body = sendAdvanceBodySchema.parse(payload);
-    await apiClient.post(`${BASE_URL}/${advanceId}/send`, body);
+    await apiClient.post(`${BASE_URL}/${sequence}/send`, body);
   } catch (error) {
     handleApiError(error);
   }
@@ -163,6 +174,7 @@ export const advancesService = {
   create,
   update,
   deleteById,
+  voidById,
   syncAttachments,
   sendAdvance,
 };

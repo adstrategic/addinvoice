@@ -12,14 +12,15 @@ import { processRequest } from "zod-express-middleware";
 
 import asyncHandler from "../../core/async-handler.js";
 import {
-  addEstimateItem,
   addEstimateDescriptiveItem,
+  addEstimateItem,
   convertEstimateToInvoice,
   createEstimate,
   createEstimateFromVoiceAudio,
   deleteEstimate,
   deleteEstimateDescriptiveItem,
   deleteEstimateItem,
+  voidEstimate,
   enqueueSendEstimate,
   getEstimateBySequence,
   getEstimatePdf,
@@ -27,15 +28,16 @@ import {
   listEstimates,
   markEstimateAsAccepted,
   sendEstimate,
+  shareEstimatePublicLink,
   updateEstimate,
   updateEstimateDescriptiveItem,
   updateEstimateItem,
 } from "./estimates.controller.js";
 import {
   fromVoiceAudioBodySchema,
-  getEstimateDescriptiveItemByIdSchema,
   getEstimateByIdSchema,
   getEstimateBySequenceSchema,
+  getEstimateDescriptiveItemByIdSchema,
   getEstimateItemByIdSchema,
   getNextEstimateNumberQuerySchema,
   listEstimatesSchema,
@@ -104,6 +106,13 @@ estimatesRoutes.post(
   asyncHandler(enqueueSendEstimate),
 );
 
+// POST /api/v1/estimates/:sequence/share-link - Issue via public link
+estimatesRoutes.post(
+  "/:sequence/share-link",
+  processRequest({ params: getEstimateBySequenceSchema }),
+  asyncHandler(shareEstimatePublicLink),
+);
+
 // GET /api/v1/estimates/:id - Get estimate by ID
 estimatesRoutes.get(
   "/:sequence",
@@ -148,6 +157,13 @@ estimatesRoutes.delete(
   "/:estimateId",
   processRequest({ params: getEstimateByIdSchema }),
   asyncHandler(deleteEstimate),
+);
+
+// POST /api/v1/estimates/:estimateId/void - Mark estimate as voided
+estimatesRoutes.post(
+  "/:estimateId/void",
+  processRequest({ params: getEstimateByIdSchema }),
+  asyncHandler(voidEstimate),
 );
 
 // POST /api/v1/estimates/:estimateId/items - Add an estimate item

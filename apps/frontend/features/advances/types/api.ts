@@ -18,6 +18,7 @@ export function mapStatusToUI(status: AdvanceStatus): string {
 		DRAFT: 'draft',
 		ISSUED: 'issued',
 		INVOICED: 'invoiced',
+		VOIDED: 'voided',
 	}
 	return statusMap[status] || 'draft'
 }
@@ -30,6 +31,7 @@ export function mapUIToStatus(uiStatus: string): AdvanceStatus | null {
 		draft: 'DRAFT',
 		issued: 'ISSUED',
 		invoiced: 'INVOICED',
+		voided: 'VOIDED',
 	}
 	return statusMap[uiStatus] || null
 }

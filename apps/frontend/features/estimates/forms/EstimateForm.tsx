@@ -21,6 +21,7 @@ import {
 } from "@/features/workspace";
 import type { BusinessResponse } from "@addinvoice/schemas";
 import { SendEstimateDialog } from "@/components/send-estimate-dialog";
+import { canSendEstimate } from "@/lib/is-document-public-issued";
 import type {
   ClientResponse,
   CreateEstimateDescriptiveItemDTO,
@@ -561,22 +562,27 @@ export function EstimateForm({
                 )}
                 <span className="text-xs">Save</span>
               </Button>
-              <Button
-                type="button"
-                onClick={handleSendClick}
-                disabled={!hasItems || isSavingBeforeSend}
-                className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
-                aria-label={
-                  !hasItems ? "Add at least one item to send" : "Send Estimate"
-                }
-              >
-                {isSavingBeforeSend ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                <span className="text-xs">Send</span>
-              </Button>
+              {canSendEstimate({
+                status: existingEstimate.status,
+                itemCount: draftItems.length,
+              }) && (
+                <Button
+                  type="button"
+                  onClick={handleSendClick}
+                  disabled={!hasItems || isSavingBeforeSend}
+                  className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
+                  aria-label={
+                    !hasItems ? "Add at least one item to send" : "Send Estimate"
+                  }
+                >
+                  {isSavingBeforeSend ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  <span className="text-xs">Send</span>
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -654,7 +660,12 @@ export function EstimateForm({
         </div>
       </div>
 
-      {mode === "edit" && existingEstimate && (
+      {mode === "edit" &&
+        existingEstimate &&
+        canSendEstimate({
+          status: existingEstimate.status,
+          itemCount: draftItems.length,
+        }) && (
         <SendEstimateDialog
           open={sendDialogOpen}
           onOpenChange={setSendDialogOpen}
@@ -662,6 +673,7 @@ export function EstimateForm({
           estimateNumber={existingEstimate.estimateNumber}
           clientName={existingEstimate.client?.name ?? "Client"}
           clientEmail={existingEstimate.clientEmail}
+          publicSlug={existingEstimate.publicSlug}
         />
       )}
     </div>

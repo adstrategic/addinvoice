@@ -13,6 +13,8 @@ import { AdvanceForm } from "../forms/AdvancesForm";
 import { statusFilterToApiParam } from "../types/api";
 import { useAdvances } from "../hooks/useAdvances";
 import { useAdvanceDelete } from "../hooks/useAdvanceDelete";
+import { useAdvanceVoid } from "../hooks/useAdvanceVoid";
+import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
 import { useAdvanceManager } from "../hooks/useAdvancesFormManager";
 import { TablePagination } from "@/components/TablePagination";
 import { SendAdvanceDialog } from "@/components/send-advance-dialog";
@@ -37,6 +39,7 @@ export default function AdvancesContent() {
 
   const advanceManager = useAdvanceManager();
   const deleteAdvance = useAdvanceDelete();
+  const voidAdvance = useAdvanceVoid();
   const sendAdvance = useSendAdvance();
   const { guardCreate } = useLimitGuard();
 
@@ -109,6 +112,7 @@ export default function AdvancesContent() {
           advances={advances}
           statusFilter={statusFilter}
           onDelete={deleteAdvance.openDeleteModal}
+          onVoid={voidAdvance.openVoidModal}
           onSend={(advance) => {
             setSelectedAdvanceForSend(advance);
             setSendDialogOpen(true);
@@ -135,6 +139,15 @@ export default function AdvancesContent() {
           isDeleting={deleteAdvance.isDeleting}
         />
 
+        <EntityVoidModal
+          isOpen={voidAdvance.isVoidModalOpen}
+          onClose={voidAdvance.closeVoidModal}
+          onConfirm={voidAdvance.handleVoidConfirm}
+          entity="advance"
+          entityName={voidAdvance.advanceToVoid?.label || ""}
+          isVoiding={voidAdvance.isVoiding}
+        />
+
         {selectedAdvanceForSend && (
           <SendAdvanceDialog
             open={sendDialogOpen}
@@ -144,13 +157,14 @@ export default function AdvancesContent() {
                 setSelectedAdvanceForSend(null);
               }
             }}
-            advanceId={selectedAdvanceForSend.id}
+            advanceSequence={selectedAdvanceForSend.sequence}
             clientName={selectedAdvanceForSend.client?.name ?? "Client"}
             clientEmail={selectedAdvanceForSend.client?.email}
             projectName={selectedAdvanceForSend.projectName}
+            publicSlug={selectedAdvanceForSend.publicSlug}
             sending={sendAdvance.isPending}
-            onSend={async ({ advanceId, payload }) => {
-              await sendAdvance.mutateAsync({ advanceId, payload });
+            onSend={async ({ sequence, payload }) => {
+              await sendAdvance.mutateAsync({ sequence, payload });
             }}
           />
         )}

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Send, Edit, Trash2, Plus, ExternalLink } from "lucide-react";
+import { ArrowLeft, Download, Send, Edit, Trash2, Plus, ExternalLink, Ban } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -11,7 +11,11 @@ import { useInvoiceBySequence } from "@/features/invoices/hooks/useInvoices";
 import { PaymentFormDialog } from "@/features/invoices/components/PaymentFormDialog";
 import { PaymentsSection } from "@/features/invoices/forms/form-fields/PaymentsSection";
 import { useInvoiceDelete } from "@/features/invoices/hooks/useInvoiceDelete";
+import { useInvoiceVoid } from "@/features/invoices/hooks/useInvoiceVoid";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
+import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
+import { canVoidInvoice } from "@/lib/document-void";
+import { canSendInvoice } from "@/lib/is-document-public-issued";
 import { mapStatusToUI } from "@/features/invoices/types/api";
 import {
   Tooltip,
@@ -22,12 +26,15 @@ import { toast } from "sonner";
 import { useDownloadInvoicePdf } from "@/features/invoices/hooks/useDownloadInvoicePDF";
 import { InvoicePdfPreview } from "@/features/invoices/components/InvoicePdfPreview";
 import { DetailPageLoading } from "@/components/loading-component";
+import { CopyPublicLinkButton } from "@/components/shared/copy-public-link-button";
+import { isInvoicePublicIssued } from "@/lib/is-document-public-issued";
 
 const statusConfig = {
   paid: { label: "Paid", className: "bg-primary/20 text-primary" },
   overdue: { label: "Overdue", className: "bg-chart-4/20 text-chart-4" },
   issued: { label: "Issued", className: "bg-chart-3/20 text-chart-3" },
   draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
+  voided: { label: "Voided", className: "bg-destructive/15 text-destructive" },
 };
 
 export default function InvoiceDetailPage() {
@@ -41,6 +48,7 @@ export default function InvoiceDetailPage() {
       router.push("/invoices");
     },
   });
+  const invoiceVoid = useInvoiceVoid();
 
   const sequence = params?.sequence
     ? parseInt(params.sequence as string)
@@ -115,6 +123,10 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            <CopyPublicLinkButton
+              publicSlug={invoice.publicSlug}
+              isIssued={isInvoicePublicIssued(invoice.status)}
+            />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -189,7 +201,9 @@ export default function InvoiceDetailPage() {
                 </TooltipContent>
               </Tooltip>
             )}
-            {invoice.status !== "DRAFT" && (
+            {invoice.status !== "DRAFT" &&
+              invoice.status !== "VOIDED" &&
+              invoice.status !== "PAID" && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -207,21 +221,40 @@ export default function InvoiceDetailPage() {
                 </TooltipContent>
               </Tooltip>
             )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => setSendDialogOpen(true)}
-                  className="gap-2 shrink-0"
-                  size="sm"
-                >
-                  <Send className="h-4 w-4 shrink-0" />
-                  <span className="hidden sm:inline">Send</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Send invoice</p>
-              </TooltipContent>
-            </Tooltip>
+            {canSendInvoice(invoice) && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => setSendDialogOpen(true)}
+                    className="gap-2 shrink-0"
+                    size="sm"
+                  >
+                    <Send className="h-4 w-4 shrink-0" />
+                    <span className="hidden sm:inline">Send</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Send invoice</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {canVoidInvoice(invoice) && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="text-destructive hover:text-destructive bg-transparent"
+                    onClick={() => invoiceVoid.openVoidModal(invoice)}
+                  >
+                    <Ban className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Mark as voided</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
 
@@ -256,6 +289,7 @@ export default function InvoiceDetailPage() {
         invoiceNumber={invoice.invoiceNumber}
         clientName={client?.name || "Client"}
         clientEmail={invoice.clientEmail}
+        publicSlug={invoice.publicSlug}
       />
 
       <EntityDeleteModal
@@ -265,6 +299,15 @@ export default function InvoiceDetailPage() {
         entity="invoice"
         entityName={invoiceDelete.invoiceToDelete?.invoiceNumber || ""}
         isDeleting={invoiceDelete.isDeleting}
+      />
+
+      <EntityVoidModal
+        isOpen={invoiceVoid.isVoidModalOpen}
+        onClose={invoiceVoid.closeVoidModal}
+        onConfirm={invoiceVoid.handleVoidConfirm}
+        entity="invoice"
+        entityName={invoiceVoid.invoiceToVoid?.invoiceNumber || ""}
+        isVoiding={invoiceVoid.isVoiding}
       />
     </>
   );

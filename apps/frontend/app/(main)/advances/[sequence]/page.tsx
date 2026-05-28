@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { SendAdvanceDialog } from "@/components/send-advance-dialog";
+import { CopyPublicLinkButton } from "@/components/shared/copy-public-link-button";
+import { isAdvancePublicIssued } from "@/lib/is-document-public-issued";
 import {
   Tooltip,
   TooltipContent,
@@ -18,11 +20,16 @@ import {
   Edit,
   Send,
   Trash2,
+  Ban,
 } from "lucide-react";
 import { useAdvanceBySequence } from "@/features/advances/hooks/useAdvances";
 import { useSendAdvance } from "@/features/advances/hooks/useAdvances";
 import { AdvancePdfPreview } from "@/features/advances/components/AdvancePdfPreview";
 import { useAdvanceDelete } from "@/features/advances/hooks/useAdvanceDelete";
+import { useAdvanceVoid } from "@/features/advances/hooks/useAdvanceVoid";
+import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
+import { canVoidAdvance } from "@/lib/document-void";
+import { canSendAdvance } from "@/lib/is-document-public-issued";
 import { mapStatusToUI } from "@/features/advances";
 import { useDownloadAdvancePdf } from "@/features/advances/hooks/useDownloadAdvancePDF";
 import { DetailPageLoading } from "@/components/loading-component";
@@ -31,6 +38,7 @@ const statusConfig = {
   draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
   issued: { label: "Issued", className: "bg-chart-3/20 text-chart-3" },
   invoiced: { label: "Invoiced", className: "bg-primary/20 text-primary" },
+  voided: { label: "Voided", className: "bg-destructive/15 text-destructive" },
 };
 
 export default function AdvanceDetailPage() {
@@ -41,6 +49,7 @@ export default function AdvanceDetailPage() {
   const advanceDelete = useAdvanceDelete({
     onAfterDelete: () => router.push("/advances"),
   });
+  const advanceVoid = useAdvanceVoid();
 
   const sequence = params?.sequence
     ? Number.parseInt(params.sequence as string, 10)
@@ -105,6 +114,10 @@ export default function AdvanceDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            <CopyPublicLinkButton
+              publicSlug={advance.publicSlug}
+              isIssued={isAdvancePublicIssued(advance.status)}
+            />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -159,6 +172,25 @@ export default function AdvanceDetailPage() {
               </Tooltip>
             ) : null}
 
+            {canVoidAdvance(advance) && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="text-destructive hover:text-destructive bg-transparent"
+                    onClick={() => advanceVoid.openVoidModal(advance)}
+                  >
+                    <Ban className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Mark as voided</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {canSendAdvance(advance) && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -174,6 +206,7 @@ export default function AdvanceDetailPage() {
                 <p>Send advance</p>
               </TooltipContent>
             </Tooltip>
+            )}
           </div>
         </div>
 
@@ -185,13 +218,14 @@ export default function AdvanceDetailPage() {
       <SendAdvanceDialog
         open={sendDialogOpen}
         onOpenChange={setSendDialogOpen}
-        advanceId={advance.id}
+        advanceSequence={advance.sequence}
         projectName={advance.projectName}
         clientName={advance.client?.name ?? "Client"}
         clientEmail={advance.client?.email}
+        publicSlug={advance.publicSlug}
         sending={sendAdvance.isPending}
-        onSend={({ advanceId, payload }) =>
-          sendAdvance.mutateAsync({ advanceId, payload })
+        onSend={({ sequence, payload }) =>
+          sendAdvance.mutateAsync({ sequence, payload })
         }
       />
 
@@ -202,6 +236,15 @@ export default function AdvanceDetailPage() {
         entity="advance"
         entityName={advanceDelete.advanceToDelete?.label || ""}
         isDeleting={advanceDelete.isDeleting}
+      />
+
+      <EntityVoidModal
+        isOpen={advanceVoid.isVoidModalOpen}
+        onClose={advanceVoid.closeVoidModal}
+        onConfirm={advanceVoid.handleVoidConfirm}
+        entity="advance"
+        entityName={advanceVoid.advanceToVoid?.label || ""}
+        isVoiding={advanceVoid.isVoiding}
       />
     </>
   );

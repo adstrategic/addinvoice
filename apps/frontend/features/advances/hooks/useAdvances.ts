@@ -146,6 +146,24 @@ export function useDeleteAdvance() {
   });
 }
 
+export function useVoidAdvance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, sequence }: { id: number; sequence: number }) =>
+      advancesService.voidById(id),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: advanceKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: advanceKeys.detail(variables.sequence),
+      });
+      toast.success("Advance voided", {
+        description: "The advance has been marked as voided.",
+      });
+    },
+    onError: (err) => handleMutationError(err),
+  });
+}
+
 export function useSyncAdvanceAttachments(
   setError?: UseFormSetError<AdvanceResponse>,
 ) {
@@ -179,16 +197,19 @@ export function useSendAdvance() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
-      advanceId,
+      sequence,
       payload,
     }: {
-      advanceId: number;
+      sequence: number;
       payload: SendAdvanceDTO;
-    }) => advancesService.sendAdvance(advanceId, payload),
+    }) => advancesService.sendAdvance(sequence, payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: advanceKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: advanceKeys.detail(variables.advanceId),
+        queryKey: advanceKeys.detail(variables.sequence),
+      });
+      queryClient.invalidateQueries({
+        queryKey: advanceKeys.pdf(variables.sequence),
       });
       toast.success("Advance is being sent");
     },

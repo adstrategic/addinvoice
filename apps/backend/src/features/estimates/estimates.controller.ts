@@ -182,6 +182,24 @@ export async function deleteEstimate(
 }
 
 /**
+ * POST /estimates/:id/void - Mark an estimate as voided
+ */
+export async function voidEstimate(
+  req: TypedRequest<typeof getEstimateByIdSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { estimateId } = req.params;
+
+  const estimate = await estimatesService.voidEstimate(workspaceId, estimateId);
+
+  res.json({
+    data: estimate,
+    message: "Estimate voided successfully",
+  });
+}
+
+/**
  * DELETE /estimates/:estimateId/items/:itemId - Delete an estimate item
  * No error handling needed - middleware handles it
  */
@@ -253,6 +271,22 @@ export async function enqueueSendEstimate(
   res.status(202).json({
     message: "Estimate is being sent",
   });
+}
+
+/**
+ * POST /estimates/:sequence/share-link - Issue estimate and return public share slug
+ */
+export async function shareEstimatePublicLink(
+  req: TypedRequest<typeof getEstimateBySequenceSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence } = req.params;
+  const data = await estimatesService.shareEstimatePublicLink(
+    workspaceId,
+    sequence,
+  );
+  res.json({ data });
 }
 
 /**

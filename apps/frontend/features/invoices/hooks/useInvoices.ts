@@ -239,3 +239,22 @@ export function useDeleteInvoice() {
     onError: (err) => handleMutationError(err, undefined),
   });
 }
+
+export function useVoidInvoice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, sequence }: { id: number; sequence: number }) =>
+      invoicesService.void(id),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.detail(variables.sequence),
+      });
+      toast.success("Invoice voided", {
+        description: "The invoice has been marked as voided.",
+      });
+    },
+    onError: (err) => handleMutationError(err, undefined),
+  });
+}

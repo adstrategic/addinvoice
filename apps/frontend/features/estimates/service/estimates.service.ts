@@ -212,6 +212,17 @@ async function deleteEstimate(id: number): Promise<void> {
   }
 }
 
+async function voidEstimate(id: number): Promise<EstimateResponse> {
+  try {
+    const { data } = await apiClient.post<ApiSuccessResponse<EstimateResponse>>(
+      `${BASE_URL}/${id}/void`,
+    );
+    return estimateResponseSchema.parse(data.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 /**
  * Create an estimate item
  */
@@ -358,6 +369,7 @@ export const estimatesService = {
   convertToProposal: convertEstimateToProposal,
   createFromVoiceAudio,
   delete: deleteEstimate,
+  void: voidEstimate,
   createItem: createEstimateItem,
   updateItem: updateEstimateItem,
   deleteItem: deleteEstimateItem,

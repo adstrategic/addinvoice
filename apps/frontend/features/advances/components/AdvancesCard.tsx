@@ -14,8 +14,11 @@ import {
   Calendar,
   Eye,
   Send,
+  Ban,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { canVoidAdvance } from "@/lib/document-void";
+import { canSendAdvance } from "@/lib/is-document-public-issued";
 import type { AdvanceListItemResponse } from "@addinvoice/schemas";
 import { mapStatusToUI } from "../types/api";
 import { useRouter } from "next/navigation";
@@ -33,19 +36,30 @@ const statusConfig = {
     label: "Invoiced",
     className: "bg-chart-3/20 text-chart-3 hover:bg-chart-3/30",
   },
+  voided: {
+    label: "Voided",
+    className: "bg-destructive/15 text-destructive hover:bg-destructive/20",
+  },
 };
 
 interface AdvanceCardProps {
   advance: AdvanceListItemResponse;
   index: number;
   onDelete: (advance: AdvanceListItemResponse) => void;
+  onVoid: (advance: AdvanceListItemResponse) => void;
   onSend: (advance: AdvanceListItemResponse) => void;
 }
 
 /**
  * Individual estimate card component
  */
-export function AdvanceCard({ advance, index, onDelete, onSend }: AdvanceCardProps) {
+export function AdvanceCard({
+  advance,
+  index,
+  onDelete,
+  onVoid,
+  onSend,
+}: AdvanceCardProps) {
   const router = useRouter();
 
   const clientName =
@@ -91,29 +105,44 @@ export function AdvanceCard({ advance, index, onDelete, onSend }: AdvanceCardPro
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onSend(advance)}>
-            <Send className="mr-2 h-4 w-4" />
-            Send
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => router.push(`/advances/${advance.sequence}/edit`)}
-          >
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </DropdownMenuItem>
+          {canSendAdvance(advance) && (
+            <DropdownMenuItem onClick={() => onSend(advance)}>
+              <Send className="mr-2 h-4 w-4" />
+              Send
+            </DropdownMenuItem>
+          )}
+          {advance.status === "DRAFT" && (
+            <DropdownMenuItem
+              onClick={() => router.push(`/advances/${advance.sequence}/edit`)}
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             onClick={() => router.push(`/advances/${advance.sequence}`)}
           >
             <Eye className="mr-2 h-4 w-4" />
             View
           </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-destructive"
-            onClick={() => onDelete(advance)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </DropdownMenuItem>
+          {advance.status === "DRAFT" && (
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => onDelete(advance)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          )}
+          {canVoidAdvance(advance) && (
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => onVoid(advance)}
+            >
+              <Ban className="mr-2 h-4 w-4" />
+              Mark as voided
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </motion.div>

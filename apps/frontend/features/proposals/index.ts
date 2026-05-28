@@ -25,6 +25,7 @@ export {
   useMarkProposalAsAccepted,
   useSendProposal,
   useDeleteProposal,
+  useVoidProposal,
   useConvertProposalToInvoice,
   proposalKeys,
 } from "./hooks/useProposals";
@@ -39,6 +40,7 @@ export {
 
 export { useProposalActions } from "./hooks/useProposalActions";
 export { useProposalDelete } from "./hooks/useProposalDelete";
+export { useProposalVoid } from "./hooks/useProposalVoid";
 
 // Components
 export { default as ProposalsContent } from "./components/ProposalContent";

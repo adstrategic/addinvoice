@@ -18,7 +18,10 @@ import {
   Trash2,
   FileText,
   Plus,
+  Ban,
 } from "lucide-react";
+import { canVoidInvoice } from "@/lib/document-void";
+import { canSendInvoice } from "@/lib/is-document-public-issued";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import type { InvoiceResponse } from "../schemas/invoice.schema";
@@ -44,6 +47,10 @@ const statusConfig = {
     label: "Draft",
     className: "bg-muted text-muted-foreground hover:bg-muted/80",
   },
+  voided: {
+    label: "Voided",
+    className: "bg-destructive/15 text-destructive hover:bg-destructive/20",
+  },
 };
 
 interface InvoiceCardProps {
@@ -53,6 +60,7 @@ interface InvoiceCardProps {
   onSend: (invoice: InvoiceResponse) => void;
   onAddPayment: (invoice: InvoiceResponse) => void;
   onDelete: (invoice: InvoiceResponse) => void;
+  onVoid?: (invoice: InvoiceResponse) => void;
   linkOnly?: boolean;
 }
 
@@ -66,6 +74,7 @@ export function InvoiceCard({
   onSend,
   onAddPayment,
   onDelete,
+  onVoid = () => {},
   linkOnly = false,
 }: InvoiceCardProps) {
   const router = useRouter();
@@ -78,9 +87,11 @@ export function InvoiceCard({
     label: uiStatus,
     className: "bg-muted text-muted-foreground",
   };
-  const hasItems = (invoice.items?.length ?? 0) > 0;
   const hasBalance = (invoice.balance ?? 0) > 0;
-  const canAddPayment = uiStatus !== "paid" && hasBalance;
+  const isVoided = invoice.status === "VOIDED";
+  const showSend = canSendInvoice(invoice);
+  const canAddPayment = !isVoided && uiStatus !== "paid" && hasBalance;
+  const showVoid = canVoidInvoice(invoice);
   const cardContent = (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -162,10 +173,12 @@ export function InvoiceCard({
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSend(invoice)}>
-                <Send className="h-4 w-4 mr-2" />
-                Send
-              </DropdownMenuItem>
+              {showSend && (
+                <DropdownMenuItem onClick={() => onSend(invoice)}>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send
+                </DropdownMenuItem>
+              )}
               {canAddPayment && (
                 <DropdownMenuItem onClick={() => onAddPayment(invoice)}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -182,6 +195,18 @@ export function InvoiceCard({
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
+                  </DropdownMenuItem>
+                </>
+              )}
+              {showVoid && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onVoid(invoice)}
+                    className="text-destructive"
+                  >
+                    <Ban className="h-4 w-4 mr-2" />
+                    Mark as voided
                   </DropdownMenuItem>
                 </>
               )}

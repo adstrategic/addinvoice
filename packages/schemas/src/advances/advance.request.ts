@@ -66,6 +66,10 @@ export const getAdvanceByIdSchema = z.object({
   advanceId: z.coerce.number().int().positive("Advance ID must be positive"),
 });
 
+export const getAdvanceBySequenceSchema = z.object({
+  sequence: z.coerce.number().int().positive("Sequence must be positive"),
+});
+
 export const listPendingAdvancesByClientSchema = z.object({
   clientId: z.coerce.number().int().positive("Client ID must be positive"),
 });
@@ -107,6 +111,9 @@ export type GenerateAdvanceReportDTO = z.infer<
   typeof generateAdvanceReportBodySchema
 >;
 export type GetAdvanceByIdParams = z.infer<typeof getAdvanceByIdSchema>;
+export type GetAdvanceBySequenceParams = z.infer<
+  typeof getAdvanceBySequenceSchema
+>;
 export type LinkAdvanceToInvoiceDTO = z.infer<
   typeof linkAdvanceToInvoiceBodySchema
 >;

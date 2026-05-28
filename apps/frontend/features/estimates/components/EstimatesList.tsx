@@ -22,6 +22,7 @@ interface EstimateListProps {
   onDownload: (estimate: EstimateDashboardResponse) => void;
   onSend: (estimate: EstimateDashboardResponse) => void;
   onDelete: (estimate: EstimateDashboardResponse) => void;
+  onVoid: (estimate: EstimateDashboardResponse) => void;
   onAccept?: (estimate: EstimateDashboardResponse) => void;
   onConvertToInvoice?: (estimate: EstimateDashboardResponse) => void;
   onConvertToProposal?: (estimate: EstimateDashboardResponse) => void;
@@ -38,6 +39,7 @@ export function EstimateList({
   onDownload,
   onSend,
   onDelete,
+  onVoid,
   onAccept,
   onConvertToInvoice,
   onConvertToProposal,
@@ -77,6 +79,7 @@ export function EstimateList({
                   onDownload={onDownload}
                   onSend={onSend}
                   onDelete={onDelete}
+                  onVoid={onVoid}
                   onAccept={onAccept}
                   onConvertToInvoice={onConvertToInvoice}
                   onConvertToProposal={onConvertToProposal}

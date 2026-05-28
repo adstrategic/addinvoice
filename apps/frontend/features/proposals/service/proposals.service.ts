@@ -124,6 +124,17 @@ async function deleteProposal(id: number): Promise<void> {
   }
 }
 
+async function voidProposal(id: number): Promise<ProposalResponse> {
+  try {
+    const { data } = await apiClient.post<ApiSuccessResponse<ProposalResponse>>(
+      `${BASE_URL}/${id}/void`,
+    );
+    return proposalResponseSchema.parse(data.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 async function createProposalDescriptiveItem(
   proposalId: number,
   dto: CreateProposalDescriptiveItemDTO,
@@ -174,6 +185,7 @@ export const proposalsService = {
   send: sendProposal,
   convertToInvoice: convertProposalToInvoice,
   delete: deleteProposal,
+  void: voidProposal,
   createDescriptiveItem: createProposalDescriptiveItem,
   updateDescriptiveItem: updateProposalDescriptiveItem,
   deleteDescriptiveItem: deleteProposalDescriptiveItem,

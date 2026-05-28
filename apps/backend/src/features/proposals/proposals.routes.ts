@@ -13,11 +13,13 @@ import {
   convertProposalToInvoice,
   deleteProposal,
   deleteProposalDescriptiveItem,
+  voidProposal,
   getProposalBySequence,
   getProposalPdf,
   listProposals,
   markProposalAsAccepted,
   resendProposal,
+  shareProposalPublicLink,
   updateProposal,
   updateProposalDescriptiveItem,
 } from "./proposals.controller.js";
@@ -68,6 +70,13 @@ proposalsRoutes.post(
   asyncHandler(resendProposal),
 );
 
+// POST /api/v1/proposals/:sequence/share-link - Issue via public link
+proposalsRoutes.post(
+  "/:sequence/share-link",
+  processRequest({ params: getProposalBySequenceSchema }),
+  asyncHandler(shareProposalPublicLink),
+);
+
 // GET /api/v1/proposals/:sequence - Get proposal by sequence
 proposalsRoutes.get(
   "/:sequence",
@@ -104,6 +113,13 @@ proposalsRoutes.delete(
   "/:proposalId",
   processRequest({ params: getProposalByIdSchema }),
   asyncHandler(deleteProposal),
+);
+
+// POST /api/v1/proposals/:proposalId/void - Mark proposal as voided
+proposalsRoutes.post(
+  "/:proposalId/void",
+  processRequest({ params: getProposalByIdSchema }),
+  asyncHandler(voidProposal),
 );
 
 // POST /api/v1/proposals/:proposalId/descriptive-items - Add a descriptive item

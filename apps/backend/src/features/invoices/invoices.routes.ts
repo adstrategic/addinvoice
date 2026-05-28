@@ -17,6 +17,7 @@ import {
   createInvoiceFromVoiceTranscript,
   deleteInvoice,
   deleteInvoiceItem,
+  voidInvoice,
   deletePayment,
   enqueueSendInvoice,
   getInvoiceBySequence,
@@ -25,6 +26,7 @@ import {
   getPendingAdvancesForInvoice,
   listInvoices,
   sendInvoice,
+  shareInvoicePublicLink,
   updateInvoice,
   updateInvoiceItem,
   updatePayment,
@@ -98,6 +100,13 @@ invoicesRoutes.post(
   asyncHandler(enqueueSendInvoice),
 );
 
+// POST /api/v1/invoices/:sequence/share-link - Issue via public link
+invoicesRoutes.post(
+  "/:sequence/share-link",
+  processRequest({ params: getInvoiceBySequenceSchema }),
+  asyncHandler(shareInvoicePublicLink),
+);
+
 // GET /api/v1/invoices/:id - Get invoice by ID
 invoicesRoutes.get(
   "/:sequence",
@@ -159,6 +168,13 @@ invoicesRoutes.delete(
   "/:invoiceId",
   processRequest({ params: getInvoiceByIdSchema }),
   asyncHandler(deleteInvoice),
+);
+
+// POST /api/v1/invoices/:invoiceId/void - Mark invoice as voided
+invoicesRoutes.post(
+  "/:invoiceId/void",
+  processRequest({ params: getInvoiceByIdSchema }),
+  asyncHandler(voidInvoice),
 );
 
 // POST /api/v1/invoices/:invoiceId/items - Add an invoice item

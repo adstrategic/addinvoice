@@ -232,6 +232,25 @@ export function useDeleteEstimate() {
   });
 }
 
+export function useVoidEstimate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, sequence }: { id: number; sequence: number }) =>
+      estimatesService.void(id),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: estimateKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: estimateKeys.detail(variables.sequence),
+      });
+      toast.success("Estimate voided", {
+        description: "The estimate has been marked as voided.",
+      });
+    },
+    onError: (err) => handleMutationError(err, undefined),
+  });
+}
+
 /**
  * Hook to convert an accepted estimate to an invoice.
  * On success invalidates estimates and invoices lists and returns the created invoice (sequence for redirect).

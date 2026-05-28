@@ -353,7 +353,7 @@ export const invoiceResponseSchema = baseInvoiceSchema
     totalTax: z.number(),
     total: z.number(),
     workspaceId: z.number().int().positive(),
-    status: z.enum(["DRAFT", "SENT", "VIEWED", "PAID", "OVERDUE"]),
+    status: z.enum(["DRAFT", "SENT", "VIEWED", "PAID", "OVERDUE", "VOIDED"]),
     sequence: z.number().int().positive(),
     paymentLink: z.string().nullable(),
     paymentProvider: z.string().nullable(),
@@ -363,6 +363,7 @@ export const invoiceResponseSchema = baseInvoiceSchema
     sentAt: z.coerce.date().nullable(),
     viewedAt: z.coerce.date().nullable(),
     paidAt: z.coerce.date().nullable(),
+    publicSlug: z.string().nullable().optional(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
 

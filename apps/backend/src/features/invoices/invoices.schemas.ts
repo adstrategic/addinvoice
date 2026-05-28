@@ -363,13 +363,15 @@ export const invoiceEntitySchema = baseInvoiceSchema
     selectedPaymentMethodId: z.number().int().nullable(),
     sentAt: z.date().nullable(),
     sequence: z.number().int().positive(),
-    status: z.enum(["DRAFT", "SENT", "VIEWED", "PAID", "OVERDUE"]),
+    status: z.enum(["DRAFT", "SENT", "VIEWED", "PAID", "OVERDUE", "VOIDED"]),
+    voidedAt: z.date().nullable(),
     subtotal: z.number(),
 
     total: z.number(),
     totalTax: z.number(),
     updatedAt: z.date(),
     viewedAt: z.date().nullable(),
+    publicSlug: z.string().nullable(),
     workspaceId: z.number().int().positive(),
   })
   .omit({

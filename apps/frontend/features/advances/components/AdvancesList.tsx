@@ -17,6 +17,7 @@ interface AdvanceListProps {
   advances: AdvanceListItemResponse[];
   statusFilter: string;
   onDelete: (advance: AdvanceListItemResponse) => void;
+  onVoid: (advance: AdvanceListItemResponse) => void;
   onSend: (advance: AdvanceListItemResponse) => void;
   children?: React.ReactNode;
 }
@@ -29,6 +30,7 @@ export function AdvanceList({
   advances,
   statusFilter,
   onDelete,
+  onVoid,
   onSend,
   children,
 }: AdvanceListProps) {
@@ -61,6 +63,7 @@ export function AdvanceList({
                   advance={advance}
                   index={index}
                   onDelete={onDelete}
+                  onVoid={onVoid}
                   onSend={onSend}
                 />
               ))}
