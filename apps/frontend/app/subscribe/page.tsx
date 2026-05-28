@@ -47,8 +47,9 @@ export default function SubscribePage() {
   const activateTrial = useActivateTrial();
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("month");
-  const [selectedPlan, setSelectedPlan] =
-    useState<PaidSubscriptionPlan | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<PaidSubscriptionPlan | null>(
+    null,
+  );
 
   const canStartTrial =
     subscription != null &&
@@ -329,7 +330,9 @@ export default function SubscribePage() {
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-primary" />
-                      <span>Voice creation enabled (counts toward module caps)</span>
+                      <span>
+                        Voice creation enabled (counts toward module caps)
+                      </span>
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-primary" />
