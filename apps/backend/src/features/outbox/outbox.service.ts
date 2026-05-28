@@ -1,5 +1,4 @@
-import { prisma } from "@addinvoice/db";
-import { InvoiceStatus } from "@addinvoice/db";
+import { InvoiceStatus, prisma, type Prisma } from "@addinvoice/db";
 
 import { sendEmailWithPdf } from "../../lib/email.js";
 import * as invoicesService from "../invoices/invoices.service.js";
@@ -42,11 +41,33 @@ function messageToHtml(message: string): string {
   );
 }
 
-const ACTIVE_INVOICE_STATUSES = [
+/** Unpaid, issued invoices only — excludes VOIDED, DRAFT, and PAID. */
+export const REMINDER_ELIGIBLE_INVOICE_STATUSES = [
   InvoiceStatus.SENT,
   InvoiceStatus.VIEWED,
   InvoiceStatus.OVERDUE,
-];
+] as const;
+
+export function isInvoiceReminderEligible(status: InvoiceStatus): boolean {
+  return (
+    REMINDER_ELIGIBLE_INVOICE_STATUSES as readonly InvoiceStatus[]
+  ).includes(status);
+}
+
+const reminderEligibleInvoiceWhere: Prisma.InvoiceWhereInput = {
+  AND: [
+    {
+      status: {
+        in: [
+          InvoiceStatus.SENT,
+          InvoiceStatus.VIEWED,
+          InvoiceStatus.OVERDUE,
+        ],
+      },
+    },
+    { status: { not: InvoiceStatus.VOIDED } },
+  ],
+};
 
 /**
  * Execute reminder emails for eligible invoices at start of day (no outbox).
@@ -63,12 +84,13 @@ export async function executeReminders(): Promise<{
   const todayTime = startOfToday.getTime();
   const invoices = await prisma.invoice.findMany({
     include: { client: true },
-    where: {
-      status: { in: ACTIVE_INVOICE_STATUSES },
-    },
+    where: reminderEligibleInvoiceWhere,
   });
   const eligible: typeof invoices = [];
   for (const inv of invoices) {
+    if (!isInvoiceReminderEligible(inv.status)) {
+      continue;
+    }
     const due = new Date(inv.dueDate);
     due.setUTCHours(0, 0, 0, 0);
     const dueTime = due.getTime();
@@ -86,22 +108,33 @@ export async function executeReminders(): Promise<{
     eligible.push(inv);
   }
   if (eligible.length === 0) return { failed: 0, sent: 0 };
-  let sent = 0;
-  let failed = 0;
-  const payloads: ReturnType<typeof invoicesService.buildInvoicePdfPayload>[] =
-    [];
+
+  const toSend: {
+    inv: (typeof eligible)[number];
+    pdfPayload: ReturnType<typeof invoicesService.buildInvoicePdfPayload>;
+  }[] = [];
   for (const inv of eligible) {
     const full = await invoicesService.getInvoiceById(inv.workspaceId, inv.id);
-    payloads.push(invoicesService.buildInvoicePdfPayload(full));
+    if (!isInvoiceReminderEligible(full.status)) {
+      continue;
+    }
+    toSend.push({
+      inv,
+      pdfPayload: invoicesService.buildInvoicePdfPayload(full),
+    });
   }
+  if (toSend.length === 0) return { failed: 0, sent: 0 };
+
+  let sent = 0;
+  let failed = 0;
   let pdfs: Buffer[] = [];
   try {
-    pdfs = await fetchInvoicePdfBatch(payloads);
+    pdfs = await fetchInvoicePdfBatch(toSend.map((row) => row.pdfPayload));
   } catch (err) {
     console.error("[executeReminders] PDF batch failed:", err);
-    return { failed: eligible.length, sent: 0 };
+    return { failed: toSend.length, sent: 0 };
   }
-  for (const [i, inv] of eligible.entries()) {
+  for (const [i, { inv }] of toSend.entries()) {
     const pdf = pdfs[i];
     if (!pdf) {
       failed++;

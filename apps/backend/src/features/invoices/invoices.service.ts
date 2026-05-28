@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import type { Estimate, EstimateItem, Prisma } from "@addinvoice/db";
+import type {
+  Estimate,
+  EstimateItem,
+  InvoiceStatus,
+  Prisma,
+} from "@addinvoice/db";
 import type { EstimateResponse } from "@addinvoice/schemas";
 import type {
   AdvanceListItemResponse,
@@ -1292,7 +1297,7 @@ export async function listInvoices(
   };
 
   const buildStatsWhere = (
-    status?: Prisma.EnumInvoiceStatusFilter | Prisma.InvoiceStatus,
+    status?: Prisma.EnumInvoiceStatusFilter | InvoiceStatus,
   ): Prisma.InvoiceWhereInput => {
     // Metric-specific stats use an explicit status (PAID, OVERDUE, etc.) and ignore
     // the list tab filter. Enum values are mutually exclusive, so a single `status`
