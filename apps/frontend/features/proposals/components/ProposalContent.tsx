@@ -24,6 +24,7 @@ import { useDownloadProposalPdf } from "../hooks/useDownloadProposalPDF";
 const VALID_STATUSES = [
   "all",
   "sent",
+  "viewed",
   "accepted",
   "rejected",
   "invoiced",

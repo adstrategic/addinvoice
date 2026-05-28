@@ -22,8 +22,12 @@ export function QueryProvider({ children }: QueryProviderProps) {
             staleTime: 30 * 1000, // 30 seconds
             // Cache data for 5 minutes
             gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
-            // Retry failed requests once
-            retry: 1,
+            // Never retry 429 (rate-limited) or 401/403 (handled by Axios interceptor).
+            retry: (failureCount, error) => {
+              const status = (error as { response?: { status?: number } })?.response?.status
+              if (status === 429 || status === 401 || status === 403) return false
+              return failureCount < 1
+            },
             // Refetch on window focus in production
             refetchOnWindowFocus: process.env.NODE_ENV === "production",
             // Don't refetch on mount if data is fresh

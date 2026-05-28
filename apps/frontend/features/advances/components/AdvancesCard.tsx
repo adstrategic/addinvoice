@@ -32,6 +32,10 @@ const statusConfig = {
     label: "Issued",
     className: "bg-primary/20 text-primary hover:bg-primary/30",
   },
+  viewed: {
+    label: "Viewed",
+    className: "bg-blue-500/15 text-blue-600 hover:bg-blue-500/20",
+  },
   invoiced: {
     label: "Invoiced",
     className: "bg-chart-3/20 text-chart-3 hover:bg-chart-3/30",

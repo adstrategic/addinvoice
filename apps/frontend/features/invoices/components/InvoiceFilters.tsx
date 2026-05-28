@@ -57,6 +57,7 @@ export function InvoiceFilters({
             <SelectItem value="paid">Paid</SelectItem>
             <SelectItem value="overdue">Overdue</SelectItem>
             <SelectItem value="issued">Issued</SelectItem>
+            <SelectItem value="viewed">Viewed</SelectItem>
             <SelectItem value="draft">Draft</SelectItem>
           </SelectContent>
         </Select>

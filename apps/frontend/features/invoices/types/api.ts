@@ -36,6 +36,7 @@ export const INVOICE_FILTER_VALUES = [
   "paid",
   "overdue",
   "issued",
+  "viewed",
   "draft",
 ] as const;
 
@@ -46,7 +47,7 @@ export function mapStatusToUI(status: InvoiceStatus): string {
   const statusMap: Record<InvoiceStatus, string> = {
     DRAFT: "draft",
     SENT: "issued",
-    VIEWED: "issued",
+    VIEWED: "viewed",
     PAID: "paid",
     OVERDUE: "overdue",
     VOIDED: "voided",
@@ -61,6 +62,7 @@ export function mapUIToStatus(uiStatus: string): InvoiceStatus | null {
   const statusMap: Record<string, InvoiceStatus> = {
     draft: "DRAFT",
     issued: "SENT",
+    viewed: "VIEWED",
     overdue: "OVERDUE",
     paid: "PAID",
     voided: "VOIDED",
