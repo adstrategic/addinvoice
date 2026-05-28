@@ -80,6 +80,7 @@ function toProposalBase(row: ProposalRowFlat) {
     publicSlug: row.publicSlug,
     signatureData: row.signatureData as unknown,
     sentAt: row.sentAt,
+    viewedAt: row.viewedAt,
     voidedAt: row.voidedAt,
     acceptedAt: row.acceptedAt,
     acceptedBy: row.acceptedBy,

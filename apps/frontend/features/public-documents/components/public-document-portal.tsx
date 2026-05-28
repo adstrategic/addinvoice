@@ -48,13 +48,13 @@ export function PublicDocumentPortal({ slug }: PublicDocumentPortalProps) {
     error: pdfError,
     refetch: refetchPdf,
   } = usePublicDocumentPdf(slug);
-  const markViewed = useMarkPublicDocumentViewed(slug);
+  const { mutate: markViewedMutate } = useMarkPublicDocumentViewed(slug);
 
   useEffect(() => {
-    if (document?.type === "invoice") {
-      markViewed.mutate();
+    if (document) {
+      markViewedMutate();
     }
-  }, [document?.type, markViewed]);
+  }, [document, markViewedMutate]);
 
   const handleDownload = useCallback(async () => {
     if (!pdfBytes || !document) return;

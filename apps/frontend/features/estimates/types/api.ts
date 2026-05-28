@@ -19,7 +19,7 @@ export function mapStatusToUI(status: EstimateStatus): string {
   const statusMap: Record<EstimateStatus, string> = {
     DRAFT: "draft",
     SENT: "sent",
-    VIEWED: "sent",
+    VIEWED: "viewed",
     ACCEPTED: "accepted",
     REJECTED: "rejected",
     INVOICED: "invoiced",
@@ -36,6 +36,7 @@ export function mapUIToStatus(uiStatus: string): EstimateStatus | null {
   const statusMap: Record<string, EstimateStatus> = {
     draft: "DRAFT",
     sent: "SENT",
+    viewed: "VIEWED",
     accepted: "ACCEPTED",
     rejected: "REJECTED",
     invoiced: "INVOICED",

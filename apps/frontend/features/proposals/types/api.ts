@@ -6,6 +6,7 @@ type ProposalStatus = z.infer<typeof ProposalStatusEnum>;
 export const PROPOSAL_FILTER_VALUES = [
   "all",
   "sent",
+  "viewed",
   "accepted",
   "rejected",
   "invoiced",
@@ -14,6 +15,7 @@ export const PROPOSAL_FILTER_VALUES = [
 export function mapStatusToUI(status: ProposalStatus): string {
   const map: Record<ProposalStatus, string> = {
     SENT: "sent",
+    VIEWED: "viewed",
     ACCEPTED: "accepted",
     REJECTED: "rejected",
     INVOICED: "invoiced",
@@ -25,6 +27,7 @@ export function mapStatusToUI(status: ProposalStatus): string {
 export function mapUIToStatus(uiStatus: string): ProposalStatus | null {
   const map: Record<string, ProposalStatus> = {
     sent: "SENT",
+    viewed: "VIEWED",
     accepted: "ACCEPTED",
     rejected: "REJECTED",
     invoiced: "INVOICED",

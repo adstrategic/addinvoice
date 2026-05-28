@@ -7,6 +7,7 @@ export const ADVANCE_FILTER_VALUES = [
 	'all',
 	'draft',
 	'issued',
+	'viewed',
 	'invoiced',
 ] as const
 
@@ -17,6 +18,7 @@ export function mapStatusToUI(status: AdvanceStatus): string {
 	const statusMap: Record<AdvanceStatus, string> = {
 		DRAFT: 'draft',
 		ISSUED: 'issued',
+		VIEWED: 'viewed',
 		INVOICED: 'invoiced',
 		VOIDED: 'voided',
 	}
@@ -30,6 +32,7 @@ export function mapUIToStatus(uiStatus: string): AdvanceStatus | null {
 	const statusMap: Record<string, AdvanceStatus> = {
 		draft: 'DRAFT',
 		issued: 'ISSUED',
+		viewed: 'VIEWED',
 		invoiced: 'INVOICED',
 		voided: 'VOIDED',
 	}

@@ -1,5 +1,6 @@
 "use client"
 
+import { useAuth } from "@clerk/nextjs"
 import {
   Dialog,
   DialogContent,
@@ -102,7 +103,8 @@ interface UpgradeDialogProps {
 }
 
 export function UpgradeDialog({ payload, onClose }: UpgradeDialogProps) {
-  const { data: plans } = useSubscriptionPlans()
+  const { isSignedIn } = useAuth()
+  const { data: plans } = useSubscriptionPlans({ enabled: !!payload && !!isSignedIn })
   const createCheckout = useCreateCheckout()
 
   if (!payload) return null

@@ -54,6 +54,7 @@ export function ProposalFilters({
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="viewed">Viewed</SelectItem>
             <SelectItem value="accepted">Accepted</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
             <SelectItem value="invoiced">Invoiced</SelectItem>

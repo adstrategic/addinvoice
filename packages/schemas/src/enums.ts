@@ -18,6 +18,7 @@ export type EstimateStatus =
 
 export const ProposalStatus = {
   SENT: "SENT",
+  VIEWED: "VIEWED",
   ACCEPTED: "ACCEPTED",
   REJECTED: "REJECTED",
   INVOICED: "INVOICED",
