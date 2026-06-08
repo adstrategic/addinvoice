@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { DocumentStatusBadge } from "@/components/shared/DocumentStatusBadge";
 import {
   ArrowLeft,
   Download,
@@ -26,16 +26,9 @@ import {
 import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
 import { canVoidProposal } from "@/lib/document-void";
 import { canSendProposalFromDetail } from "@/lib/is-document-public-issued";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useDownloadProposalPdf } from "@/features/proposals/hooks/useDownloadProposalPDF";
 import { DetailPageLoading } from "@/components/loading-component";
-import { CopyPublicLinkButton } from "@/components/shared/copy-public-link-button";
-import { isProposalPublicIssued } from "@/lib/is-document-public-issued";
 
 const ProposalPdfPreview = dynamic(
   () =>
@@ -54,14 +47,6 @@ const ProposalPdfPreview = dynamic(
     ),
   },
 );
-
-const statusConfig = {
-  sent: { label: "Sent", className: "bg-chart-3/20 text-chart-3" },
-  accepted: { label: "Accepted", className: "bg-chart-2/20 text-chart-2" },
-  rejected: { label: "Rejected", className: "bg-chart-4/20 text-chart-4" },
-  invoiced: { label: "Invoiced", className: "bg-primary/20 text-primary" },
-  voided: { label: "Voided", className: "bg-destructive/15 text-destructive" },
-};
 
 export default function ProposalDetailPage() {
   const params = useParams();
@@ -129,140 +114,89 @@ export default function ProposalDetailPage() {
                 <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">
                   {proposal.proposalNumber}
                 </h1>
-                <Badge
-                  className={
-                    statusConfig[uiStatus as keyof typeof statusConfig]
-                      ?.className || "bg-muted text-muted-foreground"
-                  }
-                >
-                  {statusConfig[uiStatus as keyof typeof statusConfig]?.label ||
-                    uiStatus}
-                </Badge>
+                <DocumentStatusBadge
+                  uiStatus={uiStatus}
+                  documentType="proposal"
+                  size="md"
+                />
               </div>
               <p className="text-muted-foreground mt-1 text-sm">PDF preview</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-            <CopyPublicLinkButton
-              publicSlug={proposal.publicSlug}
-              isIssued={isProposalPublicIssued(proposal.status)}
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="bg-transparent"
-                  onClick={handleDownloadPDF}
-                  disabled={downloading}
-                >
-                  {downloading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Download PDF</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {canVoidProposal(proposal) && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:text-destructive bg-transparent"
-                    onClick={() => proposalVoid.openVoidModal(proposal)}
-                  >
-                    <Ban className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Mark as voided</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 shrink-0 bg-transparent"
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+            >
+              {downloading ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 shrink-0" />
+              )}
+              Download PDF
+            </Button>
 
             {canSendProposalFromDetail(proposal.status) && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => setSendDialogOpen(true)}
-                    className="gap-2 shrink-0"
-                    size="sm"
-                    disabled={proposalActions.isSending}
-                  >
-                    <Send className="h-4 w-4 shrink-0" />
-                    <span className="hidden sm:inline">Send</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    {proposal.status === "REJECTED"
-                      ? "Resend proposal"
-                      : "Share or send proposal"}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                size="lg"
+                className="gap-2 shrink-0"
+                onClick={() => setSendDialogOpen(true)}
+                disabled={proposalActions.isSending}
+              >
+                <Send className="h-4 w-4 shrink-0" />
+                {proposal.status === "REJECTED" ? "Resend" : "Send"}
+              </Button>
             )}
 
             {proposal.status === "SENT" && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => markAsAccepted.mutate(proposal.id)}
-                    disabled={markAsAccepted.isPending}
-                    className="gap-2 shrink-0"
-                    size="sm"
-                    variant="secondary"
-                  >
-                    {markAsAccepted.isPending ? (
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 shrink-0" />
-                    )}
-                    <span className="hidden sm:inline">
-                      {markAsAccepted.isPending ? "Accepting…" : "Mark Accepted"}
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Mark proposal as accepted</p>
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                size="lg"
+                variant="secondary"
+                className="gap-2 shrink-0"
+                onClick={() => markAsAccepted.mutate(proposal.id)}
+                disabled={markAsAccepted.isPending}
+              >
+                {markAsAccepted.isPending ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 shrink-0" />
+                )}
+                {markAsAccepted.isPending ? "Accepting…" : "Mark as accepted"}
+              </Button>
             )}
 
             {proposal.status === "ACCEPTED" && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() =>
-                      proposalActions.handleConvertToInvoice(proposal)
-                    }
-                    disabled={proposalActions.isConvertingToInvoice}
-                    className="gap-2 shrink-0"
-                    size="sm"
-                    variant="secondary"
-                  >
-                    {proposalActions.isConvertingToInvoice ? (
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                    ) : (
-                      <Receipt className="h-4 w-4 shrink-0" />
-                    )}
-                    <span className="hidden sm:inline">
-                      {proposalActions.isConvertingToInvoice
-                        ? "Converting…"
-                        : "Convert to Invoice"}
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Convert to invoice</p>
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                size="lg"
+                variant="secondary"
+                className="gap-2 shrink-0"
+                onClick={() => proposalActions.handleConvertToInvoice(proposal)}
+                disabled={proposalActions.isConvertingToInvoice}
+              >
+                {proposalActions.isConvertingToInvoice ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                ) : (
+                  <Receipt className="h-4 w-4 shrink-0" />
+                )}
+                {proposalActions.isConvertingToInvoice
+                  ? "Converting…"
+                  : "Convert to Invoice"}
+              </Button>
+            )}
+
+            {canVoidProposal(proposal) && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 shrink-0 bg-transparent text-destructive hover:text-destructive"
+                onClick={() => proposalVoid.openVoidModal(proposal)}
+              >
+                <Ban className="h-4 w-4 shrink-0" />
+                Mark as voided
+              </Button>
             )}
           </div>
         </div>

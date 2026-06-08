@@ -7,6 +7,15 @@ import {
   baseAdvanceSchema,
 } from "./advance.base.js";
 
+function hasTipTapContent(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value !== "object") return false;
+  const node = value as Record<string, unknown>;
+  if (typeof node.text === "string") return node.text.trim().length > 0;
+  if (Array.isArray(node.content)) return node.content.some(hasTipTapContent);
+  return false;
+}
+
 export const createAdvanceSchema = baseAdvanceSchema
   .extend({
     ...advanceClientInputSchema.shape,
@@ -15,11 +24,9 @@ export const createAdvanceSchema = baseAdvanceSchema
   })
   .refine(
     (data) => {
-      // TODO: Add notes validation
-      // const hasNotes = (data.workCompleted ?? "").trim().length > 0;
+      const hasNotes = hasTipTapContent(data.workCompleted);
       const hasAttachments = (data.attachments?.length ?? 0) > 0;
-      // return hasNotes || hasAttachments;
-      return hasAttachments;
+      return hasNotes || hasAttachments;
     },
     {
       message: "Either progress notes or an attachment is required",

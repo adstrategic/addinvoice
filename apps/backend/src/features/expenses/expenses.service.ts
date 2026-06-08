@@ -366,6 +366,7 @@ export async function getExpenseDashboardStats(
   workspaceId: number,
   query: ExpenseStatsQuery,
 ): Promise<{
+  chartSeries: { label: string; amount: number }[];
   monthlyExpenses: { amount: number; month: string }[];
   recentExpenses: ExpenseEntity[];
   thisMonthExpenses: number;
@@ -373,7 +374,7 @@ export async function getExpenseDashboardStats(
   totalAmount: number;
   totalExpenses: number;
 }> {
-  const { workCategoryId } = query;
+  const { workCategoryId, period = "30d" } = query;
   const where: Prisma.ExpenseWhereInput = {
     workspaceId,
     ...(workCategoryId != null && { workCategoryId }),
@@ -459,6 +460,8 @@ export async function getExpenseDashboardStats(
     });
   }
 
+  const chartSeries = await buildExpenseChartSeries(prisma, where, period);
+
   const recentExpenses = recent.map((expense) => ({
     ...expense,
     total: Number(expense.total),
@@ -466,6 +469,7 @@ export async function getExpenseDashboardStats(
   }));
 
   return {
+    chartSeries,
     totalExpenses,
     totalAmount,
     thisWeekExpenses: thisWeekCount,
@@ -473,4 +477,102 @@ export async function getExpenseDashboardStats(
     monthlyExpenses,
     recentExpenses,
   };
+}
+
+function formatExpenseDayLabel(date: Date): string {
+  const month = MONTH_NAMES[date.getMonth()] ?? "Unknown";
+  return `${month} ${String(date.getDate())}`;
+}
+
+async function buildExpenseChartSeries(
+  prismaClient: typeof prisma,
+  where: Prisma.ExpenseWhereInput,
+  period: "7d" | "30d" | "6m" | "12m",
+): Promise<{ label: string; amount: number }[]> {
+  if (period === "7d" || period === "30d") {
+    const days = period === "7d" ? 7 : 30;
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(now.getDate() - (days - 1));
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+
+    const expenses = await prismaClient.expense.findMany({
+      select: { expenseDate: true, total: true },
+      where: { ...where, expenseDate: { gte: start, lte: end } },
+    });
+
+    const amountByDay = new Map<string, number>();
+    for (const e of expenses) {
+      const d = new Date(e.expenseDate);
+      d.setHours(0, 0, 0, 0);
+      const key = d.toISOString();
+      amountByDay.set(key, (amountByDay.get(key) ?? 0) + Number(e.total));
+    }
+
+    const series: { label: string; amount: number }[] = [];
+    for (let i = 0; i < days; i++) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
+      const dayKey = new Date(date);
+      dayKey.setHours(0, 0, 0, 0);
+      series.push({
+        label: formatExpenseDayLabel(date),
+        amount: amountByDay.get(dayKey.toISOString()) ?? 0,
+      });
+    }
+    return series;
+  }
+
+  const monthsCount = period === "6m" ? 6 : 12;
+  const now = new Date();
+  const startOfOldestMonth = new Date(
+    now.getFullYear(),
+    now.getMonth() - (monthsCount - 1),
+    1,
+  );
+  const endOfCurrentMonth = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999,
+  );
+
+  const expenses = await prismaClient.expense.findMany({
+    select: { expenseDate: true, total: true },
+    where: {
+      ...where,
+      expenseDate: { gte: startOfOldestMonth, lte: endOfCurrentMonth },
+    },
+  });
+
+  const series: { label: string; amount: number }[] = [];
+  for (let i = monthsCount - 1; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+    const monthEnd = new Date(
+      date.getFullYear(),
+      date.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+    const amount = expenses
+      .filter((e) => {
+        const d = new Date(e.expenseDate);
+        return d >= monthStart && d <= monthEnd;
+      })
+      .reduce((sum, e) => sum + Number(e.total), 0);
+    series.push({
+      label: MONTH_NAMES[date.getMonth()] ?? "Unknown",
+      amount,
+    });
+  }
+  return series;
 }

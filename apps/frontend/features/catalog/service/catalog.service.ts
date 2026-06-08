@@ -47,11 +47,7 @@ async function listCatalogs(
       },
     });
 
-    const validatedData = catalogResponseListSchema.parse(data);
-    return {
-      data: validatedData.data,
-      pagination: validatedData.pagination,
-    };
+    return catalogResponseListSchema.parse(data);
   } catch (error) {
     handleApiError(error);
   }

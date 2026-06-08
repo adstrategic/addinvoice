@@ -1,75 +1,92 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Receipt, DollarSign, Plus } from "lucide-react";
-import type { ExpenseResponse } from "../schema/expenses.schema";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DollarSign, CalendarDays } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { useExpenseDashboardStats } from "../hooks/useExpenseDashboardStats";
+import { ModuleHeroLabel } from "@/components/shared/module-ui";
+import { getListCardTheme } from "@/components/shared/list-card-theme";
+import { cn } from "@/lib/utils";
+
+const glassCard =
+  "bg-linear-to-br from-card/60 to-card/20 backdrop-blur-2xl border-white/20 dark:border-white/10 hover:-translate-y-1 hover:shadow-lg transition-all duration-300";
 
 interface ExpenseStatsProps {
-  expenses: ExpenseResponse[];
+  workCategoryId: string;
 }
 
-function formatTotal(value: number | string): number {
-  const n = typeof value === "string" ? parseFloat(value) : value;
-  return Number.isFinite(n) ? n : 0;
-}
+export function ExpenseStats({ workCategoryId }: ExpenseStatsProps) {
+  const workCategoryIdNum =
+    workCategoryId === "all" ? undefined : parseInt(workCategoryId, 10);
 
-export function ExpenseStats({ expenses }: ExpenseStatsProps) {
-  const totalExpenses = expenses.length;
-  const totalAmount = expenses.reduce(
-    (sum, e) => sum + formatTotal(e.total),
-    0,
-  );
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const newThisMonth = expenses.filter((e) => {
-    if (!e.createdAt) return false;
-    const d = new Date(e.createdAt);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  }).length;
+  const { data: stats, isLoading } = useExpenseDashboardStats({
+    workCategoryId: workCategoryIdNum,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mb-6">
+        <Skeleton className="h-4 w-32 mb-2" />
+        <Skeleton className="h-14 w-24 mb-5" />
+        <div className="flex gap-3 max-w-xl">
+          <Skeleton className="h-28 flex-1 rounded-xl" />
+          <Skeleton className="h-28 flex-1 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats) return null;
+
+  const theme = getListCardTheme("expense");
 
   return (
-    <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 md:grid-cols-3">
-      <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
-            Total Expenses
-          </CardTitle>
-          <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-xl sm:text-2xl font-bold text-foreground">
-            {totalExpenses}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="mb-6">
+      <div className="mb-5 text-center sm:text-left">
+        <ModuleHeroLabel variant="expense">Total Expenses</ModuleHeroLabel>
+        <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground font-mono tabular-nums">
+          {stats.totalExpenses}
+        </h2>
+      </div>
 
-      <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
-            Total Amount
-          </CardTitle>
-          <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-xl sm:text-2xl font-bold text-foreground">
-            ${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 max-w-xl">
+        <div className="snap-start shrink-0 min-w-[150px] sm:min-w-0">
+          <Card className={glassCard}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Total Amount
+              </CardTitle>
+              <div className={cn("p-1.5 rounded-lg", theme.statIconWrap)}>
+                <DollarSign className={cn("h-4 w-4", theme.statIcon)} />
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="text-2xl sm:text-3xl font-black font-mono text-foreground tabular-nums">
+                {formatCurrency(stats.totalAmount)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
-            New This Month
-          </CardTitle>
-          <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-xl sm:text-2xl font-bold text-foreground">
-            {newThisMonth}
-          </div>
-        </CardContent>
-      </Card>
+        <div className="snap-start shrink-0 min-w-[150px] sm:min-w-0">
+          <Card className={glassCard}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Registered This Month
+              </CardTitle>
+              <div className={cn("p-1.5 rounded-lg", theme.statIconWrap)}>
+                <CalendarDays className={cn("h-4 w-4", theme.statIcon)} />
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="text-3xl font-black font-mono text-foreground">
+                {stats.thisMonthExpenses}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { plainTextFromTipTapJson } from "@/lib/rich-text-plain";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,9 +8,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { Package, MoreVertical, Edit, Trash2 } from "lucide-react";
 import type { CatalogResponse } from "@/features/catalog";
+import { formatCurrency } from "@/lib/utils";
+import {
+  ListCard,
+  ListCardBody,
+  ListCardMain,
+  ListCardHeaderRow,
+  ListCardMetricGrid,
+  ListCardMetricsDesktop,
+  ListCardFooter,
+} from "@/components/shared/list-card";
 
 interface CatalogCardProps {
   catalog: CatalogResponse;
@@ -19,62 +27,76 @@ interface CatalogCardProps {
   onDelete: (catalog: CatalogResponse) => void;
 }
 
-/**
- * Catalog card component
- * Displays catalog item information and action menu
- */
-export function CatalogCard({ catalog, onEdit, onDelete }: CatalogCardProps) {
-  const quantityUnitLabels = {
-    UNITS: "Units",
-    HOURS: "Hours",
-    DAYS: "Days",
+const quantityUnitLabels = {
+  UNITS: "UNIT",
+  HOURS: "HOUR",
+  DAYS: "DAY",
+} as const;
+
+function formatPricePerUnit(price: number, unit: keyof typeof quantityUnitLabels) {
+  return `${formatCurrency(price)} per ${quantityUnitLabels[unit]}`;
+}
+
+export function CatalogCard({
+  catalog,
+  onEdit,
+  onDelete,
+}: CatalogCardProps) {
+  const description =
+    plainTextFromTipTapJson(catalog.description as unknown) ||
+    "No description provided.";
+  const priceLabel = formatPricePerUnit(catalog.price, catalog.quantityUnit);
+
+  const actionsMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 hover:bg-sky-500/10 hover:text-sky-600 transition-colors duration-200"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onEdit(catalog.sequence)}>
+          <Edit className="h-4 w-4 mr-2" />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={() => onDelete(catalog)}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const priceMetric = {
+    label: "Price",
+    value: priceLabel,
+    valueClassName: "text-sky-600",
   };
 
   return (
-    <Card className="bg-card border-border hover:shadow-md transition-shadow">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg">{catalog.name}</CardTitle>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge variant="secondary" className="text-xs">
-                {quantityUnitLabels[catalog.quantityUnit]}
-              </Badge>
-            </div>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(catalog.sequence)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => onDelete(catalog)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-[2.5rem]">
-          {plainTextFromTipTapJson(catalog.description as unknown) ||
-            "No description provided."}
+    <ListCard clickable={false} variant="catalog">
+      <ListCardBody>
+        <ListCardMain icon={Package} variant="catalog">
+          <ListCardHeaderRow title={catalog.name} actions={actionsMenu} />
+
+          <ListCardMetricGrid variant="catalog" metrics={[priceMetric]} />
+        </ListCardMain>
+
+        <ListCardMetricsDesktop metrics={[priceMetric]} actions={actionsMenu} />
+      </ListCardBody>
+
+      <ListCardFooter variant="catalog">
+        <p className="text-xs text-muted-foreground line-clamp-2">
+          {description}
         </p>
-        <div className="flex items-center justify-between">
-          <span className="text-xl font-bold text-primary">
-            ${catalog.price.toFixed(2)}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
+      </ListCardFooter>
+    </ListCard>
   );
 }

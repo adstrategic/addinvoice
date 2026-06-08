@@ -70,7 +70,7 @@ export function TourSelectionModal({
             </DialogHeader>
 
             <div className="p-6 grid gap-4 md:grid-cols-2 overflow-y-auto min-h-0 flex-1">
-              <motion.div
+              <div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -99,9 +99,9 @@ export function TourSelectionModal({
                     </Button>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
 
-              <motion.div
+              <div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.1 }}
@@ -132,7 +132,7 @@ export function TourSelectionModal({
                     </Button>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
             </div>
           </>
         ) : (
@@ -163,7 +163,7 @@ export function TourSelectionModal({
                 {TOUR_REGISTRY.map((module, index) => {
                   const Icon = module.icon;
                   return (
-                    <motion.div
+                    <div
                       key={module.id}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -187,7 +187,7 @@ export function TourSelectionModal({
                           </p>
                         </CardContent>
                       </Card>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>

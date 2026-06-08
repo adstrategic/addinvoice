@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
+  EstimateStats,
   EstimateFilters,
   EstimateList,
   EstimateActions,
@@ -15,7 +16,6 @@ import { TablePagination } from "@/components/TablePagination";
 import { useDebouncedTableParams } from "@/hooks/useDebouncedTableParams";
 import { Card, CardContent } from "@/components/ui/card";
 import LoadingComponent from "@/components/loading-component";
-import { motion } from "framer-motion";
 import { SendEstimateDialog } from "@/components/send-estimate-dialog";
 import { ConvertToProposalDialog } from "@/components/convert-to-proposal-dialog";
 import { BusinessSelectionDialog } from "@/components/business-selection-dialog";
@@ -29,8 +29,8 @@ import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useDownloadEstimatePdf } from "../hooks/useDownloadEstimatePDF";
-import { Button } from "@/components/ui/button";
-import { Mic } from "lucide-react";
+import { VoiceCreateFab } from "@/components/shared/VoiceCreateFab";
+import { ArrowLeft } from "lucide-react";
 import { useLimitGuard } from "@/hooks/use-limit-guard";
 
 const VALID_STATUSES = [
@@ -71,7 +71,7 @@ export default function EstimatesContent() {
       params.set("status", value);
     }
     params.set("page", "1");
-    router.push(`${pathname}?${params.toString()}`);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
@@ -86,12 +86,17 @@ export default function EstimatesContent() {
   const {
     data: estimatesData,
     isLoading,
+    isFetching,
+    isPlaceholderData,
     error,
   } = useEstimates({
     page: currentPage,
     search: debouncedSearch || undefined,
     status: statusFilterToApiParam(statusFilter),
   });
+
+  const isInitialLoad = isLoading && !estimatesData;
+  const isListLoading = isFetching && isPlaceholderData;
 
   const downloadPdf = useDownloadEstimatePdf();
 
@@ -102,15 +107,44 @@ export default function EstimatesContent() {
   const estimateActions = useEstimateActions();
   const { guardCreate } = useLimitGuard();
 
-  const handleCreateEstimate = () => {
+  const handleCreateEstimate = useCallback(() => {
     if (guardCreate("estimates")) return;
     estimateManager.handleCreateEstimate();
-  };
+  }, [guardCreate, estimateManager]);
 
-  const handleCreateEstimateByVoice = () => {
+  const handleCreateEstimateByVoice = useCallback(() => {
     if (guardCreate("estimates", { viaVoice: true })) return;
     estimateManager.handleCreateEstimateByVoice();
-  };
+  }, [guardCreate, estimateManager]);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(
+        estimateManager.isFormOpen ? "app:form-open" : "app:form-close",
+      ),
+    );
+  }, [estimateManager.isFormOpen]);
+
+  const actionParam = searchParams.get("action");
+  const didTriggerCreateRef = useRef(false);
+
+  useEffect(() => {
+    if (actionParam !== "create") {
+      didTriggerCreateRef.current = false;
+      return;
+    }
+    if (estimateManager.isLoadingBusinesses) return;
+    if (didTriggerCreateRef.current) return;
+    didTriggerCreateRef.current = true;
+    router.replace(pathname);
+    handleCreateEstimate();
+  }, [
+    actionParam,
+    estimateManager.isLoadingBusinesses,
+    handleCreateEstimate,
+    pathname,
+    router,
+  ]);
 
   const handleAccept = (estimate: EstimateDashboardResponse) => {
     markAsAccepted.mutate(estimate.id);
@@ -137,7 +171,7 @@ export default function EstimatesContent() {
     setConvertToProposalDialogOpen(true);
   };
 
-  if (isLoading) return <LoadingComponent variant="dashboard" />;
+  if (isInitialLoad) return <LoadingComponent variant="dashboard" />;
 
   if (error || !estimatesData) {
     return (
@@ -160,36 +194,46 @@ export default function EstimatesContent() {
   // If business is selected, show estimate form instead of list
   if (estimateManager.isFormOpen && estimateManager.selectedBusiness) {
     return (
-      <EstimateForm
-        selectedBusiness={estimateManager.selectedBusiness}
-        form={estimateManager.form}
-        mode={estimateManager.mode}
-        isLoading={estimateManager.isMutating}
-        isLoadingEstimate={estimateManager.isLoadingEstimate}
-        isLoadingNumber={estimateManager.isLoadingNextNumber}
-        estimateError={estimateManager.estimateError}
-        onSubmit={estimateManager.onSubmit}
-        onCancel={estimateManager.close}
-        existingEstimate={estimateManager.estimate}
-        createdClient={estimateManager.createdClient}
-        saveBeforeSend={estimateManager.saveBeforeSend}
-        saveBeforeOpenSubform={estimateManager.saveBeforeOpenSubform}
-        onConvertToInvoice={estimateManager.onConvertToInvoice}
-        isConvertingToInvoice={estimateManager.isConvertingToInvoice}
-        draftItems={estimateManager.draftItems}
-        draftDescriptiveItems={estimateManager.draftDescriptiveItems}
-        draftTotals={estimateManager.draftTotals}
-        onDraftCreateItem={estimateManager.addDraftItem}
-        onDraftUpdateItem={estimateManager.updateDraftItem}
-        onDraftDeleteItem={estimateManager.removeDraftItem}
-        onDraftCreateDescriptiveItem={estimateManager.addDraftDescriptiveItem}
-        onDraftUpdateDescriptiveItem={
-          estimateManager.updateDraftDescriptiveItem
-        }
-        onDraftDeleteDescriptiveItem={
-          estimateManager.removeDraftDescriptiveItem
-        }
-      />
+      <div>
+        <button
+          type="button"
+          onClick={estimateManager.close}
+          className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Estimates
+        </button>
+        <EstimateForm
+          selectedBusiness={estimateManager.selectedBusiness}
+          form={estimateManager.form}
+          mode={estimateManager.mode}
+          isLoading={estimateManager.isMutating}
+          isLoadingEstimate={estimateManager.isLoadingEstimate}
+          isLoadingNumber={estimateManager.isLoadingNextNumber}
+          estimateError={estimateManager.estimateError}
+          onSubmit={estimateManager.onSubmit}
+          onCancel={estimateManager.close}
+          existingEstimate={estimateManager.estimate}
+          createdClient={estimateManager.createdClient}
+          saveBeforeSend={estimateManager.saveBeforeSend}
+          saveBeforeOpenSubform={estimateManager.saveBeforeOpenSubform}
+          onConvertToInvoice={estimateManager.onConvertToInvoice}
+          isConvertingToInvoice={estimateManager.isConvertingToInvoice}
+          draftItems={estimateManager.draftItems}
+          draftDescriptiveItems={estimateManager.draftDescriptiveItems}
+          draftTotals={estimateManager.draftTotals}
+          onDraftCreateItem={estimateManager.addDraftItem}
+          onDraftUpdateItem={estimateManager.updateDraftItem}
+          onDraftDeleteItem={estimateManager.removeDraftItem}
+          onDraftCreateDescriptiveItem={estimateManager.addDraftDescriptiveItem}
+          onDraftUpdateDescriptiveItem={
+            estimateManager.updateDraftDescriptiveItem
+          }
+          onDraftDeleteDescriptiveItem={
+            estimateManager.removeDraftDescriptiveItem
+          }
+        />
+      </div>
     );
   }
 
@@ -197,13 +241,8 @@ export default function EstimatesContent() {
     <>
       <div>
         {/* Header */}
-        <motion.div
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+          <div className="text-center sm:text-left">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Estimates
             </h1>
@@ -215,40 +254,41 @@ export default function EstimatesContent() {
             onCreateEstimate={handleCreateEstimate}
             onCreateByVoice={handleCreateEstimateByVoice}
           />
-        </motion.div>
+        </div>
 
-        {/* <EstimateStats stats={estimatesData.stats} /> */}
+        <EstimateStats stats={estimatesData.stats} />
 
-        <EstimateFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearch}
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-        />
+        <div className="bg-card rounded-2xl border border-border/60 px-4 sm:px-6 pt-5 pb-5 shadow-sm">
+          <EstimateFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearch}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+          />
 
-        {/* Estimates List */}
-        <EstimateList
-          estimates={estimates}
-          statusFilter={statusFilter}
-          onDownload={handleDownloadPDF}
-          onSend={handleSendEstimate}
-          onDelete={estimateDelete.openDeleteModal}
-          onVoid={estimateVoid.openVoidModal}
-          onAccept={handleAccept}
-          onConvertToInvoice={estimateActions.handleConvertToInvoice}
-          onConvertToProposal={handleConvertToProposal}
-        >
-          {pagination && (
-            <TablePagination
-              currentPage={currentPage}
-              totalPages={pagination.totalPages}
-              totalItems={pagination.total}
-              onPageChange={setPage}
-              emptyMessage="No estimates found"
-              itemLabel="estimates"
-            />
-          )}
-        </EstimateList>
+          <EstimateList
+            estimates={estimates}
+            isLoading={isListLoading}
+            onDownload={handleDownloadPDF}
+            onSend={handleSendEstimate}
+            onDelete={estimateDelete.openDeleteModal}
+            onVoid={estimateVoid.openVoidModal}
+            onAccept={handleAccept}
+            onConvertToInvoice={estimateActions.handleConvertToInvoice}
+            onConvertToProposal={handleConvertToProposal}
+          >
+            {pagination && (
+              <TablePagination
+                currentPage={currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.total}
+                onPageChange={setPage}
+                emptyMessage="No estimates found"
+                itemLabel="estimates"
+              />
+            )}
+          </EstimateList>
+        </div>
       </div>
 
       {/* Delete Confirmation Modal - Separate logic */}
@@ -323,16 +363,11 @@ export default function EstimatesContent() {
         }}
       />
 
-      <Button
-        type="button"
-        size="icon-lg"
-        className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
+      <VoiceCreateFab
         onClick={handleCreateEstimateByVoice}
-        aria-label="Create estimate by voice"
-        data-tour-id="estimates-voice-btn"
-      >
-        <Mic className="size-8" />
-      </Button>
+        ariaLabel="Create estimate by voice"
+        tourId="estimates-voice-btn"
+      />
     </>
   );
 }

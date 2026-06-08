@@ -1,69 +1,71 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, FileText } from "lucide-react";
+import { Building2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ClientCard } from "./ClientCard";
-import type { ClientResponse } from "@/features/clients";
+import type { ClientResponse } from "@addinvoice/schemas";
+import { cn } from "@/lib/utils";
 
 interface ClientListProps {
   clients: ClientResponse[];
+  isLoading?: boolean;
   onViewDetails: (sequence: number) => void;
   onEdit: (sequence: number) => void;
-  // onViewInvoices: (client: ClientResponse) => void;
   onSendEmail: (client: ClientResponse) => void;
   onDelete: (client: ClientResponse) => void;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
-/**
- * Client list component
- * Displays a list of clients with search results count
- */
+function ClientListSkeleton() {
+  return (
+    <div className="space-y-3" aria-busy="true" aria-label="Loading clients">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Skeleton key={i} className="h-24 w-full rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
 export function ClientList({
-  children,
   clients,
+  isLoading = false,
   onViewDetails,
   onEdit,
-  // onViewInvoices,
   onSendEmail,
   onDelete,
+  children,
 }: ClientListProps) {
   return (
-    <Card data-tour-id="clients-list" className="bg-card border-border">
-      <CardHeader>
-        <CardTitle className="text-lg sm:text-xl font-bold text-foreground">
-          All Clients
-          <span className="text-muted-foreground font-normal ml-2">
-            ({clients.length})
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {clients.length == 0 ? (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                No clients found matching your filters
-              </p>
-            </div>
-          ) : (
-            clients.map((client) => (
-              <ClientCard
-                key={client.id}
-                client={client}
-                onViewDetails={onViewDetails}
-                onEdit={onEdit}
-                // onViewInvoices={onViewInvoices}
-                onSendEmail={onSendEmail}
-                onDelete={onDelete}
-              />
-            ))
-          )}
+    <div
+      data-tour-id="clients-list"
+      className={cn(
+        "transition-opacity duration-200",
+        isLoading && "opacity-70",
+      )}
+    >
+      {isLoading ? (
+        <ClientListSkeleton />
+      ) : clients.length === 0 ? (
+        <div className="py-12 text-center">
+          <Building2 className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          <p className="text-muted-foreground">No clients found</p>
         </div>
-
-        {children}
-      </CardContent>
-    </Card>
+      ) : (
+        <div className="space-y-3">
+          {clients.map((client, index) => (
+            <ClientCard
+              key={client.id}
+              client={client}
+              index={index}
+              onViewDetails={onViewDetails}
+              onEdit={onEdit}
+              onSendEmail={onSendEmail}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      )}
+      {children}
+    </div>
   );
 }

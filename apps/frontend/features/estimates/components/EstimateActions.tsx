@@ -15,26 +15,26 @@ export function EstimateActions({
   onCreateEstimate,
 }: EstimateActionsProps) {
   return (
-    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+    <div className="flex flex-wrap gap-2">
       <Button
         type="button"
         variant="outline"
+        size="lg"
         className="gap-2 flex-1 md:flex-none cursor-pointer"
         onClick={onCreateByVoice}
       >
         <Mic className="h-4 w-4" />
         Add by voice
       </Button>
-      <div className="flex-1 sm:flex-none" data-tour-id="estimates-create-btn">
-        <Button
-          onClick={onCreateEstimate}
-          size="lg"
-          className="cursor-pointer gap-2 w-full hover:shadow-lg hover:shadow-primary/20 transition-all duration-300"
-        >
-          <Plus className="h-5 w-5" />
-          Create Estimate
-        </Button>
-      </div>
+      <Button
+        onClick={onCreateEstimate}
+        size="lg"
+        data-tour-id="estimates-create-btn"
+        className="cursor-pointer flex-1 md:flex-none gap-2 hover:shadow-lg hover:shadow-primary/20 transition-all duration-300"
+      >
+        <Plus className="h-5 w-5" />
+        Create Estimate
+      </Button>
     </div>
   );
 }

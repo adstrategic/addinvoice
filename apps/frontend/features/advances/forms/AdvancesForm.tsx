@@ -170,14 +170,6 @@ export function AdvanceForm({
     <div className="pb-28">
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onCancel}
-            className="rounded-full"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
               {mode === "create" ? "New Work Advance" : "Edit Work Advance"}
@@ -421,9 +413,10 @@ export function AdvanceForm({
                         <p>
                           <span className="text-gray-400">DATE:</span>{" "}
                           <span className="text-gray-900">
-                            {format(form.watch("advanceDate"), "PPP", {
-                              locale: enUS,
-                            }) || "—"}
+                            {(() => {
+                              const d = form.watch("advanceDate");
+                              return d ? format(d, "PPP", { locale: enUS }) : "—";
+                            })()}
                           </span>
                         </p>
                         <p>

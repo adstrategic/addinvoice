@@ -67,7 +67,8 @@ export function TourOverlay() {
   const currentStep = steps[currentStepIndex];
   const targetId = currentStep?.targetId ?? null;
   const isLastStep = currentStepIndex === steps.length - 1;
-  const suppressNext = !!currentStep?.navigateTo || !!currentStep?.autoAdvanceOn;
+  const suppressNext =
+    !!currentStep?.navigateTo || !!currentStep?.autoAdvanceOn;
   const isAutoAdvanceStep = !!currentStep?.autoAdvanceOn;
   const isInteractionStep =
     suppressNext || (isMobile && isSidebarTarget(targetId));
@@ -161,10 +162,7 @@ export function TourOverlay() {
     : { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
 
   return createPortal(
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <div
       className={cn(
         "fixed inset-0 overflow-hidden pointer-events-none",
         isMobile ? "z-[55]" : "z-30",
@@ -173,24 +171,15 @@ export function TourOverlay() {
       {shouldShowBackdrop &&
         (targetRect ? (
           <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute bg-black/50 transition-all duration-300 ease-out pointer-events-auto"
               style={{ top: 0, left: 0, right: 0, height: targetRect.top }}
             />
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute bg-black/50 transition-all duration-300 ease-out pointer-events-auto"
               style={{ top: targetRect.bottom, left: 0, right: 0, bottom: 0 }}
             />
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute bg-black/50 transition-all duration-300 ease-out pointer-events-auto"
               style={{
                 top: targetRect.top,
@@ -199,10 +188,7 @@ export function TourOverlay() {
                 height: targetRect.height,
               }}
             />
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
+            <div
               className="absolute bg-black/50 transition-all duration-300 ease-out pointer-events-auto"
               style={{
                 top: targetRect.top,
@@ -213,12 +199,7 @@ export function TourOverlay() {
             />
           </>
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
-          />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto" />
         ))}
 
       <div
@@ -228,17 +209,11 @@ export function TourOverlay() {
         )}
       >
         <AnimatePresence mode="wait">
-          <motion.div
+          <div
             key={currentStepIndex}
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.3 }}
             className={cn(
               "pointer-events-auto",
-              isMobile
-                ? "w-full"
-                : "absolute w-[350px] max-w-[90vw]",
+              isMobile ? "w-full" : "absolute w-[350px] max-w-[90vw]",
             )}
             style={isMobile ? undefined : tooltipStyle}
           >
@@ -286,10 +261,10 @@ export function TourOverlay() {
                 </div>
               </CardFooter>
             </Card>
-          </motion.div>
+          </div>
         </AnimatePresence>
       </div>
-    </motion.div>,
+    </div>,
     document.body,
   );
 }
@@ -331,7 +306,10 @@ function getTooltipStyle(
     case "right":
       top = rect.top + rect.height / 2 - TOOLTIP_CARD_HEIGHT / 2;
       left = rect.right + TOOLTIP_PADDING;
-      if ((left as number) + TOOLTIP_CARD_WIDTH > windowWidth - TOOLTIP_PADDING) {
+      if (
+        (left as number) + TOOLTIP_CARD_WIDTH >
+        windowWidth - TOOLTIP_PADDING
+      ) {
         top = rect.bottom + TOOLTIP_PADDING;
         left = rect.left + rect.width / 2 - TOOLTIP_CARD_WIDTH / 2;
         transform = "";
@@ -363,10 +341,17 @@ function getTooltipStyle(
     top = TOOLTIP_PADDING;
   }
 
-  if (rectsOverlap(
-    { top: top as number, left: left as number, width: TOOLTIP_CARD_WIDTH, height: TOOLTIP_CARD_HEIGHT },
-    rect,
-  )) {
+  if (
+    rectsOverlap(
+      {
+        top: top as number,
+        left: left as number,
+        width: TOOLTIP_CARD_WIDTH,
+        height: TOOLTIP_CARD_HEIGHT,
+      },
+      rect,
+    )
+  ) {
     top = rect.bottom + TOOLTIP_PADDING;
     left = Math.max(
       TOOLTIP_PADDING,

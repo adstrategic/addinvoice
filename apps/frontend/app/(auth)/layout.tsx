@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-import { motion } from "framer-motion";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
 
@@ -10,12 +9,7 @@ export default function AuthLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0F2027] via-[#203A43] to-[#2C5364] sm:p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
+      <div className="w-full max-w-md">
         <Card className="border-0 bg-white! shadow-none p-6 md:border md:border-border/50 md:shadow-2xl md:bg-card/95 md:backdrop-blur">
           <div className="flex justify-center mb-6">
             <Image
@@ -33,7 +27,7 @@ export default function AuthLayout({
             </p>
           </div>
         </Card>
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { paymentsService, type ListPaymentsParams } from "../service/payments.service";
 
 export const paymentKeys = {
@@ -18,7 +18,7 @@ export function usePayments(params?: ListPaymentsParams) {
     queryKey: paymentKeys.list(params),
     queryFn: () => paymentsService.list(params),
     staleTime: 30 * 1000,
-    placeholderData: (previousData) => previousData,
+    placeholderData: keepPreviousData,
   });
 }
 

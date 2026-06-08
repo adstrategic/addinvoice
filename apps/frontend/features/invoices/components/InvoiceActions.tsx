@@ -15,27 +15,28 @@ export function InvoiceActions({
   onCreateByVoice,
 }: InvoiceActionsProps) {
   return (
-    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+    <div className="flex gap-2 flex-wrap">
       <Button
         type="button"
         variant="outline"
-        className="gap-2 flex-1 md:flex-none cursor-pointer"
+        size="lg"
+        className="gap-2 cursor-pointer flex-1 md:flex-none"
         onClick={onCreateByVoice}
         data-tour-id="invoices-voice-btn"
       >
-        <Mic className="h-4 w-4" />
+        <Mic className="h-5 w-5" />
         Add by voice
       </Button>
-      <div className="flex-1 sm:flex-none" data-tour-id="invoices-create-btn">
-        <Button
-          onClick={onCreateInvoice}
-          size="lg"
-          className="cursor-pointer gap-2 w-full hover:shadow-lg hover:shadow-primary/20 transition-all duration-300"
-        >
-          <Plus className="h-5 w-5" />
-          Create Invoice
-        </Button>
-      </div>
+      <Button
+        type="button"
+        onClick={onCreateInvoice}
+        size="lg"
+        className="cursor-pointer flex-1 md:flex-none gap-2 hover:shadow-lg hover:shadow-primary/20 transition-all duration-300"
+        data-tour-id="invoices-create-btn"
+      >
+        <Plus className="h-5 w-5" />
+        Create Invoice
+      </Button>
     </div>
   );
 }

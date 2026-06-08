@@ -58,7 +58,25 @@ export const publicProposalSummarySchema = proposalResponseSchema.omit({
   convertedToInvoiceId: true,
 });
 
+export const proposalListStatsSchema = z.object({
+  /** Workspace-wide count (all statuses); not scoped to list status tab */
+  total: z.number().int().nonnegative(),
+});
+
+export const listProposalsResponseSchema = z.object({
+  data: z.array(proposalDashboardResponseSchema),
+  pagination: z.object({
+    limit: z.number().int().positive(),
+    page: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+    totalPages: z.number().int().nonnegative(),
+  }),
+  stats: proposalListStatsSchema,
+});
+
 export type ProposalDescriptiveItemResponse = z.infer<typeof proposalDescriptiveItemResponseSchema>;
 export type ProposalResponse = z.infer<typeof proposalResponseSchema>;
 export type ProposalDashboardResponse = z.infer<typeof proposalDashboardResponseSchema>;
+export type ProposalListStats = z.infer<typeof proposalListStatsSchema>;
+export type ListProposalsResponse = z.infer<typeof listProposalsResponseSchema>;
 export type PublicProposalSummary = z.infer<typeof publicProposalSummarySchema>;

@@ -44,6 +44,7 @@ export { useProposalVoid } from "./hooks/useProposalVoid";
 
 // Components
 export { default as ProposalsContent } from "./components/ProposalContent";
+export { ProposalStats } from "./components/ProposalStats";
 export { ProposalFilters } from "./components/ProposalFilters";
 export { ProposalList } from "./components/ProposalList";
 export { ProposalCard } from "./components/ProposalCard";

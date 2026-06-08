@@ -20,11 +20,6 @@ import {
   useExpenseManager,
 } from "@/features/expenses";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DetailPageLoading } from "@/components/loading-component";
 import { formatCurrency, formatDateOnly } from "@/lib/utils";
@@ -89,37 +84,25 @@ export default function ExpenseDetailPage() {
               </p>
             </div>
           </div>
-          <div className="flex justify-center gap-6">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-14 w-14 bg-transparent"
-                  onClick={() => editExpense.openEdit(sequence)}
-                >
-                  <Edit className="size-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Edit expense</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-14 w-14 text-destructive hover:text-destructive bg-transparent"
-                  onClick={() => expenseDelete.openDeleteModal(expense)}
-                >
-                  <Trash2 className="size-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete expense</p>
-              </TooltipContent>
-            </Tooltip>
+          <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 shrink-0 bg-transparent"
+              onClick={() => editExpense.openEdit(sequence)}
+            >
+              <Edit className="h-4 w-4 shrink-0" />
+              Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 shrink-0 bg-transparent text-destructive hover:text-destructive"
+              onClick={() => expenseDelete.openDeleteModal(expense)}
+            >
+              <Trash2 className="h-4 w-4 shrink-0" />
+              Delete
+            </Button>
           </div>
         </div>
 

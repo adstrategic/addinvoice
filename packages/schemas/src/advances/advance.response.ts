@@ -39,6 +39,11 @@ export const advanceListItemResponseSchema = advanceResponseSchema.omit({
   attachments: true,
 });
 
+export const advanceListStatsSchema = z.object({
+  /** Workspace-wide count (all statuses); not scoped to list status tab */
+  total: z.number().int().nonnegative(),
+});
+
 export const listAdvancesResponseSchema = z.object({
   data: z.array(advanceListItemResponseSchema),
   pagination: z.object({
@@ -47,6 +52,7 @@ export const listAdvancesResponseSchema = z.object({
     total: z.number().int().nonnegative(),
     totalPages: z.number().int().nonnegative(),
   }),
+  stats: advanceListStatsSchema,
 });
 
 export const pendingAdvanceForInvoiceResponseSchema =

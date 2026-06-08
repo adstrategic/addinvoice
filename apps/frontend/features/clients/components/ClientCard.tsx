@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,118 +15,132 @@ import {
   MoreVertical,
   Eye,
   Edit,
-  FileText,
   Trash2,
 } from "lucide-react";
-import type { ClientResponse } from "@/features/clients";
+import type { ClientResponse } from "@addinvoice/schemas";
+import {
+  ListCard,
+  ListCardBody,
+  ListCardMain,
+  ListCardHeaderRow,
+  ListCardSubtitle,
+  ListCardFooter,
+  ListCardFooterLabel,
+  ListCardFooterValue,
+  getClientDisplayLines,
+} from "@/components/shared/list-card";
 
 interface ClientCardProps {
   client: ClientResponse;
+  index?: number;
   onViewDetails: (sequence: number) => void;
   onEdit: (sequence: number) => void;
-  // onViewInvoices: (client: ClientResponse) => void;
   onSendEmail: (client: ClientResponse) => void;
   onDelete: (client: ClientResponse) => void;
 }
 
-/**
- * Client card component
- * Displays client information and action menu
- */
 export function ClientCard({
   client,
+  index = 0,
   onViewDetails,
   onEdit,
-  // onViewInvoices,
   onSendEmail,
   onDelete,
 }: ClientCardProps) {
+  const { businessName: clientBusinessName } = getClientDisplayLines(client);
+
+  const actionsMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 hover:bg-indigo-500/10 hover:text-indigo-600 transition-colors duration-200"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onViewDetails(client.sequence)}>
+          <Eye className="h-4 w-4 mr-2" />
+          View Details
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onEdit(client.sequence)}>
+          <Edit className="h-4 w-4 mr-2" />
+          Edit
+        </DropdownMenuItem>
+        {client.email && (
+          <DropdownMenuItem onClick={() => onSendEmail(client)}>
+            <Mail className="h-4 w-4 mr-2" />
+            Send Email
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => onDelete(client)}
+          className="text-destructive"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-secondary/50 border border-border hover:border-primary/50 transition-colors">
-      <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
-        <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-          <Building2 className="h-6 w-6 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap mb-1">
-            <p className="font-semibold text-foreground text-sm sm:text-base">
-              {client.name}
-            </p>
-            {client.businessName && (
-              <Badge
-                variant="default"
-                className="bg-primary/20 text-primary hover:bg-primary/30"
-              >
-                {client.businessName}
-              </Badge>
+    <ListCard clickable={false} variant="client">
+      <ListCardBody>
+        <ListCardMain icon={Building2} variant="client">
+          <ListCardHeaderRow title={client.name} actions={actionsMenu}>
+            {clientBusinessName && (
+              <ListCardSubtitle>{clientBusinessName}</ListCardSubtitle>
+            )}
+          </ListCardHeaderRow>
+        </ListCardMain>
+
+        <div className="hidden sm:block shrink-0">{actionsMenu}</div>
+      </ListCardBody>
+
+      {(client.email || client.phone) && (
+        <ListCardFooter
+          variant="client"
+          className="justify-start gap-x-2 gap-y-1.5 sm:justify-between"
+        >
+          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+            {client.email && (
+              <>
+                <Mail
+                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                  aria-hidden
+                />
+                <ListCardFooterLabel>Email</ListCardFooterLabel>
+                <ListCardFooterValue className="truncate">
+                  {client.email}
+                </ListCardFooterValue>
+              </>
+            )}
+            {client.phone && !client.email && (
+              <>
+                <Phone
+                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                  aria-hidden
+                />
+                <span className="text-xs font-medium text-foreground">
+                  {client.phone}
+                </span>
+              </>
             )}
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-            {client.email && (
-              <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 truncate">
-                <Mail className="h-3 w-3 shrink-0" />
-                <span className="truncate">{client.email}</span>
-              </p>
-            )}
-            {client.phone && (
-              <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
-                <Phone className="h-3 w-3 shrink-0" />
+          {client.phone && client.email && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+              <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="font-medium text-foreground">
                 {client.phone}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 pl-[60px] sm:pl-0">
-        <div className="text-left sm:text-right">
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            {/* {client.totalInvoices} invoices */}
-          </p>
-          <p className="font-semibold text-foreground text-sm sm:text-base">
-            {/* ${(client.totalAmount || 0).toLocaleString()} */}
-          </p>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0 hover:bg-primary/10 hover:text-primary transition-colors duration-300"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onViewDetails(client.sequence)}>
-              <Eye className="h-4 w-4 mr-2" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEdit(client.sequence)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </DropdownMenuItem>
-            {/* TODO: Add view invoices functionality */}
-            {/* <DropdownMenuItem onClick={() => onViewInvoices(client)}>
-              <FileText className="h-4 w-4 mr-2" />
-              View Invoices
-            </DropdownMenuItem> */}
-            {client.email && (
-              <DropdownMenuItem onClick={() => onSendEmail(client)}>
-                <Mail className="h-4 w-4 mr-2" />
-                Send Email
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => onDelete(client)}
-              className="text-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
+              </span>
+            </span>
+          )}
+        </ListCardFooter>
+      )}
+    </ListCard>
   );
 }

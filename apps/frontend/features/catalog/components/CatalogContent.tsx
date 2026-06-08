@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import {
   CatalogList,
   CatalogFilters,
+  CatalogStats,
   CatalogActions,
   useCatalogs,
   CatalogFormModal,
@@ -16,16 +17,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import LoadingComponent from "@/components/loading-component";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { BusinessSelectionDialog } from "@/components/business-selection-dialog";
-import { Mic, Package } from "lucide-react";
 import type { CatalogSortBy } from "./CatalogFilters";
 import { VoiceCatalogPromptDialog } from "./VoiceCatalogPromptDialog";
-import { Button } from "@/components/ui/button";
+import { VoiceCreateFab } from "@/components/shared/VoiceCreateFab";
 import { useLimitGuard } from "@/hooks/use-limit-guard";
 
-/**
- * Catalog page component
- * Displays catalog list with server-side search, pagination, and management actions
- */
 export default function CatalogContent() {
   const { currentPage, setPage, debouncedSearch, searchTerm, setSearch } =
     useDebouncedTableParams();
@@ -42,10 +38,10 @@ export default function CatalogContent() {
     catalogManager.openCreate();
   };
 
-  const handleCreateCatalogByVoice = () => {
+  const handleCreateCatalogByVoice = useCallback(() => {
     if (guardCreate("catalog", { viaVoice: true })) return;
     catalogManager.handleCreateCatalogByVoice();
-  };
+  }, [guardCreate, catalogManager]);
 
   const handleBusinessIdChange = useCallback(
     (value: string) => {
@@ -63,10 +59,11 @@ export default function CatalogContent() {
     [setPage],
   );
 
-  // Fetch catalogs with pagination, search, business filter, and sort
   const {
     data: catalogsData,
     isLoading,
+    isFetching,
+    isPlaceholderData,
     error,
   } = useCatalogs({
     page: currentPage,
@@ -77,39 +74,37 @@ export default function CatalogContent() {
     sortOrder,
   });
 
+  const isInitialLoad = isLoading && !catalogsData;
+  const isListLoading = isFetching && isPlaceholderData;
+
   const catalogDelete = useCatalogDelete();
 
-  if (isLoading) return <LoadingComponent variant="dashboard" />;
+  if (isInitialLoad) return <LoadingComponent variant="dashboard" />;
 
   if (error || !catalogsData) {
     return (
       <Card className="bg-card border-border">
         <CardContent className="pt-6">
-          <div className="text-center py-12">
-            <p className="text-destructive">
-              Error loading catalog items. Please try again.
-            </p>
-          </div>
+          <p className="text-destructive">
+            Error loading catalog items. Please try again.
+          </p>
         </CardContent>
       </Card>
     );
   }
 
-  // Extract catalogs and pagination info
   const catalogs = catalogsData.data;
   const pagination = catalogsData.pagination;
 
   return (
     <>
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-              <Package className="h-8 w-8" />
+      <div>
+        <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-center sm:text-left">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Catalog
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
               Save your products and services and link them to the correct
               company.
             </p>
@@ -120,24 +115,26 @@ export default function CatalogContent() {
           />
         </div>
 
-        <CatalogFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearch}
-          businessId={businessIdFilter}
-          onBusinessIdChange={handleBusinessIdChange}
-          sortBy={sortBy}
-          onSortByChange={handleSortByChange}
-        />
+        <CatalogStats stats={catalogsData.stats} />
 
-        {/* Catalog List */}
-        <CatalogList
-          catalogs={catalogs}
-          onEdit={catalogManager.openEdit}
-          onDelete={catalogDelete.openDeleteModal}
-          onAddNew={handleOpenCreateCatalog}
-        >
-          {pagination && (
-            <div className="mt-6">
+        <div className="bg-card rounded-2xl border border-border/60 px-4 sm:px-6 pt-5 pb-5 shadow-sm">
+          <CatalogFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearch}
+            businessId={businessIdFilter}
+            onBusinessIdChange={handleBusinessIdChange}
+            sortBy={sortBy}
+            onSortByChange={handleSortByChange}
+          />
+
+          <CatalogList
+            catalogs={catalogs}
+            isLoading={isListLoading}
+            onEdit={catalogManager.openEdit}
+            onDelete={catalogDelete.openDeleteModal}
+            onAddNew={handleOpenCreateCatalog}
+          >
+            {pagination && (
               <TablePagination
                 currentPage={currentPage}
                 totalPages={pagination.totalPages}
@@ -146,12 +143,11 @@ export default function CatalogContent() {
                 emptyMessage="No catalog items found"
                 itemLabel="items"
               />
-            </div>
-          )}
-        </CatalogList>
+            )}
+          </CatalogList>
+        </div>
       </div>
 
-      {/* Catalog Form Modal - handles both create and edit */}
       <CatalogFormModal
         isOpen={catalogManager.isOpen}
         onClose={catalogManager.close}
@@ -165,7 +161,6 @@ export default function CatalogContent() {
         catalogError={catalogManager.catalogError}
       />
 
-      {/* Catalog Delete Modal */}
       <EntityDeleteModal
         isOpen={catalogDelete.isDeleteModalOpen}
         onClose={catalogDelete.closeDeleteModal}
@@ -192,15 +187,10 @@ export default function CatalogContent() {
         }}
       />
 
-      <Button
-        type="button"
-        size="icon-lg"
-        className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
+      <VoiceCreateFab
         onClick={handleCreateCatalogByVoice}
-        aria-label="Create product by voice"
-      >
-        <Mic className="size-8" />
-      </Button>
+        ariaLabel="Create product by voice"
+      />
     </>
   );
 }

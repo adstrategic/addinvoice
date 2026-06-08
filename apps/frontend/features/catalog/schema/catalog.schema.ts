@@ -66,14 +66,21 @@ export const catalogResponseSchema = createCatalogSchema.extend({
  *   }
  * }
  */
+export const catalogListStatsSchema = z.object({
+  /** Workspace-wide count; not scoped to sort order */
+  total: z.number().int().nonnegative(),
+});
+
 export const catalogResponseListSchema = z.object({
   data: z.array(catalogResponseSchema),
   pagination: paginationMetaSchema,
+  stats: catalogListStatsSchema,
 });
 
 // DTO types
 export type CreateCatalogDto = z.infer<typeof createCatalogSchema>;
 export type UpdateCatalogDto = z.infer<typeof updateCatalogSchema>;
 export type CatalogResponse = z.infer<typeof catalogResponseSchema>;
+export type CatalogListStats = z.infer<typeof catalogListStatsSchema>;
 export type CatalogResponseList = z.infer<typeof catalogResponseListSchema>;
 export type ListCatalogsParams = z.infer<typeof listCatalogsSchema>;

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { DocumentStatusBadge } from "@/components/shared/DocumentStatusBadge";
 import {
   ArrowLeft,
   Download,
@@ -31,32 +31,10 @@ import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { canSendEstimate } from "@/lib/is-document-public-issued";
 import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
 import { canVoidEstimate } from "@/lib/document-void";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useDownloadEstimatePdf } from "@/features/estimates/hooks/useDownloadEstimatePDF";
 import { EstimatePdfPreview } from "@/features/estimates/components/EstimatePdfPreview";
 import { DetailPageLoading } from "@/components/loading-component";
-import { CopyPublicLinkButton } from "@/components/shared/copy-public-link-button";
-import { isEstimatePublicIssued } from "@/lib/is-document-public-issued";
-
-const statusConfig = {
-  paid: { label: "Paid", className: "bg-primary/20 text-primary" },
-  overdue: { label: "Overdue", className: "bg-chart-4/20 text-chart-4" },
-  issued: { label: "Issued", className: "bg-chart-3/20 text-chart-3" },
-  draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
-  accepted: {
-    label: "Accepted",
-    className: "bg-chart-2/20 text-chart-2",
-  },
-  sent: { label: "Sent", className: "bg-chart-3/20 text-chart-3" },
-  rejected: { label: "Rejected", className: "bg-chart-4/20 text-chart-4" },
-  invoiced: { label: "Invoiced", className: "bg-primary/20 text-primary" },
-  voided: { label: "Voided", className: "bg-destructive/15 text-destructive" },
-};
 
 export default function EstimateDetailPage() {
   const params = useParams();
@@ -130,15 +108,11 @@ export default function EstimateDetailPage() {
                 <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">
                   {estimate.estimateNumber}
                 </h1>
-                <Badge
-                  className={
-                    statusConfig[uiStatus as keyof typeof statusConfig]
-                      ?.className || "bg-muted text-muted-foreground"
-                  }
-                >
-                  {statusConfig[uiStatus as keyof typeof statusConfig]?.label ||
-                    uiStatus}
-                </Badge>
+                <DocumentStatusBadge
+                  uiStatus={uiStatus}
+                  documentType="estimate"
+                  size="md"
+                />
               </div>
               <p className="text-muted-foreground mt-1 text-sm">
                 PDF preview
@@ -146,173 +120,113 @@ export default function EstimateDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-            <CopyPublicLinkButton
-              publicSlug={estimate.publicSlug}
-              isIssued={isEstimatePublicIssued(estimate.status)}
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="bg-transparent"
-                  onClick={handleDownloadPDF}
-                  disabled={downloading}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Download PDF</p>
-              </TooltipContent>
-            </Tooltip>
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 shrink-0 bg-transparent"
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              Download PDF
+            </Button>
             {(estimate.status === "DRAFT" ||
               estimate.status === "REJECTED") && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href={`/estimates/${sequence}/edit`}>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="bg-transparent"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Edit estimate</p>
-                </TooltipContent>
-              </Tooltip>
+              <Link href={`/estimates/${sequence}/edit`}>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 shrink-0 bg-transparent"
+                >
+                  <Edit className="h-4 w-4 shrink-0" />
+                  Edit
+                </Button>
+              </Link>
             )}
             {estimate.status === "DRAFT" && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:text-destructive bg-transparent"
-                    onClick={() =>
-                      estimate && estimateDelete.openDeleteModal(estimate)
-                    }
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete estimate</p>
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 shrink-0 bg-transparent text-destructive hover:text-destructive"
+                onClick={() =>
+                  estimate && estimateDelete.openDeleteModal(estimate)
+                }
+              >
+                <Trash2 className="h-4 w-4 shrink-0" />
+                Delete
+              </Button>
             )}
             {canSendEstimate({
               status: estimate.status,
               itemCount: items.length,
             }) && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => setSendDialogOpen(true)}
-                      className="gap-2 shrink-0"
-                      size="sm"
-                    >
-                      <Send className="h-4 w-4 shrink-0" />
-                      <span className="hidden sm:inline">Send</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Send estimate</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
+              <Button
+                size="lg"
+                className="gap-2 shrink-0"
+                onClick={() => setSendDialogOpen(true)}
+              >
+                <Send className="h-4 w-4 shrink-0" />
+                Send
+              </Button>
+            )}
             {estimate.status === "SENT" && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => markAsAccepted.mutate(estimate.id)}
-                    disabled={markAsAccepted.isPending}
-                    className="gap-2 shrink-0"
-                    size="sm"
-                  >
-                    {markAsAccepted.isPending ? (
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 shrink-0" />
-                    )}
-                    <span className="hidden sm:inline">
-                      {markAsAccepted.isPending
-                        ? "Accepting…"
-                        : "Mark as accepted"}
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Mark as accepted</p>
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                size="lg"
+                className="gap-2 shrink-0"
+                onClick={() => markAsAccepted.mutate(estimate.id)}
+                disabled={markAsAccepted.isPending}
+              >
+                {markAsAccepted.isPending ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 shrink-0" />
+                )}
+                {markAsAccepted.isPending
+                  ? "Accepting…"
+                  : "Mark as accepted"}
+              </Button>
             )}
             {estimate.status === "ACCEPTED" && (
               <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => setConvertToProposalDialogOpen(true)}
-                      className="gap-2 shrink-0"
-                      size="sm"
-                      variant="secondary"
-                    >
-                      <ScrollText className="h-4 w-4 shrink-0" />
-                      <span className="hidden sm:inline">Convert to Proposal</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Convert to proposal</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() =>
-                        estimateActions.handleConvertToInvoice(estimate)
-                      }
-                      disabled={estimateActions.isConvertingToInvoice}
-                      className="gap-2 shrink-0"
-                      size="sm"
-                      variant="secondary"
-                    >
-                      {estimateActions.isConvertingToInvoice ? (
-                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                      ) : (
-                        <Receipt className="h-4 w-4 shrink-0" />
-                      )}
-                      <span className="hidden sm:inline">
-                        {estimateActions.isConvertingToInvoice
-                          ? "Converting…"
-                          : "Convert to Invoice"}
-                      </span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Convert to invoice</p>
-                  </TooltipContent>
-                </Tooltip>
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="gap-2 shrink-0"
+                  onClick={() => setConvertToProposalDialogOpen(true)}
+                >
+                  <ScrollText className="h-4 w-4 shrink-0" />
+                  Convert to Proposal
+                </Button>
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="gap-2 shrink-0"
+                  onClick={() =>
+                    estimateActions.handleConvertToInvoice(estimate)
+                  }
+                  disabled={estimateActions.isConvertingToInvoice}
+                >
+                  {estimateActions.isConvertingToInvoice ? (
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                  ) : (
+                    <Receipt className="h-4 w-4 shrink-0" />
+                  )}
+                  {estimateActions.isConvertingToInvoice
+                    ? "Converting…"
+                    : "Convert to Invoice"}
+                </Button>
               </>
             )}
             {canVoidEstimate(estimate) && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:text-destructive bg-transparent"
-                    onClick={() => estimateVoid.openVoidModal(estimate)}
-                  >
-                    <Ban className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Mark as voided</p>
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 shrink-0 bg-transparent text-destructive hover:text-destructive"
+                onClick={() => estimateVoid.openVoidModal(estimate)}
+              >
+                <Ban className="h-4 w-4 shrink-0" />
+                Mark as voided
+              </Button>
             )}
           </div>
         </div>

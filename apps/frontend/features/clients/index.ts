@@ -9,8 +9,11 @@
 // Schemas and Types
 export {
   clientResponseListSchema,
+  type ClientResponseList,
   type ListClientsParams,
 } from "./schema/clients.schema";
+
+export type { ClientResponse, ClientListStats } from "@addinvoice/schemas";
 
 // Hooks
 export {

@@ -94,6 +94,7 @@ export const receiptScanResultSchema = z.object({
  */
 export const expenseStatsSchema = z.object({
   workCategoryId: z.coerce.number().int().positive().optional(),
+  period: z.enum(["7d", "30d", "6m", "12m"]).optional(),
 });
 
 /**
@@ -113,6 +114,7 @@ export const expenseDashboardStatsResponseSchema = z.object({
   thisWeekExpenses: z.number(),
   thisMonthExpenses: z.number(),
   monthlyExpenses: z.array(monthlyExpenseSchema),
+  chartSeries: z.array(z.object({ label: z.string(), amount: z.number() })),
   recentExpenses: z.array(z.any()),
 });
 

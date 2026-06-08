@@ -1,5 +1,6 @@
 export { default as AdvancesContent } from './components/AdvancesContent'
 export { AdvanceActions } from './components/AdvancesActions'
+export { AdvanceStats } from './components/AdvanceStats'
 export { AdvanceFilters } from './components/AdvancesFilters'
 export { AdvanceList } from './components/AdvancesList'
 export { AdvanceCard } from './components/AdvancesCard'
