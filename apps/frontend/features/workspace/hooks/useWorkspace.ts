@@ -22,7 +22,7 @@ export function useWorkspacePaymentMethods() {
   return useQuery({
     queryKey: workspaceKeys.paymentMethods(),
     queryFn: () => workspaceService.listPaymentMethods(),
-    staleTime: 30 * 1000,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -83,7 +83,7 @@ export function useWorkspaceLanguage() {
   return useQuery({
     queryKey: workspaceKeys.language(),
     queryFn: () => workspaceService.getWorkspaceLanguage(),
-    staleTime: 30 * 1000,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
