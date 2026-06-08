@@ -1299,14 +1299,9 @@ export async function listInvoices(
   const buildStatsWhere = (
     status?: Prisma.EnumInvoiceStatusFilter | InvoiceStatus,
   ): Prisma.InvoiceWhereInput => {
-    // Metric-specific stats use an explicit status (PAID, OVERDUE, etc.) and ignore
-    // the list tab filter. Enum values are mutually exclusive, so a single `status`
-    // field is enough — no AND with `{ not: VOIDED }`.
+    // Workspace-wide stats (and per-metric counts) ignore the list status tab filter.
     if (status !== undefined) {
       return { ...baseWhere, status };
-    }
-    if (statusParam) {
-      return { ...baseWhere, status: statusParam };
     }
     return { ...baseWhere, status: { not: "VOIDED" } };
   };
@@ -1342,7 +1337,7 @@ export async function listInvoices(
       where,
     }),
     prisma.invoice.count({ where }),
-    prisma.invoice.count({ where: statsWhere }),
+    prisma.invoice.count({ where: baseWhere }),
     prisma.invoice.count({ where: wherePaid }),
     prisma.invoice.count({ where: whereOverdue }),
     prisma.payment.aggregate({

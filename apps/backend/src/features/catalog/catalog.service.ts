@@ -108,14 +108,14 @@ export async function listCatalogs(
   catalogs: CatalogEntity[];
   limit: number;
   page: number;
+  stats: { total: number };
   total: number;
 }> {
   const { businessId, limit, page, search, sortBy, sortOrder } = query;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.CatalogWhereInput = {
+  const baseWhere: Prisma.CatalogWhereInput = {
     workspaceId,
-
     ...(businessId && { businessId }),
     ...(search && {
       OR: [{ name: { contains: search, mode: "insensitive" } }],
@@ -126,7 +126,7 @@ export async function listCatalogs(
     [sortBy]: sortOrder,
   } as Prisma.CatalogOrderByWithRelationInput;
 
-  const [catalogs, total] = await Promise.all([
+  const [catalogs, total, statsTotal] = await Promise.all([
     prisma.catalog.findMany({
       include: {
         business: true,
@@ -134,15 +134,17 @@ export async function listCatalogs(
       orderBy,
       skip,
       take: limit,
-      where,
+      where: baseWhere,
     }),
-    prisma.catalog.count({ where }),
+    prisma.catalog.count({ where: baseWhere }),
+    prisma.catalog.count({ where: baseWhere }),
   ]);
 
   return {
     catalogs: catalogs.map(toCatalogEntity),
     limit,
     page,
+    stats: { total: statsTotal },
     total,
   };
 }

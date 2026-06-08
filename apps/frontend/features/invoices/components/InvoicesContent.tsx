@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   InvoiceStats,
   InvoiceFilters,
@@ -16,7 +16,6 @@ import { TablePagination } from "@/components/TablePagination";
 import { useDebouncedTableParams } from "@/hooks/useDebouncedTableParams";
 import { Card, CardContent } from "@/components/ui/card";
 import LoadingComponent from "@/components/loading-component";
-import { motion } from "framer-motion";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { BusinessSelectionDialog } from "@/components/business-selection-dialog";
 import { VoiceInvoicePromptDialog } from "./VoiceInvoicePromptDialog";
@@ -29,11 +28,18 @@ import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useDownloadInvoicePdf } from "../hooks/useDownloadInvoicePDF";
-import { Button } from "@/components/ui/button";
-import { Mic } from "lucide-react";
+import { VoiceCreateFab } from "@/components/shared/VoiceCreateFab";
+import { ArrowLeft } from "lucide-react";
 import { useLimitGuard } from "@/hooks/use-limit-guard";
 
-const VALID_STATUSES = ["all", "paid", "overdue", "issued", "viewed", "draft"] as const;
+const VALID_STATUSES = [
+  "all",
+  "paid",
+  "overdue",
+  "issued",
+  "viewed",
+  "draft",
+] as const;
 
 function parseStatusParam(value: string | null): string {
   if (!value) return "all";
@@ -62,7 +68,7 @@ export default function InvoicesContent() {
       params.set("status", value);
     }
     params.set("page", "1");
-    router.push(`${pathname}?${params.toString()}`);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
@@ -74,6 +80,8 @@ export default function InvoicesContent() {
   const {
     data: invoicesData,
     isLoading,
+    isFetching,
+    isPlaceholderData,
     error,
   } = useInvoices({
     page: currentPage,
@@ -81,25 +89,56 @@ export default function InvoicesContent() {
     status: statusFilterToApiParam(statusFilter),
   });
 
+  const isInitialLoad = isLoading && !invoicesData;
+  const isListLoading = isFetching && isPlaceholderData;
+
   const invoiceManager = useInvoiceManager();
   const invoiceDelete = useInvoiceDelete();
   const invoiceVoid = useInvoiceVoid();
   const downloadPdf = useDownloadInvoicePdf();
   const { guardCreate } = useLimitGuard();
 
-  const handleCreateInvoice = () => {
+  const handleCreateInvoice = useCallback(() => {
     if (guardCreate("invoices")) return;
     invoiceManager.handleCreateInvoice();
-  };
+  }, [guardCreate, invoiceManager]);
 
-  const handleCreateInvoiceByVoice = () => {
+  const handleCreateInvoiceByVoice = useCallback(() => {
     if (guardCreate("invoices", { viaVoice: true })) return;
     invoiceManager.handleCreateInvoiceByVoice();
-    // Let voice modal state commit before the tour ends on the last onboarding step.
     requestAnimationFrame(() => {
       window.dispatchEvent(new CustomEvent("tour:invoice-voice-clicked"));
     });
-  };
+  }, [guardCreate, invoiceManager]);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(
+        invoiceManager.isFormOpen ? "app:form-open" : "app:form-close",
+      ),
+    );
+  }, [invoiceManager.isFormOpen]);
+
+  const actionParam = searchParams.get("action");
+  const didTriggerCreateRef = useRef(false);
+
+  useEffect(() => {
+    if (actionParam !== "create") {
+      didTriggerCreateRef.current = false;
+      return;
+    }
+    if (invoiceManager.isLoadingBusinesses) return;
+    if (didTriggerCreateRef.current) return;
+    didTriggerCreateRef.current = true;
+    router.replace(pathname);
+    handleCreateInvoice();
+  }, [
+    actionParam,
+    invoiceManager.isLoadingBusinesses,
+    handleCreateInvoice,
+    pathname,
+    router,
+  ]);
 
   const handleDownloadPDF = async (invoice: InvoiceResponse) => {
     try {
@@ -117,7 +156,7 @@ export default function InvoicesContent() {
     setSendDialogOpen(true);
   };
 
-  if (isLoading) return <LoadingComponent variant="dashboard" />;
+  if (isInitialLoad) return <LoadingComponent variant="dashboard" />;
 
   if (error || !invoicesData) {
     return (
@@ -140,24 +179,34 @@ export default function InvoicesContent() {
   // If business is selected, show invoice form instead of list
   if (invoiceManager.isFormOpen && invoiceManager.selectedBusiness) {
     return (
-      <InvoiceForm
-        selectedBusiness={invoiceManager.selectedBusiness}
-        form={invoiceManager.form}
-        mode={invoiceManager.mode}
-        isLoading={invoiceManager.isMutating}
-        isLoadingInvoice={invoiceManager.isLoadingInvoice}
-        isLoadingNumber={invoiceManager.isLoadingNextNumber}
-        invoiceError={invoiceManager.invoiceError}
-        onSubmit={invoiceManager.onSubmit}
-        onCancel={invoiceManager.close}
-        existingInvoice={invoiceManager.invoice}
-        saveBeforeOpenSubform={invoiceManager.saveBeforeOpenSubform}
-        draftItems={invoiceManager.draftItems}
-        draftTotals={invoiceManager.draftTotals}
-        onDraftCreateItem={invoiceManager.addDraftItem}
-        onDraftUpdateItem={invoiceManager.updateDraftItem}
-        onDraftDeleteItem={invoiceManager.removeDraftItem}
-      />
+      <div>
+        <button
+          type="button"
+          onClick={invoiceManager.close}
+          className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Invoices
+        </button>
+        <InvoiceForm
+          selectedBusiness={invoiceManager.selectedBusiness}
+          form={invoiceManager.form}
+          mode={invoiceManager.mode}
+          isLoading={invoiceManager.isMutating}
+          isLoadingInvoice={invoiceManager.isLoadingInvoice}
+          isLoadingNumber={invoiceManager.isLoadingNextNumber}
+          invoiceError={invoiceManager.invoiceError}
+          onSubmit={invoiceManager.onSubmit}
+          onCancel={invoiceManager.close}
+          existingInvoice={invoiceManager.invoice}
+          saveBeforeOpenSubform={invoiceManager.saveBeforeOpenSubform}
+          draftItems={invoiceManager.draftItems}
+          draftTotals={invoiceManager.draftTotals}
+          onDraftCreateItem={invoiceManager.addDraftItem}
+          onDraftUpdateItem={invoiceManager.updateDraftItem}
+          onDraftDeleteItem={invoiceManager.removeDraftItem}
+        />
+      </div>
     );
   }
 
@@ -165,13 +214,8 @@ export default function InvoicesContent() {
     <>
       <div>
         {/* Header */}
-        <motion.div
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+          <div className="text-center sm:text-left">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Invoices
             </h1>
@@ -183,38 +227,39 @@ export default function InvoicesContent() {
             onCreateInvoice={handleCreateInvoice}
             onCreateByVoice={handleCreateInvoiceByVoice}
           />
-        </motion.div>
+        </div>
 
         <InvoiceStats stats={invoicesData.stats} />
 
-        <InvoiceFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearch}
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-        />
+        <div className="bg-card rounded-2xl border border-border/60 px-4 sm:px-6 pt-5 pb-5 shadow-sm">
+          <InvoiceFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearch}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+          />
 
-        {/* Invoices List */}
-        <InvoiceList
-          invoices={invoices}
-          statusFilter={statusFilter}
-          onDownload={handleDownloadPDF}
-          onSend={handleSendInvoice}
-          onAddPayment={paymentDialog.openPaymentDialog}
-          onDelete={invoiceDelete.openDeleteModal}
-          onVoid={invoiceVoid.openVoidModal}
-        >
-          {pagination && (
-            <TablePagination
-              currentPage={currentPage}
-              totalPages={pagination.totalPages}
-              totalItems={pagination.total}
-              onPageChange={setPage}
-              emptyMessage="No invoices found"
-              itemLabel="invoices"
-            />
-          )}
-        </InvoiceList>
+          <InvoiceList
+            invoices={invoices}
+            isLoading={isListLoading}
+            onDownload={handleDownloadPDF}
+            onSend={handleSendInvoice}
+            onAddPayment={paymentDialog.openPaymentDialog}
+            onDelete={invoiceDelete.openDeleteModal}
+            onVoid={invoiceVoid.openVoidModal}
+          >
+            {pagination && (
+              <TablePagination
+                currentPage={currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.total}
+                onPageChange={setPage}
+                emptyMessage="No invoices found"
+                itemLabel="invoices"
+              />
+            )}
+          </InvoiceList>
+        </div>
       </div>
 
       {/* Delete Confirmation Modal - Separate logic */}
@@ -277,15 +322,11 @@ export default function InvoicesContent() {
         }}
       />
 
-      <Button
-        type="button"
-        size="icon-lg"
-        className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
+      <VoiceCreateFab
         onClick={handleCreateInvoiceByVoice}
-        aria-label="Create invoice by voice"
-      >
-        <Mic className="size-8" />
-      </Button>
+        ariaLabel="Create invoice by voice"
+        tourId="invoices-voice-btn"
+      />
     </>
   );
 }

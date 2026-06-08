@@ -17,5 +17,7 @@ export type { ListPaymentsParams } from "./service/payments.service";
 export { usePayments, usePaymentById, paymentKeys } from "./hooks/usePayments";
 
 export { default as PaymentsContent } from "./components/PaymentsContent";
+export { PaymentStats } from "./components/PaymentStats";
+export { PaymentFilters } from "./components/PaymentFilters";
 export { PaymentList } from "./components/PaymentList";
 export { PaymentCard } from "./components/PaymentCard";

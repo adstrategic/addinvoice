@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { invoiceEntityWithRelationsSchema } from "../invoices/invoices.schemas.js";
+import { estimateDashboardResponseSchema } from "@addinvoice/schemas";
 
 const periodSchema = z.enum(["7d", "30d", "6m", "12m"]);
 
@@ -37,6 +38,7 @@ export const dashboardStatsResponseSchema = z.object({
   paidInvoices: z.number(),
   pendingInvoices: z.number(),
   recentInvoices: z.array(invoiceEntityWithRelationsSchema),
+  recentEstimates: z.array(estimateDashboardResponseSchema),
   thisMonthInvoices: z.number(),
   thisWeekInvoices: z.number(),
   totalInvoices: z.number(),

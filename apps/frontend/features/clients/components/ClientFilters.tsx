@@ -1,7 +1,8 @@
-import { Card, CardContent } from "@/components/ui/card";
+"use client";
+
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import React from "react";
+import { getModuleSearchInputClass } from "@/components/shared/module-ui";
 
 interface ClientFiltersProps {
   searchTerm: string;
@@ -13,14 +14,16 @@ export function ClientFilters({
   onSearchChange,
 }: ClientFiltersProps) {
   return (
-    <div className="relative mb-4 sm:mb-6 " data-tour-id="clients-search">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-      <Input
-        placeholder="Search clients..."
-        className="pl-10 bg-white"
-        value={searchTerm}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
+    <div className="mb-6">
+      <div className="relative" data-tour-id="clients-search">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search clients..."
+          className={getModuleSearchInputClass("client")}
+          value={searchTerm}
+          onChange={(event) => onSearchChange(event.target.value)}
+        />
+      </div>
     </div>
   );
 }

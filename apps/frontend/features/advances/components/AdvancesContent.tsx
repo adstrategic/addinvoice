@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import LoadingComponent from "@/components/loading-component";
 import { useDebouncedTableParams } from "@/hooks/useDebouncedTableParams";
 import { toast } from "sonner";
 import { AdvanceActions } from "./AdvancesActions";
+import { AdvanceStats } from "./AdvanceStats";
 import { AdvanceFilters } from "./AdvancesFilters";
 import { AdvanceList } from "./AdvancesList";
 import { AdvanceForm } from "../forms/AdvancesForm";
@@ -21,15 +22,48 @@ import { SendAdvanceDialog } from "@/components/send-advance-dialog";
 import type { AdvanceListItemResponse } from "@addinvoice/schemas";
 import { useSendAdvance } from "../hooks/useAdvances";
 import { useLimitGuard } from "@/hooks/use-limit-guard";
+import { ArrowLeft } from "lucide-react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+
+const VALID_STATUSES = [
+  "all",
+  "draft",
+  "issued",
+  "viewed",
+  "invoiced",
+] as const;
+
+function parseStatusParam(value: string | null): string {
+  if (!value) return "all";
+  return VALID_STATUSES.includes(value as (typeof VALID_STATUSES)[number])
+    ? value
+    : "all";
+}
 
 export default function AdvancesContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { currentPage, setPage, debouncedSearch, searchTerm, setSearch } =
     useDebouncedTableParams();
-  const [statusFilter, setStatusFilter] = useState("all");
+
+  const statusFilter = parseStatusParam(searchParams.get("status"));
+  const setStatusFilter = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value === "all") {
+      params.delete("status");
+    } else {
+      params.set("status", value);
+    }
+    params.set("page", "1");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   const {
     data: advancesData,
     isLoading,
+    isFetching,
+    isPlaceholderData,
     error,
   } = useAdvances({
     page: currentPage,
@@ -37,24 +71,54 @@ export default function AdvancesContent() {
     status: statusFilterToApiParam(statusFilter),
   });
 
+  const isInitialLoad = isLoading && !advancesData;
+  const isListLoading = isFetching && isPlaceholderData;
+
   const advanceManager = useAdvanceManager();
   const deleteAdvance = useAdvanceDelete();
   const voidAdvance = useAdvanceVoid();
   const sendAdvance = useSendAdvance();
   const { guardCreate } = useLimitGuard();
 
-  const handleCreateAdvance = () => {
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(
+        advanceManager.isFormOpen ? "app:form-open" : "app:form-close",
+      ),
+    );
+  }, [advanceManager.isFormOpen]);
+
+  const handleCreateAdvance = useCallback(() => {
     if (guardCreate("advances")) return;
     advanceManager.handleCreateAdvance();
-  };
+  }, [guardCreate, advanceManager]);
+
+  const actionParam = searchParams.get("action");
+  const didTriggerCreateRef = useRef(false);
+
+  useEffect(() => {
+    if (actionParam !== "create") {
+      didTriggerCreateRef.current = false;
+      return;
+    }
+    if (advanceManager.isLoadingBusinesses) return;
+    if (didTriggerCreateRef.current) return;
+    didTriggerCreateRef.current = true;
+    router.replace(pathname);
+    handleCreateAdvance();
+  }, [
+    actionParam,
+    advanceManager.isLoadingBusinesses,
+    handleCreateAdvance,
+    pathname,
+    router,
+  ]);
+
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedAdvanceForSend, setSelectedAdvanceForSend] =
     useState<AdvanceListItemResponse | null>(null);
 
-  const pagination = advancesData?.pagination;
-  const advances = advancesData?.data ?? [];
-
-  if (isLoading) return <LoadingComponent variant="dashboard" />;
+  if (isInitialLoad) return <LoadingComponent variant="dashboard" />;
 
   if (error || !advancesData) {
     return (
@@ -66,32 +130,45 @@ export default function AdvancesContent() {
     );
   }
 
+  const pagination = advancesData.pagination;
+  const advances = advancesData.data;
+
   if (advanceManager.isFormOpen && advanceManager.selectedBusiness) {
     return (
-      <AdvanceForm
-        form={advanceManager.form}
-        mode={advanceManager.mode}
-        images={advanceManager.images}
-        isLoading={advanceManager.isMutating}
-        isLoadingAdvance={advanceManager.isLoadingAdvance}
-        selectedBusiness={advanceManager.selectedBusiness}
-        onAddImages={advanceManager.addImages}
-        onRemoveImage={advanceManager.removeImage}
-        onSubmit={advanceManager.onSubmit}
-        onCancel={advanceManager.close}
-      />
+      <div>
+        <button
+          type="button"
+          onClick={advanceManager.close}
+          className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Advances
+        </button>
+        <AdvanceForm
+          form={advanceManager.form}
+          mode={advanceManager.mode}
+          images={advanceManager.images}
+          isLoading={advanceManager.isMutating}
+          isLoadingAdvance={advanceManager.isLoadingAdvance}
+          selectedBusiness={advanceManager.selectedBusiness}
+          onAddImages={advanceManager.addImages}
+          onRemoveImage={advanceManager.removeImage}
+          onSubmit={advanceManager.onSubmit}
+          onCancel={advanceManager.close}
+        />
+      </div>
     );
   }
 
   return (
     <>
       <div>
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
+        <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-center sm:text-left">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Work Advances
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
               Track project progress reports
             </p>
           </div>
@@ -101,34 +178,38 @@ export default function AdvancesContent() {
           />
         </div>
 
-        <AdvanceFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearch}
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-        />
+        <AdvanceStats stats={advancesData.stats} />
 
-        <AdvanceList
-          advances={advances}
-          statusFilter={statusFilter}
-          onDelete={deleteAdvance.openDeleteModal}
-          onVoid={voidAdvance.openVoidModal}
-          onSend={(advance) => {
-            setSelectedAdvanceForSend(advance);
-            setSendDialogOpen(true);
-          }}
-        >
-          {pagination && (
-            <TablePagination
-              currentPage={currentPage}
-              totalPages={pagination.totalPages}
-              totalItems={pagination.total}
-              onPageChange={setPage}
-              emptyMessage="No advances found"
-              itemLabel="advances"
-            />
-          )}
-        </AdvanceList>
+        <div className="bg-card rounded-2xl border border-border/60 px-4 sm:px-6 pt-5 pb-5 shadow-sm">
+          <AdvanceFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearch}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+          />
+
+          <AdvanceList
+            advances={advances}
+            isLoading={isListLoading}
+            onDelete={deleteAdvance.openDeleteModal}
+            onVoid={voidAdvance.openVoidModal}
+            onSend={(advance) => {
+              setSelectedAdvanceForSend(advance);
+              setSendDialogOpen(true);
+            }}
+          >
+            {pagination && (
+              <TablePagination
+                currentPage={currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.total}
+                onPageChange={setPage}
+                emptyMessage="No advances found"
+                itemLabel="advances"
+              />
+            )}
+          </AdvanceList>
+        </div>
 
         <EntityDeleteModal
           isOpen={deleteAdvance.isDeleteModalOpen}

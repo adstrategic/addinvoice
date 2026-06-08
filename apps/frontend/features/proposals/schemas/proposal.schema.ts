@@ -1,10 +1,7 @@
-import { proposalDashboardResponseSchema } from "@addinvoice/schemas";
-import { z } from "zod";
-import { paginationMetaSchema } from "@/lib/api/types";
+import { listProposalsResponseSchema } from "@addinvoice/schemas";
 
-export const proposalResponseListSchema = z.object({
-  data: z.array(proposalDashboardResponseSchema),
-  pagination: paginationMetaSchema,
-});
+export const proposalResponseListSchema = listProposalsResponseSchema;
 
-export type ProposalResponseList = z.infer<typeof proposalResponseListSchema>;
+export type ProposalResponseList = ReturnType<
+  typeof proposalResponseListSchema.parse
+>;

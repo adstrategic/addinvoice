@@ -1,4 +1,5 @@
 import type { InvoiceResponse } from "@/features/invoices";
+import type { EstimateDashboardResponse } from "@addinvoice/schemas";
 
 /**
  * Chart series point (label = day "Mar 12" or month "Jan")
@@ -22,6 +23,7 @@ export interface DashboardStats {
   totalOutstanding: number;
   totalRevenue: number;
   recentInvoices: InvoiceResponse[];
+  recentEstimates: EstimateDashboardResponse[];
 }
 
 /**

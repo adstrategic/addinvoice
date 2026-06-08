@@ -2,6 +2,7 @@
 
 import {
   ExpenseDashboard,
+  ExpenseStats,
   ExpenseList,
   ExpenseFilters,
   useExpenses,
@@ -57,7 +58,7 @@ export default function ExpensesContent() {
         else params.delete(DATE_TO_PARAM);
       }
       params.set("page", "1");
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     },
     [pathname, router, searchParams],
   );
@@ -73,6 +74,8 @@ export default function ExpensesContent() {
   const {
     data: expensesData,
     isLoading,
+    isFetching,
+    isPlaceholderData,
     error,
   } = useExpenses({
     page: currentPage,
@@ -85,19 +88,18 @@ export default function ExpensesContent() {
     dateTo: dateTo || undefined,
   });
 
+  const isInitialLoad = isLoading && !expensesData;
+  const isListLoading = isFetching && isPlaceholderData;
+
   const expenseDelete = useExpenseDelete();
 
-  if (isLoading) return <LoadingComponent variant="dashboard" />;
+  if (isInitialLoad) return <LoadingComponent variant="dashboard" />;
 
   if (error || !expensesData) {
     return (
       <Card className="bg-card border-border">
         <CardContent className="pt-6">
-          <div className="text-center py-12">
-            <p className="text-destructive">
-              Error loading expenses. Please try again.
-            </p>
-          </div>
+          <p className="text-destructive">Error loading expenses.</p>
         </CardContent>
       </Card>
     );
@@ -109,8 +111,8 @@ export default function ExpensesContent() {
   return (
     <>
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-          <div>
+        <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-center sm:text-left">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Expenses
             </h1>
@@ -121,25 +123,28 @@ export default function ExpensesContent() {
           <ExpenseActions onOpenCreateModal={handleOpenCreateExpense} />
         </div>
 
+        <ExpenseStats workCategoryId={workCategoryIdFilter} />
+
         <ExpenseDashboard workCategoryId={workCategoryIdFilter} />
 
-        <ExpenseFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearch}
-          workCategoryId={workCategoryIdFilter}
-          onWorkCategoryIdChange={(value) =>
-            setFilterParams({ category: value })
-          }
-          dateFrom={dateFrom ?? undefined}
-          dateTo={dateTo ?? undefined}
-          onDateRangeChange={(from, to) =>
-            setFilterParams({ dateFrom: from ?? null, dateTo: to ?? null })
-          }
-        />
+        <div className="bg-card rounded-2xl border border-border/60 px-4 sm:px-6 pt-5 pb-5 shadow-sm">
+          <ExpenseFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearch}
+            workCategoryId={workCategoryIdFilter}
+            onWorkCategoryIdChange={(value) =>
+              setFilterParams({ category: value })
+            }
+            dateFrom={dateFrom ?? undefined}
+            dateTo={dateTo ?? undefined}
+            onDateRangeChange={(from, to) =>
+              setFilterParams({ dateFrom: from ?? null, dateTo: to ?? null })
+            }
+          />
 
-        <div id="expenses-list">
           <ExpenseList
             expenses={expenses}
+            isLoading={isListLoading}
             onViewDetails={(sequence) => router.push(`/expenses/${sequence}`)}
             onEdit={expenseManager.openEdit}
             onDelete={expenseDelete.openDeleteModal}

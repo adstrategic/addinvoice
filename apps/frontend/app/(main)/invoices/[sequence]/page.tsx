@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { DocumentStatusBadge } from "@/components/shared/DocumentStatusBadge";
 import { ArrowLeft, Download, Send, Edit, Trash2, Plus, ExternalLink, Ban } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -17,25 +17,10 @@ import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
 import { canVoidInvoice } from "@/lib/document-void";
 import { canSendInvoice } from "@/lib/is-document-public-issued";
 import { mapStatusToUI } from "@/features/invoices/types/api";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useDownloadInvoicePdf } from "@/features/invoices/hooks/useDownloadInvoicePDF";
 import { InvoicePdfPreview } from "@/features/invoices/components/InvoicePdfPreview";
 import { DetailPageLoading } from "@/components/loading-component";
-import { CopyPublicLinkButton } from "@/components/shared/copy-public-link-button";
-import { isInvoicePublicIssued } from "@/lib/is-document-public-issued";
-
-const statusConfig = {
-  paid: { label: "Paid", className: "bg-primary/20 text-primary" },
-  overdue: { label: "Overdue", className: "bg-chart-4/20 text-chart-4" },
-  issued: { label: "Issued", className: "bg-chart-3/20 text-chart-3" },
-  draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
-  voided: { label: "Voided", className: "bg-destructive/15 text-destructive" },
-};
 
 export default function InvoiceDetailPage() {
   const params = useParams();
@@ -107,15 +92,11 @@ export default function InvoiceDetailPage() {
                 <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">
                   {invoice.invoiceNumber}
                 </h1>
-                <Badge
-                  className={
-                    statusConfig[uiStatus as keyof typeof statusConfig]
-                      ?.className || "bg-muted text-muted-foreground"
-                  }
-                >
-                  {statusConfig[uiStatus as keyof typeof statusConfig]?.label ||
-                    uiStatus}
-                </Badge>
+                <DocumentStatusBadge
+                  uiStatus={uiStatus}
+                  documentType="invoice"
+                  size="md"
+                />
               </div>
               <p className="text-muted-foreground mt-1 text-sm">
                 PDF preview
@@ -123,137 +104,90 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-            <CopyPublicLinkButton
-              publicSlug={invoice.publicSlug}
-              isIssued={isInvoicePublicIssued(invoice.status)}
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="bg-transparent"
-                  onClick={handleDownloadPDF}
-                  disabled={downloading}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Download PDF</p>
-              </TooltipContent>
-            </Tooltip>
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 shrink-0 bg-transparent"
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              Download PDF
+            </Button>
             {invoice.paymentProvider === "stripe" &&
               invoice.paymentLink &&
               invoice.status !== "PAID" && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <a
-                      href={invoice.paymentLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                        <ExternalLink className="h-4 w-4" />
-                        Stripe Payment Link
-                      </Button>
-                    </a>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Open Stripe payment page</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            {invoice.status === "DRAFT" && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href={`/invoices/${sequence}/edit`}>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="bg-transparent"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Edit invoice</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {invoice.status === "DRAFT" && (
-              <Tooltip>
-                <TooltipTrigger asChild>
+                <a
+                  href={invoice.paymentLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <Button
                     variant="outline"
-                    size="icon"
-                    className="text-destructive hover:text-destructive bg-transparent"
-                    onClick={() =>
-                      invoice && invoiceDelete.openDeleteModal(invoice)
-                    }
+                    size="lg"
+                    className="gap-2 shrink-0 bg-transparent"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <ExternalLink className="h-4 w-4 shrink-0" />
+                    Stripe Payment Link
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete invoice</p>
-                </TooltipContent>
-              </Tooltip>
+                </a>
+              )}
+            {invoice.status === "DRAFT" && (
+              <Link href={`/invoices/${sequence}/edit`}>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 shrink-0 bg-transparent"
+                >
+                  <Edit className="h-4 w-4 shrink-0" />
+                  Edit
+                </Button>
+              </Link>
+            )}
+            {invoice.status === "DRAFT" && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 shrink-0 bg-transparent text-destructive hover:text-destructive"
+                onClick={() => invoice && invoiceDelete.openDeleteModal(invoice)}
+              >
+                <Trash2 className="h-4 w-4 shrink-0" />
+                Delete
+              </Button>
             )}
             {invoice.status !== "DRAFT" &&
               invoice.status !== "VOIDED" &&
               invoice.status !== "PAID" && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 sm:gap-2 bg-transparent shrink-0"
-                    onClick={() => setShowPaymentDialog(true)}
-                  >
-                    <Plus className="h-4 w-4 shrink-0" />
-                    <span className="hidden sm:inline">Add Payment</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Add payment</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 shrink-0 bg-transparent"
+                  onClick={() => setShowPaymentDialog(true)}
+                >
+                  <Plus className="h-4 w-4 shrink-0" />
+                  Add Payment
+                </Button>
+              )}
             {canSendInvoice(invoice) && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => setSendDialogOpen(true)}
-                    className="gap-2 shrink-0"
-                    size="sm"
-                  >
-                    <Send className="h-4 w-4 shrink-0" />
-                    <span className="hidden sm:inline">Send</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Send invoice</p>
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                size="lg"
+                className="gap-2 shrink-0"
+                onClick={() => setSendDialogOpen(true)}
+              >
+                <Send className="h-4 w-4 shrink-0" />
+                Send
+              </Button>
             )}
             {canVoidInvoice(invoice) && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:text-destructive bg-transparent"
-                    onClick={() => invoiceVoid.openVoidModal(invoice)}
-                  >
-                    <Ban className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Mark as voided</p>
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 shrink-0 bg-transparent text-destructive hover:text-destructive"
+                onClick={() => invoiceVoid.openVoidModal(invoice)}
+              >
+                <Ban className="h-4 w-4 shrink-0" />
+                Mark as voided
+              </Button>
             )}
           </div>
         </div>

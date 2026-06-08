@@ -1,74 +1,68 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Plus } from "lucide-react";
-import type { ClientResponse } from "@/features/clients";
+import { UserCheck, UserPlus } from "lucide-react";
+import type { ClientListStats } from "@addinvoice/schemas";
+import { ModuleHeroLabel } from "@/components/shared/module-ui";
+import { getListCardTheme } from "@/components/shared/list-card-theme";
+import { cn } from "@/lib/utils";
 
 interface ClientStatsProps {
-  clients: ClientResponse[];
+  stats: ClientListStats;
 }
 
-/**
- * Client statistics cards component
- * Displays total clients, active clients, new this month, and total revenue
- */
-export function ClientStats({ clients }: ClientStatsProps) {
-  const totalClients = clients.length;
-  const activeClients = clients.length;
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const newThisMonth = clients.filter((c) => {
-    if (!c.createdAt) return false;
-    const createdDate = new Date(c.createdAt);
-    return (
-      createdDate.getMonth() === currentMonth &&
-      createdDate.getFullYear() === currentYear
-    );
-  }).length;
+const glassCard =
+  "bg-linear-to-br from-card/60 to-card/20 backdrop-blur-2xl border-white/20 dark:border-white/10 hover:-translate-y-1 hover:shadow-lg transition-all duration-300";
+
+export function ClientStats({ stats }: ClientStatsProps) {
+  const theme = getListCardTheme("client");
 
   return (
-    <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 md:grid-cols-3">
-      <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
-            Total Clients
-          </CardTitle>
-          <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-xl sm:text-2xl font-bold text-foreground">
-            {totalClients}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="mb-6">
+      <div className="mb-5 text-center sm:text-left">
+        <ModuleHeroLabel variant="client">Total Clients</ModuleHeroLabel>
+        <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground font-mono tabular-nums">
+          {stats.total}
+        </h2>
+      </div>
 
-      <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
-            Active
-          </CardTitle>
-          <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-xl sm:text-2xl font-bold text-foreground">
-            {activeClients}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 max-w-xl">
+        <div className="snap-start shrink-0 min-w-[150px] sm:min-w-0">
+          <Card className={glassCard}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Active
+              </CardTitle>
+              <div className={cn("p-1.5 rounded-lg", theme.statIconWrap)}>
+                <UserCheck className={cn("h-4 w-4", theme.statIcon)} />
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="text-3xl font-black font-mono text-foreground">
+                {stats.active}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm sm:text-base font-medium text-muted-foreground">
-            New This Month
-          </CardTitle>
-          <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-xl sm:text-2xl font-bold text-foreground">
-            {newThisMonth}
-          </div>
-        </CardContent>
-      </Card>
+        <div className="snap-start shrink-0 min-w-[150px] sm:min-w-0">
+          <Card className={glassCard}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                New This Month
+              </CardTitle>
+              <div className={cn("p-1.5 rounded-lg", theme.statIconWrap)}>
+                <UserPlus className={cn("h-4 w-4", theme.statIcon)} />
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="text-3xl font-black font-mono text-foreground">
+                {stats.newThisMonth}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

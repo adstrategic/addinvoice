@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   ClientStats,
   ClientList,
@@ -17,9 +17,8 @@ import { useDebouncedTableParams } from "@/hooks/useDebouncedTableParams";
 import { Card, CardContent } from "@/components/ui/card";
 import LoadingComponent from "@/components/loading-component";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Mic } from "lucide-react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { VoiceCreateFab } from "@/components/shared/VoiceCreateFab";
 import { useLimitGuard } from "@/hooks/use-limit-guard";
 
 /**
@@ -28,6 +27,8 @@ import { useLimitGuard } from "@/hooks/use-limit-guard";
  */
 export default function ClientsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { currentPage, setPage, debouncedSearch, searchTerm, setSearch } =
     useDebouncedTableParams();
 
@@ -45,19 +46,37 @@ export default function ClientsPage() {
     clientManager.openCreate();
   };
 
-  // Fetch clients with pagination and search
+  const actionParam = searchParams.get("action");
+  const didTriggerCreateRef = useRef(false);
+
+  useEffect(() => {
+    if (actionParam !== "create") {
+      didTriggerCreateRef.current = false;
+      return;
+    }
+    if (didTriggerCreateRef.current) return;
+    didTriggerCreateRef.current = true;
+    router.replace(pathname);
+    handleOpenCreateClient();
+  }, [actionParam, handleOpenCreateClient, pathname, router]);
+
   const {
     data: clientsData,
     isLoading,
+    isFetching,
+    isPlaceholderData,
     error,
   } = useClients({
     page: currentPage,
     search: debouncedSearch || undefined,
   });
 
+  const isInitialLoad = isLoading && !clientsData;
+  const isListLoading = isFetching && isPlaceholderData;
+
   const clientDelete = useClientDelete();
 
-  if (isLoading) return <LoadingComponent variant="dashboard" />;
+  if (isInitialLoad) return <LoadingComponent variant="dashboard" />;
 
   if (error || !clientsData) {
     return (
@@ -81,8 +100,8 @@ export default function ClientsPage() {
     <>
       <div>
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-          <div>
+        <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-center sm:text-left">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Clients
             </h1>
@@ -96,33 +115,33 @@ export default function ClientsPage() {
           />
         </div>
 
-        <div className="mb-6 sm:mb-8">
-          <ClientStats clients={clients} />
-        </div>
+        <ClientStats stats={clientsData.stats} />
 
-        <ClientFilters searchTerm={searchTerm} onSearchChange={setSearch} />
-        {/* Clients List */}
-        <ClientList
-          clients={clients}
-          onViewDetails={(sequence) => router.push(`/clients/${sequence}`)}
-          onEdit={clientManager.openEdit}
-          // onViewInvoices={(client) => router.push("/invoices")}
-          onSendEmail={(client) => {
-            if (client.email) window.location.href = `mailto:${client.email}`;
-          }}
-          onDelete={clientDelete.openDeleteModal}
-        >
-          {pagination && (
-            <TablePagination
-              currentPage={currentPage}
-              totalPages={pagination.totalPages}
-              totalItems={pagination.total}
-              onPageChange={setPage}
-              emptyMessage="No clients found"
-              itemLabel="clients"
-            />
-          )}
-        </ClientList>
+        <div className="bg-card rounded-2xl border border-border/60 px-4 sm:px-6 pt-5 pb-5 shadow-sm">
+          <ClientFilters searchTerm={searchTerm} onSearchChange={setSearch} />
+
+          <ClientList
+            clients={clients}
+            isLoading={isListLoading}
+            onViewDetails={(sequence) => router.push(`/clients/${sequence}`)}
+            onEdit={clientManager.openEdit}
+            onSendEmail={(client) => {
+              if (client.email) window.location.href = `mailto:${client.email}`;
+            }}
+            onDelete={clientDelete.openDeleteModal}
+          >
+            {pagination && (
+              <TablePagination
+                currentPage={currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.total}
+                onPageChange={setPage}
+                emptyMessage="No clients found"
+                itemLabel="clients"
+              />
+            )}
+          </ClientList>
+        </div>
       </div>
 
       {/* Client Form Modal - handles both create and edit */}
@@ -156,16 +175,11 @@ export default function ClientsPage() {
         onOpenChange={setVoicePromptOpen}
       />
 
-      <Button
-        type="button"
-        size="icon-lg"
-        className="fixed bottom-6 right-6 z-40 size-18 rounded-full shadow-lg hover:shadow-xl"
+      <VoiceCreateFab
         onClick={openVoicePrompt}
-        aria-label="Create client by voice"
-        data-tour-id="clients-voice-btn"
-      >
-        <Mic className="size-8" />
-      </Button>
+        ariaLabel="Create client by voice"
+        tourId="clients-voice-btn"
+      />
     </>
   );
 }

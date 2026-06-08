@@ -271,16 +271,6 @@ export function EstimateForm({
       {/* Header */}
       <div className="sm:flex items-center justify-between mb-8">
         <div className="flex mb-4 sm:mb-0 items-center gap-4">
-          <Button
-            className="hidden sm:block"
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              onCancel();
-            }}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
           <div>
             <h1 className="text-3xl font-bold text-foreground">
               {mode === "create" ? "Create Estimate" : "Edit Estimate"}
@@ -631,15 +621,10 @@ export function EstimateForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={onSubmit}
-                disabled={form.formState.isSubmitting || isLoading || !isDirty}
+                onClick={() => onCancel()}
                 className="h-auto min-w-20 flex-1 flex-col gap-1 py-2"
               >
-                {isLoading || form.formState.isSubmitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ArrowLeft className="h-4 w-4" />
-                )}
+                <ArrowLeft className="h-4 w-4" />
                 <span className="text-xs">Back</span>
               </Button>
               <Button

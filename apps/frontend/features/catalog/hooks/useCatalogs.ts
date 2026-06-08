@@ -1,5 +1,10 @@
 import type { UseFormSetError } from "react-hook-form";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   type CreateCatalogDto,
@@ -40,7 +45,7 @@ export function useCatalogs(params?: ListCatalogsParams) {
     queryKey: catalogKeys.list(queryParams),
     queryFn: () => catalogService.list(queryParams),
     staleTime: 30 * 1000, // 30 seconds
-    placeholderData: (previousData) => previousData, // Smooth pagination transitions
+    placeholderData: keepPreviousData,
     enabled,
     initialData,
   });

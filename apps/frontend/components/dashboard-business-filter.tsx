@@ -28,6 +28,8 @@ export function DashboardBusinessFilter({
   const { data: businessesData } = useBusinesses();
   const businesses = businessesData?.data ?? [];
 
+  if (businesses.length <= 1) return null;
+
   return (
     <div className="flex items-center gap-2">
       <Select value={businessId} onValueChange={onBusinessIdChange}>

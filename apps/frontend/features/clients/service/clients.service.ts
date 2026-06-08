@@ -39,11 +39,7 @@ async function listClients(
       },
     });
 
-    const validatedData = clientResponseListSchema.parse(data);
-    return {
-      data: validatedData.data,
-      pagination: validatedData.pagination,
-    };
+    return clientResponseListSchema.parse(data);
   } catch (error) {
     handleApiError(error);
   }

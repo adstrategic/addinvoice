@@ -4,6 +4,7 @@ import { prisma } from "@addinvoice/db";
 
 import type { InvoiceEntityWithRelations } from "../invoices/invoices.schemas.js";
 import { toInvoiceEntityWithRelations } from "../invoices/invoices.mapper.js";
+import { toEstimateDashboardResponse } from "../estimates/estimates.mapper.js";
 import type {
   DashboardStatsQuery,
   DashboardStatsResponse,
@@ -115,11 +116,28 @@ export async function getDashboardStats(
   const recentInvoicesData: InvoiceEntityWithRelations[] =
     recentInvoicesWithDetails.map(toInvoiceEntityWithRelations);
 
+  const recentEstimatesWithDetails = await prisma.estimate.findMany({
+    include: {
+      _count: { select: { items: true } },
+      business: true,
+      client: true,
+      proposal: { select: { sequence: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+    where: { workspaceId, ...(businessId && { businessId }) },
+  });
+
+  const recentEstimatesData = recentEstimatesWithDetails.map(
+    toEstimateDashboardResponse,
+  );
+
   return {
     chartSeries,
     overdueInvoices,
     paidInvoices,
     pendingInvoices,
+    recentEstimates: recentEstimatesData,
     recentInvoices: recentInvoicesData,
     thisMonthInvoices,
     thisWeekInvoices,

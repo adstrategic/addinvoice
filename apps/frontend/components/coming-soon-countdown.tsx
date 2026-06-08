@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const TimeUnit = ({ value, label }: { value: number; label: string }) => (
-  <motion.div
+  <div
     className="flex flex-col items-center gap-4"
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -15,7 +15,7 @@ const TimeUnit = ({ value, label }: { value: number; label: string }) => (
       <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
       <AnimatePresence mode="popLayout" initial={false}>
-        <motion.div
+        <div
           key={value}
           initial={{ y: "100%" }}
           animate={{ y: "0%" }}
@@ -26,13 +26,13 @@ const TimeUnit = ({ value, label }: { value: number; label: string }) => (
           <span className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-primary to-primary/70 font-mono">
             {value.toString().padStart(2, "0")}
           </span>
-        </motion.div>
+        </div>
       </AnimatePresence>
     </div>
     <span className="text-sm font-medium tracking-widest uppercase text-muted-foreground">
       {label}
     </span>
-  </motion.div>
+  </div>
 );
 
 export function ComingSoonCountdown() {
@@ -69,7 +69,7 @@ export function ComingSoonCountdown() {
 
   return (
     <div className="container mx-auto px-4 min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center py-12">
-      <motion.div
+      <div
         className="max-w-4xl w-full text-center space-y-12"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -77,7 +77,7 @@ export function ComingSoonCountdown() {
       >
         {/* Header Section */}
         <div className="space-y-6">
-          <motion.h1
+          <h1
             className="text-4xl md:text-6xl font-black tracking-tight text-foreground uppercase leading-tight"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -87,9 +87,9 @@ export function ComingSoonCountdown() {
             <br />
             Is In The Works For{" "}
             <span className="text-primary">ADDINVOICES</span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
+          <p
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -97,7 +97,7 @@ export function ComingSoonCountdown() {
           >
             We are working on a new and exciting feature we think you'll really
             like! Stay tuned for the big reveal.
-          </motion.p>
+          </p>
         </div>
 
         {/* Countdown Section */}
@@ -109,7 +109,7 @@ export function ComingSoonCountdown() {
         </div>
 
         {/* Footer / Coming Soon Badge */}
-        <motion.div
+        <div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
@@ -122,8 +122,8 @@ export function ComingSoonCountdown() {
             </span>
             Launching March 1st, 2026
           </div>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

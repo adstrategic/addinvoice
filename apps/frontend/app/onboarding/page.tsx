@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -224,40 +223,26 @@ export default function OnboardingPage() {
     <div className="min-h-screen w-full flex flex-col items-center p-4 sm:p-6 lg:p-8 relative overflow-hidden bg-primary">
       {/* Background Images */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <AnimatePresence>
-          <motion.div
-            key={bgIndex}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.5 }}
-            className="absolute inset-0"
-          >
-            <picture>
-              <source
-                media="(min-width: 768px)"
-                srcSet={`/images/onboarding-pics/do${(bgIndex % 2) + 1}.png`}
-              />
-              <img
-                src={`/images/onboarding-pics/ro${(bgIndex % 5) + 1}.png`}
-                alt="Background"
-                className="w-full h-full object-cover"
-              />
-            </picture>
-          </motion.div>
-        </AnimatePresence>
+        <div key={bgIndex} className="absolute inset-0">
+          <picture>
+            <source
+              media="(min-width: 768px)"
+              srcSet={`/images/onboarding-pics/do${(bgIndex % 2) + 1}.png`}
+            />
+            <img
+              src={`/images/onboarding-pics/ro${(bgIndex % 5) + 1}.png`}
+              alt="Background"
+              className="w-full h-full object-cover"
+            />
+          </picture>
+        </div>
         {/* Overlay to ensure text readability */}
         <div className="absolute inset-0 bg-primary/40 mix-blend-multiply" />
       </div>
 
       {isFinishing ? (
         <div className="relative z-10 w-full flex flex-col items-center justify-center flex-1 text-white">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="text-center space-y-6"
-          >
+          <div className="text-center space-y-6">
             <div className="h-20 w-20 bg-background text-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
               <svg
                 className="w-10 h-10 animate-[bounce_2s_infinite]"
@@ -281,7 +266,7 @@ export default function OnboardingPage() {
               Let’s get your business set up so you never have to worry about
               this again.
             </p>
-          </motion.div>
+          </div>
         </div>
       ) : (
         <>
@@ -303,80 +288,66 @@ export default function OnboardingPage() {
 
           {/* Main Content */}
           <div className="relative z-10 w-full max-w-2xl flex-1 flex flex-col justify-start sm:justify-center mt-4 sm:mt-0">
-            <AnimatePresence mode="wait" custom={direction}>
-              <motion.div
-                key={currentStep}
-                custom={direction}
-                variants={slideVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="w-full space-y-8"
-              >
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 sm:p-5 shadow-lg">
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white leading-tight text-center sm:text-left drop-shadow-md">
-                    {currentQuestion.question}
-                  </h1>
-                </div>
+            <div key={currentStep} className="w-full space-y-8">
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 sm:p-5 shadow-lg">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white leading-tight text-center sm:text-left drop-shadow-md">
+                  {currentQuestion.question}
+                </h1>
+              </div>
 
-                <div className="space-y-3 sm:space-y-4 pt-2">
-                  {currentQuestion.options.map((option) => (
-                    <Card
-                      key={option.id}
-                      className={cn(
-                        "group relative cursor-pointer border border-white/20 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg hover:shadow-xl",
-                        selections[currentStep] === option.id &&
-                          "border-white/60 bg-white/20",
-                        option.isOther &&
-                          isOtherPending &&
-                          "ring-2 ring-white border-white/60",
-                      )}
-                      onClick={() => handleOptionSelect(option.id)}
-                    >
-                      <CardContent className="py-2.5 px-4 sm:py-3 sm:px-5 flex items-center gap-3 sm:gap-4">
-                        <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/30 flex items-center justify-center text-xs sm:text-sm font-bold text-white bg-white/10 group-hover:bg-white group-hover:text-primary group-hover:border-white transition-colors">
-                          {option.id}
-                        </div>
-                        <span className="text-base sm:text-lg font-medium leading-snug">
-                          {option.text}
-                        </span>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
-                {isOtherPending && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-3 pt-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-xl p-4 sm:p-5 shadow-lg"
+              <div className="space-y-3 sm:space-y-4 pt-2">
+                {currentQuestion.options.map((option) => (
+                  <Card
+                    key={option.id}
+                    className={cn(
+                      "group relative cursor-pointer border border-white/20 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg hover:shadow-xl",
+                      selections[currentStep] === option.id &&
+                        "border-white/60 bg-white/20",
+                      option.isOther &&
+                        isOtherPending &&
+                        "ring-2 ring-white border-white/60",
+                    )}
+                    onClick={() => handleOptionSelect(option.id)}
                   >
-                    <Input
-                      autoFocus
-                      placeholder="Please specify your business type"
-                      value={customAnswers[currentStep] ?? ""}
-                      onChange={(e) =>
-                        setCustomAnswers((prev) => ({
-                          ...prev,
-                          [currentStep]: e.target.value,
-                        }))
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleOtherContinue();
-                      }}
-                      className="h-11 border-white/30 bg-white/10 text-white placeholder:text-white/80 focus-visible:border-white focus-visible:ring-white/30"
-                    />
-                    <Button
-                      className="w-full bg-white text-primary hover:bg-white/90"
-                      onClick={handleOtherContinue}
-                      disabled={!customAnswers[currentStep]?.trim()}
-                    >
-                      Continue
-                    </Button>
-                  </motion.div>
-                )}
-              </motion.div>
-            </AnimatePresence>
+                    <CardContent className="py-2.5 px-4 sm:py-3 sm:px-5 flex items-center gap-3 sm:gap-4">
+                      <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/30 flex items-center justify-center text-xs sm:text-sm font-bold text-white bg-white/10 group-hover:bg-white group-hover:text-primary group-hover:border-white transition-colors">
+                        {option.id}
+                      </div>
+                      <span className="text-base sm:text-lg font-medium leading-snug">
+                        {option.text}
+                      </span>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {isOtherPending && (
+                <div className="space-y-3 pt-2 bg-black/40 backdrop-blur-sm border border-white/20 rounded-xl p-4 sm:p-5 shadow-lg">
+                  <Input
+                    autoFocus
+                    placeholder="Please specify your business type"
+                    value={customAnswers[currentStep] ?? ""}
+                    onChange={(e) =>
+                      setCustomAnswers((prev) => ({
+                        ...prev,
+                        [currentStep]: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleOtherContinue();
+                    }}
+                    className="h-11 border-white/30 bg-white/10 text-white placeholder:text-white/80 focus-visible:border-white focus-visible:ring-white/30"
+                  />
+                  <Button
+                    className="w-full bg-white text-primary hover:bg-white/90"
+                    onClick={handleOtherContinue}
+                    disabled={!customAnswers[currentStep]?.trim()}
+                  >
+                    Continue
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Footer Navigation */}

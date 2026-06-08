@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { DocumentStatusBadge } from "@/components/shared/DocumentStatusBadge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,35 +16,22 @@ import {
   Send,
   Ban,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { canVoidAdvance } from "@/lib/document-void";
 import { canSendAdvance } from "@/lib/is-document-public-issued";
 import type { AdvanceListItemResponse } from "@addinvoice/schemas";
 import { mapStatusToUI } from "../types/api";
 import { useRouter } from "next/navigation";
-
-const statusConfig = {
-  draft: {
-    label: "Draft",
-    className: "bg-muted text-muted-foreground hover:bg-muted/80",
-  },
-  issued: {
-    label: "Issued",
-    className: "bg-primary/20 text-primary hover:bg-primary/30",
-  },
-  viewed: {
-    label: "Viewed",
-    className: "bg-blue-500/15 text-blue-600 hover:bg-blue-500/20",
-  },
-  invoiced: {
-    label: "Invoiced",
-    className: "bg-chart-3/20 text-chart-3 hover:bg-chart-3/30",
-  },
-  voided: {
-    label: "Voided",
-    className: "bg-destructive/15 text-destructive hover:bg-destructive/20",
-  },
-};
+import {
+  ListCard,
+  ListCardBody,
+  ListCardMain,
+  ListCardHeaderRow,
+  ListCardSubtitle,
+  ListCardFooter,
+  ListCardFooterLabel,
+  ListCardFooterValue,
+  getClientDisplayLines,
+} from "@/components/shared/list-card";
 
 interface AdvanceCardProps {
   advance: AdvanceListItemResponse;
@@ -54,9 +41,14 @@ interface AdvanceCardProps {
   onSend: (advance: AdvanceListItemResponse) => void;
 }
 
-/**
- * Individual estimate card component
- */
+function formatCardDate(date: Date | string) {
+  return new Date(date).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function AdvanceCard({
   advance,
   index,
@@ -66,89 +58,97 @@ export function AdvanceCard({
 }: AdvanceCardProps) {
   const router = useRouter();
 
-  const clientName =
-    advance.client?.name || advance.client?.businessName || "Unknown client";
+  const { name: clientName, businessName: clientBusinessName } =
+    getClientDisplayLines(advance.client, "Unknown client");
   const uiStatus = mapStatusToUI(advance.status);
-  const statusInfo = statusConfig[uiStatus as keyof typeof statusConfig] || {
-    label: uiStatus,
-    className: "bg-muted text-muted-foreground",
-  };
+
+  const actionsMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 hover:bg-primary/10 hover:text-primary transition-colors duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {canSendAdvance(advance) && (
+          <DropdownMenuItem onClick={() => onSend(advance)}>
+            <Send className="mr-2 h-4 w-4" />
+            Send
+          </DropdownMenuItem>
+        )}
+        {advance.status === "DRAFT" && (
+          <DropdownMenuItem
+            onClick={() => router.push(`/advances/${advance.sequence}/edit`)}
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem
+          onClick={() => router.push(`/advances/${advance.sequence}`)}
+        >
+          <Eye className="mr-2 h-4 w-4" />
+          View
+        </DropdownMenuItem>
+        {advance.status === "DRAFT" && (
+          <DropdownMenuItem
+            className="text-destructive"
+            onClick={() => onDelete(advance)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        )}
+        {canVoidAdvance(advance) && (
+          <DropdownMenuItem
+            className="text-destructive"
+            onClick={() => onVoid(advance)}
+          >
+            <Ban className="mr-2 h-4 w-4" />
+            Mark as voided
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.25, delay: index * 0.03 }}
-      className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/50 p-4 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/20">
-          <FileText className="h-5 w-5 text-primary" />
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="truncate font-semibold text-foreground">
-              {advance.projectName}
-            </p>
-            <Badge variant="secondary" className={statusInfo.className}>
-              {statusInfo.label}
-            </Badge>
-          </div>
-          <p className="truncate text-sm text-muted-foreground">{clientName}</p>
-          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3" />
-            {new Date(advance.advanceDate).toLocaleDateString()}
-          </p>
-        </div>
-      </div>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {canSendAdvance(advance) && (
-            <DropdownMenuItem onClick={() => onSend(advance)}>
-              <Send className="mr-2 h-4 w-4" />
-              Send
-            </DropdownMenuItem>
-          )}
-          {advance.status === "DRAFT" && (
-            <DropdownMenuItem
-              onClick={() => router.push(`/advances/${advance.sequence}/edit`)}
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem
-            onClick={() => router.push(`/advances/${advance.sequence}`)}
+    <ListCard clickable={false} variant="advance">
+      <ListCardBody>
+        <ListCardMain icon={FileText} variant="advance">
+          <ListCardHeaderRow
+            title={advance.projectName}
+            badge={
+              <DocumentStatusBadge
+                uiStatus={uiStatus}
+                documentType="advance"
+              />
+            }
+            actions={actionsMenu}
           >
-            <Eye className="mr-2 h-4 w-4" />
-            View
-          </DropdownMenuItem>
-          {advance.status === "DRAFT" && (
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => onDelete(advance)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          )}
-          {canVoidAdvance(advance) && (
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => onVoid(advance)}
-            >
-              <Ban className="mr-2 h-4 w-4" />
-              Mark as voided
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </motion.div>
+            <ListCardSubtitle>{clientName}</ListCardSubtitle>
+            {clientBusinessName && (
+              <p className="text-xs text-muted-foreground truncate">
+                {clientBusinessName}
+              </p>
+            )}
+          </ListCardHeaderRow>
+        </ListCardMain>
+
+        <div className="hidden sm:block shrink-0">{actionsMenu}</div>
+      </ListCardBody>
+
+      <ListCardFooter variant="advance" icon={Calendar}>
+        <ListCardFooterLabel>Advance date</ListCardFooterLabel>
+        <ListCardFooterValue>
+          {formatCardDate(advance.advanceDate)}
+        </ListCardFooterValue>
+      </ListCardFooter>
+    </ListCard>
   );
 }

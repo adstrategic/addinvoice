@@ -1,29 +1,13 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import {
-  TrendingDown,
-  Plus,
-  TrendingUp,
-  Wallet,
-  type LucideIcon,
-} from "lucide-react";
-import { DashboardBusinessFilter } from "@/components/dashboard-business-filter";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { useDashboardStats } from "@/features/dashboard";
-import { useExpenseDashboardStats } from "@/features/expenses";
-import { InvoiceCard } from "@/features/invoices/components/InvoiceCard";
+import { FileText, FileCheck, FileSearch, Inbox } from "lucide-react";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -32,12 +16,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { DashboardBusinessFilter } from "@/components/dashboard-business-filter";
+import { useDashboardStats } from "@/features/dashboard";
+import { mapStatusToUI } from "@/features/invoices/types/api";
+import { useExpenseDashboardStats } from "@/features/expenses";
 import { cn, formatCurrency } from "@/lib/utils";
+import { getClientDisplayLines } from "@/components/shared/list-card";
 import {
   dismissRootShortcuts,
   hasDismissedRootShortcuts,
 } from "@/lib/root-shortcuts";
 import { ShortcutInterface } from "@/components/shortcut-interface";
+import type { EstimateDashboardResponse } from "@addinvoice/schemas";
+import type { InvoiceResponse } from "@/features/invoices";
+
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 const CHART_PERIODS = [
   { value: "7d" as const, label: "Last 7 days" },
@@ -46,148 +45,234 @@ const CHART_PERIODS = [
   { value: "12m" as const, label: "Last 12 months" },
 ] as const;
 
+const INVOICE_FILTERS = ["Recent", "Open", "Overdue", "Paid"] as const;
+const ESTIMATE_FILTERS = ["Recent", "Sent", "Accepted"] as const;
+
 const chartConfig = {
-  earnings: {
-    label: "Earnings",
-    color: "var(--chart-earnings)",
-  },
-  expenses: {
-    label: "Expenses",
-    color: "var(--chart-expenses)",
-  },
+  earnings: { label: "Earnings", color: "var(--chart-earnings)" },
+  expenses: { label: "Expenses", color: "var(--chart-expenses)" },
 } satisfies ChartConfig;
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 },
-  },
-};
+// ─── Sparkline ───────────────────────────────────────────────────────────────
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as const },
-  },
-};
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  if (data.length < 2) return null;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const points = data
+    .map(
+      (d, i) =>
+        `${(i / (data.length - 1)) * 100},${100 - ((d - min) / range) * 80}`,
+    )
+    .join(" ");
+  const gradId = `grad-${color.replace(/[^a-zA-Z0-9]/g, "")}`;
+  return (
+    <svg
+      className="absolute bottom-0 left-0 w-full h-1/2 opacity-20 pointer-events-none"
+      preserveAspectRatio="none"
+      viewBox="0 0 100 100"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.8" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="3"
+        vectorEffect="non-scaling-stroke"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <polygon
+        points={`0,100 ${points} 100,100`}
+        fill={`url(#${gradId})`}
+        opacity="0.5"
+      />
+    </svg>
+  );
+}
+
+// ─── Stat Card ───────────────────────────────────────────────────────────────
 
 interface StatCardProps {
   label: string;
-  value: string | number;
-  subtitle?: string;
-  icon: LucideIcon;
-  iconClassName?: string;
+  value: string;
+  dotColor: string;
+  sparkData: number[];
+  sparkColor: string;
+  glowColor: string;
   tourId?: string;
 }
 
 function StatCard({
   label,
   value,
-  subtitle,
-  icon: Icon,
-  iconClassName = "text-primary",
+  dotColor,
+  sparkData,
+  sparkColor,
+  glowColor,
   tourId,
 }: StatCardProps) {
   return (
-    <Card
+    <div
       data-tour-id={tourId}
-      className="shadow-sm hover:shadow-md transition-shadow duration-200"
+      className="bg-linear-to-br from-card/80 to-card/30 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl p-4 sm:p-5 text-left shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group min-w-0 w-full"
     >
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {label}
-        </CardTitle>
-        <Icon
-          className={cn(
-            "h-4 w-4 opacity-80 group-hover:opacity-100",
-            iconClassName,
-          )}
-        />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold tracking-tight text-foreground">
-          {value}
-        </div>
-        {subtitle && (
-          <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+      <Sparkline data={sparkData} color={sparkColor} />
+      <div
+        className={cn(
+          "absolute -right-4 -top-4 w-16 h-16 rounded-full blur-2xl transition-colors",
+          glowColor,
         )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function DashboardEntryFallback() {
-  return (
-    <div>
-      <div className="mb-8 space-y-2">
-        <div className="h-8 w-48 animate-pulse rounded-md bg-muted" />
-        <div className="h-4 w-72 animate-pulse rounded-md bg-muted/80" />
+      />
+      <div className="flex items-center gap-2 mb-2 relative z-10">
+        <div className={cn("w-2.5 h-2.5 rounded-full", dotColor)} />
+        <span className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-widest">
+          {label}
+        </span>
       </div>
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-        {[0, 1, 2].map((i) => (
-          <Card key={i} className="shadow-sm">
-            <CardHeader>
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <p className="text-xl sm:text-xl font-black text-foreground relative z-10 font-mono tabular-nums break-words">
+        {value}
+      </p>
     </div>
   );
 }
 
-type RootSurface = "hydrating" | "shortcuts" | "dashboard";
+// ─── Invoice mini card ───────────────────────────────────────────────────────
 
-function DashboardRoot() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [surface, setSurface] = useState<RootSurface>("hydrating");
+const INVOICE_STATUS_COLORS: Record<string, string> = {
+  paid: "bg-primary/10 text-primary",
+  overdue: "bg-red-500/10 text-red-500",
+  issued: "bg-chart-3/10 text-chart-3",
+  viewed: "bg-blue-500/10 text-blue-500",
+  draft: "bg-secondary text-muted-foreground",
+  voided: "bg-destructive/10 text-destructive",
+};
 
-  const goToDashboard = useCallback(() => {
-    setSurface("dashboard");
-  }, []);
+function InvoiceMiniCard({ invoice }: { invoice: InvoiceResponse }) {
+  const uiStatus = mapStatusToUI(invoice.status);
+  const { name: clientName, businessName: clientBusinessName } =
+    getClientDisplayLines(invoice.client, "—");
+  const dueDateLabel = new Date(invoice.dueDate).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 
-  useEffect(() => {
-    const view = searchParams.get("view");
-    const shortcuts = searchParams.get("shortcuts");
-
-    if (view === "dashboard" || shortcuts === "0") {
-      dismissRootShortcuts();
-      router.replace("/", { scroll: false });
-      setSurface("dashboard");
-      return;
-    }
-
-    if (shortcuts === "1") {
-      setSurface("shortcuts");
-      return;
-    }
-
-    setSurface(hasDismissedRootShortcuts() ? "dashboard" : "shortcuts");
-  }, [router, searchParams]);
-
-  if (surface === "hydrating") {
-    return <DashboardEntryFallback />;
-  }
-
-  if (surface === "shortcuts") {
-    return <ShortcutInterface onRequestDashboard={goToDashboard} />;
-  }
-
-  return <DashboardHome />;
+  return (
+    <Link href={`/invoices/${invoice.sequence}`}>
+      <div className="min-w-[240px] bg-card/50 border border-border/40 rounded-2xl p-5 hover:bg-card hover:border-primary/30 hover:shadow-md transition-all duration-300 group shrink-0 cursor-pointer">
+        <div className="flex justify-between items-start mb-4">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors duration-200">
+            <FileText className="w-6 h-6" />
+          </div>
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[10px] uppercase font-bold tracking-wider border-0",
+              INVOICE_STATUS_COLORS[uiStatus] ??
+                "bg-secondary text-muted-foreground",
+            )}
+          >
+            {uiStatus}
+          </Badge>
+        </div>
+        <p className="font-bold text-foreground truncate">{clientName}</p>
+        {clientBusinessName && (
+          <p className="text-xs text-muted-foreground truncate">
+            {clientBusinessName}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground mb-1 mt-0.5">
+          {invoice.invoiceNumber}
+        </p>
+        <p className="text-2xl font-mono font-black text-foreground mt-2">
+          {formatCurrency(invoice.total ?? 0)}
+        </p>
+        <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2 text-xs">
+          <span className="text-muted-foreground">
+            Balance{" "}
+            <span
+              className={cn(
+                "font-semibold font-mono tabular-nums",
+                (invoice.balance ?? 0) <= 0 ? "text-green-600" : "text-red-600",
+              )}
+            >
+              {formatCurrency(invoice.balance ?? 0)}
+            </span>
+          </span>
+          <span className="text-muted-foreground shrink-0">
+            Due {dueDateLabel}
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
 }
+
+// ─── Estimate mini card ──────────────────────────────────────────────────────
+
+function EstimateMiniCard({
+  estimate,
+}: {
+  estimate: EstimateDashboardResponse;
+}) {
+  const status = estimate.status?.toLowerCase() ?? "draft";
+  const { name: clientName, businessName: clientBusinessName } =
+    getClientDisplayLines(estimate.client, "—");
+  const statusColors: Record<string, string> = {
+    accepted: "bg-green-500/10 text-green-500",
+    sent: "bg-orange-500/10 text-orange-500",
+    viewed: "bg-blue-500/10 text-blue-500",
+  };
+  return (
+    <Link href={`/estimates/${estimate.sequence}`}>
+      <div className="min-w-[240px] bg-card/50 border border-border/40 rounded-2xl p-5 hover:bg-card hover:border-orange-500/30 hover:shadow-md transition-all duration-300 group shrink-0 cursor-pointer">
+        <div className="flex justify-between items-start mb-4">
+          <div className="w-12 h-12 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-colors">
+            <FileCheck className="w-6 h-6" />
+          </div>
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[10px] uppercase font-bold tracking-wider border-0",
+              statusColors[status] ?? "bg-secondary text-muted-foreground",
+            )}
+          >
+            {status}
+          </Badge>
+        </div>
+        <p className="font-bold text-foreground truncate">{clientName}</p>
+        {clientBusinessName && (
+          <p className="text-xs text-muted-foreground truncate">
+            {clientBusinessName}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground mb-1 mt-0.5">
+          {estimate.estimateNumber}
+        </p>
+        <p className="text-2xl font-mono font-black text-foreground mt-2">
+          {formatCurrency(estimate.total ?? 0)}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+// ─── Dashboard home ──────────────────────────────────────────────────────────
 
 function DashboardHome() {
   const [periodFilter, setPeriodFilter] = useState<"7d" | "30d" | "6m" | "12m">(
     "30d",
   );
   const [businessIdFilter, setBusinessIdFilter] = useState<string>("all");
+  const [invoiceFilter, setInvoiceFilter] = useState<string>("Recent");
+  const [estimateFilter, setEstimateFilter] = useState<string>("Recent");
 
   const {
     data: stats,
@@ -227,354 +312,431 @@ function DashboardHome() {
     }));
   }, [stats?.chartSeries, expenseStats]);
 
+  const sparklinePoints = useMemo(() => {
+    const slice = (stats?.chartSeries ?? []).slice(-8).map((p) => p.revenue);
+    return slice.length >= 2 ? slice : [0, 0, 0, 0, 0, 0, 0, 0];
+  }, [stats?.chartSeries]);
+
+  const expenseSparkline = useMemo(() => {
+    const series =
+      (
+        expenseStats as
+          | { chartSeries?: { label: string; amount: number }[] }
+          | undefined
+      )?.chartSeries ?? [];
+    const slice = series.slice(-8).map((p) => p.amount);
+    return slice.length >= 2 ? slice : [0, 0, 0, 0, 0, 0, 0, 0];
+  }, [expenseStats]);
+
+  const filteredInvoices = useMemo(() => {
+    const all = (stats?.recentInvoices ?? []) as InvoiceResponse[];
+    if (invoiceFilter === "Open")
+      return all.filter((i) => i.status === "SENT" || i.status === "VIEWED");
+    if (invoiceFilter === "Overdue")
+      return all.filter((i) => i.status === "OVERDUE");
+    if (invoiceFilter === "Paid") return all.filter((i) => i.status === "PAID");
+    return all;
+  }, [stats?.recentInvoices, invoiceFilter]);
+
+  const filteredEstimates = useMemo(() => {
+    const all = (stats?.recentEstimates ?? []) as EstimateDashboardResponse[];
+    if (estimateFilter === "Sent")
+      return all.filter((e) => e.status === "SENT" || e.status === "VIEWED");
+    if (estimateFilter === "Accepted")
+      return all.filter((e) => e.status === "ACCEPTED");
+    return all;
+  }, [stats?.recentEstimates, estimateFilter]);
+
+  const totalRevenue = stats?.totalRevenue ?? 0;
+  const totalOutstanding = stats?.totalOutstanding ?? 0;
+  const totalSpent = expenseStats?.totalAmount ?? 0;
+  const projected = totalRevenue + totalOutstanding;
+  const paidRatio = projected > 0 ? totalRevenue / projected : 0;
+
   return (
-    <>
-      {/* GRADIENT OPTION — swap className below to compare designs:
-          Current (flat): remove the wrapper div entirely
-          Gradient A (light teal): bg-gradient-to-br from-teal-50/80 via-slate-50 to-sky-100/60
-          Gradient B (dark navy): bg-gradient-to-br from-[#0c1524] via-[#111e35] to-[#0c1520]
-      */}
-      {/* <div className="min-h-screen bg-gradient-to-br from-teal-50/80 via-slate-50 to-sky-100/60"> */}
-      <div>
-        {/* Header with Business Filter */}
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-              Dashboard
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Overview of your invoices and revenue
-            </p>
-          </div>
+    <div className="flex flex-col min-h-screen -mx-4 sm:-mx-6 -mt-6 sm:-mt-8">
+      {/* Hero section */}
+      <div className="pt-8 sm:pt-12 pb-20 px-4 sm:px-6 relative z-0">
+        <div className="flex justify-end mb-6">
           <DashboardBusinessFilter
             businessId={businessIdFilter}
             onBusinessIdChange={setBusinessIdFilter}
           />
         </div>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="space-y-6">
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-4 w-24" />
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-8 w-16" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+        <div className="flex flex-col items-center text-center space-y-2 mb-8">
+          <span className="text-xs sm:text-sm font-bold tracking-widest text-muted-foreground uppercase">
+            Projected Revenue
+          </span>
+          <div className="relative inline-block">
+            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse" />
+            <h1
+              data-tour-id="dashboard-total-earned"
+              className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-foreground drop-shadow-sm font-mono tabular-nums relative z-10"
+            >
+              {isLoading ? (
+                <Skeleton className="h-16 w-56 mx-auto" />
+              ) : (
+                formatCurrency(projected)
+              )}
+            </h1>
           </div>
-        )}
 
-        {/* Error State */}
-        {error && (
-          <Card className="p-6 shadow-sm">
-            <p className="text-destructive">
-              Failed to load dashboard data. Please try again later.
-            </p>
-          </Card>
-        )}
-
-        {/* Dashboard Content */}
-        {!isLoading && !error && stats && (
-          <>
-            {/* Overview stats: Total earned, Total spent, Customers owe */}
-            <section className="mb-8">
-              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-                Overview
-              </h2>
+          {!isLoading && projected > 0 && (
+            <div className="w-full max-w-sm flex h-2 rounded-full overflow-hidden mt-6 bg-secondary/50 shadow-inner border border-border/50">
               <motion.div
-                className="grid gap-4 grid-cols-1 sm:grid-cols-3"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-              >
-                <motion.div variants={itemVariants}>
-                  <StatCard
-                    tourId="dashboard-total-earned"
-                    label="Total earned"
-                    value={formatCurrency(stats.totalRevenue)}
-                    icon={TrendingUp}
-                    iconClassName="text-primary"
-                  />
-                </motion.div>
-                <motion.div variants={itemVariants}>
-                  <StatCard
-                    tourId="dashboard-total-spent"
-                    label="Total spent"
-                    value={formatCurrency(expenseStats?.totalAmount ?? 0)}
-                    icon={TrendingDown}
-                    iconClassName="text-destructive"
-                  />
-                </motion.div>
-                <motion.div variants={itemVariants}>
-                  <StatCard
-                    tourId="dashboard-customers-owe"
-                    label="Customers owe"
-                    value={formatCurrency(stats.totalOutstanding)}
-                    icon={Wallet}
-                    iconClassName="text-chart-4"
-                  />
-                </motion.div>
-              </motion.div>
-            </section>
-
-            {/* Earnings vs Expenses chart + Recent Invoices */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                className="bg-linear-to-r from-primary-dark via-primary to-primary-light h-full shrink-0"
+                initial={{ width: 0 }}
+                animate={{ width: `${paidRatio * 100}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+              />
               <motion.div
-                className="lg:col-span-2"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
-              >
-                <Card
-                  data-tour-id="dashboard-revenue-chart"
-                  className="h-full shadow-sm hover:shadow-md transition-shadow duration-200"
-                >
-                  <CardHeader>
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div>
-                          <CardTitle className="text-xl sm:text-2xl font-bold text-foreground">
-                            Earnings vs expenses
-                          </CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            By payment date (earnings) and expense date
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="flex items-center gap-1.5 text-primary">
-                            <span className="h-2 w-2 rounded-full bg-primary" />
-                            Earnings
-                          </span>
-                          <span className="flex items-center gap-1.5 text-destructive">
-                            <span className="h-2 w-2 rounded-full bg-destructive" />
-                            Expenses
-                          </span>
-                        </div>
-                      </div>
-                      <Select
-                        value={periodFilter}
-                        onValueChange={(v) =>
-                          setPeriodFilter(v as "7d" | "30d" | "6m" | "12m")
-                        }
-                      >
-                        <SelectTrigger className="w-full max-w-48">
-                          <SelectValue placeholder="Period" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CHART_PERIODS.map(({ value, label }) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="px-0 pr-2">
-                    <ChartContainer
-                      config={chartConfig}
-                      className="min-h-[300px] w-full"
-                    >
-                      <AreaChart
-                        accessibilityLayer
-                        data={chartData}
-                        margin={{ left: 12, right: 12 }}
-                      >
-                        <defs>
-                          <linearGradient
-                            id="fillEarnings"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="0%"
-                              stopColor="var(--color-earnings)"
-                              stopOpacity={0.4}
-                            />
-                            <stop
-                              offset="100%"
-                              stopColor="var(--color-earnings)"
-                              stopOpacity={0}
-                            />
-                          </linearGradient>
-                          <linearGradient
-                            id="fillExpenses"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="0%"
-                              stopColor="var(--color-expenses)"
-                              stopOpacity={0.4}
-                            />
-                            <stop
-                              offset="100%"
-                              stopColor="var(--color-expenses)"
-                              stopOpacity={0}
-                            />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid vertical={false} />
-                        <XAxis
-                          dataKey="label"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          minTickGap={32}
-                        />
-                        <YAxis
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tickFormatter={(value) =>
-                            value >= 1000 ? `$${value / 1000}K` : `$${value}`
-                          }
-                        />
-                        <ChartTooltip
-                          content={
-                            <ChartTooltipContent
-                              formatter={(value, name) => {
-                                const label =
-                                  name === "earnings"
-                                    ? chartConfig.earnings.label
-                                    : chartConfig.expenses.label;
-                                return (
-                                  <div className="flex w-full items-center justify-between gap-4">
-                                    <span className="text-muted-foreground">
-                                      {label}
-                                    </span>
-                                    <span className="font-mono font-medium tabular-nums text-foreground">
-                                      {formatCurrency(Number(value))}
-                                    </span>
-                                  </div>
-                                );
-                              }}
-                            />
-                          }
-                        />
-                        <Area
-                          dataKey="earnings"
-                          type="monotone"
-                          stroke="var(--color-earnings)"
-                          fill="url(#fillEarnings)"
-                          strokeWidth={2}
-                        />
-                        <Area
-                          dataKey="expenses"
-                          type="monotone"
-                          stroke="var(--color-expenses)"
-                          fill="url(#fillExpenses)"
-                          strokeWidth={2}
-                        />
-                      </AreaChart>
-                    </ChartContainer>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                className="bg-linear-to-r from-chart-4/80 to-chart-4 h-full shrink-0"
+                initial={{ width: 0 }}
+                animate={{ width: `${(1 - paidRatio) * 100}%` }}
+                transition={{ duration: 0.8, ease: "easeOut", delay: 0.15 }}
+              />
+            </div>
+          )}
+        </div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.35 }}
-              >
-                <Card
-                  data-tour-id="dashboard-recent-invoices"
-                  className="h-full shadow-sm hover:shadow-md transition-shadow duration-200"
-                >
-                  <CardHeader>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div>
-                        <CardTitle className="text-lg font-bold text-foreground">
-                          Recent Invoices
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                          Latest activity
-                        </p>
-                      </div>
-                      <Link href="/invoices">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="hover:bg-primary/10 hover:text-primary hover:border-primary transition-all duration-200"
-                        >
-                          View All
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {stats.recentInvoices.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-muted-foreground text-sm">
-                          No recent invoices
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {stats.recentInvoices.map((invoice, index) => (
-                          <InvoiceCard
-                            key={invoice.id}
-                            invoice={invoice}
-                            index={index}
-                            linkOnly={true}
-                            onDownload={() => {}}
-                            onSend={() => {}}
-                            onAddPayment={() => {}}
-                            onDelete={() => {}}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </section>
-          </>
+        {/* Stat cards */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 max-w-2xl mx-auto w-full">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="rounded-3xl bg-card/50 p-4 sm:p-5 min-w-0">
+                <Skeleton className="h-3 w-16 mb-3" />
+                <Skeleton className="h-7 w-32 max-w-full" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 max-w-2xl mx-auto w-full">
+            <StatCard
+              tourId="dashboard-paid"
+              label="Paid"
+              value={formatCurrency(totalRevenue)}
+              dotColor="bg-primary-light shadow-[0_0_12px_rgba(0,117,135,1)]"
+              sparkData={sparklinePoints}
+              sparkColor="hsl(var(--primary-light))"
+              glowColor="bg-primary-light/10 group-hover:bg-primary-light/30"
+            />
+            <StatCard
+              tourId="dashboard-total-spent"
+              label="Spent"
+              value={formatCurrency(totalSpent)}
+              dotColor="bg-chart-4 shadow-[0_0_8px_rgba(255,180,84,0.8)]"
+              sparkData={expenseSparkline}
+              sparkColor="#f59e0b"
+              glowColor="bg-chart-4/10 group-hover:bg-chart-4/20"
+            />
+            <StatCard
+              tourId="dashboard-customers-owe"
+              label="Owe"
+              value={formatCurrency(totalOutstanding)}
+              dotColor="bg-muted-foreground shadow-[0_0_8px_rgba(150,150,150,0.5)]"
+              sparkData={sparklinePoints.map((v) => v * 0.4)}
+              sparkColor="#9ca3af"
+              glowColor="bg-muted-foreground/10 group-hover:bg-muted-foreground/20"
+            />
+          </div>
         )}
       </div>
 
-      <Link href="/invoices">
-        <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{
-            duration: 0.5,
-            delay: 1,
-            type: "spring",
-            stiffness: 200,
-          }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Button
-            size="lg"
-            data-tour-id="dashboard-create-invoice-btn"
-            className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg hover:shadow-xl hover:shadow-primary/30 transition-all bg-primary text-primary-foreground hover:bg-primary/90"
+      {/* Overlapping content card */}
+      <div className="flex-1 bg-background/80 backdrop-blur-3xl rounded-t-[3rem] px-5 sm:px-10 pt-8 pb-10 -mt-8 relative z-10 shadow-[0_-20px_60px_rgba(0,0,0,0.1)] border-t border-white/20 dark:border-white/5">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-6 bg-linear-to-r from-primary-dark/0 via-primary-light/20 to-primary-dark/0 blur-2xl rounded-full pointer-events-none" />
+        <div className="w-12 h-1.5 bg-border rounded-full mx-auto mb-8 opacity-50" />
+
+        {error && (
+          <p className="text-sm text-destructive mb-6">
+            Failed to load dashboard data. Please try again.
+          </p>
+        )}
+
+        {/* Invoices */}
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-foreground" />
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+                Invoices
+              </h2>
+            </div>
+            <Link href="/invoices">
+              <Button
+                variant="link"
+                className="text-muted-foreground hover:text-foreground p-0 h-auto"
+              >
+                View all
+              </Button>
+            </Link>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
+            {INVOICE_FILTERS.map((filter) => (
+              <Badge
+                key={filter}
+                onClick={() => setInvoiceFilter(filter)}
+                className={cn(
+                  "cursor-pointer px-4 py-1 text-xs rounded-full transition-all duration-200 whitespace-nowrap",
+                  invoiceFilter === filter
+                    ? filter === "Overdue"
+                      ? "bg-red-500 text-white hover:bg-red-600"
+                      : filter === "Paid"
+                        ? "bg-green-500 text-white hover:bg-green-600"
+                        : "bg-foreground text-background hover:bg-foreground/90"
+                    : "bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )}
+              >
+                {filter}
+              </Badge>
+            ))}
+          </div>
+
+          <div
+            id="dashboard-recent-invoices"
+            className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
           >
-            <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
-            <span className="sr-only">Create Invoice</span>
-          </Button>
-        </motion.div>
-      </Link>
-      {/* </div>{" "} */}
-      {/* gradient wrapper */}
-    </>
+            {isLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton
+                  key={i}
+                  className="min-w-[240px] h-44 rounded-2xl shrink-0"
+                />
+              ))
+            ) : filteredInvoices.length > 0 ? (
+              filteredInvoices.map((invoice) => (
+                <InvoiceMiniCard key={invoice.id} invoice={invoice} />
+              ))
+            ) : (
+              <div className="w-full text-center py-10 bg-secondary/20 rounded-3xl border border-dashed border-border/50 flex flex-col items-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-3">
+                  <Inbox className="w-8 h-8 text-primary opacity-80" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  No {invoiceFilter.toLowerCase()} invoices
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Estimates */}
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <FileCheck className="h-5 w-5 text-foreground" />
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+                Estimates
+              </h2>
+            </div>
+            <Link href="/estimates">
+              <Button
+                variant="link"
+                className="text-muted-foreground hover:text-foreground p-0 h-auto"
+              >
+                View all
+              </Button>
+            </Link>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
+            {ESTIMATE_FILTERS.map((filter) => (
+              <Badge
+                key={filter}
+                onClick={() => setEstimateFilter(filter)}
+                className={cn(
+                  "cursor-pointer px-4 py-1 text-xs rounded-full transition-all duration-200 whitespace-nowrap",
+                  estimateFilter === filter
+                    ? "bg-foreground text-background hover:bg-foreground/90"
+                    : "bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )}
+              >
+                {filter}
+              </Badge>
+            ))}
+          </div>
+
+          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            {isLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton
+                  key={i}
+                  className="min-w-[240px] h-44 rounded-2xl shrink-0"
+                />
+              ))
+            ) : filteredEstimates.length > 0 ? (
+              filteredEstimates.map((estimate) => (
+                <EstimateMiniCard key={estimate.id} estimate={estimate} />
+              ))
+            ) : (
+              <div className="w-full text-center py-10 bg-secondary/20 rounded-3xl border border-dashed border-border/50 flex flex-col items-center">
+                <FileSearch className="w-10 h-10 text-muted-foreground/50 mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  No {estimateFilter.toLowerCase()} estimates
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Revenue Trend */}
+        <section
+          id="dashboard-revenue-chart"
+          data-tour-id="dashboard-revenue-chart"
+          className="pt-8 border-t border-border/50"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <h3 className="text-lg font-bold text-foreground">Revenue Trend</h3>
+            <Select
+              value={periodFilter}
+              onValueChange={(v) => setPeriodFilter(v as typeof periodFilter)}
+            >
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CHART_PERIODS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {isLoading ? (
+            <Skeleton className="h-[220px] w-full rounded-xl" />
+          ) : chartData.length > 0 ? (
+            <ChartContainer config={chartConfig} className="h-[220px] w-full">
+              <AreaChart
+                data={chartData}
+                margin={{ top: 10, right: 0, left: -20, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="fillEarnings" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor="var(--color-earnings)"
+                      stopOpacity={0.5}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="var(--color-earnings)"
+                      stopOpacity={0}
+                    />
+                  </linearGradient>
+                  <linearGradient id="fillExpenses" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor="var(--color-expenses)"
+                      stopOpacity={0.4}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="var(--color-expenses)"
+                      stopOpacity={0}
+                    />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  vertical={false}
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border))"
+                />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 10 }}
+                  tickMargin={8}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(v) => `$${v}`}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Area
+                  type="monotone"
+                  dataKey="earnings"
+                  stroke="var(--color-earnings)"
+                  strokeWidth={2}
+                  fill="url(#fillEarnings)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="expenses"
+                  stroke="var(--color-expenses)"
+                  strokeWidth={2}
+                  fill="url(#fillExpenses)"
+                />
+              </AreaChart>
+            </ChartContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[200px] text-muted-foreground bg-secondary/20 rounded-xl border border-border/50">
+              <p className="text-sm">No revenue data yet</p>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
   );
 }
 
-export default function DashboardPage() {
+// ─── Surface router ──────────────────────────────────────────────────────────
+
+type RootSurface = "hydrating" | "shortcuts" | "dashboard";
+
+function DashboardRoot() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [surface, setSurface] = useState<RootSurface>("hydrating");
+
+  const goToDashboard = useCallback(() => setSurface("dashboard"), []);
+
+  useEffect(() => {
+    const view = searchParams.get("view");
+    const shortcuts = searchParams.get("shortcuts");
+
+    if (view === "dashboard" || shortcuts === "0") {
+      dismissRootShortcuts();
+      router.replace("/", { scroll: false });
+      setSurface("dashboard");
+      return;
+    }
+    if (shortcuts === "1") {
+      setSurface("shortcuts");
+      return;
+    }
+    setSurface(hasDismissedRootShortcuts() ? "dashboard" : "shortcuts");
+  }, [router, searchParams]);
+
+  if (surface === "hydrating") {
+    return (
+      <div className="space-y-6 pt-8">
+        <Skeleton className="h-16 w-56 mx-auto" />
+        <div className="grid grid-cols-3 gap-2 max-w-2xl mx-auto">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-24 rounded-3xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (surface === "shortcuts") {
+    return <ShortcutInterface onRequestDashboard={goToDashboard} />;
+  }
+
+  return <DashboardHome />;
+}
+
+export default function Dashboard() {
   return (
-    <Suspense fallback={<DashboardEntryFallback />}>
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
       <DashboardRoot />
     </Suspense>
   );
