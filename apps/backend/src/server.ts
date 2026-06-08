@@ -5,7 +5,7 @@ import express from "express";
 import helmet from "helmet";
 
 import asyncHandler from "./core/async-handler.js";
-import { apiRateLimiter, errorHandler } from "./core/middleware.js";
+import { authApiRateLimiter, errorHandler, publicApiRateLimiter } from "./core/middleware.js";
 import { handleClerkWebhook } from "./features/subscriptions/clerk-webhook.handler.js";
 import { handleStripeWebhook } from "./features/subscriptions/stripe-webhook.handler.js";
 import { apiRouter } from "./routes/index.js";
@@ -55,14 +55,11 @@ app.post(
   asyncHandler(handleClerkWebhook),
 );
 
-// Rate limiting
-app.use("/api", apiRateLimiter);
+// Public API routes — strict IP-based limiter (unauthenticated)
+app.use("/api/v1/public", publicApiRateLimiter, publicRouter);
 
-// Public API routes (no auth) - must be before main apiRouter
-app.use("/api/v1/public", publicRouter);
-
-// API routes (auth required)
-app.use("/api/v1", apiRouter);
+// Authenticated API routes — generous user-keyed limiter
+app.use("/api/v1", authApiRateLimiter, apiRouter);
 
 // Health check endpoint
 app.get("/health", (req, res) => {

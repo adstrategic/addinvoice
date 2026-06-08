@@ -1,20 +1,39 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { LimitExceededError, Prisma } from "@addinvoice/db";
-import rateLimit from "express-rate-limit";
+import { getAuth } from "@clerk/express";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 import CustomError from "../errors/CustomError.js";
 
 /**
- * Rate limiting middleware
- * Limits requests to 100 per 15 minutes per IP
+ * Strict, IP-keyed limiter for unauthenticated public endpoints.
+ * Public routes serve quote/proposal signing pages — a handful of requests per visit is normal.
  */
-export const apiRateLimiter = rateLimit({
+export const publicApiRateLimiter = rateLimit({
   legacyHeaders: false,
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later.",
+  max: 500,
+  message: "Too many requests, please try again later.",
   standardHeaders: true,
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
+});
+
+/**
+ * Generous, user-keyed limiter for authenticated API endpoints.
+ * Keyed by Clerk userId (falling back to IP) so shared-IP offices don't starve each other.
+ * 1000 per 15 min comfortably covers heavy dashboard usage (~13 req/navigation × 30 navigations
+ * + Clerk token refresh cycles).
+ */
+export const authApiRateLimiter = rateLimit({
+  legacyHeaders: false,
+  max: 1000,
+  message: "Too many requests, please try again later.",
+  standardHeaders: true,
+  windowMs: 15 * 60 * 1000,
+  keyGenerator: (req) => {
+    const { userId } = getAuth(req);
+    return userId ?? ipKeyGenerator(req.ip ?? "");
+  },
 });
 
 /**
