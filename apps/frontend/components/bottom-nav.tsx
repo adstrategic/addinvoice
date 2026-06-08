@@ -18,7 +18,6 @@ import {
   CreditCard,
   Receipt,
   Package,
-  Bell,
   HelpCircle,
   Settings,
   type LucideIcon,
@@ -56,7 +55,6 @@ const moreNavItems: MoreNavItem[] = [
   { name: 'Payments', href: '/payments', icon: CreditCard, feature: 'payment', requiresAdvances: false },
   { name: 'Expenses', href: '/expenses', icon: Receipt, feature: 'expense', requiresAdvances: false },
   { name: 'Catalog', href: '/catalog', icon: Package, feature: 'catalog', requiresAdvances: false },
-  { name: 'Reminders', href: '/reminders', icon: Bell, feature: 'reminders', requiresAdvances: false },
   { name: 'Ask Me How', href: '/ask-me-how', icon: HelpCircle, feature: 'ask-me-how', requiresAdvances: false },
   { name: 'Settings', href: '/configuration', icon: Settings, feature: 'settings', requiresAdvances: false },
 ]

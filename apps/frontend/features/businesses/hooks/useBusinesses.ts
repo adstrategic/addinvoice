@@ -35,7 +35,7 @@ export function useBusinesses(params?: ListBusinessesParams) {
   return useQuery({
     queryKey: businessKeys.list(queryParams),
     queryFn: () => businessesService.list(queryParams),
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes
     placeholderData: (previousData) => previousData, // Smooth pagination transitions
     enabled,
     initialData,

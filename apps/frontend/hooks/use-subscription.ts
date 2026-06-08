@@ -25,10 +25,8 @@ export function useSubscription() {
   return useQuery({
     queryKey: subscriptionKeys.status(),
     queryFn: () => subscriptionsService.getStatus(),
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 60 * 1000, // 60 seconds — subscription plan rarely changes mid-session
     refetchOnWindowFocus: true,
-    retry: 1, // Only retry once on failure
-    retryDelay: 1000, // Wait 1 second before retrying
   });
 }
 
