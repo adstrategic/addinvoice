@@ -3,17 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
+import { DocumentStatusBadge } from "@/components/shared/DocumentStatusBadge";
 import { Button } from "@/components/ui/button";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { SendAdvanceDialog } from "@/components/send-advance-dialog";
-import { CopyPublicLinkButton } from "@/components/shared/copy-public-link-button";
-import { isAdvancePublicIssued } from "@/lib/is-document-public-issued";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   ArrowLeft,
   Download,
@@ -33,13 +26,6 @@ import { canSendAdvance } from "@/lib/is-document-public-issued";
 import { mapStatusToUI } from "@/features/advances";
 import { useDownloadAdvancePdf } from "@/features/advances/hooks/useDownloadAdvancePDF";
 import { DetailPageLoading } from "@/components/loading-component";
-
-const statusConfig = {
-  draft: { label: "Draft", className: "bg-muted text-muted-foreground" },
-  issued: { label: "Issued", className: "bg-chart-3/20 text-chart-3" },
-  invoiced: { label: "Invoiced", className: "bg-primary/20 text-primary" },
-  voided: { label: "Voided", className: "bg-destructive/15 text-destructive" },
-};
 
 export default function AdvanceDetailPage() {
   const params = useParams();
@@ -100,112 +86,73 @@ export default function AdvanceDetailPage() {
                 <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">
                   {advance.projectName}
                 </h1>
-                <Badge
-                  className={
-                    statusConfig[uiStatus as keyof typeof statusConfig]
-                      ?.className || "bg-muted text-muted-foreground"
-                  }
-                >
-                  {statusConfig[uiStatus as keyof typeof statusConfig]?.label ||
-                    uiStatus}
-                </Badge>
+                <DocumentStatusBadge
+                  uiStatus={uiStatus}
+                  documentType="advance"
+                  size="md"
+                />
               </div>
               <p className="text-muted-foreground mt-1 text-sm">PDF preview</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-            <CopyPublicLinkButton
-              publicSlug={advance.publicSlug}
-              isIssued={isAdvancePublicIssued(advance.status)}
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 shrink-0 bg-transparent"
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              Download PDF
+            </Button>
+
+            {advance.status === "DRAFT" && (
+              <Link href={`/advances/${advance.sequence}/edit`}>
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="bg-transparent"
-                  onClick={handleDownloadPDF}
-                  disabled={downloading}
+                  size="lg"
+                  className="gap-2 shrink-0 bg-transparent"
                 >
-                  <Download className="h-4 w-4" />
+                  <Edit className="h-4 w-4 shrink-0" />
+                  Edit
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Download PDF</p>
-              </TooltipContent>
-            </Tooltip>
+              </Link>
+            )}
 
-            {advance.status === "DRAFT" ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href={`/advances/${advance.sequence}/edit`}>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="bg-transparent"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Edit advance</p>
-                </TooltipContent>
-              </Tooltip>
-            ) : null}
-
-            {advance.status === "DRAFT" ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:text-destructive bg-transparent"
-                    onClick={() => advanceDelete.openDeleteModal(advance)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete advance</p>
-                </TooltipContent>
-              </Tooltip>
-            ) : null}
-
-            {canVoidAdvance(advance) && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:text-destructive bg-transparent"
-                    onClick={() => advanceVoid.openVoidModal(advance)}
-                  >
-                    <Ban className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Mark as voided</p>
-                </TooltipContent>
-              </Tooltip>
+            {advance.status === "DRAFT" && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 shrink-0 bg-transparent text-destructive hover:text-destructive"
+                onClick={() => advanceDelete.openDeleteModal(advance)}
+              >
+                <Trash2 className="h-4 w-4 shrink-0" />
+                Delete
+              </Button>
             )}
 
             {canSendAdvance(advance) && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => setSendDialogOpen(true)}
-                  className="gap-2 shrink-0"
-                  size="sm"
-                >
-                  <Send className="h-4 w-4 shrink-0" />
-                  <span className="hidden sm:inline">Send</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Send advance</p>
-              </TooltipContent>
-            </Tooltip>
+              <Button
+                size="lg"
+                className="gap-2 shrink-0"
+                onClick={() => setSendDialogOpen(true)}
+              >
+                <Send className="h-4 w-4 shrink-0" />
+                Send
+              </Button>
+            )}
+
+            {canVoidAdvance(advance) && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 shrink-0 bg-transparent text-destructive hover:text-destructive"
+                onClick={() => advanceVoid.openVoidModal(advance)}
+              >
+                <Ban className="h-4 w-4 shrink-0" />
+                Mark as voided
+              </Button>
             )}
           </div>
         </div>

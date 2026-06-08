@@ -194,16 +194,6 @@ export function InvoiceForm({
       {/* Header */}
       <div className="sm:flex items-center justify-between mb-8">
         <div className="flex mb-4 sm:mb-0 items-center gap-4">
-          <Button
-            className="hidden sm:block"
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              onCancel();
-            }}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
           <div>
             <h1 className="text-3xl font-bold text-foreground">
               {mode === "create" ? "Create Invoice" : "Edit Invoice"}

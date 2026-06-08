@@ -1,7 +1,12 @@
 import type { UseFormSetError } from "react-hook-form";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { type ListInvoicesParams, invoicesService } from "@/features/invoices";
 import type {
   CreateInvoiceDTO,
@@ -35,7 +40,7 @@ export function useInvoices(params?: ListInvoicesParams) {
     queryKey: invoiceKeys.list(params),
     queryFn: () => invoicesService.list(params),
     staleTime: 30 * 1000, // 30 seconds
-    placeholderData: (previousData) => previousData, // Smooth pagination transitions
+    placeholderData: keepPreviousData,
   });
 }
 

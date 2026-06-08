@@ -15,6 +15,7 @@ export {
   type CreateCatalogDto,
   type UpdateCatalogDto,
   type CatalogResponse,
+  type CatalogListStats,
   type ListCatalogsParams,
 } from "./schema/catalog.schema";
 
@@ -40,6 +41,7 @@ export { catalogService } from "./service/catalog.service";
 export type { FromVoiceCatalogResult } from "./service/catalog.service";
 
 // Components
+export { CatalogStats } from "./components/CatalogStats";
 export { CatalogCard } from "./components/CatalogCard";
 export { CatalogList } from "./components/CatalogList";
 export { CatalogFilters } from "./components/CatalogFilters";

@@ -1,4 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
+"use client";
+
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -9,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { useBusinesses } from "@/features/businesses";
 import { Search } from "lucide-react";
-import React from "react";
+import { getModuleSearchInputClass } from "@/components/shared/module-ui";
 
 export type CatalogSortBy = "sequence" | "name" | "price";
 
@@ -32,47 +33,54 @@ export function CatalogFilters({
 }: CatalogFiltersProps) {
   const { data: businessesData } = useBusinesses();
   const businesses = businessesData?.data ?? [];
+  const showBusinessFilter = businesses.length > 1;
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-4 sm:flex-row sm:items-center sm:flex-wrap mb-4 sm:mb-6">
-      <div className="relative flex-1 min-w-0" data-tour-id="catalog-search">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <div className="mb-6 space-y-4">
+      <div className="relative" data-tour-id="catalog-search">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search products or services..."
-          className="pl-10 bg-white"
+          className={getModuleSearchInputClass("catalog")}
           value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
+          onChange={(event) => onSearchChange(event.target.value)}
         />
       </div>
-      <Select value={businessId} onValueChange={onBusinessIdChange}>
-        <SelectTrigger
-          className="w-full sm:w-[200px] bg-white"
-          data-tour-id="catalog-filter"
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {showBusinessFilter && (
+          <Select value={businessId} onValueChange={onBusinessIdChange}>
+            <SelectTrigger
+              className="w-full sm:w-[200px] h-11 bg-secondary/50 border-transparent rounded-xl"
+              data-tour-id="catalog-filter"
+            >
+              <SelectValue placeholder="Filter by Business" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Businesses</SelectItem>
+              {businesses.map((business) => (
+                <SelectItem key={business.id} value={business.id.toString()}>
+                  {business.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        <Select
+          value={sortBy}
+          onValueChange={(v) => onSortByChange(v as CatalogSortBy)}
         >
-          <SelectValue placeholder="Filter by Business" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Businesses</SelectItem>
-          {businesses.map((business) => (
-            <SelectItem key={business.id} value={business.id.toString()}>
-              {business.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        value={sortBy}
-        onValueChange={(v) => onSortByChange(v as CatalogSortBy)}
-      >
-        <SelectTrigger className="w-full sm:w-[200px] bg-white">
-          <SelectValue placeholder="Sort by" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="sequence">Default order</SelectItem>
-          <SelectItem value="name">Name (A-Z)</SelectItem>
-          <SelectItem value="price">Price (Low to High)</SelectItem>
-        </SelectContent>
-      </Select>
+          <SelectTrigger className="w-full sm:w-[200px] h-11 bg-secondary/50 border-transparent rounded-xl">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="sequence">Default order</SelectItem>
+            <SelectItem value="name">Name (A-Z)</SelectItem>
+            <SelectItem value="price">Price (Low to High)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }

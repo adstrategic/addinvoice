@@ -22,11 +22,6 @@ import {
   useClientManager,
 } from "@/features/clients";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DetailPageLoading } from "@/components/loading-component";
 
@@ -89,54 +84,36 @@ export default function ClientDetailPage() {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-14 w-14 bg-transparent"
-                  onClick={() => editClient.openEdit(sequence)}
-                >
-                  <Edit className="size-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Edit client</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-14 w-14 text-destructive hover:text-destructive bg-transparent"
-                  onClick={() => clientDelete.openDeleteModal(client)}
-                >
-                  <Trash2 className="size-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete client</p>
-              </TooltipContent>
-            </Tooltip>
+          <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 shrink-0 bg-transparent"
+              onClick={() => editClient.openEdit(sequence)}
+            >
+              <Edit className="h-4 w-4 shrink-0" />
+              Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 shrink-0 bg-transparent text-destructive hover:text-destructive"
+              onClick={() => clientDelete.openDeleteModal(client)}
+            >
+              <Trash2 className="h-4 w-4 shrink-0" />
+              Delete
+            </Button>
             {client.email && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <a href={`mailto:${client.email}`}>
-                    <Button
-                      variant="outline"
-                      className="h-14 gap-2 bg-transparent"
-                    >
-                      <Mail className="h-4 w-4" />
-                      Send Email
-                    </Button>
-                  </a>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Send email</p>
-                </TooltipContent>
-              </Tooltip>
+              <a href={`mailto:${client.email}`}>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 shrink-0 bg-transparent"
+                >
+                  <Mail className="h-4 w-4 shrink-0" />
+                  Send Email
+                </Button>
+              </a>
             )}
           </div>
         </div>

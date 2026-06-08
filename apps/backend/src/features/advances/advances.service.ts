@@ -283,27 +283,37 @@ export async function listAdvances(
   data: AdvanceListItemResponse[];
   limit: number;
   page: number;
+  stats: { total: number };
   total: number;
 }> {
   const { clientId, invoiceId, limit, page, search, status } = query;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.AdvanceWhereInput = {
+  const baseWhere: Prisma.AdvanceWhereInput = {
     workspaceId,
     ...(clientId ? { clientId } : {}),
     ...(invoiceId ? { invoiceId } : {}),
-    ...(status ? { status } : {}),
     ...(search
       ? {
           OR: [
             { projectName: { contains: search, mode: "insensitive" } },
             { client: { name: { contains: search, mode: "insensitive" } } },
+            {
+              client: {
+                businessName: { contains: search, mode: "insensitive" },
+              },
+            },
           ],
         }
       : {}),
   };
 
-  const [rows, total] = await Promise.all([
+  const where: Prisma.AdvanceWhereInput = {
+    ...baseWhere,
+    ...(status ? { status } : {}),
+  };
+
+  const [rows, total, statsTotal] = await Promise.all([
     prisma.advance.findMany({
       include: {
         business: true,
@@ -315,12 +325,14 @@ export async function listAdvances(
       where,
     }),
     prisma.advance.count({ where }),
+    prisma.advance.count({ where: baseWhere }),
   ]);
 
   return {
     data: rows.map(toAdvanceListItem),
     limit,
     page,
+    stats: { total: statsTotal },
     total,
   };
 }

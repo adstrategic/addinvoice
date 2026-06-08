@@ -20,6 +20,7 @@ const dashboardStatsSchema = z.object({
   totalOutstanding: z.number(),
   totalRevenue: z.number(),
   recentInvoices: z.array(z.any()),
+  recentEstimates: z.array(z.any()),
 });
 
 /**

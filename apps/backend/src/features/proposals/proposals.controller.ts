@@ -64,6 +64,7 @@ export async function listProposals(
       total: result.total,
       totalPages: Math.ceil(result.total / result.limit),
     },
+    stats: result.stats,
   });
 }
 

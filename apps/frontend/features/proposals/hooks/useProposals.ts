@@ -1,6 +1,11 @@
 import type { UseFormSetError } from "react-hook-form";
 import { useAuth } from "@clerk/nextjs";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import {
   type ListProposalsParams,
   proposalsService,
@@ -24,7 +29,7 @@ export function useProposals(params?: ListProposalsParams) {
     queryKey: proposalKeys.list(params),
     queryFn: () => proposalsService.list(params),
     staleTime: 30 * 1000,
-    placeholderData: (previousData) => previousData,
+    placeholderData: keepPreviousData,
   });
 }
 

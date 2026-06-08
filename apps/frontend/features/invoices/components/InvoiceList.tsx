@@ -1,23 +1,14 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText } from "lucide-react";
-import { motion } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
 import { InvoiceCard } from "./InvoiceCard";
 import type { InvoiceResponse } from "../schemas/invoice.schema";
-
-const STATUS_TO_TITLE: Record<string, string> = {
-  all: "All Invoices",
-  paid: "Paid Invoices",
-  overdue: "Overdue Invoices",
-  issued: "Issued Invoices",
-  viewed: "Viewed Invoices",
-  draft: "Draft Invoices",
-};
+import { cn } from "@/lib/utils";
 
 interface InvoiceListProps {
   invoices: InvoiceResponse[];
-  statusFilter: string;
+  isLoading?: boolean;
   onDownload: (invoice: InvoiceResponse) => void;
   onSend: (invoice: InvoiceResponse) => void;
   onAddPayment: (invoice: InvoiceResponse) => void;
@@ -26,13 +17,19 @@ interface InvoiceListProps {
   children?: React.ReactNode;
 }
 
-/**
- * Invoice list component
- * Displays a list of invoices with title derived from status filter
- */
+function InvoiceListSkeleton() {
+  return (
+    <div className="space-y-3" aria-busy="true" aria-label="Loading invoices">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Skeleton key={i} className="h-28 w-full rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
 export function InvoiceList({
   invoices,
-  statusFilter,
+  isLoading = false,
   onDownload,
   onSend,
   onAddPayment,
@@ -40,49 +37,38 @@ export function InvoiceList({
   onVoid,
   children,
 }: InvoiceListProps) {
-  const listTitle = STATUS_TO_TITLE[statusFilter] ?? STATUS_TO_TITLE.all;
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.4 }}
+    <div
+      data-tour-id="invoices-list"
+      className={cn(
+        "transition-opacity duration-200",
+        isLoading && "opacity-70",
+      )}
     >
-      <Card
-        data-tour-id="invoices-list"
-        className="bg-card border-border shadow-sm hover:shadow-md transition-shadow duration-300"
-      >
-        <CardHeader>
-          <CardTitle className="text-lg sm:text-xl font-bold text-foreground">
-            {listTitle}
-            {invoices.length > 0 && ` (${invoices.length})`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {invoices.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No invoices found</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {invoices.map((invoice, index) => (
-                <InvoiceCard
-                  key={invoice.id}
-                  invoice={invoice}
-                  index={index}
-                  onDownload={onDownload}
-                  onSend={onSend}
-                  onAddPayment={onAddPayment}
-                  onDelete={onDelete}
-                  onVoid={onVoid}
-                />
-              ))}
-            </div>
-          )}
-          {children}
-        </CardContent>
-      </Card>
-    </motion.div>
+      {isLoading ? (
+        <InvoiceListSkeleton />
+      ) : invoices.length === 0 ? (
+        <div className="text-center py-12">
+          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">No invoices found</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {invoices.map((invoice, index) => (
+            <InvoiceCard
+              key={invoice.id}
+              invoice={invoice}
+              index={index}
+              onDownload={onDownload}
+              onSend={onSend}
+              onAddPayment={onAddPayment}
+              onDelete={onDelete}
+              onVoid={onVoid}
+            />
+          ))}
+        </div>
+      )}
+      {children}
+    </div>
   );
 }

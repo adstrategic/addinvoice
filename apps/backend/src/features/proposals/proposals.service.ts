@@ -313,6 +313,7 @@ export async function listProposals(
   limit: number;
   page: number;
   proposals: ProposalDashboardResponse[];
+  stats: { total: number };
   total: number;
 }> {
   const {
@@ -325,9 +326,8 @@ export async function listProposals(
   } = query;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.ProposalWhereInput = {
+  const baseWhere: Prisma.ProposalWhereInput = {
     workspaceId,
-    ...(statusParam && { status: statusParam }),
     ...(clientId && { clientId }),
     ...(businessId && { businessId }),
     ...(search && {
@@ -339,7 +339,12 @@ export async function listProposals(
     }),
   };
 
-  const [proposals, total] = await Promise.all([
+  const where: Prisma.ProposalWhereInput = {
+    ...baseWhere,
+    ...(statusParam && { status: statusParam }),
+  };
+
+  const [proposals, total, statsTotal] = await Promise.all([
     prisma.proposal.findMany({
       include: {
         business: true,
@@ -352,12 +357,14 @@ export async function listProposals(
       where,
     }),
     prisma.proposal.count({ where }),
+    prisma.proposal.count({ where: baseWhere }),
   ]);
 
   return {
     proposals: proposals.map(toProposalDashboardResponse),
     limit,
     page,
+    stats: { total: statsTotal },
     total,
   };
 }

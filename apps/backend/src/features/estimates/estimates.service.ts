@@ -11,7 +11,12 @@ import type {
   UpdateEstimateItemDTO,
 } from "@addinvoice/schemas";
 
-import { assertCanCreate, prisma, type Prisma } from "@addinvoice/db";
+import {
+  assertCanCreate,
+  type EstimateStatus,
+  prisma,
+  type Prisma,
+} from "@addinvoice/db";
 import { randomUUID } from "node:crypto";
 
 import type { ListEstimatesQuery } from "./estimates.schemas.js";
@@ -30,10 +35,7 @@ import {
 } from "../../errors/EntityErrors.js";
 import { buildPublicSlug } from "../../lib/public-slug.js";
 import { sendInvoiceQueue } from "../../queue/queues.js";
-import {
-  createInvoiceFromEstimate,
-  markInvoiceAsSent,
-} from "../invoices/invoices.service.js";
+import { createInvoiceFromEstimate } from "../invoices/invoices.service.js";
 import { resolveSelectedPaymentMethodId } from "../workspace/payment-method-resolver.service.js";
 import {
   toEstimateDashboardResponse,
@@ -1375,12 +1377,12 @@ export async function listEstimates(
   limit: number;
   page: number;
   stats: {
-    outstanding: number;
-    paidCount: number;
-    pendingCount: number;
-    revenue: number;
+    acceptedCount: number;
+    acceptedValue: number;
+    estimatedValue: number;
+    pendingValue: number;
+    sentCount: number;
     total: number;
-    totalEstimated: number;
   };
   total: number;
 }> {
@@ -1394,9 +1396,8 @@ export async function listEstimates(
   } = query;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.EstimateWhereInput = {
+  const baseWhere: Prisma.EstimateWhereInput = {
     workspaceId,
-
     ...(search && {
       OR: [
         { estimateNumber: { contains: search, mode: "insensitive" } },
@@ -1404,24 +1405,38 @@ export async function listEstimates(
         { client: { businessName: { contains: search, mode: "insensitive" } } },
       ],
     }),
-    // Only allowed statuses (DRAFT, SENT, PAID, OVERDUE); VIEWED excluded from filter
-    ...(statusParam && { status: statusParam }),
     ...(clientId && { clientId }),
     ...(businessId && { businessId }),
   };
 
-  // const wherePaid: Prisma.EstimateWhereInput = { ...where, status: "PAID" };
-  // const whereOverdue: Prisma.EstimateWhereInput = {
-  //   ...where,
-  //   status: "OVERDUE",
-  // };
+  const where: Prisma.EstimateWhereInput = {
+    ...baseWhere,
+    ...(statusParam && { status: statusParam }),
+  };
+
+  const buildStatsWhere = (
+    status?: EstimateStatus | Prisma.EnumEstimateStatusFilter,
+  ): Prisma.EstimateWhereInput => {
+    if (status !== undefined) {
+      return { ...baseWhere, status };
+    }
+    return { ...baseWhere, status: { not: "VOIDED" } };
+  };
+
+  const statsWhere = buildStatsWhere();
+  const whereSent = buildStatsWhere({ in: ["SENT", "VIEWED"] });
+  const whereAccepted = buildStatsWhere("ACCEPTED");
+  const wherePending = buildStatsWhere({ in: ["SENT", "VIEWED"] });
 
   const [
     estimates,
     total,
-    // paidCount,
-    // pendingCount,
-    // revenueAgg,
+    statsTotal,
+    sentCount,
+    acceptedCount,
+    estimatedValueAgg,
+    acceptedValueAgg,
+    pendingValueAgg,
   ] = await Promise.all([
     prisma.estimate.findMany({
       include: {
@@ -1436,10 +1451,12 @@ export async function listEstimates(
       where,
     }),
     prisma.estimate.count({ where }),
-    // prisma.estimate.count({ where: wherePaid }),
-    // prisma.estimate.count({ where: whereOverdue }),
-
-    // prisma.estimate.aggregate({ _sum: { total: true }, where }),
+    prisma.estimate.count({ where: baseWhere }),
+    prisma.estimate.count({ where: whereSent }),
+    prisma.estimate.count({ where: whereAccepted }),
+    prisma.estimate.aggregate({ _sum: { total: true }, where: statsWhere }),
+    prisma.estimate.aggregate({ _sum: { total: true }, where: whereAccepted }),
+    prisma.estimate.aggregate({ _sum: { total: true }, where: wherePending }),
   ]);
 
   return {
@@ -1447,12 +1464,12 @@ export async function listEstimates(
     limit,
     page,
     stats: {
-      outstanding: 0,
-      paidCount: 0,
-      pendingCount: 0,
-      revenue: 0,
-      total,
-      totalEstimated: 0,
+      total: statsTotal,
+      sentCount,
+      acceptedCount,
+      estimatedValue: Number(estimatedValueAgg._sum.total ?? 0),
+      acceptedValue: Number(acceptedValueAgg._sum.total ?? 0),
+      pendingValue: Number(pendingValueAgg._sum.total ?? 0),
     },
     total,
   };

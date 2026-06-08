@@ -1,6 +1,11 @@
 import type { UseFormSetError } from "react-hook-form";
 import { useAuth } from "@clerk/nextjs";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import type {
   AdvanceResponse,
   CreateAdvanceDTO,
@@ -36,7 +41,7 @@ export function useAdvances(params?: ListAdvancesParams) {
     queryKey: advanceKeys.list(params),
     queryFn: () => advancesService.list(params),
     staleTime: 30 * 1000,
-    placeholderData: (previousData) => previousData,
+    placeholderData: keepPreviousData,
   });
 }
 

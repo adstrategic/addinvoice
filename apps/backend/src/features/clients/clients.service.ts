@@ -149,12 +149,13 @@ export async function listClients(
   clients: ClientEntity[];
   limit: number;
   page: number;
+  stats: { active: number; newThisMonth: number; total: number };
   total: number;
 }> {
   const { limit, page, search } = query;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.ClientWhereInput = {
+  const baseWhere: Prisma.ClientWhereInput = {
     workspaceId,
     ...(search && {
       OR: [
@@ -166,20 +167,36 @@ export async function listClients(
     }),
   };
 
-  const [clients, total] = await Promise.all([
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const [clients, total, statsTotal, newThisMonth] = await Promise.all([
     prisma.client.findMany({
       orderBy: { sequence: "asc" },
       skip,
       take: limit,
-      where,
+      where: baseWhere,
     }),
-    prisma.client.count({ where }),
+    prisma.client.count({ where: baseWhere }),
+    prisma.client.count({ where: baseWhere }),
+    prisma.client.count({
+      where: {
+        ...baseWhere,
+        createdAt: { gte: startOfMonth },
+      },
+    }),
   ]);
 
   return {
     clients,
     limit,
     page,
+    stats: {
+      total: statsTotal,
+      active: statsTotal,
+      newThisMonth,
+    },
     total,
   };
 }

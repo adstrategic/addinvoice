@@ -1,15 +1,22 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Search } from "lucide-react";
-import { motion } from "framer-motion";
+import {
+  ModuleStatusTabs,
+  getModuleSearchInputClass,
+} from "@/components/shared/module-ui";
+
+const STATUS_TABS = [
+  { label: "All", value: "all" },
+  { label: "Draft", value: "draft" },
+  { label: "Sent", value: "sent" },
+  { label: "Viewed", value: "viewed" },
+  { label: "Accepted", value: "accepted" },
+  { label: "Rejected", value: "rejected" },
+  { label: "Proposal", value: "proposal" },
+  { label: "Invoiced", value: "invoiced" },
+] as const;
 
 interface EstimateFiltersProps {
   searchTerm: string;
@@ -18,10 +25,6 @@ interface EstimateFiltersProps {
   onStatusChange: (value: string) => void;
 }
 
-/**
- * Estimate filters component
- * Includes search and status filter dropdown
- */
 export function EstimateFilters({
   searchTerm,
   onSearchChange,
@@ -29,40 +32,24 @@ export function EstimateFilters({
   onStatusChange,
 }: EstimateFiltersProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.3 }}
-    >
-      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3 sm:gap-4">
-        <div className="relative flex-1" data-tour-id="estimates-search">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search estimates..."
-            className="pl-10 bg-white"
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={onStatusChange}>
-          <SelectTrigger
-            className="w-full sm:w-[180px] bg-white"
-            data-tour-id="estimates-filter"
-          >
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="sent">Sent</SelectItem>
-            <SelectItem value="viewed">Viewed</SelectItem>
-            <SelectItem value="accepted">Accepted</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="proposal">Proposal</SelectItem>
-            <SelectItem value="invoiced">Invoiced</SelectItem>
-          </SelectContent>
-        </Select>
+    <div className="mb-6 space-y-4">
+      <div className="relative" data-tour-id="estimates-search">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search estimates..."
+          className={getModuleSearchInputClass("estimate")}
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
       </div>
-    </motion.div>
+
+      <ModuleStatusTabs
+        variant="estimate"
+        tabs={STATUS_TABS}
+        value={statusFilter}
+        onChange={onStatusChange}
+        tourId="estimates-filter"
+      />
+    </div>
   );
 }

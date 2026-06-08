@@ -3,15 +3,15 @@ import { z } from "zod";
 import { paginationMetaSchema } from "@/lib/api/types";
 
 /**
- * Estimate list stats (aggregates for the filtered set)
+ * Estimate list stats (workspace aggregates; not scoped to list status tab)
  */
 export const estimateListStatsSchema = z.object({
   total: z.number(),
-  paidCount: z.number(),
-  pendingCount: z.number(),
-  revenue: z.number(),
-  totalEstimated: z.number(),
-  outstanding: z.number(),
+  sentCount: z.number(),
+  acceptedCount: z.number(),
+  estimatedValue: z.number(),
+  acceptedValue: z.number(),
+  pendingValue: z.number(),
 });
 
 /**

@@ -15,16 +15,29 @@ import {
   Download,
   Send,
   FileText,
+  Calendar,
 } from "lucide-react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { SendReceiptDialog } from "@/components/send-receipt-dialog";
 import type { PaymentListResponse } from "../schemas/payments.schema";
 import { toast } from "sonner";
+import {
+  ListCard,
+  ListCardBody,
+  ListCardMain,
+  ListCardHeaderRow,
+  ListCardSubtitle,
+  ListCardMeta,
+  ListCardMetricGrid,
+  ListCardMetricsDesktop,
+  ListCardFooter,
+  ListCardFooterLabel,
+  ListCardFooterValue,
+  getClientDisplayLines,
+} from "@/components/shared/list-card";
 
 interface PaymentCardProps {
   payment: PaymentListResponse;
-  index: number;
   onView: (id: number) => void;
 }
 
@@ -50,15 +63,20 @@ async function downloadReceiptPdf(
   });
 }
 
-export function PaymentCard({ payment, index, onView }: PaymentCardProps) {
+function formatCardDate(date: Date | string) {
+  return new Date(date).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export function PaymentCard({ payment, onView }: PaymentCardProps) {
   const [sendReceiptOpen, setSendReceiptOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const clientName =
-    payment.invoice.client.name ||
-    payment.invoice.client.businessName ||
-    "Unknown Client";
-  const businessName = payment.invoice.business.name;
+  const { name: clientName, businessName: clientBusinessName } =
+    getClientDisplayLines(payment.invoice.client);
   const currency = payment.invoice.currency || "USD";
 
   const formatAmount = (amount: number) =>
@@ -80,87 +98,106 @@ export function PaymentCard({ payment, index, onView }: PaymentCardProps) {
     }
   };
 
+  const actionsMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors duration-200"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onView(payment.id)}>
+          <FileText className="h-4 w-4 mr-2" />
+          View details
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={`/invoices/${payment.invoice.sequence}`}>
+            <Eye className="h-4 w-4 mr-2" />
+            View invoice
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={handleDownloadReceipt}
+          disabled={downloading}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          {downloading ? "Downloading..." : "Download receipt"}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setSendReceiptOpen(true)}>
+          <Send className="h-4 w-4 mr-2" />
+          Send receipt
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{
-        duration: 0.3,
-        delay: 0.05 + index * 0.05,
-      }}
-      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-secondary/50 border border-border hover:border-primary/50 hover:bg-secondary/70 transition-all duration-300 hover:shadow-md"
-    >
-      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-        <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-          <DollarSign className="h-5 w-5 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <Link
-              href={`/invoices/${payment.invoice.sequence}`}
-              className="font-semibold text-foreground text-sm sm:text-base hover:underline"
+    <>
+      <ListCard clickable={false} variant="payment">
+        <ListCardBody>
+          <ListCardMain icon={DollarSign} variant="payment">
+            <ListCardHeaderRow
+              title={
+                <Link
+                  href={`/invoices/${payment.invoice.sequence}`}
+                  className="hover:underline"
+                >
+                  {payment.invoice.invoiceNumber}
+                </Link>
+              }
+              actions={actionsMenu}
             >
-              {payment.invoice.invoiceNumber}
-            </Link>
-            <span className="text-sm text-muted-foreground">
-              {payment.paymentMethod}
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground truncate">{clientName}</p>
-          <p className="text-xs text-muted-foreground truncate">
-            {businessName}
-          </p>
-          {payment.transactionId && (
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              Ref: {payment.transactionId}
-            </p>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 pl-[52px] sm:pl-0">
-        <div className="text-left sm:text-right">
-          <p className="font-semibold text-foreground text-sm sm:text-base">
-            {formatAmount(payment.amount)}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Paid: {new Date(payment.paidAt).toLocaleDateString()}
-          </p>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0 hover:bg-primary/10 hover:text-primary transition-colors duration-300"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onView(payment.id)}>
-              <FileText className="h-4 w-4 mr-2" />
-              View details
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/invoices/${payment.invoice.sequence}`}>
-                <Eye className="h-4 w-4 mr-2" />
-                View invoice
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={handleDownloadReceipt}
-              disabled={downloading}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              {downloading ? "Downloading..." : "Download receipt"}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSendReceiptOpen(true)}>
-              <Send className="h-4 w-4 mr-2" />
-              Send receipt
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+              <ListCardSubtitle>{clientName}</ListCardSubtitle>
+              {clientBusinessName && (
+                <ListCardMeta>{clientBusinessName}</ListCardMeta>
+              )}
+              {payment.transactionId && (
+                <ListCardMeta>Ref: {payment.transactionId}</ListCardMeta>
+              )}
+            </ListCardHeaderRow>
+
+            <ListCardMetricGrid
+              variant="payment"
+              metrics={[
+                {
+                  label: "Amount",
+                  value: formatAmount(payment.amount),
+                },
+                {
+                  label: "Method",
+                  value: payment.paymentMethod,
+                  valueClassName: "font-sans text-sm",
+                },
+              ]}
+            />
+          </ListCardMain>
+
+          <ListCardMetricsDesktop
+            metrics={[
+              {
+                label: "Amount",
+                value: formatAmount(payment.amount),
+              },
+            ]}
+            actions={actionsMenu}
+          />
+        </ListCardBody>
+
+        <ListCardFooter variant="payment" icon={Calendar}>
+          <ListCardFooterLabel>Paid</ListCardFooterLabel>
+          <ListCardFooterValue>
+            {formatCardDate(payment.paidAt)}
+          </ListCardFooterValue>
+          <span className="text-xs text-muted-foreground ml-auto hidden sm:inline">
+            {payment.paymentMethod}
+          </span>
+        </ListCardFooter>
+      </ListCard>
+
       <SendReceiptDialog
         open={sendReceiptOpen}
         onOpenChange={setSendReceiptOpen}
@@ -169,6 +206,6 @@ export function PaymentCard({ payment, index, onView }: PaymentCardProps) {
         clientName={clientName}
         clientEmail={payment.invoice.clientEmail ?? undefined}
       />
-    </motion.div>
+    </>
   );
 }

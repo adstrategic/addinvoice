@@ -1,74 +1,57 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign } from "lucide-react";
-import { motion } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentCard } from "./PaymentCard";
 import type { PaymentListResponse } from "../schemas/payments.schema";
-import { TablePagination } from "@/components/TablePagination";
+import { cn } from "@/lib/utils";
 
 interface PaymentListProps {
   payments: PaymentListResponse[];
-  onView: (sequence: number) => void;
-  currentPage: number;
-  totalPages: number;
-  totalItems: number;
-  onPageChange: (page: number) => void;
+  isLoading?: boolean;
+  onView: (id: number) => void;
+  children?: React.ReactNode;
+}
+
+function PaymentListSkeleton() {
+  return (
+    <div className="space-y-3" aria-busy="true" aria-label="Loading payments">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Skeleton key={i} className="h-28 w-full rounded-xl" />
+      ))}
+    </div>
+  );
 }
 
 export function PaymentList({
   payments,
+  isLoading = false,
   onView,
-  currentPage,
-  totalPages,
-  totalItems,
-  onPageChange,
+  children,
 }: PaymentListProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.4 }}
+    <div
+      data-tour-id="payments-history"
+      className={cn(
+        "transition-opacity duration-200",
+        isLoading && "opacity-70",
+      )}
     >
-      <Card className="bg-card border-border shadow-sm hover:shadow-md transition-shadow duration-300">
-        <CardHeader>
-          <CardTitle className="text-lg sm:text-xl font-bold text-foreground">
-            Payments
-            {payments.length > 0 && ` (${totalItems})`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {payments.length === 0 ? (
-            <div className="text-center py-12">
-              <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                No payments found matching your filters
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-3">
-                {payments.map((payment, index) => (
-                  <PaymentCard
-                    key={payment.id}
-                    payment={payment}
-                    index={index}
-                    onView={onView}
-                  />
-                ))}
-              </div>
-              <TablePagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                onPageChange={onPageChange}
-                emptyMessage="No payments found"
-                itemLabel="payments"
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </motion.div>
+      {isLoading ? (
+        <PaymentListSkeleton />
+      ) : payments.length === 0 ? (
+        <div className="py-12 text-center">
+          <DollarSign className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          <p className="text-muted-foreground">No payments found</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {payments.map((payment) => (
+            <PaymentCard key={payment.id} payment={payment} onView={onView} />
+          ))}
+        </div>
+      )}
+      {children}
+    </div>
   );
 }

@@ -14,7 +14,6 @@ import {
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
-import { motion, type Variants } from "framer-motion";
 import {
   Dialog,
   DialogContent,
@@ -43,28 +42,6 @@ type PaymentMethod = {
   expiryYear?: number;
   isDefault?: boolean;
   createdAt?: string;
-};
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-    },
-  },
-};
-
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.4,
-      ease: "easeOut",
-    },
-  },
 };
 
 const typeLabels = {
@@ -208,12 +185,7 @@ export default function PaymentMethodsPage() {
   return (
     <>
       <div>
-        <motion.div
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div className="flex items-center gap-4">
             <Link href="/payments">
               <Button variant="ghost" size="icon">
@@ -237,14 +209,10 @@ export default function PaymentMethodsPage() {
             <Plus className="h-5 w-5" />
             Add Payment Method
           </Button>
-        </motion.div>
+        </div>
 
         {paymentMethods.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+          <div>
             <Card className="bg-card border-border">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <CreditCard className="h-16 w-16 text-muted-foreground mb-4" />
@@ -261,16 +229,11 @@ export default function PaymentMethodsPage() {
                 </Button>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         ) : (
-          <motion.div
-            className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
+          <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
             {paymentMethods.map((method) => (
-              <motion.div key={method.id} variants={cardVariants}>
+              <div key={method.id}>
                 <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 h-full">
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -362,9 +325,9 @@ export default function PaymentMethodsPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         )}
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
