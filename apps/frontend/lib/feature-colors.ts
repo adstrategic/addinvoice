@@ -5,6 +5,7 @@ export type FeatureKey =
   | "voice"
   | ListCardVariant
   | "reminders"
+  | "reputation"
   | "ask-me-how"
   | "settings"
   | "more";
@@ -176,6 +177,21 @@ export const FEATURE_COLORS: Record<FeatureKey, FeatureColorStyles> = {
       textHover: "group-hover:text-orange-500",
     },
     createIcon: "bg-orange-500/10 text-orange-500",
+  },
+  reputation: {
+    circle: {
+      button:
+        "bg-yellow-500/20 border border-yellow-500/30 shadow-[0_0_40px_rgba(234,179,8,0.35)] hover:shadow-[0_0_60px_rgba(234,179,8,0.55)]",
+      icon: "text-yellow-400",
+      iconGlow: "drop-shadow-[0_0_12px_rgba(234,179,8,0.6)]",
+      focusRing: "focus-visible:ring-yellow-500",
+    },
+    tile: {
+      gradient:
+        "from-yellow-500/10 to-yellow-500/5 border-yellow-500/20 text-yellow-500 group-hover:from-yellow-500/20 group-hover:to-yellow-500/10 group-hover:shadow-yellow-500/25",
+      textHover: "group-hover:text-yellow-500",
+    },
+    createIcon: "bg-yellow-500/10 text-yellow-500",
   },
   "ask-me-how": {
     circle: {

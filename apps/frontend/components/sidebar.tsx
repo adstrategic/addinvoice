@@ -23,6 +23,7 @@ import {
   FilePen,
   Bell,
   ClipboardList,
+  Star,
 } from "lucide-react";
 import {
   Sidebar as SidebarRoot,
@@ -59,6 +60,7 @@ const navigation: NavItem[] = [
   { name: "Expenses", href: "/expenses", icon: Receipt },
   { name: "Clients", href: "/clients", icon: Users },
   { name: "Catalog", href: "/catalog", icon: Package },
+  { name: "Reputation", href: "/reputation", icon: Star },
   { name: "Ask Me How", href: "/ask-me-how", icon: HelpCircle },
   { name: "Configuration", href: "/configuration", icon: Settings },
 ];
