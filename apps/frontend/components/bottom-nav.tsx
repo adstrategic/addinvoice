@@ -20,6 +20,7 @@ import {
   Package,
   HelpCircle,
   Settings,
+  Star,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -55,6 +56,7 @@ const moreNavItems: MoreNavItem[] = [
   { name: 'Payments', href: '/payments', icon: CreditCard, feature: 'payment', requiresAdvances: false },
   { name: 'Expenses', href: '/expenses', icon: Receipt, feature: 'expense', requiresAdvances: false },
   { name: 'Catalog', href: '/catalog', icon: Package, feature: 'catalog', requiresAdvances: false },
+  { name: 'Reputation', href: '/reputation', icon: Star, feature: 'reputation', requiresAdvances: false },
   { name: 'Ask Me How', href: '/ask-me-how', icon: HelpCircle, feature: 'ask-me-how', requiresAdvances: false },
   { name: 'Settings', href: '/configuration', icon: Settings, feature: 'settings', requiresAdvances: false },
 ]
