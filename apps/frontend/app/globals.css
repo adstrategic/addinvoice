@@ -13,6 +13,8 @@
   --popover-foreground: oklch(0.14 0.02 220);
   /* AdStrategic teal — #00afc0 family */
   --primary: oklch(0.64 0.13 200);
+  --primary-light: oklch(0.698964 0.122679 213.6734);
+  --primary-dark: oklch(0.3483 0.061 213.19);
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.94 0.012 210);
   --secondary-foreground: oklch(0.14 0.02 220);
@@ -54,6 +56,8 @@
   --popover: oklch(0.14 0.02 215);
   --popover-foreground: oklch(0.95 0 0);
   --primary: oklch(0.7 0.12 200);
+  --primary-light: oklch(0.8575 0.1301 209.97);
+  --primary-dark: oklch(0.497638 0.087078 213.0016);
   --primary-foreground: oklch(0.1 0.015 215);
   --secondary: oklch(0.18 0.02 215);
   --secondary-foreground: oklch(0.95 0 0);
@@ -94,6 +98,8 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);

@@ -30,7 +30,7 @@ export function VoiceCreateFab({
         onClick={handleMobileClick}
         aria-label={ariaLabel}
         data-tour-id={tourId}
-        className="md:hidden fixed bottom-24 right-21 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-background to-secondary border-2 border-primary/30 shadow-[0_4px_12px_rgba(0,117,135,0.2)] text-primary overflow-hidden active:scale-90 transition-transform duration-150"
+        className="md:hidden fixed bottom-24 right-21 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-white border-2 border-[#007587]/35 shadow-[0_4px_14px_rgba(0,117,135,0.25)] text-[#007587] overflow-hidden active:scale-90 transition-transform duration-150"
       >
         <Mic className="h-5 w-5" />
       </button>

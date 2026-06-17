@@ -55,44 +55,72 @@ const chartConfig = {
 
 // ─── Sparkline ───────────────────────────────────────────────────────────────
 
+const DECORATIVE_SPARKLINE = [12, 28, 18, 42, 24, 48, 30, 38, 22, 44, 26, 36];
+
+function buildSparkCoords(values: number[]) {
+  const mainEndX = 86;
+  const coords = values.map((val, i) => ({
+    x: values.length === 1 ? 0 : (i / (values.length - 1)) * mainEndX,
+    val,
+  }));
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const last = values[values.length - 1] ?? min;
+
+  coords.push({ x: 93, val: min + range * 0.12 });
+  coords.push({ x: 97, val: last - range * 0.08 });
+  coords.push({ x: 100, val: max + range * 0.55 });
+
+  return coords;
+}
+
 function Sparkline({ data, color }: { data: number[]; color: string }) {
   if (data.length < 2) return null;
-  const max = Math.max(...data, 1);
+
+  const max = Math.max(...data);
   const min = Math.min(...data);
-  const range = max - min || 1;
-  const points = data
+  const isFlat = max === min;
+  const series = isFlat ? DECORATIVE_SPARKLINE : data;
+  const coords = buildSparkCoords(series);
+
+  const plotMin = Math.min(...coords.map((c) => c.val));
+  const plotMax = Math.max(...coords.map((c) => c.val));
+  const plotRange = plotMax - plotMin || 1;
+
+  const points = coords
     .map(
-      (d, i) =>
-        `${(i / (data.length - 1)) * 100},${100 - ((d - min) / range) * 80}`,
+      ({ x, val }) =>
+        `${x},${88 - ((val - plotMin) / plotRange) * 34}`,
     )
     .join(" ");
-  const gradId = `grad-${color.replace(/[^a-zA-Z0-9]/g, "")}`;
+
+  const gradId = `spark-fill-${color.replace(/[^a-zA-Z0-9]/g, "")}`;
+
   return (
     <svg
-      className="absolute bottom-0 left-0 w-full h-1/2 opacity-20 pointer-events-none"
+      className="absolute inset-x-0 bottom-0 w-full h-[42%] pointer-events-none"
       preserveAspectRatio="none"
       viewBox="0 0 100 100"
       aria-hidden
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.8" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.12" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.01" />
         </linearGradient>
       </defs>
+      <polygon points={`0,100 ${points} 100,100`} fill={`url(#${gradId})`} />
       <polyline
         points={points}
         fill="none"
         stroke={color}
-        strokeWidth="3"
+        strokeWidth="1.5"
         vectorEffect="non-scaling-stroke"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-      <polygon
-        points={`0,100 ${points} 100,100`}
-        fill={`url(#${gradId})`}
-        opacity="0.5"
+        opacity="0.3"
       />
     </svg>
   );
@@ -122,7 +150,7 @@ function StatCard({
   return (
     <div
       data-tour-id={tourId}
-      className="bg-linear-to-br from-card/80 to-card/30 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl p-4 sm:p-5 text-left shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group min-w-0 w-full"
+      className="bg-white/70 dark:bg-card/60 backdrop-blur-xl border border-white/40 dark:border-white/5 rounded-3xl p-4 sm:p-5 text-left shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_28px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group min-w-0 w-full"
     >
       <Sparkline data={sparkData} color={sparkColor} />
       <div
@@ -416,28 +444,28 @@ function DashboardHome() {
               tourId="dashboard-paid"
               label="Paid"
               value={formatCurrency(totalRevenue)}
-              dotColor="bg-primary-light shadow-[0_0_12px_rgba(0,117,135,1)]"
+              dotColor="bg-[#00afc0] shadow-[0_0_10px_rgba(0,175,192,0.7)]"
               sparkData={sparklinePoints}
-              sparkColor="hsl(var(--primary-light))"
-              glowColor="bg-primary-light/10 group-hover:bg-primary-light/30"
+              sparkColor="#00afc0"
+              glowColor="bg-[#00afc0]/10 group-hover:bg-[#00afc0]/20"
             />
             <StatCard
               tourId="dashboard-total-spent"
               label="Spent"
               value={formatCurrency(totalSpent)}
-              dotColor="bg-chart-4 shadow-[0_0_8px_rgba(255,180,84,0.8)]"
+              dotColor="bg-[#f5b942] shadow-[0_0_8px_rgba(245,185,66,0.7)]"
               sparkData={expenseSparkline}
-              sparkColor="#f59e0b"
-              glowColor="bg-chart-4/10 group-hover:bg-chart-4/20"
+              sparkColor="#f5b942"
+              glowColor="bg-[#f5b942]/10 group-hover:bg-[#f5b942]/20"
             />
             <StatCard
               tourId="dashboard-customers-owe"
               label="Owe"
               value={formatCurrency(totalOutstanding)}
-              dotColor="bg-muted-foreground shadow-[0_0_8px_rgba(150,150,150,0.5)]"
+              dotColor="bg-[#9ca3af] shadow-[0_0_8px_rgba(156,163,175,0.5)]"
               sparkData={sparklinePoints.map((v) => v * 0.4)}
               sparkColor="#9ca3af"
-              glowColor="bg-muted-foreground/10 group-hover:bg-muted-foreground/20"
+              glowColor="bg-[#9ca3af]/10 group-hover:bg-[#9ca3af]/20"
             />
           </div>
         )}
