@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
 import { guardCreateOrExplain } from '../lib/limits';
+import { normalizeTipTapField, normalizeTipTapFieldNullable } from '../lib/tiptap';
 import type {
   EstimateDraft,
   InvoiceSessionData,
@@ -341,7 +342,7 @@ export function createCreateEstimateTool() {
             clientEmail: client.email,
             clientPhone: client.phone ?? null,
             clientAddress: client.address ?? null,
-            summary: summary ?? null,
+            summary: normalizeTipTapFieldNullable(summary),
             timelineStartDate: estimateStartDate,
             timelineEndDate: resolvedExpiryDate ?? null,
             sequence: nextSequence,
@@ -356,14 +357,16 @@ export function createCreateEstimateTool() {
             taxName,
             taxPercentage,
             total,
-            notes: notes ?? business.defaultNotes ?? null,
-            terms: terms ?? business.defaultTerms ?? null,
+            notes:
+              notes != null ? normalizeTipTapField(notes) : (business.defaultNotes ?? null),
+            terms:
+              terms != null ? normalizeTipTapField(terms) : (business.defaultTerms ?? null),
             purchaseOrder: null,
             requireSignature: false,
             items: {
               create: draft.items.map((i) => ({
                 name: i.name,
-                description: i.description,
+                description: normalizeTipTapField(i.description),
                 quantity: i.quantity,
                 quantityUnit: i.quantityUnit,
                 unitPrice: i.unitPrice,

@@ -2,6 +2,7 @@ import { llm } from '@livekit/agents';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
 import { guardCreateOrExplain } from '../lib/limits';
+import { normalizeTipTapField } from '../lib/tiptap';
 import type { InvoiceSessionData } from '../types/session-data';
 
 export function createCreateCatalogTool() {
@@ -42,7 +43,7 @@ export function createCreateCatalogTool() {
             workspaceId: sessionData.workspaceId,
             businessId,
             name,
-            description,
+            description: normalizeTipTapField(description),
             price: unitPrice,
             quantityUnit: 'UNITS',
             sequence: nextSequence,

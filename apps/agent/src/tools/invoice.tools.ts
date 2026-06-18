@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 import { z } from 'zod';
 import { prisma } from '../db/prisma';
 import { guardCreateOrExplain } from '../lib/limits';
+import { normalizeTipTapField } from '../lib/tiptap';
 import type { InvoiceSessionData } from '../types/session-data';
 
 /**
@@ -465,14 +466,23 @@ export function createCreateInvoiceTool() {
             discount: 0,
             total: finalTotal,
             balance: finalTotal,
-            notes: invoiceData.notes ?? business.defaultNotes ?? null,
-            terms: invoiceData.terms ?? invoiceTerms,
+            notes:
+              invoiceData.notes != null
+                ? normalizeTipTapField(invoiceData.notes)
+                : (business.defaultNotes ?? null),
+            terms:
+              invoiceData.terms != null
+                ? normalizeTipTapField(invoiceData.terms)
+                : (invoiceTerms ?? null),
             taxMode: taxMode,
             taxName: taxName,
             taxPercentage: taxPercentage,
             discountType: 'NONE',
             items: {
-              create: invoiceData.items,
+              create: invoiceData.items.map((i) => ({
+                ...i,
+                description: normalizeTipTapField(i.description),
+              })),
             },
           },
           include: {
