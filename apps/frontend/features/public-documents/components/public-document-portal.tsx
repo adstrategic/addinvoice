@@ -254,7 +254,7 @@ function PublicDocumentLayout({
                 rel="noopener noreferrer"
               >
                 <CreditCard className="w-5 h-5 mr-2" />
-                Pay {formatMoney(document.balance, currency)}
+                Pay {formatMoney(document.balance, document.currency ?? "USD")}
                 <ExternalLink className="w-4 h-4 ml-2 opacity-70" />
               </a>
             </Button>
