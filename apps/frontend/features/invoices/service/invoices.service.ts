@@ -167,6 +167,25 @@ async function updateInvoice(
 }
 
 /**
+ * Change only the payment method on an issued, unpaid invoice.
+ * `selectedPaymentMethodId` of null means "Manual".
+ */
+async function updateInvoicePaymentMethod(
+  id: number,
+  selectedPaymentMethodId: number | null,
+): Promise<InvoiceResponse> {
+  try {
+    const { data } = await apiClient.patch<ApiSuccessResponse<InvoiceResponse>>(
+      `${BASE_URL}/${id}/payment-method`,
+      { selectedPaymentMethodId },
+    );
+    return invoiceResponseSchema.parse(data.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+/**
  * Delete an invoice (soft delete)
  */
 async function deleteInvoice(id: number): Promise<void> {
@@ -340,6 +359,7 @@ export const invoicesService = {
   createFromVoiceAudio,
   create: createInvoice,
   update: updateInvoice,
+  updatePaymentMethod: updateInvoicePaymentMethod,
   delete: deleteInvoice,
   void: voidInvoice,
   createItem: createInvoiceItem,

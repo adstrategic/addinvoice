@@ -58,26 +58,19 @@ export async function validateAndRegisterWebhook(
 }
 
 /**
- * Creates a Stripe Checkout Session for an invoice.
- * Line items are built from invoice.items. Invoice-level tax (BY_TOTAL) and
- * invoice-level discounts are handled as separate line items / Stripe Coupons.
- *
- * Returns the hosted checkout URL.
+ * Builds the itemized Stripe line items for the full invoice amount:
+ * per-item line items plus a BY_TOTAL tax line item. Invoice-level discounts
+ * are returned separately as Stripe Coupons (created lazily).
  */
-export async function createCheckoutSession(
+async function buildFullAmountLineItems(
   stripeClient: Stripe,
   invoice: InvoiceEntityWithRelations,
-  successUrl: string,
-  cancelUrl: string,
-): Promise<string> {
-  const currency = invoice.currency.toLowerCase();
+  currency: string,
+): Promise<{
+  discounts: Stripe.Checkout.SessionCreateParams["discounts"];
+  lineItems: Stripe.Checkout.SessionCreateParams.LineItem[];
+}> {
   const items = invoice.items ?? [];
-
-  if (items.length === 0) {
-    throw new Error(
-      "Cannot create a Stripe Checkout Session for an invoice with no items",
-    );
-  }
 
   // Build line items — use the pre-calculated item.total to avoid re-implementing
   // discount and tax logic. Each line item shows the post-discount (item-level) amount.
@@ -133,6 +126,65 @@ export async function createCheckoutSession(
     discounts = [{ coupon: coupon.id }];
   }
 
+  return { discounts, lineItems };
+}
+
+/**
+ * Creates a Stripe Checkout Session for an invoice.
+ *
+ * When the invoice has recorded partial payments (balance < total), the session
+ * charges only the remaining balance via a single "Balance due" line item — the
+ * balance already nets out tax and discounts. Otherwise line items are itemized
+ * from invoice.items with a BY_TOTAL tax line item and invoice-level discounts.
+ *
+ * Returns the hosted checkout session's id and URL.
+ */
+export async function createCheckoutSession(
+  stripeClient: Stripe,
+  invoice: InvoiceEntityWithRelations,
+  successUrl: string,
+  cancelUrl: string,
+): Promise<{ id: string; url: string }> {
+  const currency = invoice.currency.toLowerCase();
+  const items = invoice.items ?? [];
+
+  if (items.length === 0) {
+    throw new Error(
+      "Cannot create a Stripe Checkout Session for an invoice with no items",
+    );
+  }
+
+  const total = Number(invoice.total);
+  const balance = Number(invoice.balance);
+  const hasPartialPayment = balance > 0 && balance < total;
+
+  let lineItems: Stripe.Checkout.SessionCreateParams.LineItem[];
+  let discounts: Stripe.Checkout.SessionCreateParams["discounts"];
+
+  if (hasPartialPayment) {
+    // Charge only the outstanding balance — it already accounts for tax and discounts.
+    lineItems = [
+      {
+        price_data: {
+          currency,
+          product_data: {
+            description: `Remaining balance for invoice ${invoice.invoiceNumber}`,
+            name: "Balance due",
+          },
+          unit_amount: Math.max(0, Math.round(balance * 100)),
+        },
+        quantity: 1,
+      },
+    ];
+    discounts = undefined;
+  } else {
+    ({ discounts, lineItems } = await buildFullAmountLineItems(
+      stripeClient,
+      invoice,
+      currency,
+    ));
+  }
+
   const session = await stripeClient.checkout.sessions.create({
     cancel_url: cancelUrl,
     discounts,
@@ -149,7 +201,25 @@ export async function createCheckoutSession(
     throw new Error("Stripe did not return a checkout URL");
   }
 
-  return session.url;
+  return { id: session.id, url: session.url };
+}
+
+/**
+ * Expires an open Stripe Checkout Session so its hosted URL can no longer be paid.
+ * Silently ignores sessions that are already completed/expired (Stripe throws).
+ */
+export async function expireCheckoutSession(
+  stripeClient: Stripe,
+  sessionId: string,
+): Promise<void> {
+  try {
+    await stripeClient.checkout.sessions.expire(sessionId);
+  } catch (err) {
+    console.warn(
+      `[stripe] Could not expire checkout session ${sessionId}:`,
+      err instanceof Error ? err.message : err,
+    );
+  }
 }
 
 /**

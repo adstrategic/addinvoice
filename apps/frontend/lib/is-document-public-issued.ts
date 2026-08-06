@@ -31,6 +31,15 @@ export function canSendInvoice(invoice: {
   return (invoice.items?.length ?? 0) > 0;
 }
 
+/**
+ * Whether the invoice's payment method may still be changed: it has been issued
+ * but is not yet settled (PAID) or cancelled (VOIDED). Drafts use the full edit
+ * flow instead.
+ */
+export function canChangePaymentMethod(invoice: { status: string }): boolean {
+  return ["SENT", "VIEWED", "OVERDUE"].includes(invoice.status);
+}
+
 /** Resend email from list (rejected proposals only). */
 export function canSendProposalFromList(proposal: { status: string }): boolean {
   return proposal.status === "REJECTED";

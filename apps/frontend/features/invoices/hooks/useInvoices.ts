@@ -220,6 +220,37 @@ export function useUpdateInvoice(setError?: UseFormSetError<CreateInvoiceDTO>) {
 }
 
 /**
+ * Hook to change only the payment method on an issued, unpaid invoice.
+ * `selectedPaymentMethodId` of null means "Manual".
+ */
+export function useUpdateInvoicePaymentMethod() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      selectedPaymentMethodId,
+    }: {
+      id: number;
+      selectedPaymentMethodId: number | null;
+    }) => invoicesService.updatePaymentMethod(id, selectedPaymentMethodId),
+    onSuccess: (updatedInvoice) => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.detail(updatedInvoice.sequence),
+      });
+      queryClient.invalidateQueries({
+        queryKey: invoiceKeys.pdf(updatedInvoice.sequence),
+      });
+      toast.success("Payment method updated", {
+        description: "The invoice payment method has been changed.",
+      });
+    },
+    onError: (err) => handleMutationError(err, undefined),
+  });
+}
+
+/**
  * Hook to delete an invoice.
  * Errors are handled by the central dispatcher (handleMutationError).
  */

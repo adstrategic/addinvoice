@@ -11,6 +11,7 @@ import {
   useInvoiceVoid,
 } from "@/features/invoices";
 import { PaymentFormDialog } from "./PaymentFormDialog";
+import { ChangePaymentMethodDialog } from "./ChangePaymentMethodDialog";
 import { usePaymentDialog } from "../hooks/usePaymentDialog";
 import { TablePagination } from "@/components/TablePagination";
 import { useDebouncedTableParams } from "@/hooks/useDebouncedTableParams";
@@ -75,6 +76,9 @@ export default function InvoicesContent() {
   const [selectedInvoiceForSend, setSelectedInvoiceForSend] = useState<
     InvoiceResponse | undefined
   >(undefined);
+  const [paymentMethodDialogOpen, setPaymentMethodDialogOpen] = useState(false);
+  const [selectedInvoiceForPaymentMethod, setSelectedInvoiceForPaymentMethod] =
+    useState<InvoiceResponse | null>(null);
   const paymentDialog = usePaymentDialog();
   // Fetch invoices with pagination, search, and status (server-side)
   const {
@@ -154,6 +158,11 @@ export default function InvoicesContent() {
   const handleSendInvoice = (invoice: InvoiceResponse) => {
     setSelectedInvoiceForSend(invoice);
     setSendDialogOpen(true);
+  };
+
+  const handleChangePaymentMethod = (invoice: InvoiceResponse) => {
+    setSelectedInvoiceForPaymentMethod(invoice);
+    setPaymentMethodDialogOpen(true);
   };
 
   if (isInitialLoad) return <LoadingComponent variant="dashboard" />;
@@ -245,6 +254,7 @@ export default function InvoicesContent() {
             onDownload={handleDownloadPDF}
             onSend={handleSendInvoice}
             onAddPayment={paymentDialog.openPaymentDialog}
+            onChangePaymentMethod={handleChangePaymentMethod}
             onDelete={invoiceDelete.openDeleteModal}
             onVoid={invoiceVoid.openVoidModal}
           >
@@ -303,6 +313,17 @@ export default function InvoicesContent() {
         onOpenChange={paymentDialog.setIsPaymentDialogOpen}
         invoiceId={paymentDialog.selectedInvoiceForPayment?.id}
         invoiceSequence={paymentDialog.selectedInvoiceForPayment?.sequence}
+      />
+
+      <ChangePaymentMethodDialog
+        open={paymentMethodDialogOpen}
+        onOpenChange={(open) => {
+          setPaymentMethodDialogOpen(open);
+          if (!open) {
+            setSelectedInvoiceForPaymentMethod(null);
+          }
+        }}
+        invoice={selectedInvoiceForPaymentMethod}
       />
 
       <BusinessSelectionDialog

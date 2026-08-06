@@ -29,6 +29,7 @@ import {
   shareInvoicePublicLink,
   updateInvoice,
   updateInvoiceItem,
+  updateInvoicePaymentMethod,
   updatePayment,
 } from "./invoices.controller.js";
 import {
@@ -43,6 +44,7 @@ import {
   listInvoicesSchema,
   sendInvoiceBodySchema,
   updateInvoiceItemSchema,
+  updateInvoicePaymentMethodSchema,
   updateInvoiceSchema,
 } from "./invoices.schemas.js";
 
@@ -161,6 +163,16 @@ invoicesRoutes.patch(
     params: getInvoiceByIdSchema,
   }),
   asyncHandler(updateInvoice),
+);
+
+// PATCH /api/v1/invoices/:id/payment-method - Change payment method on an issued invoice
+invoicesRoutes.patch(
+  "/:invoiceId/payment-method",
+  processRequest({
+    body: updateInvoicePaymentMethodSchema,
+    params: getInvoiceByIdSchema,
+  }),
+  asyncHandler(updateInvoicePaymentMethod),
 );
 
 // DELETE /api/v1/invoices/:id - Delete an invoice (soft delete)

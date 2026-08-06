@@ -98,6 +98,7 @@ function toInvoiceBase(row: InvoiceRowFlat): InvoiceEntity {
     terms: toJsonRecord(row.terms),
     paymentLink: row.paymentLink,
     paymentProvider: row.paymentProvider,
+    paymentSessionId: row.paymentSessionId,
     sentAt: row.sentAt,
     viewedAt: row.viewedAt,
     paidAt: row.paidAt,

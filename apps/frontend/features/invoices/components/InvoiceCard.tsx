@@ -20,9 +20,13 @@ import {
   Plus,
   Ban,
   Calendar,
+  CreditCard,
 } from "lucide-react";
 import { canVoidInvoice } from "@/lib/document-void";
-import { canSendInvoice } from "@/lib/is-document-public-issued";
+import {
+  canChangePaymentMethod,
+  canSendInvoice,
+} from "@/lib/is-document-public-issued";
 import Link from "next/link";
 import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { mapStatusToUI } from "../types/api";
@@ -49,6 +53,7 @@ interface InvoiceCardProps {
   onDownload: (invoice: InvoiceResponse) => void;
   onSend: (invoice: InvoiceResponse) => void;
   onAddPayment: (invoice: InvoiceResponse) => void;
+  onChangePaymentMethod: (invoice: InvoiceResponse) => void;
   onDelete: (invoice: InvoiceResponse) => void;
   onVoid?: (invoice: InvoiceResponse) => void;
   linkOnly?: boolean;
@@ -68,6 +73,7 @@ export function InvoiceCard({
   onDownload,
   onSend,
   onAddPayment,
+  onChangePaymentMethod,
   onDelete,
   onVoid = () => {},
   linkOnly = false,
@@ -81,6 +87,7 @@ export function InvoiceCard({
   const isVoided = invoice.status === "VOIDED";
   const showSend = canSendInvoice(invoice);
   const canAddPayment = !isVoided && uiStatus !== "paid" && hasBalance;
+  const showChangePaymentMethod = canChangePaymentMethod(invoice);
   const showVoid = canVoidInvoice(invoice);
   const dueDateLabel = formatCardDate(invoice.dueDate);
   const isOverdue = uiStatus === "overdue";
@@ -126,6 +133,12 @@ export function InvoiceCard({
           <DropdownMenuItem onClick={() => onAddPayment(invoice)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Payment
+          </DropdownMenuItem>
+        )}
+        {showChangePaymentMethod && (
+          <DropdownMenuItem onClick={() => onChangePaymentMethod(invoice)}>
+            <CreditCard className="h-4 w-4 mr-2" />
+            Change payment method
           </DropdownMenuItem>
         )}
         {invoice.status === "DRAFT" && (

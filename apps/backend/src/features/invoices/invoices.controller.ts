@@ -13,6 +13,7 @@ import type {
   getPaymentByIdSchema,
   sendInvoiceBodySchema,
   updateInvoiceItemSchema,
+  updateInvoicePaymentMethodSchema,
   updateInvoiceSchema,
 } from "./invoices.schemas.js";
 
@@ -506,6 +507,32 @@ export async function updateInvoice(
     workspaceId,
     invoiceId,
     body,
+  );
+
+  res.json({
+    data: invoice,
+  });
+}
+
+/**
+ * PATCH /invoices/:invoiceId/payment-method - Change only the payment method
+ * on an issued, unpaid invoice. No error handling needed - middleware handles it
+ */
+export async function updateInvoicePaymentMethod(
+  req: TypedRequest<
+    typeof getInvoiceByIdSchema,
+    never,
+    typeof updateInvoicePaymentMethodSchema
+  >,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { invoiceId } = req.params;
+
+  const invoice = await invoicesService.updateInvoicePaymentMethod(
+    workspaceId,
+    invoiceId,
+    req.body.selectedPaymentMethodId,
   );
 
   res.json({

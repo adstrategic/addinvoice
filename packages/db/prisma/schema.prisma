@@ -231,6 +231,7 @@ model Invoice {
     terms                   Json?
     paymentLink             String?
     paymentProvider         String? // e.g. "stripe"
+    paymentSessionId        String? // Stripe Checkout Session id backing paymentLink (used to expire it)
     sentAt                  DateTime?
     viewedAt                DateTime?
     paidAt                  DateTime?

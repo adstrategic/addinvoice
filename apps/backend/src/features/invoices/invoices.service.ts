@@ -47,7 +47,10 @@ import {
 import { type BusinessEntity } from "../businesses/businesses.schemas.js";
 import { type ClientEntity } from "../clients/clients.schemas.js";
 import { resolveSelectedPaymentMethodId } from "../workspace/payment-method-resolver.service.js";
-import { ensureInvoiceStripePaymentLink } from "./invoice-stripe-payment-link.service.js";
+import {
+  ensureInvoiceStripePaymentLink,
+  expireInvoiceStripeSession,
+} from "./invoice-stripe-payment-link.service.js";
 import {
   toInvoiceEntityWithRelations,
   toInvoiceItemEntity,
@@ -1768,6 +1771,91 @@ export async function updateInvoice(
       balance: Number(withBalance?.balance ?? updatedInvoice.balance),
     };
   });
+}
+
+/**
+ * Statuses on which the payment method may still be changed: the invoice has
+ * been issued but is not yet settled or cancelled.
+ */
+const PAYMENT_METHOD_CHANGEABLE_STATUSES: InvoiceStatus[] = [
+  "SENT",
+  "VIEWED",
+  "OVERDUE",
+];
+
+/**
+ * Change ONLY the selected payment method on an already-issued, unpaid invoice.
+ *
+ * Unlike updateInvoice (draft-only), this is deliberately scoped to a single
+ * field so an active invoice can be re-pointed at a different payment method
+ * without unlocking anything else. It also reconciles the cached Stripe link:
+ * switching to Stripe (re)generates a checkout at the current balance, switching
+ * away expires the old Stripe session and clears the link.
+ */
+export async function updateInvoicePaymentMethod(
+  workspaceId: number,
+  id: number,
+  selectedPaymentMethodId: null | number,
+): Promise<InvoiceEntityWithRelations> {
+  const previousMethodType = await prisma.$transaction(async (tx) => {
+    const existing = await tx.invoice.findUnique({
+      include: { selectedPaymentMethod: true },
+      where: { id },
+    });
+
+    if (existing?.workspaceId !== workspaceId) {
+      throw new EntityNotFoundError("Invoice not found");
+    }
+
+    if (!PAYMENT_METHOD_CHANGEABLE_STATUSES.includes(existing.status)) {
+      throw new EntityValidationError(
+        "Payment method can only be changed on an issued, unpaid invoice",
+      );
+    }
+
+    // An explicit "Manual" choice (null) must stay null — do not fall back to
+    // the workspace default the way create/update do.
+    const resolvedPaymentMethodId = await resolveSelectedPaymentMethodId(
+      tx,
+      workspaceId,
+      selectedPaymentMethodId,
+      { useWorkspaceDefaultWhenNull: false },
+    );
+
+    await tx.invoice.update({
+      data: {
+        selectedPaymentMethod:
+          resolvedPaymentMethodId != null
+            ? { connect: { id: resolvedPaymentMethodId } }
+            : { disconnect: true },
+      },
+      where: { id, workspaceId },
+    });
+
+    return existing.selectedPaymentMethod?.type ?? null;
+  });
+
+  // Reconcile the Stripe checkout link outside the transaction (external calls).
+  const updated = await getInvoiceById(workspaceId, id);
+  const newMethodType = updated.selectedPaymentMethod?.type ?? null;
+  const wasStripe = previousMethodType === "STRIPE";
+  const isStripe = newMethodType === "STRIPE";
+
+  if (isStripe) {
+    // Clear any stale link first so a fresh checkout is generated at the
+    // current balance, then generate it.
+    await expireInvoiceStripeSession(workspaceId, updated);
+    await ensureInvoiceStripePaymentLink(
+      workspaceId,
+      await getInvoiceById(workspaceId, id),
+    );
+  } else if (wasStripe) {
+    // Switching away from Stripe: expire the old session and drop the link so
+    // the public page stops offering Stripe.
+    await expireInvoiceStripeSession(workspaceId, updated);
+  }
+
+  return await getInvoiceById(workspaceId, id);
 }
 
 /**

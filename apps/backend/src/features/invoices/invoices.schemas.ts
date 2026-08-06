@@ -269,6 +269,14 @@ export const updateInvoiceSchema = baseInvoiceSchema.partial().extend({
 });
 
 /**
+ * Schema for changing only the payment method on an issued invoice.
+ * `null` means "Manual" (no online payment method).
+ */
+export const updateInvoicePaymentMethodSchema = z.object({
+  selectedPaymentMethodId: z.coerce.number().int().positive().nullable(),
+});
+
+/**
  * Schema for creating an invoice item (standalone)
  */
 export const createInvoiceItemSchema = z.object({
@@ -360,6 +368,7 @@ export const invoiceEntitySchema = baseInvoiceSchema
     paidAt: z.date().nullable(),
     paymentLink: z.string().nullable(),
     paymentProvider: z.string().nullable(),
+    paymentSessionId: z.string().nullable(),
     selectedPaymentMethodId: z.number().int().nullable(),
     sentAt: z.date().nullable(),
     sequence: z.number().int().positive(),
@@ -428,3 +437,7 @@ export type PaymentDetail = z.infer<typeof paymentDetailSchema>;
 export type UpdateInvoiceDto = z.infer<typeof updateInvoiceSchema>;
 
 export type UpdateInvoiceItemDto = z.infer<typeof updateInvoiceItemSchema>;
+
+export type UpdateInvoicePaymentMethodDto = z.infer<
+  typeof updateInvoicePaymentMethodSchema
+>;

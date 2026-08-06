@@ -12,6 +12,7 @@ interface InvoiceListProps {
   onDownload: (invoice: InvoiceResponse) => void;
   onSend: (invoice: InvoiceResponse) => void;
   onAddPayment: (invoice: InvoiceResponse) => void;
+  onChangePaymentMethod: (invoice: InvoiceResponse) => void;
   onDelete: (invoice: InvoiceResponse) => void;
   onVoid: (invoice: InvoiceResponse) => void;
   children?: React.ReactNode;
@@ -33,6 +34,7 @@ export function InvoiceList({
   onDownload,
   onSend,
   onAddPayment,
+  onChangePaymentMethod,
   onDelete,
   onVoid,
   children,
@@ -62,6 +64,7 @@ export function InvoiceList({
               onDownload={onDownload}
               onSend={onSend}
               onAddPayment={onAddPayment}
+              onChangePaymentMethod={onChangePaymentMethod}
               onDelete={onDelete}
               onVoid={onVoid}
             />

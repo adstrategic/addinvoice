@@ -357,7 +357,9 @@ function DashboardHome() {
   }, [expenseStats]);
 
   const filteredInvoices = useMemo(() => {
-    const all = (stats?.recentInvoices ?? []) as InvoiceResponse[];
+    const all = ((stats?.recentInvoices ?? []) as InvoiceResponse[]).filter(
+      (i) => i.status !== "VOIDED",
+    );
     if (invoiceFilter === "Open")
       return all.filter((i) => i.status === "SENT" || i.status === "VIEWED");
     if (invoiceFilter === "Overdue")

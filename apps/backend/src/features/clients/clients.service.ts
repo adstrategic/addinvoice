@@ -111,7 +111,7 @@ export async function getClientById(
 ): Promise<ClientEntity> {
   const client = await prisma.client.findUnique({ where: { id } });
 
-  if (!client || client.workspaceId !== workspaceId) {
+  if (client?.workspaceId !== workspaceId) {
     throw new EntityNotFoundError("Client not found");
   }
 

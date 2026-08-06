@@ -2,20 +2,24 @@
 
 import { Button } from "@/components/ui/button";
 import { DocumentStatusBadge } from "@/components/shared/DocumentStatusBadge";
-import { ArrowLeft, Download, Send, Edit, Trash2, Plus, ExternalLink, Ban } from "lucide-react";
+import { ArrowLeft, Download, Send, Edit, Trash2, Plus, ExternalLink, Ban, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { useInvoiceBySequence } from "@/features/invoices/hooks/useInvoices";
 import { PaymentFormDialog } from "@/features/invoices/components/PaymentFormDialog";
+import { ChangePaymentMethodDialog } from "@/features/invoices/components/ChangePaymentMethodDialog";
 import { PaymentsSection } from "@/features/invoices/forms/form-fields/PaymentsSection";
 import { useInvoiceDelete } from "@/features/invoices/hooks/useInvoiceDelete";
 import { useInvoiceVoid } from "@/features/invoices/hooks/useInvoiceVoid";
 import { EntityDeleteModal } from "@/components/shared/EntityDeleteModal";
 import { EntityVoidModal } from "@/components/shared/EntityVoidModal";
 import { canVoidInvoice } from "@/lib/document-void";
-import { canSendInvoice } from "@/lib/is-document-public-issued";
+import {
+  canChangePaymentMethod,
+  canSendInvoice,
+} from "@/lib/is-document-public-issued";
 import { mapStatusToUI } from "@/features/invoices/types/api";
 import { toast } from "sonner";
 import { useDownloadInvoicePdf } from "@/features/invoices/hooks/useDownloadInvoicePDF";
@@ -27,6 +31,7 @@ export default function InvoiceDetailPage() {
   const router = useRouter();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showPaymentMethodDialog, setShowPaymentMethodDialog] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const invoiceDelete = useInvoiceDelete({
     onAfterDelete: () => {
@@ -168,6 +173,17 @@ export default function InvoiceDetailPage() {
                   Add Payment
                 </Button>
               )}
+            {canChangePaymentMethod(invoice) && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 shrink-0 bg-transparent"
+                onClick={() => setShowPaymentMethodDialog(true)}
+              >
+                <CreditCard className="h-4 w-4 shrink-0" />
+                Change payment method
+              </Button>
+            )}
             {canSendInvoice(invoice) && (
               <Button
                 size="lg"
@@ -214,6 +230,12 @@ export default function InvoiceDetailPage() {
         onOpenChange={setShowPaymentDialog}
         invoiceId={invoice.id}
         invoiceSequence={invoice.sequence}
+      />
+
+      <ChangePaymentMethodDialog
+        open={showPaymentMethodDialog}
+        onOpenChange={setShowPaymentMethodDialog}
+        invoice={invoice}
       />
 
       <SendInvoiceDialog

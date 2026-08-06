@@ -5,6 +5,7 @@ import type { InvoiceEntityWithRelations } from "./invoices.schemas.js";
 import {
   createCheckoutSession,
   createPerWorkspaceStripeClient,
+  expireCheckoutSession,
 } from "../stripe/stripe-integration.service.js";
 
 function getFrontendBaseUrl(): string {
@@ -60,7 +61,7 @@ export async function ensureInvoiceStripePaymentLink(
   const stripeClient = createPerWorkspaceStripeClient(
     workspaceStripe.stripeSecretKey,
   );
-  const paymentLink = await createCheckoutSession(
+  const { id: sessionId, url: paymentLink } = await createCheckoutSession(
     stripeClient,
     invoice,
     successUrl,
@@ -68,9 +69,49 @@ export async function ensureInvoiceStripePaymentLink(
   );
 
   await prisma.invoice.update({
-    data: { paymentLink, paymentProvider: "stripe" },
+    data: {
+      paymentLink,
+      paymentProvider: "stripe",
+      paymentSessionId: sessionId,
+    },
     where: { id: invoice.id },
   });
 
   return paymentLink;
+}
+
+/**
+ * Expires the invoice's cached Stripe Checkout Session (best-effort) and clears
+ * the stored link fields, so the public page stops offering Stripe and the old
+ * hosted URL can no longer be paid. No-op when the invoice has no stored link.
+ */
+export async function expireInvoiceStripeSession(
+  workspaceId: number,
+  invoice: InvoiceEntityWithRelations,
+): Promise<void> {
+  if (!invoice.paymentLink && !invoice.paymentSessionId) {
+    return;
+  }
+
+  if (invoice.paymentSessionId) {
+    const workspaceStripe = await prisma.workspacePaymentMethod.findFirst({
+      where: { type: PaymentMethodType.STRIPE, workspaceId },
+    });
+
+    if (workspaceStripe?.stripeSecretKey) {
+      const stripeClient = createPerWorkspaceStripeClient(
+        workspaceStripe.stripeSecretKey,
+      );
+      await expireCheckoutSession(stripeClient, invoice.paymentSessionId);
+    }
+  }
+
+  await prisma.invoice.update({
+    data: {
+      paymentLink: null,
+      paymentProvider: null,
+      paymentSessionId: null,
+    },
+    where: { id: invoice.id },
+  });
 }

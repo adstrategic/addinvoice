@@ -13,8 +13,6 @@ import {
   Send,
   CreditCard,
 } from "lucide-react";
-import { useWorkspacePaymentMethods } from "@/features/workspace";
-import Image from "next/image";
 import type { BusinessResponse } from "@addinvoice/schemas";
 import { SendInvoiceDialog } from "@/components/send-invoice-dialog";
 import { canSendInvoice } from "@/lib/is-document-public-issued";
@@ -30,6 +28,7 @@ import { NotesSection } from "./form-fields/NotesSection";
 import { TermsSection } from "./form-fields/TermsSection";
 import { ProductsSection } from "./form-fields/ProductsSection";
 import { PaymentsSection } from "./form-fields/PaymentsSection";
+import { PaymentMethodTiles } from "../components/PaymentMethodTiles";
 import type { InvoiceResponse } from "../schemas/invoice.schema";
 import { Form } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,9 +132,6 @@ export function InvoiceForm({
     taxPercentage: form.watch("taxPercentage") || null,
   };
 
-  const { data: paymentMethods } = useWorkspacePaymentMethods();
-  const enabledPaymentMethods =
-    paymentMethods?.filter((m) => m.isEnabled && m.type !== "VENMO") ?? [];
   const hasItems = draftItems.length > 0;
 
   // Show loading state in edit mode while invoice is loading
@@ -353,93 +349,14 @@ export function InvoiceForm({
                     </p>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div
-                        className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${form.watch("selectedPaymentMethodId") == null ? "border-primary bg-secondary/50" : "border-border"}`}
-                        onClick={() =>
-                          form.setValue("selectedPaymentMethodId", null, {
-                            shouldDirty: true,
-                          })
-                        }
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                            <CreditCard className="h-4 w-4 text-foreground" />
-                          </div>
-                          <span className="font-medium text-foreground">
-                            Manual
-                          </span>
-                        </div>
-                      </div>
-                      {enabledPaymentMethods.map((method) => {
-                        const labels: Record<
-                          string,
-                          {
-                            name: string;
-                            icon: "paypal" | "zelle" | "nequi" | "stripe";
-                          }
-                        > = {
-                          PAYPAL: { name: "PayPal", icon: "paypal" },
-                          ZELLE: { name: "Zelle", icon: "zelle" },
-                          NEQUI: { name: "Nequi", icon: "nequi" },
-                          STRIPE: { name: "Stripe", icon: "stripe" },
-                        };
-                        const label = labels[method.type];
-                        const isSelected =
-                          form.watch("selectedPaymentMethodId") === method.id;
-                        return (
-                          <div
-                            key={method.id}
-                            className={`cursor-pointer rounded-lg border p-4 hover:bg-secondary/50 transition-colors ${isSelected ? "border-primary bg-secondary/50" : "border-border"}`}
-                            onClick={() =>
-                              form.setValue(
-                                "selectedPaymentMethodId",
-                                method.id,
-                                { shouldDirty: true },
-                              )
-                            }
-                          >
-                            <div className="flex items-center gap-3">
-                              {label?.icon === "paypal" && (
-                                <Image
-                                  src="/images/PayPal-icon.png"
-                                  alt="PayPal"
-                                  width={32}
-                                  height={32}
-                                  className="h-8 w-8 object-contain"
-                                />
-                              )}
-                              {label?.icon === "zelle" && (
-                                <Image
-                                  src="/images/zelle-icon.png"
-                                  alt="Zelle"
-                                  width={32}
-                                  height={32}
-                                  className="h-8 w-8 object-contain"
-                                />
-                              )}
-                              {label?.icon === "stripe" && (
-                                <Image
-                                  src="/images/stripe-icon.webp"
-                                  alt="Stripe"
-                                  width={32}
-                                  height={32}
-                                  className="h-8 w-8 object-contain"
-                                />
-                              )}
-                              {label?.icon === "nequi" && (
-                                <div className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-xs font-semibold">
-                                  NQ
-                                </div>
-                              )}
-                              <span className="font-medium text-foreground">
-                                {label?.name ?? method.type}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <PaymentMethodTiles
+                      value={form.watch("selectedPaymentMethodId") ?? null}
+                      onChange={(value) =>
+                        form.setValue("selectedPaymentMethodId", value, {
+                          shouldDirty: true,
+                        })
+                      }
+                    />
                   </CardContent>
                 </Card>
 
