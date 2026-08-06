@@ -69,6 +69,7 @@ export { EstimateActions } from "./components/EstimateActions";
 export { VoiceEstimatePromptDialog } from "./components/VoiceEstimatePromptDialog";
 export { EstimateForm } from "./forms/EstimateForm";
 export { ProductFormDialog } from "./components/ProductFormDialog";
+export { CleaningCalculatorDialog } from "./components/calculator/CleaningCalculatorDialog";
 
 // Utils
 export { calculateItemTotal } from "./lib/utils";

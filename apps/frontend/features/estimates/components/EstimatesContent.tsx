@@ -20,6 +20,7 @@ import { SendEstimateDialog } from "@/components/send-estimate-dialog";
 import { ConvertToProposalDialog } from "@/components/convert-to-proposal-dialog";
 import { BusinessSelectionDialog } from "@/components/business-selection-dialog";
 import { EstimateForm } from "../forms/EstimateForm";
+import { CleaningCalculatorDialog } from "./calculator/CleaningCalculatorDialog";
 import { VoiceEstimatePromptDialog } from "./VoiceEstimatePromptDialog";
 import type { EstimateDashboardResponse } from "@addinvoice/schemas";
 import { statusFilterToApiParam } from "../types/api";
@@ -74,6 +75,7 @@ export default function EstimatesContent() {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedEstimateForSend, setSelectedEstimateForSend] = useState<
     EstimateDashboardResponse | undefined
@@ -253,6 +255,7 @@ export default function EstimatesContent() {
           <EstimateActions
             onCreateEstimate={handleCreateEstimate}
             onCreateByVoice={handleCreateEstimateByVoice}
+            onOpenCalculator={() => setCalculatorOpen(true)}
           />
         </div>
 
@@ -367,6 +370,11 @@ export default function EstimatesContent() {
         onClick={handleCreateEstimateByVoice}
         ariaLabel="Create estimate by voice"
         tourId="estimates-voice-btn"
+      />
+
+      <CleaningCalculatorDialog
+        open={calculatorOpen}
+        onOpenChange={setCalculatorOpen}
       />
     </>
   );

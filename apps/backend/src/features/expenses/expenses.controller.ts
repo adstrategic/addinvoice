@@ -16,7 +16,7 @@ import type {
 import { getWorkspaceId } from "../../core/auth.js";
 import {
   uploadExpenseReceipt,
-  validateImageFile,
+  validateReceiptFile,
 } from "../../core/cloudinary.js";
 import { InternalError } from "../../errors/EntityErrors.js";
 import * as expensesService from "./expenses.service.js";
@@ -34,7 +34,7 @@ export async function scanReceipt(
     res.status(400).json({ error: "No file provided" });
     return;
   }
-  const validation = validateImageFile(file);
+  const validation = validateReceiptFile(file);
   if (!validation.valid) {
     res.status(400).json({
       error: validation.error ?? "Invalid file",
@@ -62,7 +62,7 @@ export async function uploadReceipt(
     });
     return;
   }
-  const validation = validateImageFile(file);
+  const validation = validateReceiptFile(file);
   if (!validation.valid) {
     res.status(400).json({
       error: validation.error ?? "Invalid file",

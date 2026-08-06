@@ -24,6 +24,7 @@ import {
   Scan,
   Camera,
   ImageIcon,
+  FileText,
   X,
   CalendarIcon,
 } from "lucide-react";
@@ -51,11 +52,12 @@ import { enUS } from "date-fns/locale";
 import { NumericFormat } from "react-number-format";
 
 const MAX_RECEIPT_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-const ALLOWED_IMAGE_TYPES = [
+const ALLOWED_RECEIPT_TYPES = [
   "image/jpeg",
   "image/jpg",
   "image/png",
   "image/webp",
+  "application/pdf",
 ];
 
 interface ExpenseFormProps {
@@ -116,18 +118,15 @@ export function ExpenseForm({
       onPendingReceiptFileChange(null);
       return;
     }
-    if (
-      !file.type.startsWith("image/") ||
-      !ALLOWED_IMAGE_TYPES.includes(file.type)
-    ) {
+    if (!ALLOWED_RECEIPT_TYPES.includes(file.type)) {
       toast.error("Invalid file type", {
-        description: "Please select a JPEG, PNG, or WebP image.",
+        description: "Please select a JPEG, PNG, WebP image, or a PDF.",
       });
       return;
     }
     if (file.size > MAX_RECEIPT_SIZE_BYTES) {
       toast.error("File too large", {
-        description: "Please select an image smaller than 5MB.",
+        description: "Please select a file smaller than 5MB.",
       });
       return;
     }
@@ -138,6 +137,10 @@ export function ExpenseForm({
   const showReceiptPreview = pendingReceiptFile
     ? previewObjectUrl
     : receiptImageUrl || null;
+
+  const isPdfReceipt = pendingReceiptFile
+    ? pendingReceiptFile.type === "application/pdf"
+    : (receiptImageUrl ?? "").toLowerCase().endsWith(".pdf");
 
   const handleClearReceipt = () => {
     onPendingReceiptFileChange(null);
@@ -181,7 +184,7 @@ export function ExpenseForm({
                 onClick={() => selectPhotoInputRef.current?.click()}
               >
                 <ImageIcon className="h-4 w-4 mr-2" />
-                Select photo
+                Select image or PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -200,7 +203,7 @@ export function ExpenseForm({
           <input
             ref={selectPhotoInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,application/pdf"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -210,17 +213,23 @@ export function ExpenseForm({
           />
           {showReceiptPreview && (
             <div className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
-              <img
-                src={showReceiptPreview}
-                alt="Receipt"
-                className="h-16 w-16 object-cover rounded border"
-              />
+              {isPdfReceipt ? (
+                <div className="h-16 w-16 flex items-center justify-center rounded border bg-background">
+                  <FileText className="h-7 w-7 text-muted-foreground" />
+                </div>
+              ) : (
+                <img
+                  src={showReceiptPreview}
+                  alt="Receipt"
+                  className="h-16 w-16 object-cover rounded border"
+                />
+              )}
               <span className="text-sm text-muted-foreground flex-1 truncate">
                 {isScanningReceipt
                   ? "Scanning receipt…"
                   : pendingReceiptFile
-                    ? "Receipt image selected (will upload on save)"
-                    : "Receipt image attached"}
+                    ? `Receipt ${isPdfReceipt ? "PDF" : "image"} selected (will upload on save)`
+                    : `Receipt ${isPdfReceipt ? "PDF" : "image"} attached`}
               </span>
               {isScanningReceipt && (
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />

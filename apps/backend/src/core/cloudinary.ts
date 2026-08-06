@@ -217,14 +217,23 @@ export async function uploadExpenseReceipt(
   const uniqueId = randomUUID();
   const folder = `workspaces/${String(workspaceId)}/expenses/receipts`;
   const publicId = `${folder}/${uniqueId}`;
+  const isPdf = file.mimetype === "application/pdf";
 
   try {
-    const uploadOptions = {
+    const uploadOptions: {
+      folder: string;
+      invalidate: boolean;
+      public_id: string;
+      resource_type: "raw" | "image";
+      transformation?: unknown[];
+    } = {
       folder,
       invalidate: true,
       public_id: publicId,
-      resource_type: "image" as const,
-      transformation: [
+      resource_type: isPdf ? ("raw" as const) : ("image" as const),
+    };
+    if (!isPdf) {
+      uploadOptions.transformation = [
         {
           crop: "limit" as const,
           fetch_format: "auto" as const,
@@ -235,8 +244,8 @@ export async function uploadExpenseReceipt(
         {
           strip_metadata: true,
         },
-      ],
-    };
+      ];
+    }
 
     const base64 = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
     const result = await cloudinary.uploader.upload(base64, uploadOptions);
@@ -323,6 +332,32 @@ export function validateImageFile(file: Express.Multer.File): {
     // as we need to read the image first
   }
 
+  return { valid: true };
+}
+
+/**
+ * Validate expense receipt file (image or PDF).
+ * Receipts are both scanned by Claude and stored, so PDFs are allowed here.
+ */
+export function validateReceiptFile(file: Express.Multer.File): {
+  error?: string;
+  valid: boolean;
+} {
+  if (file.size > MAX_FILE_SIZE) {
+    return {
+      error: `File size exceeds maximum of ${String(MAX_FILE_SIZE / 1024 / 1024)}MB`,
+      valid: false,
+    };
+  }
+  if (
+    !file.mimetype ||
+    !ALLOWED_QUOTE_ATTACHMENT_MIME_TYPES.includes(file.mimetype)
+  ) {
+    return {
+      error: `Invalid file type. Allowed: images (JPEG, PNG, WebP) or PDF`,
+      valid: false,
+    };
+  }
   return { valid: true };
 }
 

@@ -3,7 +3,7 @@ import type { ReceiptScanResult } from "@addinvoice/schemas";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 
-const RECEIPT_EXTRACTION_PROMPT = `You are analyzing an image of a receipt. Extract the following fields if they are clearly visible. Use null for any field that is not found, unclear, or ambiguous.
+const RECEIPT_EXTRACTION_PROMPT = `You are analyzing a receipt (an image or PDF). Extract the following fields if they are clearly visible. Use null for any field that is not found, unclear, or ambiguous.
 Respond ONLY with a valid JSON object, no markdown, no explanation:
 {
   "description": "short merchant/purchase description",
@@ -51,9 +51,26 @@ export async function scanReceiptImage(
 ): Promise<null | ReceiptScanResult> {
   const client = new Anthropic();
 
-  const imageBuffer = file.buffer;
-  const base64Image = imageBuffer.toString("base64");
-  const mimeType = file.mimetype as "image/jpeg" | "image/png" | "image/webp";
+  const base64Data = file.buffer.toString("base64");
+  const isPdf = file.mimetype === "application/pdf";
+
+  const receiptBlock: Anthropic.ContentBlockParam = isPdf
+    ? {
+        type: "document",
+        source: {
+          type: "base64",
+          media_type: "application/pdf",
+          data: base64Data,
+        },
+      }
+    : {
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: file.mimetype as "image/jpeg" | "image/png" | "image/webp",
+          data: base64Data,
+        },
+      };
 
   const response = await client.messages.create({
     model: "claude-haiku-4-5",
@@ -69,14 +86,7 @@ export async function scanReceiptImage(
       {
         role: "user",
         content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: mimeType,
-              data: base64Image,
-            },
-          },
+          receiptBlock,
           {
             type: "text",
             text: RECEIPT_EXTRACTION_PROMPT,

@@ -21,8 +21,11 @@ import {
   HelpCircle,
   Settings,
   Star,
+  Pencil,
+  Calculator,
   type LucideIcon,
 } from "lucide-react";
+import { CleaningCalculatorDialog } from "@/features/estimates";
 import {
   Drawer,
   DrawerContent,
@@ -154,6 +157,8 @@ export function BottomNav() {
   const router = useRouter();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isEstimateChoiceOpen, setIsEstimateChoiceOpen] = useState(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isAnyFormOpen, setIsAnyFormOpen] = useState(false);
   const { triggerHaptic } = useHaptic();
   const { data: subscription } = useSubscription();
@@ -183,6 +188,30 @@ export function BottomNav() {
     if (drawer === "create") setIsCreateOpen(false);
     if (drawer === "more") setIsMoreOpen(false);
     setTimeout(() => router.push(href), 100);
+  };
+
+  // The estimate create action opens a Manual / Use calculator choice instead
+  // of navigating straight to the form.
+  const handleCreateItem = (item: CreateNavItem) => {
+    if (item.feature === "estimate") {
+      triggerHaptic("light");
+      setIsCreateOpen(false);
+      setTimeout(() => setIsEstimateChoiceOpen(true), 150);
+      return;
+    }
+    navigate(item.href, "create");
+  };
+
+  const handleEstimateManual = () => {
+    triggerHaptic("light");
+    setIsEstimateChoiceOpen(false);
+    setTimeout(() => router.push("/estimates?action=create"), 100);
+  };
+
+  const handleEstimateCalculator = () => {
+    triggerHaptic("light");
+    setIsEstimateChoiceOpen(false);
+    setTimeout(() => setIsCalculatorOpen(true), 150);
   };
 
   const isActive = (href: string) => {
@@ -217,7 +246,7 @@ export function BottomNav() {
                   return (
                     <div
                       key={item.label}
-                      onClick={() => navigate(item.href, "create")}
+                      onClick={() => handleCreateItem(item)}
                       className="cursor-pointer"
                     >
                       <div className="flex items-center gap-4 rounded-xl p-4 hover:bg-secondary/50 transition-colors">
@@ -326,6 +355,46 @@ export function BottomNav() {
           </Drawer>
         </nav>
       )}
+
+      {/* Estimate: Manual / Use calculator choice */}
+      <Drawer open={isEstimateChoiceOpen} onOpenChange={setIsEstimateChoiceOpen}>
+        <DrawerContent className="px-4 pb-8">
+          <DrawerHeader className="text-left px-2">
+            <DrawerTitle className="text-xl font-bold">
+              Create estimate
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="flex flex-col gap-2 mt-2">
+            <div
+              onClick={handleEstimateManual}
+              className="cursor-pointer"
+            >
+              <div className="flex items-center gap-4 rounded-xl p-4 hover:bg-secondary/50 transition-colors">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-foreground">
+                  <Pencil className="h-5 w-5" />
+                </div>
+                <span className="font-medium text-base">Manual</span>
+              </div>
+            </div>
+            <div
+              onClick={handleEstimateCalculator}
+              className="cursor-pointer"
+            >
+              <div className="flex items-center gap-4 rounded-xl p-4 hover:bg-secondary/50 transition-colors">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-foreground">
+                  <Calculator className="h-5 w-5" />
+                </div>
+                <span className="font-medium text-base">Use calculator</span>
+              </div>
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <CleaningCalculatorDialog
+        open={isCalculatorOpen}
+        onOpenChange={setIsCalculatorOpen}
+      />
     </>
   );
 }
