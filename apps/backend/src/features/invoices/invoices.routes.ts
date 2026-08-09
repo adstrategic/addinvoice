@@ -22,6 +22,8 @@ import {
   enqueueSendInvoice,
   getInvoiceBySequence,
   getInvoicePdf,
+  getInvoicePreview,
+  getInvoicePreviewPage,
   getNextInvoiceNumber,
   getPendingAdvancesForInvoice,
   listInvoices,
@@ -39,6 +41,7 @@ import {
   getInvoiceByIdSchema,
   getInvoiceBySequenceSchema,
   getInvoiceItemByIdSchema,
+  getInvoicePreviewPageParamsSchema,
   getNextInvoiceNumberQuerySchema,
   getPaymentByIdSchema,
   listInvoicesSchema,
@@ -47,6 +50,7 @@ import {
   updateInvoicePaymentMethodSchema,
   updateInvoiceSchema,
 } from "./invoices.schemas.js";
+import { previewHashQuerySchema } from "../_shared/preview-schemas.js";
 
 /**
  * Invoices routes
@@ -90,6 +94,23 @@ invoicesRoutes.get(
   "/:sequence/pdf",
   processRequest({ params: getInvoiceBySequenceSchema }),
   asyncHandler(getInvoicePdf),
+);
+
+// GET /api/v1/invoices/:sequence/preview/:page - Preview page image
+invoicesRoutes.get(
+  "/:sequence/preview/:page",
+  processRequest({
+    params: getInvoicePreviewPageParamsSchema,
+    query: previewHashQuerySchema,
+  }),
+  asyncHandler(getInvoicePreviewPage),
+);
+
+// GET /api/v1/invoices/:sequence/preview - Preview metadata
+invoicesRoutes.get(
+  "/:sequence/preview",
+  processRequest({ params: getInvoiceBySequenceSchema }),
+  asyncHandler(getInvoicePreview),
 );
 
 // POST /api/v1/invoices/:sequence/send - Enqueue send invoice email (202)

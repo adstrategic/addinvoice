@@ -16,6 +16,8 @@ import {
   voidProposal,
   getProposalBySequence,
   getProposalPdf,
+  getProposalPreview,
+  getProposalPreviewPage,
   listProposals,
   markProposalAsAccepted,
   resendProposal,
@@ -29,8 +31,10 @@ import {
   getProposalByIdSchema,
   getProposalBySequenceSchema,
   getProposalDescriptiveItemByIdSchema,
+  getProposalPreviewPageParamsSchema,
   listProposalsSchema,
 } from "./proposals.schemas.js";
+import { previewHashQuerySchema } from "../_shared/preview-schemas.js";
 
 /**
  * Proposals routes
@@ -61,6 +65,23 @@ proposalsRoutes.get(
   "/:sequence/pdf",
   processRequest({ params: getProposalBySequenceSchema }),
   asyncHandler(getProposalPdf),
+);
+
+// GET /api/v1/proposals/:sequence/preview/:page - Preview page image
+proposalsRoutes.get(
+  "/:sequence/preview/:page",
+  processRequest({
+    params: getProposalPreviewPageParamsSchema,
+    query: previewHashQuerySchema,
+  }),
+  asyncHandler(getProposalPreviewPage),
+);
+
+// GET /api/v1/proposals/:sequence/preview - Preview metadata
+proposalsRoutes.get(
+  "/:sequence/preview",
+  processRequest({ params: getProposalBySequenceSchema }),
+  asyncHandler(getProposalPreview),
 );
 
 // POST /api/v1/proposals/:sequence/send - Resend proposal (must be before /:sequence)

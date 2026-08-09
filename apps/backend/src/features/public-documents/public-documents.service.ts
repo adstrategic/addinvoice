@@ -12,6 +12,13 @@ import { toAdvanceResponse } from "../advances/advances.mapper.js";
 import { buildAdvancePdfPayload } from "../advances/advances.service.js";
 import { toProposalResponse } from "../proposals/proposals.mapper.js";
 import { buildProposalPdfPayload } from "../proposals/proposals.service.js";
+import {
+  type DocumentPreviewKind,
+  getPreviewMetadata,
+  getPreviewPage,
+  type PreviewMetadata,
+  type PreviewPageResult,
+} from "../_shared/document-preview.js";
 
 const INVOICE_PUBLIC_STATUSES = new Set(["OVERDUE", "PAID", "SENT", "VIEWED"]);
 
@@ -397,4 +404,119 @@ export async function getPublicDocumentPdfBySlug(
     buffer: Buffer.from(await pdfResponse.arrayBuffer()),
     filename: `advance-${String(advance.sequence)}.pdf`,
   };
+}
+
+interface PublicPreviewContext {
+  kind: DocumentPreviewKind;
+  workspaceId: string;
+  sequence: number;
+  payload: unknown;
+}
+
+async function resolvePublicPreviewContext(
+  slug: string,
+): Promise<PublicPreviewContext> {
+  const parsed = parsePublicSlug(slug);
+  if (!parsed) {
+    throw new EntityNotFoundError("Document not found");
+  }
+
+  if (parsed.type === "invoice") {
+    const invoice = await prisma.invoice.findFirst({
+      where: { publicSlug: slug },
+      include: {
+        business: true,
+        client: true,
+        items: true,
+        payments: true,
+        selectedPaymentMethod: true,
+      },
+    });
+    if (!invoice) throw new EntityNotFoundError("Document not found");
+    assertInvoicePublicAccess(invoice.status);
+    const entity = toInvoiceEntityWithRelations(invoice);
+    return {
+      kind: "invoice",
+      workspaceId: String(invoice.workspaceId),
+      sequence: invoice.sequence,
+      payload: buildInvoicePdfPayload(entity),
+    };
+  }
+
+  if (parsed.type === "estimate") {
+    const estimate = await prisma.estimate.findFirst({
+      where: { publicSlug: slug },
+      include: {
+        business: true,
+        client: true,
+        items: true,
+        descriptiveItems: true,
+        proposal: { select: { sequence: true } },
+      },
+    });
+    if (!estimate) throw new EntityNotFoundError("Document not found");
+    assertEstimatePublicAccess(estimate.status);
+    return {
+      kind: "estimate",
+      workspaceId: String(estimate.workspaceId),
+      sequence: estimate.sequence,
+      payload: buildEstimatePdfPayload(toEstimateResponse(estimate)),
+    };
+  }
+
+  if (parsed.type === "proposal") {
+    const proposal = await prisma.proposal.findFirst({
+      where: { publicSlug: slug },
+      include: {
+        business: true,
+        client: true,
+        descriptiveItems: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
+      },
+    });
+    if (!proposal) throw new EntityNotFoundError("Document not found");
+    assertProposalPublicAccess(proposal.status);
+    return {
+      kind: "proposal",
+      workspaceId: String(proposal.workspaceId),
+      sequence: proposal.sequence,
+      payload: buildProposalPdfPayload(toProposalResponse(proposal)),
+    };
+  }
+
+  const advance = await prisma.advance.findFirst({
+    where: { publicSlug: slug },
+    include: {
+      attachments: { orderBy: { sequence: "asc" } },
+      business: true,
+      client: true,
+    },
+  });
+  if (!advance) throw new EntityNotFoundError("Document not found");
+  assertAdvancePublicAccess(advance.status);
+  return {
+    kind: "advance",
+    workspaceId: String(advance.workspaceId),
+    sequence: advance.sequence,
+    payload: buildAdvancePdfPayload(toAdvanceResponse(advance)),
+  };
+}
+
+export async function getPublicDocumentPreviewBySlug(
+  slug: string,
+): Promise<PreviewMetadata> {
+  const ctx = await resolvePublicPreviewContext(slug);
+  return getPreviewMetadata(ctx);
+}
+
+export async function getPublicDocumentPreviewPageBySlug(
+  slug: string,
+  page: number,
+  hash: string,
+): Promise<PreviewPageResult> {
+  const ctx = await resolvePublicPreviewContext(slug);
+  return getPreviewPage({
+    ...ctx,
+    page,
+    hash,
+  });
 }

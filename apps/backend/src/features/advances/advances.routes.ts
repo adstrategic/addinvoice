@@ -14,6 +14,7 @@ import multer from "multer";
 import { processRequest } from "zod-express-middleware";
 
 import asyncHandler from "../../core/async-handler.js";
+import { previewHashQuerySchema } from "../_shared/preview-schemas.js";
 import {
   createAdvance,
   deleteAdvance,
@@ -21,6 +22,9 @@ import {
   generateAdvanceReport,
   getAdvanceBySequence,
   getAdvancePdf,
+  getAdvancePreview,
+  getAdvancePreviewPage,
+  getAdvancePreviewPageParamsSchema,
   linkAdvanceToInvoice,
   listAdvances,
   sendAdvance,
@@ -52,6 +56,21 @@ advancesRoutes.get(
   "/:sequence/pdf",
   processRequest({ params: getAdvanceBySequenceSchema }),
   asyncHandler(getAdvancePdf),
+);
+
+advancesRoutes.get(
+  "/:sequence/preview/:page",
+  processRequest({
+    params: getAdvancePreviewPageParamsSchema,
+    query: previewHashQuerySchema,
+  }),
+  asyncHandler(getAdvancePreviewPage),
+);
+
+advancesRoutes.get(
+  "/:sequence/preview",
+  processRequest({ params: getAdvanceBySequenceSchema }),
+  asyncHandler(getAdvancePreview),
 );
 
 advancesRoutes.post(

@@ -1,4 +1,5 @@
 import { publicApiClient } from "@/lib/api/public-client";
+import { fetchPreviewMetadata } from "@/lib/document-preview";
 import {
   publicEstimateSummarySchema,
   type PublicEstimateSummary,
@@ -43,6 +44,15 @@ export async function getEstimatePdfByAcceptToken(
 
   const buffer = await response.arrayBuffer();
   return new Uint8Array(buffer);
+}
+
+/**
+ * Fetch estimate preview metadata by accept token (public, no auth).
+ */
+export async function getEstimatePreviewByAcceptToken(token: string) {
+  return fetchPreviewMetadata(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/public/estimates/accept/${encodeURIComponent(token)}/preview`,
+  );
 }
 
 /** Payload for accepting a estimate by token */

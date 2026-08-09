@@ -12,6 +12,7 @@ import {
 } from "@/features/proposals";
 import type { UpdateProposalDTO } from "@addinvoice/schemas";
 import { handleMutationError } from "@/lib/errors/handle-error";
+import { fetchPreviewMetadata } from "@/lib/document-preview";
 import { toast } from "sonner";
 
 export const proposalKeys = {
@@ -22,6 +23,8 @@ export const proposalKeys = {
   details: () => [...proposalKeys.all, "detail"] as const,
   detail: (id: number) => [...proposalKeys.details(), id] as const,
   pdf: (sequence: number) => [...proposalKeys.detail(sequence), "pdf"] as const,
+  preview: (sequence: number) =>
+    [...proposalKeys.detail(sequence), "preview"] as const,
 };
 
 export function useProposals(params?: ListProposalsParams) {
@@ -66,6 +69,26 @@ export function useProposalPdfBytes(sequence: number | null, enabled: boolean) {
 
       const buffer = await response.arrayBuffer();
       return new Uint8Array(buffer);
+    },
+    enabled: enabled && sequence !== null,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useProposalPreview(sequence: number | null, enabled: boolean) {
+  const { getToken } = useAuth();
+
+  return useQuery({
+    queryKey: proposalKeys.preview(sequence!),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/proposals/${sequence}/preview`;
+      return fetchPreviewMetadata(url, {
+        Authorization: `Bearer ${token}`,
+      });
     },
     enabled: enabled && sequence !== null,
     staleTime: 60 * 1000,

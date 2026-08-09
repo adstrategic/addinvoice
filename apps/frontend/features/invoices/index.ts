@@ -34,6 +34,7 @@ export {
   useInvoices,
   useInvoiceBySequence,
   useInvoicePdfBytes,
+  useInvoicePreview,
   useCreateInvoice,
   useCreateInvoiceFromVoice,
   useCreateInvoiceFromVoiceAudio,
@@ -69,4 +70,4 @@ export { InvoiceForm } from "./forms/InvoiceForm";
 export { ProductFormDialog } from "./components/ProductFormDialog";
 
 // Utils
-export { calculateItemTotal, generateInvoicePDF } from "./lib/utils";
+export { calculateItemTotal } from "./lib/utils";

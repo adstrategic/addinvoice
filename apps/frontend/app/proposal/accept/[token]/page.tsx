@@ -3,7 +3,8 @@
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
-import { PdfDocumentViewer } from "@/components/pdf/pdf-document-viewer";
+import { DocumentImageViewer } from "@/components/pdf/document-image-viewer";
+import { buildPreviewPageUrl } from "@/lib/document-preview";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   useProposalForAccept,
-  useProposalPdfForAccept,
+  useProposalPreviewForAccept,
   useAcceptProposalByToken,
   useRejectProposalByToken,
 } from "@/features/proposals";
@@ -75,12 +76,21 @@ export default function ProposalAcceptPage() {
 
   const { data: proposal, isLoading, error } = useProposalForAccept(token);
   const {
-    data: pdfBytes,
-    isPending: isPdfPending,
-    isError: isPdfError,
-    error: pdfError,
-    refetch: refetchPdf,
-  } = useProposalPdfForAccept(token);
+    data: preview,
+    isPending: isPreviewPending,
+    isError: isPreviewError,
+    error: previewError,
+    refetch: refetchPreview,
+  } = useProposalPreviewForAccept(token);
+
+  const resolvePageSrc = useCallback(
+    async (page: number) => {
+      if (!token || !preview?.hash) throw new Error("Preview is not ready");
+      const base = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/public/proposals/accept/${encodeURIComponent(token)}/preview`;
+      return buildPreviewPageUrl(base, page, preview.hash);
+    },
+    [token, preview?.hash],
+  );
   const acceptMutation = useAcceptProposalByToken(token);
   const rejectMutation = useRejectProposalByToken(token);
   const requireSignature = !!proposal?.requireSignature;
@@ -331,12 +341,13 @@ export default function ProposalAcceptPage() {
             </CardHeader>
 
             <CardContent className="space-y-4">
-              <PdfDocumentViewer
-                pdfBytes={pdfBytes}
-                isLoading={isPdfPending}
-                isError={isPdfError || !pdfBytes}
-                error={pdfError}
-                onRetry={() => void refetchPdf()}
+              <DocumentImageViewer
+                pages={preview?.pages}
+                resolvePageSrc={resolvePageSrc}
+                isLoading={isPreviewPending}
+                isError={isPreviewError || !preview}
+                error={previewError instanceof Error ? previewError : null}
+                onRetry={() => void refetchPreview()}
               />
 
               <Separator />

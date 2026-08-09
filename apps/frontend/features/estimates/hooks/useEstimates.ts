@@ -14,6 +14,7 @@ import {
 import { clientKeys } from "@/features/clients";
 import type { CreateEstimateDTO, UpdateEstimateDTO } from "@addinvoice/schemas";
 import { handleMutationError } from "@/lib/errors/handle-error";
+import { fetchPreviewMetadata } from "@/lib/document-preview";
 import { toast } from "sonner";
 
 /**
@@ -30,6 +31,8 @@ export const estimateKeys = {
   nextNumber: (businessId: number | null) =>
     [...estimateKeys.all, "next-number", businessId] as const,
   pdf: (sequence: number) => [...estimateKeys.detail(sequence), "pdf"] as const,
+  preview: (sequence: number) =>
+    [...estimateKeys.detail(sequence), "preview"] as const,
 };
 
 /**
@@ -84,6 +87,26 @@ export function useEstimatePdfBytes(sequence: number | null, enabled: boolean) {
 
       const buffer = await response.arrayBuffer();
       return new Uint8Array(buffer);
+    },
+    enabled: enabled && sequence !== null,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useEstimatePreview(sequence: number | null, enabled: boolean) {
+  const { getToken } = useAuth();
+
+  return useQuery({
+    queryKey: estimateKeys.preview(sequence!),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/estimates/${sequence}/preview`;
+      return fetchPreviewMetadata(url, {
+        Authorization: `Bearer ${token}`,
+      });
     },
     enabled: enabled && sequence !== null,
     staleTime: 60 * 1000,

@@ -2,8 +2,18 @@ import type { Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
 import {
+  getPreviewMetadata,
+  getPreviewPage,
+} from "../_shared/document-preview.js";
+import {
+  sendPreviewMetadata,
+  sendPreviewPage,
+} from "../_shared/preview-http.js";
+import { previewHashQuerySchema } from "../_shared/preview-schemas.js";
+import {
   acceptEstimateBodySchema,
   getEstimateByTokenParamsSchema,
+  getEstimatePreviewPageByTokenParamsSchema,
   rejectEstimateBodySchema,
 } from "./estimates.schemas.js";
 import * as estimatesService from "./estimates.service.js";
@@ -78,6 +88,51 @@ export async function getEstimatePdfByToken(
       message: err instanceof Error ? err.message : "Unknown error",
     });
   }
+}
+
+/**
+ * GET /api/v1/public/estimates/accept/:token/preview - Preview metadata
+ */
+export async function getEstimatePreviewByToken(
+  req: TypedRequest<typeof getEstimateByTokenParamsSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const { token } = req.params;
+  const estimate = await estimatesService.getEstimateBySigningToken(token);
+  const payload = estimatesService.buildEstimatePdfPayload(estimate);
+  const metadata = await getPreviewMetadata({
+    kind: "estimate",
+    workspaceId: String(estimate.workspaceId),
+    sequence: estimate.sequence,
+    payload,
+  });
+  sendPreviewMetadata(res, metadata);
+}
+
+/**
+ * GET /api/v1/public/estimates/accept/:token/preview/:page?hash=
+ */
+export async function getEstimatePreviewPageByToken(
+  req: TypedRequest<
+    typeof getEstimatePreviewPageByTokenParamsSchema,
+    typeof previewHashQuerySchema,
+    never
+  >,
+  res: Response,
+): Promise<void> {
+  const { token, page } = req.params;
+  const { hash } = req.query;
+  const estimate = await estimatesService.getEstimateBySigningToken(token);
+  const payload = estimatesService.buildEstimatePdfPayload(estimate);
+  const result = await getPreviewPage({
+    kind: "estimate",
+    workspaceId: String(estimate.workspaceId),
+    sequence: estimate.sequence,
+    hash,
+    page,
+    payload,
+  });
+  sendPreviewPage(res, result, page);
 }
 
 /**

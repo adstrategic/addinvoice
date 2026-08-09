@@ -13,6 +13,7 @@ import type {
   UpdateAdvanceDTO,
 } from "@addinvoice/schemas";
 import { handleMutationError } from "@/lib/errors/handle-error";
+import { fetchPreviewMetadata } from "@/lib/document-preview";
 import { toast } from "sonner";
 import {
   type ListAdvancesParams,
@@ -31,6 +32,8 @@ export const advanceKeys = {
   details: () => [...advanceKeys.all, "detail"] as const,
   detail: (id: number) => [...advanceKeys.details(), id] as const,
   pdf: (sequence: number) => [...advanceKeys.detail(sequence), "pdf"] as const,
+  preview: (sequence: number) =>
+    [...advanceKeys.detail(sequence), "preview"] as const,
 };
 
 /**
@@ -95,6 +98,26 @@ export function useAdvancePdfBytes(sequence: number | null, enabled: boolean) {
 
       const buffer = await response.arrayBuffer();
       return new Uint8Array(buffer);
+    },
+    enabled: enabled && sequence !== null,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useAdvancePreview(sequence: number | null, enabled: boolean) {
+  const { getToken } = useAuth();
+
+  return useQuery({
+    queryKey: advanceKeys.preview(sequence!),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/advances/${sequence}/preview`;
+      return fetchPreviewMetadata(url, {
+        Authorization: `Bearer ${token}`,
+      });
     },
     enabled: enabled && sequence !== null,
     staleTime: 60 * 1000,

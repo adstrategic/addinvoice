@@ -32,3 +32,4 @@ coverage/
 
 # Prisma generated files
 packages/db/src/generated/prisma/
+.agents/

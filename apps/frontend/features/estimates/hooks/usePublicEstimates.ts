@@ -7,6 +7,7 @@ import {
 import {
   getEstimateByAcceptToken,
   getEstimatePdfByAcceptToken,
+  getEstimatePreviewByAcceptToken,
   acceptEstimateByToken,
   rejectEstimateByToken,
   PublicEstimateError,
@@ -21,6 +22,8 @@ export const publicEstimateKeys = {
   accept: (token: string) =>
     [...estimateKeys.all, "public-accept", token] as const,
   pdf: (token: string) => [...estimateKeys.all, "public-accept-pdf", token] as const,
+  preview: (token: string) =>
+    [...estimateKeys.all, "public-accept-preview", token] as const,
 };
 
 /**
@@ -40,6 +43,16 @@ export function useEstimatePdfForAccept(token: string | undefined) {
   return useQuery({
     queryKey: publicEstimateKeys.pdf(token!),
     queryFn: () => getEstimatePdfByAcceptToken(token!),
+    enabled: !!token,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useEstimatePreviewForAccept(token: string | undefined) {
+  return useQuery({
+    queryKey: publicEstimateKeys.preview(token!),
+    queryFn: () => getEstimatePreviewByAcceptToken(token!),
     enabled: !!token,
     staleTime: 60 * 1000,
     retry: 1,

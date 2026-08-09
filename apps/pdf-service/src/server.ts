@@ -1,11 +1,13 @@
 import "dotenv/config";
 import express, { type Request, type Response } from "express";
+import type { z } from "zod";
 
-import { generateInvoicePdf, generateInvoicePdfBatch } from "./invoice-pdf.js";
-import { generateReceiptPdf } from "./receipt-pdf.js";
-import { generateEstimatePdf } from "./estimate-pdf.js";
 import { generateAdvancePdf } from "./advance-pdf.js";
+import { generateEstimatePdf } from "./estimate-pdf.js";
+import { generateInvoicePdf, generateInvoicePdfBatch } from "./invoice-pdf.js";
 import { generateProposalPdf } from "./proposal-pdf.js";
+import { generateReceiptPdf } from "./receipt-pdf.js";
+import { rasterizePdfToImages } from "./rasterize-pdf.js";
 import {
   advancePdfPayloadSchema,
   estimatePdfPayloadSchema,
@@ -24,11 +26,17 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
 });
 
-app.post(
-  "/generate-invoice",
-  requirePdfServiceSecret,
-  async (req: Request, res: Response) => {
-    const parsed = invoicePdfPayloadSchema.safeParse(req.body);
+type PdfGenerator<T> = (payload: T) => Promise<Buffer>;
+
+function registerPdfRoute<TSchema extends z.ZodTypeAny>(
+  path: string,
+  schema: TSchema,
+  generate: PdfGenerator<z.infer<TSchema>>,
+  filename: (payload: z.infer<TSchema>) => string,
+  errorLabel: string,
+): void {
+  app.post(path, requirePdfServiceSecret, async (req: Request, res: Response) => {
+    const parsed = schema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
         details: parsed.error.flatten(),
@@ -40,21 +48,61 @@ app.post(
     const payload = parsed.data;
 
     try {
-      const pdfBuffer = await generateInvoicePdf(payload);
+      const pdfBuffer = await generate(payload);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="invoice-${payload.invoice.invoiceNumber}.pdf"`,
+        `attachment; filename="${filename(payload)}"`,
       );
       res.send(pdfBuffer);
     } catch (err) {
-      console.error("PDF generation failed:", err);
+      console.error(`${errorLabel} failed:`, err);
       res.status(500).json({
-        error: "Failed to generate PDF",
+        error: `Failed to generate ${errorLabel}`,
         message: err instanceof Error ? err.message : "Unknown error",
       });
     }
-  },
+  });
+}
+
+function registerImageRoute<TSchema extends z.ZodTypeAny>(
+  path: string,
+  schema: TSchema,
+  generate: PdfGenerator<z.infer<TSchema>>,
+  errorLabel: string,
+): void {
+  app.post(path, requirePdfServiceSecret, async (req: Request, res: Response) => {
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        details: parsed.error.flatten(),
+        error: "Invalid payload",
+      });
+      return;
+    }
+
+    const payload = parsed.data;
+
+    try {
+      const pdfBuffer = await generate(payload);
+      const pages = await rasterizePdfToImages(pdfBuffer);
+      res.json({ pages });
+    } catch (err) {
+      console.error(`${errorLabel} image render failed:`, err);
+      res.status(500).json({
+        error: `Failed to render ${errorLabel} images`,
+        message: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
+  });
+}
+
+registerPdfRoute(
+  "/generate-invoice",
+  invoicePdfPayloadSchema,
+  generateInvoicePdf,
+  (payload) => `invoice-${payload.invoice.invoiceNumber}.pdf`,
+  "PDF",
 );
 
 app.post(
@@ -84,130 +132,65 @@ app.post(
   },
 );
 
-app.post(
+registerPdfRoute(
   "/generate-estimate",
-  requirePdfServiceSecret,
-  async (req: Request, res: Response) => {
-    const parsed = estimatePdfPayloadSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({
-        details: parsed.error.flatten(),
-        error: "Invalid payload",
-      });
-      return;
-    }
-    const payload = parsed.data;
-    try {
-      const pdfBuffer = await generateEstimatePdf(payload);
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="estimate-${payload.invoice.invoiceNumber}.pdf"`,
-      );
-      res.send(pdfBuffer);
-    } catch (err) {
-      console.error("Estimate PDF generation failed:", err);
-      res.status(500).json({
-        error: "Failed to generate PDF",
-        message: err instanceof Error ? err.message : "Unknown error",
-      });
-    }
-  },
+  estimatePdfPayloadSchema,
+  generateEstimatePdf,
+  (payload) => `estimate-${payload.invoice.invoiceNumber}.pdf`,
+  "PDF",
 );
 
-app.post(
+registerPdfRoute(
   "/generate-proposal",
-  requirePdfServiceSecret,
-  async (req: Request, res: Response) => {
-    const parsed = proposalPdfPayloadSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({
-        details: parsed.error.flatten(),
-        error: "Invalid payload",
-      });
-      return;
-    }
-    const payload = parsed.data;
-    try {
-      const pdfBuffer = await generateProposalPdf(payload);
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="proposal-${payload.document.proposalNumber}.pdf"`,
-      );
-      res.send(pdfBuffer);
-    } catch (err) {
-      console.error("Proposal PDF generation failed:", err);
-      res.status(500).json({
-        error: "Failed to generate PDF",
-        message: err instanceof Error ? err.message : "Unknown error",
-      });
-    }
-  },
+  proposalPdfPayloadSchema,
+  generateProposalPdf,
+  (payload) => `proposal-${payload.document.proposalNumber}.pdf`,
+  "PDF",
 );
 
-app.post(
+registerPdfRoute(
   "/generate-advance",
-  requirePdfServiceSecret,
-  async (req: Request, res: Response) => {
-    const parsed = advancePdfPayloadSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({
-        details: parsed.error.flatten(),
-        error: "Invalid payload",
-      });
-      return;
-    }
-    const payload = parsed.data;
-    try {
-      const pdfBuffer = await generateAdvancePdf(payload);
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="advance-${String(payload.advance.sequence)}.pdf"`,
-      );
-      res.send(pdfBuffer);
-    } catch (err) {
-      console.error("Advance PDF generation failed:", err);
-      res.status(500).json({
-        error: "Failed to generate PDF",
-        message: err instanceof Error ? err.message : "Unknown error",
-      });
-    }
-  },
+  advancePdfPayloadSchema,
+  generateAdvancePdf,
+  (payload) => `advance-${String(payload.advance.sequence)}.pdf`,
+  "PDF",
 );
 
-app.post(
+registerPdfRoute(
   "/generate-receipt",
-  requirePdfServiceSecret,
-  async (req: Request, res: Response) => {
-    const parsed = receiptPdfPayloadSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({
-        details: parsed.error.flatten(),
-        error: "Invalid payload",
-      });
-      return;
-    }
+  receiptPdfPayloadSchema,
+  generateReceiptPdf,
+  (payload) =>
+    `receipt-${payload.invoice.invoiceNumber}-${payload.payment.id}.pdf`,
+  "receipt PDF",
+);
 
-    const payload = parsed.data;
+registerImageRoute(
+  "/render-invoice-images",
+  invoicePdfPayloadSchema,
+  generateInvoicePdf,
+  "invoice",
+);
 
-    try {
-      const pdfBuffer = await generateReceiptPdf(payload);
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="receipt-${payload.invoice.invoiceNumber}-${payload.payment.id}.pdf"`,
-      );
-      res.send(pdfBuffer);
-    } catch (err) {
-      console.error("Receipt PDF generation failed:", err);
-      res.status(500).json({
-        error: "Failed to generate receipt PDF",
-        message: err instanceof Error ? err.message : "Unknown error",
-      });
-    }
-  },
+registerImageRoute(
+  "/render-estimate-images",
+  estimatePdfPayloadSchema,
+  generateEstimatePdf,
+  "estimate",
+);
+
+registerImageRoute(
+  "/render-proposal-images",
+  proposalPdfPayloadSchema,
+  generateProposalPdf,
+  "proposal",
+);
+
+registerImageRoute(
+  "/render-advance-images",
+  advancePdfPayloadSchema,
+  generateAdvancePdf,
+  "advance",
 );
 
 const portNum = Number(process.env.PORT);

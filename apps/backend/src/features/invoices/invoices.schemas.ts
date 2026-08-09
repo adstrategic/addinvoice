@@ -43,6 +43,11 @@ export const getInvoiceBySequenceSchema = z.object({
     .positive("The sequence must be a positive number"),
 });
 
+export const getInvoicePreviewPageParamsSchema =
+  getInvoiceBySequenceSchema.extend({
+    page: z.coerce.number().int().positive("Page must be a positive number"),
+  });
+
 /**
  * Schema for GET /invoices/next-number query (businessId required)
  */

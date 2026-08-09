@@ -20,12 +20,22 @@ import type {
 import { getWorkspaceId } from "../../core/auth.js";
 import { sendInvoiceQueue } from "../../queue/queues.js";
 import {
+  getPreviewMetadata,
+  getPreviewPage,
+} from "../_shared/document-preview.js";
+import {
+  sendPreviewMetadata,
+  sendPreviewPage,
+} from "../_shared/preview-http.js";
+import { previewHashQuerySchema } from "../_shared/preview-schemas.js";
+import {
   createPaymentSchema,
   updatePaymentSchema,
 } from "../payments/payments.schemas.js";
 import {
   fromVoiceAudioBodySchema,
   fromVoiceTranscriptBodySchema,
+  getInvoicePreviewPageParamsSchema,
   getNextInvoiceNumberQuerySchema,
   listInvoicesSchema,
 } from "./invoices.schemas.js";
@@ -417,6 +427,59 @@ export async function getInvoicePdf(
       message: err instanceof Error ? err.message : "Unknown error",
     });
   }
+}
+
+/**
+ * GET /invoices/:sequence/preview - Preview metadata (page sizes + content hash)
+ */
+export async function getInvoicePreview(
+  req: TypedRequest<typeof getInvoiceBySequenceSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence } = req.params;
+  const invoice = await invoicesService.getInvoiceBySequence(
+    workspaceId,
+    sequence,
+  );
+  const payload = invoicesService.buildInvoicePdfPayload(invoice);
+  const metadata = await getPreviewMetadata({
+    kind: "invoice",
+    workspaceId: String(workspaceId),
+    sequence,
+    payload,
+  });
+  sendPreviewMetadata(res, metadata);
+}
+
+/**
+ * GET /invoices/:sequence/preview/:page?hash= - Preview page image (WebP)
+ */
+export async function getInvoicePreviewPage(
+  req: TypedRequest<
+    typeof getInvoicePreviewPageParamsSchema,
+    typeof previewHashQuerySchema,
+    never
+  >,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence, page } = req.params;
+  const { hash } = req.query;
+  const invoice = await invoicesService.getInvoiceBySequence(
+    workspaceId,
+    sequence,
+  );
+  const payload = invoicesService.buildInvoicePdfPayload(invoice);
+  const result = await getPreviewPage({
+    kind: "invoice",
+    workspaceId: String(workspaceId),
+    sequence,
+    hash,
+    page,
+    payload,
+  });
+  sendPreviewPage(res, result, page);
 }
 
 /**

@@ -22,7 +22,17 @@ import type {
 import { getWorkspaceId } from "../../core/auth.js";
 import { sendEstimateQueue } from "../../queue/queues.js";
 import {
+  getPreviewMetadata,
+  getPreviewPage,
+} from "../_shared/document-preview.js";
+import {
+  sendPreviewMetadata,
+  sendPreviewPage,
+} from "../_shared/preview-http.js";
+import { previewHashQuerySchema } from "../_shared/preview-schemas.js";
+import {
   fromVoiceAudioBodySchema,
+  getEstimatePreviewPageParamsSchema,
   getNextEstimateNumberQuerySchema,
   listEstimatesSchema,
 } from "./estimates.schemas.js";
@@ -393,6 +403,59 @@ export async function getEstimatePdf(
       message: err instanceof Error ? err.message : "Unknown error",
     });
   }
+}
+
+/**
+ * GET /estimates/:sequence/preview - Preview metadata
+ */
+export async function getEstimatePreview(
+  req: TypedRequest<typeof getEstimateBySequenceSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence } = req.params;
+  const estimate = await estimatesService.getEstimateBySequence(
+    workspaceId,
+    sequence,
+  );
+  const payload = estimatesService.buildEstimatePdfPayload(estimate);
+  const metadata = await getPreviewMetadata({
+    kind: "estimate",
+    workspaceId: String(workspaceId),
+    sequence,
+    payload,
+  });
+  sendPreviewMetadata(res, metadata);
+}
+
+/**
+ * GET /estimates/:sequence/preview/:page?hash= - Preview page image
+ */
+export async function getEstimatePreviewPage(
+  req: TypedRequest<
+    typeof getEstimatePreviewPageParamsSchema,
+    typeof previewHashQuerySchema,
+    never
+  >,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence, page } = req.params;
+  const { hash } = req.query;
+  const estimate = await estimatesService.getEstimateBySequence(
+    workspaceId,
+    sequence,
+  );
+  const payload = estimatesService.buildEstimatePdfPayload(estimate);
+  const result = await getPreviewPage({
+    kind: "estimate",
+    workspaceId: String(workspaceId),
+    sequence,
+    hash,
+    page,
+    payload,
+  });
+  sendPreviewPage(res, result, page);
 }
 
 /**

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import Link from "next/link";
-import { PdfDocumentViewer } from "@/components/pdf/pdf-document-viewer";
+import { DocumentImageViewer } from "@/components/pdf/document-image-viewer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -15,13 +15,18 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { ApiError } from "@/lib/errors/handler";
+import {
+  buildPreviewPageUrl,
+  type DocumentPreviewMetadata,
+} from "@/lib/document-preview";
 import { formatCurrency } from "@/lib/utils";
 import type { PublicDocumentSummary } from "@addinvoice/schemas";
 import {
   useMarkPublicDocumentViewed,
   usePublicDocument,
-  usePublicDocumentPdf,
+  usePublicDocumentPreview,
 } from "../hooks/usePublicDocument";
+import { getPublicDocumentPdfBySlug } from "../service/public-documents.service";
 
 function formatMoney(amount: number, currency: string): string {
   try {
@@ -42,13 +47,14 @@ interface PublicDocumentPortalProps {
 export function PublicDocumentPortal({ slug }: PublicDocumentPortalProps) {
   const { data: document, isLoading, error } = usePublicDocument(slug);
   const {
-    data: pdfBytes,
-    isPending: isPdfPending,
-    isError: isPdfError,
-    error: pdfError,
-    refetch: refetchPdf,
-  } = usePublicDocumentPdf(slug);
+    data: preview,
+    isPending: isPreviewPending,
+    isError: isPreviewError,
+    error: previewError,
+    refetch: refetchPreview,
+  } = usePublicDocumentPreview(slug);
   const { mutate: markViewedMutate } = useMarkPublicDocumentViewed(slug);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     if (document) {
@@ -56,26 +62,41 @@ export function PublicDocumentPortal({ slug }: PublicDocumentPortalProps) {
     }
   }, [document, markViewedMutate]);
 
+  const resolvePageSrc = useCallback(
+    async (page: number) => {
+      if (!preview?.hash) throw new Error("Preview is not ready");
+      const base = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/public/documents/${encodeURIComponent(slug)}/preview`;
+      return buildPreviewPageUrl(base, page, preview.hash);
+    },
+    [preview?.hash, slug],
+  );
+
   const handleDownload = useCallback(async () => {
-    if (!pdfBytes || !document) return;
-    const blob = new Blob([pdfBytes.slice()], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const anchor = window.document.createElement("a");
-    anchor.href = url;
-    const filename =
-      document.type === "invoice"
-        ? `invoice-${document.invoiceNumber}.pdf`
-        : document.type === "estimate"
-          ? `estimate-${document.estimateNumber}.pdf`
-          : document.type === "proposal"
-            ? `proposal-${document.proposalNumber}.pdf`
-            : document.type === "advance"
-              ? `advance-${String(document.sequence)}.pdf`
-              : "document.pdf";
-    anchor.download = filename;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }, [pdfBytes, document]);
+    if (!document) return;
+    setIsDownloading(true);
+    try {
+      const pdfBytes = await getPublicDocumentPdfBySlug(slug);
+      const blob = new Blob([pdfBytes.slice()], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const anchor = window.document.createElement("a");
+      anchor.href = url;
+      const filename =
+        document.type === "invoice"
+          ? `invoice-${document.invoiceNumber}.pdf`
+          : document.type === "estimate"
+            ? `estimate-${document.estimateNumber}.pdf`
+            : document.type === "proposal"
+              ? `proposal-${document.proposalNumber}.pdf`
+              : document.type === "advance"
+                ? `advance-${String(document.sequence)}.pdf`
+                : "document.pdf";
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [document, slug]);
 
   if (isLoading) {
     return (
@@ -104,35 +125,39 @@ export function PublicDocumentPortal({ slug }: PublicDocumentPortalProps) {
   return (
     <PublicDocumentLayout
       document={document}
-      pdfBytes={pdfBytes}
-      isPdfPending={isPdfPending}
-      isPdfError={isPdfError}
-      pdfError={pdfError}
-      onRetryPdf={() => void refetchPdf()}
+      preview={preview}
+      isPreviewPending={isPreviewPending}
+      isPreviewError={isPreviewError}
+      previewError={previewError instanceof Error ? previewError : null}
+      onRetryPreview={() => void refetchPreview()}
+      resolvePageSrc={resolvePageSrc}
       onDownload={() => void handleDownload()}
+      isDownloading={isDownloading}
     />
   );
 }
 
-interface PublicDocumentLayoutProps {
-  document: PublicDocumentSummary;
-  pdfBytes?: Uint8Array;
-  isPdfPending: boolean;
-  isPdfError: boolean;
-  pdfError: Error | null;
-  onRetryPdf: () => void;
-  onDownload: () => void;
-}
-
 function PublicDocumentLayout({
   document,
-  pdfBytes,
-  isPdfPending,
-  isPdfError,
-  pdfError,
-  onRetryPdf,
+  preview,
+  isPreviewPending,
+  isPreviewError,
+  previewError,
+  onRetryPreview,
+  resolvePageSrc,
   onDownload,
-}: PublicDocumentLayoutProps) {
+  isDownloading,
+}: {
+  document: PublicDocumentSummary;
+  preview?: DocumentPreviewMetadata;
+  isPreviewPending: boolean;
+  isPreviewError: boolean;
+  previewError: Error | null;
+  onRetryPreview: () => void;
+  resolvePageSrc: (page: number) => Promise<string>;
+  onDownload: () => void;
+  isDownloading: boolean;
+}) {
   const isInvoice = document.type === "invoice";
   const isEstimate = document.type === "estimate";
   const isProposal = document.type === "proposal";
@@ -296,22 +321,23 @@ function PublicDocumentLayout({
             variant="outline"
             className="w-full h-12 rounded-xl text-slate-600 bg-white"
             onClick={onDownload}
-            disabled={!pdfBytes || isPdfPending}
+            disabled={isDownloading}
           >
             <Download className="w-4 h-4 mr-2" />
-            Download PDF
+            {isDownloading ? "Downloading..." : "Download PDF"}
           </Button>
         </div>
       </div>
 
       <div className="flex-1 md:ml-[400px] p-4 sm:p-10 lg:p-20 bg-slate-100/50 flex justify-center items-start min-h-screen">
         <div className="w-full max-w-4xl bg-white shadow-2xl rounded-xl border border-slate-200 overflow-hidden relative min-h-[60vh]">
-          <PdfDocumentViewer
-            pdfBytes={pdfBytes}
-            isLoading={isPdfPending}
-            isError={isPdfError || !pdfBytes}
-            error={pdfError}
-            onRetry={onRetryPdf}
+          <DocumentImageViewer
+            pages={preview?.pages}
+            resolvePageSrc={resolvePageSrc}
+            isLoading={isPreviewPending}
+            isError={isPreviewError || !preview}
+            error={previewError}
+            onRetry={onRetryPreview}
             containerClassName="min-h-[70vh] overflow-auto p-4 sm:p-8 flex flex-col items-center gap-4"
           />
         </div>

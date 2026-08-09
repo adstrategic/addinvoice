@@ -29,6 +29,7 @@ export {
   useEstimates,
   useEstimateBySequence,
   useEstimatePdfBytes,
+  useEstimatePreview,
   useCreateEstimate,
   useCreateEstimateFromVoiceAudio,
   useUpdateEstimate,
@@ -43,6 +44,7 @@ export {
 export {
   useEstimateForAccept,
   useEstimatePdfForAccept,
+  useEstimatePreviewForAccept,
   useAcceptEstimateByToken,
   useRejectEstimateByToken,
   publicEstimateKeys,

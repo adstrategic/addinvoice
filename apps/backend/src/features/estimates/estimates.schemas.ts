@@ -26,6 +26,11 @@ export const getEstimateBySequenceSchema = z.object({
     .positive("The sequence must be a positive number"),
 });
 
+export const getEstimatePreviewPageParamsSchema =
+  getEstimateBySequenceSchema.extend({
+    page: z.coerce.number().int().positive("Page must be a positive number"),
+  });
+
 /**
  * Schema for GET /estimates/next-number query (businessId required)
  */
@@ -99,6 +104,11 @@ export type ListEstimatesQuery = z.infer<typeof listEstimatesSchema>;
 export const getEstimateByTokenParamsSchema = z.object({
   token: z.string().min(1, "Token is required"),
 });
+
+export const getEstimatePreviewPageByTokenParamsSchema =
+  getEstimateByTokenParamsSchema.extend({
+    page: z.coerce.number().int().positive("Page must be a positive number"),
+  });
 
 export const acceptEstimateBodySchema = z.object({
   fullName: z.string().trim().min(1, "Full name is required"),

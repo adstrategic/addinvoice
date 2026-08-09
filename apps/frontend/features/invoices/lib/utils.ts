@@ -1,8 +1,5 @@
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 import type { DiscountType, TaxMode } from "../types/api";
 import type {
-  InvoiceResponse,
   InvoiceItemResponse,
   InvoiceItemCreateInput,
 } from "../schemas/invoice.schema";
@@ -78,39 +75,4 @@ export function calculateDraftInvoiceTotals(
     total: subtotalAfterDiscount + totalTax,
     totalTax,
   };
-}
-
-/**
- * Generate PDF from invoice preview element
- */
-export async function generateInvoicePDF(
-  invoice: InvoiceResponse,
-  previewElementId: string,
-): Promise<void> {
-  const previewElement = document.getElementById(previewElementId);
-  if (!previewElement) {
-    throw new Error("Invoice preview element not found");
-  }
-
-  const canvas = await html2canvas(previewElement, {
-    scale: 2,
-    useCORS: true,
-    logging: false,
-  });
-
-  const imgData = canvas.toDataURL("image/png");
-  const pdf = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4",
-  });
-
-  const imgWidth = 210;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-  pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-  const clientName =
-    invoice.client?.name || invoice.client?.businessName || "Client";
-  const invoiceDate = invoice.issueDate || "date";
-  pdf.save(`Invoice-${clientName}-${invoiceDate}.pdf`);
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { PdfDocumentViewer } from "@/components/pdf/pdf-document-viewer";
-import { useEstimatePdfBytes } from "@/features/estimates";
+import { DocumentImageViewer } from "@/components/pdf/document-image-viewer";
+import { useAuthenticatedPreviewPageResolver } from "@/hooks/use-authenticated-preview-page-resolver";
+import { useEstimatePreview } from "@/features/estimates";
 
 interface EstimatePdfPreviewProps {
   sequence: number;
@@ -13,22 +14,28 @@ export function EstimatePdfPreview({
   estimateNumber,
 }: EstimatePdfPreviewProps) {
   const {
-    data: pdfBytes,
+    data: preview,
     isPending,
     isError,
     error,
     refetch,
-  } = useEstimatePdfBytes(sequence, true);
+  } = useEstimatePreview(sequence, true);
+
+  const previewBaseUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/estimates/${sequence}/preview`;
+  const resolvePageSrc = useAuthenticatedPreviewPageResolver(
+    previewBaseUrl,
+    preview?.hash,
+  );
 
   return (
-    <PdfDocumentViewer
-      pdfBytes={pdfBytes}
+    <DocumentImageViewer
+      pages={preview?.pages}
+      resolvePageSrc={resolvePageSrc}
       isLoading={isPending}
       isError={isError}
       error={error instanceof Error ? error : null}
       onRetry={() => void refetch()}
-      ariaLabel={`Estimate ${estimateNumber} PDF preview`}
-      fileName={`${estimateNumber}.pdf`}
+      ariaLabel={`Estimate ${estimateNumber} preview`}
       containerClassName="h-[80vh] overflow-auto flex flex-col items-center gap-4"
     />
   );

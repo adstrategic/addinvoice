@@ -7,6 +7,7 @@ import {
 import {
   getProposalByAcceptToken,
   getProposalPdfByAcceptToken,
+  getProposalPreviewByAcceptToken,
   acceptProposalByToken,
   rejectProposalByToken,
   type AcceptProposalByTokenBody,
@@ -21,6 +22,8 @@ export const publicProposalKeys = {
     [...proposalKeys.all, "public-accept", token] as const,
   pdf: (token: string) =>
     [...proposalKeys.all, "public-accept-pdf", token] as const,
+  preview: (token: string) =>
+    [...proposalKeys.all, "public-accept-preview", token] as const,
 };
 
 /**
@@ -40,6 +43,16 @@ export function useProposalPdfForAccept(token: string | undefined) {
   return useQuery({
     queryKey: publicProposalKeys.pdf(token!),
     queryFn: () => getProposalPdfByAcceptToken(token!),
+    enabled: !!token,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useProposalPreviewForAccept(token: string | undefined) {
+  return useQuery({
+    queryKey: publicProposalKeys.preview(token!),
+    queryFn: () => getProposalPreviewByAcceptToken(token!),
     enabled: !!token,
     staleTime: 60 * 1000,
     retry: 1,

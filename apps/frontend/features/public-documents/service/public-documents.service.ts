@@ -1,4 +1,5 @@
 import { publicApiClient } from "@/lib/api/public-client";
+import { fetchPreviewMetadata } from "@/lib/document-preview";
 import {
   publicDocumentSummarySchema,
   type PublicDocumentSummary,
@@ -28,6 +29,12 @@ export async function getPublicDocumentPdfBySlug(
 
   const buffer = await response.arrayBuffer();
   return new Uint8Array(buffer);
+}
+
+export async function getPublicDocumentPreviewBySlug(slug: string) {
+  return fetchPreviewMetadata(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/public/documents/${encodeURIComponent(slug)}/preview`,
+  );
 }
 
 export async function markPublicDocumentViewed(slug: string): Promise<void> {

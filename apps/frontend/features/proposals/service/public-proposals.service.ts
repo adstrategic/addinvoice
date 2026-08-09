@@ -1,4 +1,5 @@
 import { publicApiClient } from "@/lib/api/public-client";
+import { fetchPreviewMetadata } from "@/lib/document-preview";
 import {
   publicProposalSummarySchema,
   type PublicProposalSummary,
@@ -40,6 +41,12 @@ export async function getProposalPdfByAcceptToken(
 
   const buffer = await response.arrayBuffer();
   return new Uint8Array(buffer);
+}
+
+export async function getProposalPreviewByAcceptToken(token: string) {
+  return fetchPreviewMetadata(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/public/proposals/accept/${encodeURIComponent(token)}/preview`,
+  );
 }
 
 /** Payload for accepting a proposal by token */

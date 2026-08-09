@@ -2,8 +2,18 @@ import type { Response } from "express";
 import type { TypedRequest } from "zod-express-middleware";
 
 import {
+  getPreviewMetadata,
+  getPreviewPage,
+} from "../_shared/document-preview.js";
+import {
+  sendPreviewMetadata,
+  sendPreviewPage,
+} from "../_shared/preview-http.js";
+import { previewHashQuerySchema } from "../_shared/preview-schemas.js";
+import {
   acceptProposalBodySchema,
   getProposalByTokenParamsSchema,
+  getProposalPreviewPageByTokenParamsSchema,
   rejectProposalBodySchema,
 } from "./proposals.schemas.js";
 import * as proposalsService from "./proposals.service.js";
@@ -78,6 +88,51 @@ export async function getProposalPdfByToken(
       message: err instanceof Error ? err.message : "Unknown error",
     });
   }
+}
+
+/**
+ * GET /api/v1/public/proposals/accept/:token/preview - Preview metadata
+ */
+export async function getProposalPreviewByToken(
+  req: TypedRequest<typeof getProposalByTokenParamsSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const { token } = req.params;
+  const proposal = await proposalsService.getProposalBySigningToken(token);
+  const payload = proposalsService.buildProposalPdfPayload(proposal);
+  const metadata = await getPreviewMetadata({
+    kind: "proposal",
+    workspaceId: String(proposal.workspaceId),
+    sequence: proposal.sequence,
+    payload,
+  });
+  sendPreviewMetadata(res, metadata);
+}
+
+/**
+ * GET /api/v1/public/proposals/accept/:token/preview/:page?hash=
+ */
+export async function getProposalPreviewPageByToken(
+  req: TypedRequest<
+    typeof getProposalPreviewPageByTokenParamsSchema,
+    typeof previewHashQuerySchema,
+    never
+  >,
+  res: Response,
+): Promise<void> {
+  const { token, page } = req.params;
+  const { hash } = req.query;
+  const proposal = await proposalsService.getProposalBySigningToken(token);
+  const payload = proposalsService.buildProposalPdfPayload(proposal);
+  const result = await getPreviewPage({
+    kind: "proposal",
+    workspaceId: String(proposal.workspaceId),
+    sequence: proposal.sequence,
+    hash,
+    page,
+    payload,
+  });
+  sendPreviewPage(res, result, page);
 }
 
 /**

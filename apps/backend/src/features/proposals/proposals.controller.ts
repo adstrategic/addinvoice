@@ -16,7 +16,19 @@ import type {
 } from "./proposals.schemas.js";
 
 import { getWorkspaceId } from "../../core/auth.js";
-import { listProposalsSchema } from "./proposals.schemas.js";
+import {
+  getPreviewMetadata,
+  getPreviewPage,
+} from "../_shared/document-preview.js";
+import {
+  sendPreviewMetadata,
+  sendPreviewPage,
+} from "../_shared/preview-http.js";
+import { previewHashQuerySchema } from "../_shared/preview-schemas.js";
+import {
+  getProposalPreviewPageParamsSchema,
+  listProposalsSchema,
+} from "./proposals.schemas.js";
 import * as proposalsService from "./proposals.service.js";
 
 /**
@@ -265,6 +277,59 @@ export async function getProposalPdf(
       message: err instanceof Error ? err.message : "Unknown error",
     });
   }
+}
+
+/**
+ * GET /proposals/:sequence/preview - Preview metadata
+ */
+export async function getProposalPreview(
+  req: TypedRequest<typeof getProposalBySequenceSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence } = req.params;
+  const proposal = await proposalsService.getProposalBySequence(
+    workspaceId,
+    sequence,
+  );
+  const payload = proposalsService.buildProposalPdfPayload(proposal);
+  const metadata = await getPreviewMetadata({
+    kind: "proposal",
+    workspaceId: String(workspaceId),
+    sequence,
+    payload,
+  });
+  sendPreviewMetadata(res, metadata);
+}
+
+/**
+ * GET /proposals/:sequence/preview/:page?hash= - Preview page image
+ */
+export async function getProposalPreviewPage(
+  req: TypedRequest<
+    typeof getProposalPreviewPageParamsSchema,
+    typeof previewHashQuerySchema,
+    never
+  >,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence, page } = req.params;
+  const { hash } = req.query;
+  const proposal = await proposalsService.getProposalBySequence(
+    workspaceId,
+    sequence,
+  );
+  const payload = proposalsService.buildProposalPdfPayload(proposal);
+  const result = await getPreviewPage({
+    kind: "proposal",
+    workspaceId: String(workspaceId),
+    sequence,
+    hash,
+    page,
+    payload,
+  });
+  sendPreviewPage(res, result, page);
 }
 
 /**

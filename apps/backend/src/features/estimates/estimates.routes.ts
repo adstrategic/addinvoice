@@ -24,6 +24,8 @@ import {
   enqueueSendEstimate,
   getEstimateBySequence,
   getEstimatePdf,
+  getEstimatePreview,
+  getEstimatePreviewPage,
   getNextEstimateNumber,
   listEstimates,
   markEstimateAsAccepted,
@@ -39,10 +41,12 @@ import {
   getEstimateBySequenceSchema,
   getEstimateDescriptiveItemByIdSchema,
   getEstimateItemByIdSchema,
+  getEstimatePreviewPageParamsSchema,
   getNextEstimateNumberQuerySchema,
   listEstimatesSchema,
   sendEstimateBodySchema,
 } from "./estimates.schemas.js";
+import { previewHashQuerySchema } from "../_shared/preview-schemas.js";
 
 /**
  * Estimates routes
@@ -94,6 +98,23 @@ estimatesRoutes.get(
   "/:sequence/pdf",
   processRequest({ params: getEstimateBySequenceSchema }),
   asyncHandler(getEstimatePdf),
+);
+
+// GET /api/v1/estimates/:sequence/preview/:page - Preview page image
+estimatesRoutes.get(
+  "/:sequence/preview/:page",
+  processRequest({
+    params: getEstimatePreviewPageParamsSchema,
+    query: previewHashQuerySchema,
+  }),
+  asyncHandler(getEstimatePreviewPage),
+);
+
+// GET /api/v1/estimates/:sequence/preview - Preview metadata
+estimatesRoutes.get(
+  "/:sequence/preview",
+  processRequest({ params: getEstimateBySequenceSchema }),
+  asyncHandler(getEstimatePreview),
 );
 
 // POST /api/v1/estimates/:sequence/send - Enqueue send estimate email (202)

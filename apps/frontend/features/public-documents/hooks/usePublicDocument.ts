@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   getPublicDocumentBySlug,
-  getPublicDocumentPdfBySlug,
+  getPublicDocumentPreviewBySlug,
   markPublicDocumentViewed,
 } from "../service/public-documents.service";
 
@@ -14,12 +14,13 @@ export function usePublicDocument(slug: string | undefined) {
   });
 }
 
-export function usePublicDocumentPdf(slug: string | undefined) {
+export function usePublicDocumentPreview(slug: string | undefined) {
   return useQuery({
-    queryKey: ["public-document-pdf", slug],
-    queryFn: () => getPublicDocumentPdfBySlug(slug!),
+    queryKey: ["public-document-preview", slug],
+    queryFn: () => getPublicDocumentPreviewBySlug(slug!),
     enabled: !!slug,
     retry: 1,
+    staleTime: 60 * 1000,
   });
 }
 

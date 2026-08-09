@@ -14,6 +14,7 @@ import type {
 } from "../schemas/invoice.schema";
 import { clientKeys } from "@/features/clients";
 import { handleMutationError } from "@/lib/errors/handle-error";
+import { fetchPreviewMetadata } from "@/lib/document-preview";
 import { toast } from "sonner";
 
 /**
@@ -30,6 +31,8 @@ export const invoiceKeys = {
   nextNumber: (businessId: number | null) =>
     [...invoiceKeys.all, "next-number", businessId] as const,
   pdf: (sequence: number) => [...invoiceKeys.detail(sequence), "pdf"] as const,
+  preview: (sequence: number) =>
+    [...invoiceKeys.detail(sequence), "preview"] as const,
 };
 
 /**
@@ -84,6 +87,29 @@ export function useInvoicePdfBytes(sequence: number | null, enabled: boolean) {
 
       const buffer = await response.arrayBuffer();
       return new Uint8Array(buffer);
+    },
+    enabled: enabled && sequence !== null,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+/**
+ * Preview metadata (page sizes + content hash) for image-based document preview.
+ */
+export function useInvoicePreview(sequence: number | null, enabled: boolean) {
+  const { getToken } = useAuth();
+
+  return useQuery({
+    queryKey: invoiceKeys.preview(sequence!),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/invoices/${sequence}/preview`;
+      return fetchPreviewMetadata(url, {
+        Authorization: `Bearer ${token}`,
+      });
     },
     enabled: enabled && sequence !== null,
     staleTime: 60 * 1000,

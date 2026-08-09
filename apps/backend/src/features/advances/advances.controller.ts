@@ -21,7 +21,23 @@ import {
 
 import { getWorkspaceId } from "../../core/auth.js";
 import { sendAdvanceQueue } from "../../queue/queues.js";
+import {
+  getPreviewMetadata,
+  getPreviewPage,
+} from "../_shared/document-preview.js";
+import {
+  sendPreviewMetadata,
+  sendPreviewPage,
+} from "../_shared/preview-http.js";
+import {
+  previewHashQuerySchema,
+  withPreviewPageParams,
+} from "../_shared/preview-schemas.js";
 import * as advancesService from "./advances.service.js";
+
+export const getAdvancePreviewPageParamsSchema = withPreviewPageParams(
+  getAdvanceBySequenceSchema,
+);
 
 export async function createAdvance(
   req: TypedRequest<never, never, typeof createAdvanceSchema>,
@@ -119,6 +135,52 @@ export async function getAdvancePdf(
       message: error instanceof Error ? error.message : "Unknown error",
     });
   }
+}
+
+export async function getAdvancePreview(
+  req: TypedRequest<typeof getAdvanceBySequenceSchema, never, never>,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const advance = await advancesService.getAdvanceBySequence(
+    workspaceId,
+    req.params.sequence,
+  );
+  const payload = advancesService.buildAdvancePdfPayload(advance);
+  const metadata = await getPreviewMetadata({
+    kind: "advance",
+    workspaceId: String(workspaceId),
+    sequence: req.params.sequence,
+    payload,
+  });
+  sendPreviewMetadata(res, metadata);
+}
+
+export async function getAdvancePreviewPage(
+  req: TypedRequest<
+    typeof getAdvancePreviewPageParamsSchema,
+    typeof previewHashQuerySchema,
+    never
+  >,
+  res: Response,
+): Promise<void> {
+  const workspaceId = getWorkspaceId(req);
+  const { sequence, page } = req.params;
+  const { hash } = req.query;
+  const advance = await advancesService.getAdvanceBySequence(
+    workspaceId,
+    sequence,
+  );
+  const payload = advancesService.buildAdvancePdfPayload(advance);
+  const result = await getPreviewPage({
+    kind: "advance",
+    workspaceId: String(workspaceId),
+    sequence,
+    hash,
+    page,
+    payload,
+  });
+  sendPreviewPage(res, result, page);
 }
 
 export async function updateAdvance(

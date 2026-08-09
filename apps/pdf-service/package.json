@@ -11,15 +11,19 @@
     "build": "pnpm run clean && tsc",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:unit": "vitest run unit"
   },
   "dependencies": {
     "@tiptap/html": "^3.22.5",
     "@tiptap/starter-kit": "^3.22.5",
     "dotenv": "^16.5.0",
     "express": "4.21.2",
+    "pdf-to-img": "^6.2.0",
     "puppeteer": "^24.0.0",
-    "zod": "^3.25.67"
+    "sharp": "^0.35.3",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@addinvoice/eslint-config": "workspace:*",
@@ -29,6 +33,7 @@
     "eslint": "^9.39.1",
     "tsx": "^4.19.2",
     "typescript": "5.5.4",
-    "typescript-eslint": "^8.50.0"
+    "typescript-eslint": "^8.50.0",
+    "vitest": "^4.1.10"
   }
 }

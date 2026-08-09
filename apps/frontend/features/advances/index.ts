@@ -19,6 +19,7 @@ export {
 	useDeleteAdvance,
 	useVoidAdvance,
 	useAdvancePdfBytes,
+	useAdvancePreview,
 	useSyncAdvanceAttachments,
 	useSendAdvance,
 	useUpdateAdvance,

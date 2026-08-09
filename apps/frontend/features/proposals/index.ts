@@ -21,6 +21,7 @@ export {
   useProposals,
   useProposalBySequence,
   useProposalPdfBytes,
+  useProposalPreview,
   useUpdateProposal,
   useMarkProposalAsAccepted,
   useSendProposal,
@@ -33,6 +34,7 @@ export {
 export {
   useProposalForAccept,
   useProposalPdfForAccept,
+  useProposalPreviewForAccept,
   useAcceptProposalByToken,
   useRejectProposalByToken,
   publicProposalKeys,

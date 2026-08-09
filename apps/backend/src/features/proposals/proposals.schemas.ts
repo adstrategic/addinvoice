@@ -19,6 +19,11 @@ export const getProposalBySequenceSchema = z.object({
     .positive("The sequence must be a positive number"),
 });
 
+export const getProposalPreviewPageParamsSchema =
+  getProposalBySequenceSchema.extend({
+    page: z.coerce.number().int().positive("Page must be a positive number"),
+  });
+
 export const getProposalByIdSchema = z.object({
   proposalId: z.coerce
     .number()
@@ -53,6 +58,11 @@ export const convertEstimateToProposalBodySchema = z.object({
 export const getProposalByTokenParamsSchema = z.object({
   token: z.string().min(1, "Token is required"),
 });
+
+export const getProposalPreviewPageByTokenParamsSchema =
+  getProposalByTokenParamsSchema.extend({
+    page: z.coerce.number().int().positive("Page must be a positive number"),
+  });
 
 export const acceptProposalBodySchema = z.object({
   fullName: z.string().trim().min(1, "Full name is required"),
