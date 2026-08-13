@@ -37,7 +37,12 @@ apiRouter.use("/subscription", subscriptionsRoutes);
 apiRouter.use((req, res, next) => {
   if (
     req.path.startsWith("/subscription") ||
-    req.path.startsWith("/workspace/onboarding")
+    req.path.startsWith("/workspace/onboarding") ||
+    // The onboarding funnel reads /businesses to work out which step the user
+    // is on, and it has to do that before they can possibly have a plan.
+    // Guarding it 402s every new signup and strands them on /subscribe.
+    // Reads only — creating a business still requires an active subscription.
+    (req.method === "GET" && req.path.startsWith("/businesses"))
   ) {
     next();
     return;

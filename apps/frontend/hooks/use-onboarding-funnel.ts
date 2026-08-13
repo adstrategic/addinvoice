@@ -7,11 +7,22 @@ import { useAuth } from "@clerk/nextjs";
 import { useOnboardingStatus } from "@/features/onboarding/hooks/useOnboarding";
 import { useHasBusiness } from "@/hooks/useHasBusiness";
 import { useSubscription } from "@/hooks/use-subscription";
+import { ApiError } from "@/lib/errors/handler";
 import {
   getFunnelRedirectPath,
   resolveFunnelStep,
   type FunnelStep,
 } from "@/lib/funnel";
+
+/**
+ * A 402 SUBSCRIPTION_REQUIRED is a payment gate, not a failure to read the
+ * account — it is the expected answer for a user who has not subscribed yet.
+ * Treating it as a query error blocks the funnel behind "Could not verify your
+ * account" on the very page where the user would go and subscribe.
+ */
+function isSubscriptionGate(error: unknown): boolean {
+  return error instanceof ApiError && error.statusCode === 402;
+}
 
 type UseOnboardingFunnelOptions = {
   /** The funnel step this page or layout expects the user to be on */
@@ -36,18 +47,21 @@ export function useOnboardingFunnel({
   // Only fetch once Clerk is ready so requests always carry a valid token.
   const {
     data: onboarding,
+    error: onboardingError,
     isLoading: isLoadingOnboarding,
     isError: isErrorOnboarding,
     refetch: refetchOnboarding,
   } = useOnboardingStatus({ enabled: isAuthLoaded });
   const {
     data: subscription,
+    error: subscriptionError,
     isLoading: isLoadingSubscription,
     isError: isErrorSubscription,
     refetch: refetchSubscription,
   } = useSubscription();
   const {
     hasBusiness,
+    error: businessError,
     isLoading: isLoadingBusiness,
     isError: isErrorBusiness,
     refetch: refetchBusiness,
@@ -59,7 +73,12 @@ export function useOnboardingFunnel({
     isLoadingSubscription ||
     isLoadingBusiness;
 
-  const hasQueryError = isErrorOnboarding || isErrorSubscription || isErrorBusiness;
+  // A payment gate on any of these is a known state, not a broken account, so
+  // it must not surface as an error the user can only stare at.
+  const hasQueryError =
+    (isErrorOnboarding && !isSubscriptionGate(onboardingError)) ||
+    (isErrorSubscription && !isSubscriptionGate(subscriptionError)) ||
+    (isErrorBusiness && !isSubscriptionGate(businessError));
 
   const refetchAll = () =>
     Promise.all([refetchOnboarding(), refetchSubscription(), refetchBusiness()]);
