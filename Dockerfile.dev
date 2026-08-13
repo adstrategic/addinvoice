@@ -92,6 +92,28 @@ COPY apps/pdf-service/ ./apps/pdf-service/
 
 CMD ["pnpm", "dev:pdf-service"]
 
+# ---- Mobile dev (Metro bundler): serves the JS bundle to Expo Go over the LAN ----
+# Only the JS side of the app runs here. Native builds are an EAS concern and are
+# deliberately not part of this image.
+FROM shared-builder AS mobile-dev
+
+COPY apps/mobile/package.json ./apps/mobile/
+
+RUN --mount=type=cache,id=pnpm-dev,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+
+COPY apps/mobile/ ./apps/mobile/
+
+# Metro must advertise an address the phone can reach. Without this it would
+# publish the container's internal IP, which no device on the LAN can route to.
+ENV REACT_NATIVE_PACKAGER_HOSTNAME=""
+
+EXPOSE 8081
+
+# Called directly rather than through `turbo run dev` — Turbo's TUI mode garbles
+# the QR code and swallows Expo's interactive keys in container logs.
+CMD ["pnpm", "--filter", "@addinvoice/mobile", "exec", "expo", "start", "--host", "lan"]
+
 # ---- Worker dev: same codebase as backend ----
 FROM shared-builder AS worker-dev
 

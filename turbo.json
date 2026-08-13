@@ -27,7 +27,8 @@
         "LIVEKIT_*",
         "PDF_SERVICE_*",
         "REDIS_*",
-        "PUPPETEER_*"
+        "PUPPETEER_*",
+        "EXPO_PUBLIC_*"
       ]
     },
     "test": {

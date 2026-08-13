@@ -5,7 +5,8 @@
   "pnpm": {
     "overrides": {
       "livekit-server-sdk>@livekit/protocol": "1.44.0"
-    }
+    },
+    "onlyBuiltDependencies": ["@clerk/shared", "core-js"]
   },
   "scripts": {
     "build": "turbo run build",
@@ -18,7 +19,10 @@
     "dev:backend": "turbo run dev --filter=@addinvoice/backend",
     "dev:frontend": "turbo run dev --filter=@addinvoice/frontend",
     "dev:pdf-service": "turbo run dev --filter=@addinvoice/pdf-service",
-    "dev:agent": "turbo run dev --filter=@addinvoice/agent"
+    "dev:agent": "turbo run dev --filter=@addinvoice/agent",
+    "dev:mobile": "turbo run dev --filter=@addinvoice/mobile",
+    "dev:ip": "bash scripts/set-lan-ip.sh",
+    "dev:mobile": "turbo run dev --filter=@addinvoice/mobile"
   },
   "devDependencies": {
     "@livekit/agents": "~1.0.36",

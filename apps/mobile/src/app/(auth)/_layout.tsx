@@ -1,0 +1,14 @@
+import { useAuth } from '@clerk/expo'
+import { Redirect, Stack } from 'expo-router'
+
+export default function AuthLayout() {
+	const { isSignedIn } = useAuth()
+
+	// The index route resolves which funnel step this session belongs on.
+	if (isSignedIn) {
+		return <Redirect href="/" />
+	}
+
+	return <Stack screenOptions={{ headerShown: false }} />
+
+}

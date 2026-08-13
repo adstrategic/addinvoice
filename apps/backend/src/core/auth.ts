@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 
-import { prisma } from "@addinvoice/db";
+import { Prisma, prisma } from "@addinvoice/db";
 import { getAuth } from "@clerk/express";
 
 import { InternalError, UnauthorizedError } from "../errors/EntityErrors.js";
@@ -25,6 +25,37 @@ export function getWorkspaceId(req: { workspaceId?: number }): number {
     throw new Error("Workspace not found");
   }
   return req.workspaceId;
+}
+
+/**
+ * Create the workspace for a first-time user, tolerating a concurrent creator.
+ *
+ * The surrounding find-then-create is not atomic, so parallel first requests
+ * (the mobile app opens three at once on cold start) can both see no workspace
+ * and both insert. The loser hits the unique constraint on clerkId; that means
+ * the row now exists, so re-read it instead of failing the request.
+ */
+async function createWorkspaceForClerkUser(userId: string) {
+  try {
+    return await prisma.workspace.create({
+      data: {
+        clerkId: userId,
+        name: "My Workspace",
+        language: "en",
+        usage: { create: {} },
+      },
+    });
+  } catch (error) {
+    const isDuplicate =
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002";
+
+    if (!isDuplicate) throw error;
+
+    return await prisma.workspace.findFirstOrThrow({
+      where: { clerkId: userId },
+    });
+  }
 }
 
 /**
@@ -55,14 +86,7 @@ export async function verifyWorkspaceAccess(
 
     // If workspace doesn't exist (first time user), create it automatically
     // along with its usage row so limit guards always have a row to update.
-    workspace ??= await prisma.workspace.create({
-      data: {
-        clerkId: userId,
-        name: "My Workspace",
-        language: "en",
-        usage: { create: {} },
-      },
-    });
+    workspace ??= await createWorkspaceForClerkUser(userId);
 
     // Attach userId and workspaceId to request
     req.userId = userId;
