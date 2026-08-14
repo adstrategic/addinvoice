@@ -68,9 +68,13 @@ async function uploadLogo(id: number, file: LogoUpload): Promise<BusinessRespons
 		const { data } = await apiClient.post<ApiSuccessResponse<BusinessResponse>>(
 			`${BASE_URL}/${id}/logo`,
 			formData,
-			// Content-Type is left unset on purpose: RN must generate the multipart
-			// boundary itself, and setting the header by hand omits it.
-			{ headers: { 'Content-Type': undefined } },
+			// Must be set explicitly. `undefined` does NOT clear the client's
+			// 'application/json' default — axios substitutes
+			// 'application/x-www-form-urlencoded', and RN hands that to OkHttp's
+			// MultipartBody.Builder, which rejects any non-multipart type. The send
+			// then throws before a socket opens and surfaces as "Network Error" with
+			// no response. RN appends the boundary to this value itself.
+			{ headers: { 'Content-Type': 'multipart/form-data' } },
 		)
 
 		return businessResponseSchema.parse(data.data)

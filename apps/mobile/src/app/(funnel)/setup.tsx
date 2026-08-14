@@ -3,10 +3,22 @@ import { createBusinessSchema, type CreateBusinessDTO } from '@addinvoice/schema
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+import { Pressable, View } from 'react-native'
 
 import { LogoPickerField } from '@/components/businesses/logo-picker-field'
 import { FunnelGuard } from '@/components/guards/funnel-guard'
-import { Button, Input, Screen, Select, Text, View } from '@/components/ui'
+import { RichTextEditor } from '@/components/rich-text/rich-text-editor'
+import {
+	Card,
+	Divider,
+	FieldLabel,
+	Input,
+	NumericInput,
+	Screen,
+	Select,
+	Text,
+} from '@/components/ui'
+import { ArrowRightIcon, BuildingIcon } from '@/components/ui/icons'
 import {
 	useCreateBusiness,
 	useSetDefaultBusiness,
@@ -16,10 +28,20 @@ import type { LogoUpload } from '@/features/businesses/service/businesses.servic
 import { SETUP_DEFAULT_NOTES, SETUP_DEFAULT_TERMS } from '@/features/businesses/setup-defaults'
 import { TaxMode } from '@/features/businesses/tax-mode'
 
+/**
+ * The rich-text fields are object-shaped, so react-hook-form types their error
+ * as a nested `FieldErrorsImpl` whose `message` is not necessarily a string.
+ * Narrow it rather than casting.
+ */
+function fieldMessage(error?: { message?: unknown }): string | undefined {
+	return typeof error?.message === 'string' ? error.message : undefined
+}
+
+/** Labels match the web select verbatim so both clients read the same. */
 const TAX_MODE_OPTIONS = [
-	{ value: TaxMode.NONE, label: 'No tax' },
-	{ value: TaxMode.BY_PRODUCT, label: 'Tax per line item' },
-	{ value: TaxMode.BY_TOTAL, label: 'Tax on the total' },
+	{ value: TaxMode.NONE, label: 'None' },
+	{ value: TaxMode.BY_PRODUCT, label: 'By product' },
+	{ value: TaxMode.BY_TOTAL, label: 'By total' },
 ]
 
 export default function SetupScreen() {
@@ -37,6 +59,7 @@ export default function SetupScreen() {
 		control,
 		handleSubmit,
 		watch,
+		setValue,
 		formState: { errors, isSubmitting },
 	} = useForm<CreateBusinessDTO>({
 		resolver: zodResolver(createBusinessSchema),
@@ -47,7 +70,7 @@ export default function SetupScreen() {
 			address: '',
 			phone: '',
 			defaultTaxMode: TaxMode.NONE,
-			defaultTaxName: '',
+			defaultTaxName: null,
 			defaultTaxPercentage: null,
 			defaultNotes: SETUP_DEFAULT_NOTES,
 			defaultTerms: SETUP_DEFAULT_TERMS,
@@ -62,7 +85,7 @@ export default function SetupScreen() {
 		setLogoError(null)
 
 		if (!logo) {
-			setLogoError('A logo is required to finish setup.')
+			setLogoError('Logo is required')
 			return
 		}
 
@@ -95,160 +118,255 @@ export default function SetupScreen() {
 		}
 	}
 
+	const isBusy = isSubmitting || uploadLogo.isPending
+
 	return (
 		<FunnelGuard requiredStep="setup">
-			<Screen avoidKeyboard>
-				<View className="gap-2">
-					<Text variant="heading">Set up your business</Text>
-					<Text variant="muted">
-						This appears on every invoice and estimate you send.
+			<Screen avoidKeyboard contentClassName="gap-8">
+				<View className="items-center gap-2">
+					<View className="mb-2 h-16 w-16 items-center justify-center rounded-full bg-primary/20">
+						<BuildingIcon size={32} color="#00a3ab" />
+					</View>
+					<Text className="text-center font-sans-bold text-3xl leading-tight text-foreground">
+						Welcome! Let&apos;s set up your business
+					</Text>
+					<Text className="text-center font-sans text-base text-muted-foreground">
+						We need some basic information to get you started with invoicing
 					</Text>
 				</View>
 
-				<Controller
-					control={control}
-					name="name"
-					render={({ field }) => (
-						<Input
-							label="Business name"
-							value={field.value ?? ''}
-							onChangeText={field.onChange}
-							onBlur={field.onBlur}
-							error={errors.name?.message}
-							placeholder="Acme Construction"
-						/>
-					)}
-				/>
+				<Card className="gap-6 p-6">
+					<View className="gap-1.5">
+						<Text variant="title">Business Information</Text>
+						<Text className="font-sans text-sm text-muted-foreground">
+							Enter your business details. You can update these later in settings.
+						</Text>
+					</View>
 
-				<Controller
-					control={control}
-					name="email"
-					render={({ field }) => (
-						<Input
-							label="Business email"
-							value={field.value ?? ''}
-							onChangeText={field.onChange}
-							onBlur={field.onBlur}
-							error={errors.email?.message}
-							autoCapitalize="none"
-							keyboardType="email-address"
-							placeholder="billing@acme.com"
-						/>
-					)}
-				/>
+					<Divider />
 
-				<Controller
-					control={control}
-					name="phone"
-					render={({ field }) => (
-						<Input
-							label="Phone"
-							value={field.value ?? ''}
-							onChangeText={field.onChange}
-							onBlur={field.onBlur}
-							error={errors.phone?.message}
-							keyboardType="phone-pad"
-							// The schema requires E.164, so the country code is not optional.
-							placeholder="+15551234567"
-						/>
-					)}
-				/>
-
-				<Controller
-					control={control}
-					name="address"
-					render={({ field }) => (
-						<Input
-							label="Address"
-							value={field.value ?? ''}
-							onChangeText={field.onChange}
-							onBlur={field.onBlur}
-							error={errors.address?.message}
-							placeholder="123 Main St, Springfield"
-							multiline
-						/>
-					)}
-				/>
-
-				<Controller
-					control={control}
-					name="nit"
-					render={({ field }) => (
-						<Input
-							label="Tax ID (optional)"
-							value={field.value ?? ''}
-							onChangeText={field.onChange}
-							onBlur={field.onBlur}
-							error={errors.nit?.message}
-							placeholder="123456789"
-						/>
-					)}
-				/>
-
-				<Controller
-					control={control}
-					name="defaultTaxMode"
-					render={({ field }) => (
-						<Select
-							label="Default tax handling"
-							value={field.value ?? TaxMode.NONE}
-							options={TAX_MODE_OPTIONS}
-							onChange={field.onChange}
-							error={errors.defaultTaxMode?.message}
-						/>
-					)}
-				/>
-
-				{isByTotal ? (
-					<>
+					<View className="gap-4">
 						<Controller
 							control={control}
-							name="defaultTaxName"
+							name="name"
 							render={({ field }) => (
 								<Input
-									label="Tax name"
+									label="Company Name"
+									required
 									value={field.value ?? ''}
 									onChangeText={field.onChange}
 									onBlur={field.onBlur}
-									error={errors.defaultTaxName?.message}
-									placeholder="VAT"
+									error={errors.name?.message}
+									placeholder="My Company Inc."
 								/>
 							)}
 						/>
+
 						<Controller
 							control={control}
-							name="defaultTaxPercentage"
+							name="nit"
 							render={({ field }) => (
 								<Input
-									label="Tax percentage"
-									value={field.value == null ? '' : String(field.value)}
-									onChangeText={(text) =>
-										field.onChange(text === '' ? null : Number(text))
-									}
+									label="NIT / Tax ID (optional)"
+									value={field.value ?? ''}
+									onChangeText={field.onChange}
 									onBlur={field.onBlur}
-									error={errors.defaultTaxPercentage?.message}
-									keyboardType="decimal-pad"
-									placeholder="19"
+									error={errors.nit?.message}
+									placeholder="123456789-0"
 								/>
 							)}
 						/>
-					</>
-				) : null}
 
-				<LogoPickerField
-					value={logo}
-					onChange={setLogo}
-					error={logoError ?? undefined}
-					onError={setLogoError}
-				/>
+						<Controller
+							control={control}
+							name="address"
+							render={({ field }) => (
+								<Input
+									label="Address"
+									required
+									value={field.value ?? ''}
+									onChangeText={field.onChange}
+									onBlur={field.onBlur}
+									error={errors.address?.message}
+									placeholder="123 Business St, City, Country"
+									rows={2}
+								/>
+							)}
+						/>
 
-				{formError ? <Text variant="error">{formError}</Text> : null}
+						<Controller
+							control={control}
+							name="email"
+							render={({ field }) => (
+								<Input
+									label="Email"
+									required
+									value={field.value ?? ''}
+									onChangeText={field.onChange}
+									onBlur={field.onBlur}
+									error={errors.email?.message}
+									autoCapitalize="none"
+									autoComplete="email"
+									keyboardType="email-address"
+									placeholder="contact@company.com"
+								/>
+							)}
+						/>
 
-				<Button
-					label={createdBusinessId == null ? 'Finish setup' : 'Retry logo upload'}
-					isLoading={isSubmitting}
-					onPress={() => void handleSubmit(onSubmit)()}
-				/>
+						<Controller
+							control={control}
+							name="phone"
+							render={({ field }) => (
+								<Input
+									label="Phone"
+									required
+									value={field.value ?? ''}
+									onChangeText={field.onChange}
+									onBlur={field.onBlur}
+									error={errors.phone?.message}
+									keyboardType="phone-pad"
+									// The schema requires E.164, so the country code is not optional.
+									placeholder="+1 (555) 123-4567"
+								/>
+							)}
+						/>
+					</View>
+
+					<Divider />
+
+					<LogoPickerField
+						value={logo}
+						onChange={setLogo}
+						error={logoError ?? undefined}
+						onError={setLogoError}
+					/>
+
+					<Divider />
+
+					<View className="gap-4">
+						<Text className="font-sans-medium text-base text-foreground">
+							Invoice defaults (optional)
+						</Text>
+
+						<Controller
+							control={control}
+							name="defaultTaxMode"
+							render={({ field }) => (
+								<Select
+									label="VAT / Tax"
+									labelMuted
+									variant="dropdown"
+									placeholder="Select tax mode"
+									value={field.value ?? TaxMode.NONE}
+									options={TAX_MODE_OPTIONS}
+									onChange={(value) => {
+										field.onChange(value)
+										// Mirrors the web: clearing these on mode change stops a stale
+										// rate being submitted with a mode that ignores it.
+										if (value !== TaxMode.BY_TOTAL) {
+											setValue('defaultTaxName', null)
+											setValue('defaultTaxPercentage', null)
+										}
+									}}
+									error={errors.defaultTaxMode?.message}
+								/>
+							)}
+						/>
+
+						{isByTotal ? (
+							<>
+								<Controller
+									control={control}
+									name="defaultTaxName"
+									render={({ field }) => (
+										<Input
+											label="Tax name (optional)"
+											labelMuted
+											value={field.value ?? ''}
+											onChangeText={field.onChange}
+											onBlur={field.onBlur}
+											error={errors.defaultTaxName?.message}
+											placeholder="e.g. VAT, Sales Tax"
+										/>
+									)}
+								/>
+								<Controller
+									control={control}
+									name="defaultTaxPercentage"
+									render={({ field }) => (
+										<NumericInput
+											label="Tax percentage (%)"
+											labelMuted
+											value={field.value}
+											onChangeValue={field.onChange}
+											onBlur={field.onBlur}
+											error={errors.defaultTaxPercentage?.message}
+											placeholder="0"
+										/>
+									)}
+								/>
+							</>
+						) : null}
+
+						<View className="gap-1.5">
+							<FieldLabel muted>Default notes (for invoices)</FieldLabel>
+							<Controller
+								control={control}
+								name="defaultNotes"
+								render={({ field }) => (
+									<RichTextEditor
+										value={field.value as Record<string, unknown> | null}
+										onChange={field.onChange}
+										placeholder="Optional default notes on new invoices"
+										error={fieldMessage(errors.defaultNotes)}
+									/>
+								)}
+							/>
+						</View>
+
+						<View className="gap-1.5">
+							<FieldLabel muted>Default terms &amp; conditions (for invoices)</FieldLabel>
+							<Controller
+								control={control}
+								name="defaultTerms"
+								render={({ field }) => (
+									<RichTextEditor
+										value={field.value as Record<string, unknown> | null}
+										onChange={field.onChange}
+										placeholder="Optional default terms on new invoices"
+										error={fieldMessage(errors.defaultTerms)}
+									/>
+								)}
+							/>
+						</View>
+					</View>
+
+					{formError ? <Text variant="error">{formError}</Text> : null}
+
+					<Divider />
+
+					<View className="flex-row justify-end">
+						<Pressable
+							accessibilityRole="button"
+							accessibilityState={{ disabled: isBusy, busy: isBusy }}
+							disabled={isBusy}
+							onPress={() => void handleSubmit(onSubmit)()}
+							style={{ borderCurve: 'continuous' }}
+							className={`min-h-12 flex-row items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 ${
+								isBusy ? 'opacity-50' : ''
+							}`}
+						>
+							<Text className="font-sans-semibold text-base text-primary-foreground">
+								{isBusy
+									? 'Setting up...'
+									: createdBusinessId == null
+										? 'Complete Setup'
+										: 'Retry logo upload'}
+							</Text>
+							<ArrowRightIcon size={16} color="#ffffff" />
+						</Pressable>
+					</View>
+				</Card>
 			</Screen>
 		</FunnelGuard>
 	)
