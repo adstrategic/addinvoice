@@ -2,6 +2,7 @@ import {
 	businessResponseSchema,
 	type BusinessResponse,
 	type CreateBusinessDTO,
+	type UpdateBusinessDTO,
 } from '@addinvoice/schemas'
 
 import {
@@ -10,17 +11,13 @@ import {
 	type ListBusinessesParams,
 } from '@/features/businesses/schema/businesses.schema'
 import { apiClient } from '@/lib/api/client'
-import type { ApiSuccessResponse } from '@/lib/api/types'
+import type { ApiSuccessResponse, LogoUpload } from '@/lib/api/types'
 import { handleApiError } from '@/lib/errors/handler'
 
 const BASE_URL = '/businesses'
 
-/** A photo chosen with expo-image-picker, in the shape RN's FormData expects. */
-export type LogoUpload = {
-	uri: string
-	name: string
-	type: string
-}
+/** Re-exported for existing importers; the type itself now lives in lib/api/types. */
+export type { LogoUpload }
 
 async function listBusinesses(params?: ListBusinessesParams): Promise<BusinessResponseList> {
 	try {
@@ -39,10 +36,42 @@ async function listBusinesses(params?: ListBusinessesParams): Promise<BusinessRe
 	}
 }
 
+async function getBusinessById(id: number): Promise<BusinessResponse> {
+	try {
+		const { data } = await apiClient.get<ApiSuccessResponse<BusinessResponse>>(
+			`${BASE_URL}/${id}`,
+		)
+		return businessResponseSchema.parse(data.data)
+	} catch (error) {
+		handleApiError(error)
+	}
+}
+
 async function createBusiness(dto: CreateBusinessDTO): Promise<BusinessResponse> {
 	try {
 		const { data } = await apiClient.post<ApiSuccessResponse<BusinessResponse>>(BASE_URL, dto)
 		return businessResponseSchema.parse(data.data)
+	} catch (error) {
+		handleApiError(error)
+	}
+}
+
+async function updateBusiness(id: number, dto: UpdateBusinessDTO): Promise<BusinessResponse> {
+	try {
+		const { data } = await apiClient.patch<ApiSuccessResponse<BusinessResponse>>(
+			`${BASE_URL}/${id}`,
+			dto,
+		)
+		return businessResponseSchema.parse(data.data)
+	} catch (error) {
+		handleApiError(error)
+	}
+}
+
+async function deleteBusiness(id: number): Promise<void> {
+	try {
+		// Hard delete on the backend — there is no restore path.
+		await apiClient.delete(`${BASE_URL}/${id}`)
 	} catch (error) {
 		handleApiError(error)
 	}
@@ -83,9 +112,24 @@ async function uploadLogo(id: number, file: LogoUpload): Promise<BusinessRespons
 	}
 }
 
+async function deleteLogo(id: number): Promise<BusinessResponse> {
+	try {
+		const { data } = await apiClient.delete<ApiSuccessResponse<BusinessResponse>>(
+			`${BASE_URL}/${id}/logo`,
+		)
+		return businessResponseSchema.parse(data.data)
+	} catch (error) {
+		handleApiError(error)
+	}
+}
+
 export const businessesService = {
 	list: listBusinesses,
+	getById: getBusinessById,
 	create: createBusiness,
+	update: updateBusiness,
+	delete: deleteBusiness,
 	setDefault: setDefaultBusiness,
 	uploadLogo,
+	deleteLogo,
 }

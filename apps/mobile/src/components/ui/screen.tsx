@@ -61,6 +61,27 @@ export function Screen({
 			// the two on iOS.
 			contentInsetAdjustmentBehavior="never"
 			keyboardShouldPersistTaps="handled"
+			// Android form sheets. `presentation: 'formSheet'` is a Material
+			// BottomSheetDialog, and its BottomSheetBehavior decides whether a drag
+			// scrolls the content or dismisses the sheet by looking for the first
+			// descendant with nested scrolling enabled. This prop is the only way to
+			// set that flag (it maps straight to ViewCompat.setNestedScrollingEnabled)
+			// and React Native defaults it to false — so without it the behavior finds
+			// no scrolling child and swallows every downward drag as a dismiss, even
+			// mid-form.
+			//
+			// With it, Android applies the expected rule for free: drags scroll the
+			// form while it can still scroll up, and only dismiss the sheet once it is
+			// already at the top.
+			//
+			// Set unconditionally rather than only for sheet screens: nested scrolling
+			// engages only when there is a NestedScrollingParent ancestor, so on an
+			// ordinary stack screen this is inert. iOS is unaffected — UIKit finds the
+			// UIScrollView by itself.
+			//
+			// NOTE: this does not carry to other scrollables. A FlashList presented
+			// inside a form sheet needs the same prop set on itself.
+			nestedScrollEnabled
 			className={cn('flex-1 bg-background', className)}
 			// Style only — mixing contentContainerStyle with
 			// contentContainerClassName risks one overwriting the other rather than

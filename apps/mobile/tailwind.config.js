@@ -28,6 +28,10 @@ module.exports = {
 				border: '#d7e0e2',
 				input: '#d7e0e2',
 				ring: '#00a3ab',
+				// Per-module accent, from apps/frontend/components/shared/list-card-theme.ts.
+				// Clients are indigo there; each later module adds its own entry rather
+				// than scattering hex literals through components.
+				indigo: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' },
 				chart: {
 					1: '#00a3ab',
 					2: '#615ed6',

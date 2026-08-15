@@ -3,21 +3,33 @@ import { Pressable, View } from 'react-native'
 
 import { FieldLabel, Image, Text } from '@/components/ui'
 import { BuildingIcon, UploadIcon } from '@/components/ui/icons'
-import type { LogoUpload } from '@/features/businesses/service/businesses.service'
+import type { LogoUpload } from '@/lib/api/types'
 
 const MAX_LOGO_BYTES = 5 * 1024 * 1024
 
 export type LogoPickerFieldProps = {
+	/** A newly picked image, not yet uploaded. */
 	value: LogoUpload | null
 	onChange: (logo: LogoUpload | null) => void
+	/** The logo already saved on the record, if any. Shown when nothing is picked. */
+	existingUrl?: string | null
+	/** Tapped "Remove". The parent decides whether that clears a pick or the saved logo. */
+	onRemove?: () => void
 	error?: string
 	onError: (message: string | null) => void
 	required?: boolean
+	/** Field label. Defaults to the businesses wording. */
+	label?: string
+	/** Text under the upload button. Defaults to the businesses wording. */
+	helperText?: string
 }
 
 /**
  * Mirrors the web logo block in `CreateCompanyForm`: an 80×80 preview tile
  * beside an upload action and its helper text.
+ *
+ * Shared by businesses and clients — both upload to the same 5 MB, image-only
+ * Cloudinary route, so only the copy differs.
  *
  * Size and mime are validated here rather than in the zod schema — the schema
  * is shared with the web, where a logo is a `File`, and the backend cap is 5 MB.
@@ -25,10 +37,17 @@ export type LogoPickerFieldProps = {
 export function LogoPickerField({
 	value,
 	onChange,
+	existingUrl = null,
+	onRemove,
 	error,
 	onError,
 	required = true,
+	label = 'Company logo',
+	helperText = 'Recommended: square image, max 5MB (JPG, PNG, WebP, SVG)',
 }: LogoPickerFieldProps) {
+	// A fresh pick wins over whatever is already saved.
+	const previewUri = value?.uri ?? existingUrl
+	const hasLogo = previewUri != null
 	async function handlePick() {
 		onError(null)
 
@@ -69,23 +88,28 @@ export function LogoPickerField({
 
 	function handleRemove() {
 		onError(null)
+		if (onRemove) {
+			onRemove()
+			return
+		}
 		onChange(null)
 	}
 
 	return (
 		<View className="gap-2">
-			<FieldLabel required={required}>Company logo</FieldLabel>
+			<FieldLabel required={required}>{label}</FieldLabel>
 
 			<View className="flex-row items-start gap-4">
 				<View
 					style={{ borderCurve: 'continuous' }}
 					className="h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-primary/20"
 				>
-					{value ? (
+					{previewUri ? (
 						<Image
-							source={{ uri: value.uri }}
+							source={{ uri: previewUri }}
 							style={{ width: '100%', height: '100%' }}
 							contentFit="cover"
+							recyclingKey={previewUri}
 						/>
 					) : (
 						<BuildingIcon size={40} color="#00a3ab" />
@@ -102,11 +126,11 @@ export function LogoPickerField({
 						>
 							<UploadIcon size={16} color="#020b0f" />
 							<Text className="font-sans-medium text-sm text-foreground">
-								{value ? 'Change logo' : 'Upload logo'}
+								{hasLogo ? 'Change logo' : 'Upload logo'}
 							</Text>
 						</Pressable>
 
-						{value ? (
+						{hasLogo ? (
 							<Pressable
 								accessibilityRole="button"
 								onPress={handleRemove}
@@ -117,9 +141,7 @@ export function LogoPickerField({
 						) : null}
 					</View>
 
-					<Text className="font-sans text-xs text-muted-foreground">
-						Recommended: square image, max 5MB (JPG, PNG, WebP, SVG)
-					</Text>
+					<Text className="font-sans text-xs text-muted-foreground">{helperText}</Text>
 
 					{error ? <Text variant="error">{error}</Text> : null}
 				</View>

@@ -47,6 +47,16 @@ export type ValidatorErrorItem = {
 	errors: { issues?: Array<{ path: (string | number)[]; message: string }> }
 }
 
+/**
+ * A photo chosen with expo-image-picker, in the shape RN's FormData expects.
+ * Shared by every multipart upload (business logo, client logo, later receipts).
+ */
+export type LogoUpload = {
+	uri: string
+	name: string
+	type: string
+}
+
 export const paginationMetaSchema = z.object({
 	total: z.number(),
 	page: z.number(),

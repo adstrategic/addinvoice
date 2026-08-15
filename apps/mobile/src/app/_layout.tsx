@@ -14,10 +14,17 @@ import '../global.css'
 
 // Core 3 requires the key explicitly — it is no longer read from the environment
 // implicitly. Failing loudly here beats a confusing "not configured" at runtime.
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
+// Read through a function so the non-null result is a `string`, not a narrowed
+// `string | undefined`: TypeScript does not carry module-scope narrowing into
+// the component closure below.
+const publishableKey = readPublishableKey()
 
-if (!publishableKey) {
-	throw new Error('Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY. Add it to apps/mobile/.env')
+function readPublishableKey(): string {
+	const key = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
+	if (!key) {
+		throw new Error('Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY. Add it to apps/mobile/.env')
+	}
+	return key
 }
 
 export default function RootLayout() {
