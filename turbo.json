@@ -27,7 +27,10 @@
         "LIVEKIT_*",
         "PDF_SERVICE_*",
         "REDIS_*",
-        "PUPPETEER_*"
+        "PUPPETEER_*",
+        "ADMIN_CLERK_USER_IDS",
+        "REFERRAL_*",
+        "INTERNAL_API_URL"
       ]
     },
     "test": {

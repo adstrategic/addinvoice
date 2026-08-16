@@ -1,11 +1,13 @@
+import type { Mock } from "vitest";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     invoice: { findFirst: vi.fn(), update: vi.fn() },
-    estimate: { findFirst: vi.fn() },
-    proposal: { findFirst: vi.fn() },
-    advance: { findFirst: vi.fn() },
+    estimate: { findFirst: vi.fn(), update: vi.fn() },
+    proposal: { findFirst: vi.fn(), update: vi.fn() },
+    advance: { findFirst: vi.fn(), update: vi.fn() },
   },
 }));
 
@@ -55,9 +57,25 @@ const invoiceRow = {
   business: { name: "Acme Co" },
 };
 
+interface UpdateCall {
+  data: Record<string, unknown>;
+  where: Record<string, unknown>;
+}
+
+/** First argument the update mock received, typed so assertions stay safe. */
+function updateCallArg(fn: Mock): UpdateCall {
+  const calls = fn.mock.calls as unknown[][];
+  const call = calls[0];
+  if (!call) throw new Error("expected update to have been called");
+  return call[0] as UpdateCall;
+}
+
 describe("public-documents.service", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // resetAllMocks, not clearAllMocks: clear wipes call history but leaves
+    // mockResolvedValue in place, so a return value set in one test leaks into
+    // the next. Each test below sets the rows it needs.
+    vi.resetAllMocks();
   });
 
   describe("getPublicDocumentBySlug", () => {
@@ -185,20 +203,70 @@ describe("public-documents.service", () => {
         "inv-550e8400-e29b-41d4-a716-446655440000",
       );
 
-      expect(prismaMock.invoice.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: expect.objectContaining({
-          status: "VIEWED",
-          viewedAt: expect.any(Date),
-        }),
-      });
+      const call = updateCallArg(prismaMock.invoice.update);
+      expect(call.where).toEqual({ id: 1 });
+      expect(call.data).toMatchObject({ status: "VIEWED" });
+      expect(call.data.viewedAt).toBeInstanceOf(Date);
     });
 
-    it("no-ops for estimate slug", async () => {
+    it("updates estimate viewedAt when sent", async () => {
+      prismaMock.estimate.findFirst.mockResolvedValue({
+        id: 5,
+        status: "SENT",
+        viewedAt: null,
+      });
+      prismaMock.estimate.update.mockResolvedValue({});
+
       await markPublicDocumentViewed(
         "est-550e8400-e29b-41d4-a716-446655440000",
       );
+
+      const call = updateCallArg(prismaMock.estimate.update);
+      expect(call.where).toEqual({ id: 5 });
+      expect(call.data).toMatchObject({ status: "VIEWED" });
+      expect(call.data.viewedAt).toBeInstanceOf(Date);
       expect(prismaMock.invoice.update).not.toHaveBeenCalled();
+    });
+
+    it("updates advance viewedAt when issued", async () => {
+      prismaMock.advance.findFirst.mockResolvedValue({
+        id: 9,
+        status: "ISSUED",
+        viewedAt: null,
+      });
+      prismaMock.advance.update.mockResolvedValue({});
+
+      await markPublicDocumentViewed(
+        "adv-550e8400-e29b-41d4-a716-446655440000",
+      );
+
+      const call = updateCallArg(prismaMock.advance.update);
+      expect(call.where).toEqual({ id: 9 });
+      expect(call.data).toMatchObject({ status: "VIEWED" });
+      expect(call.data.viewedAt).toBeInstanceOf(Date);
+    });
+
+    it("leaves an already-viewed document untouched", async () => {
+      prismaMock.estimate.findFirst.mockResolvedValue({
+        id: 5,
+        status: "VIEWED",
+        viewedAt: new Date("2026-01-05"),
+      });
+
+      await markPublicDocumentViewed(
+        "est-550e8400-e29b-41d4-a716-446655440000",
+      );
+
+      // viewedAt records first view only; re-opening the link must not move it.
+      expect(prismaMock.estimate.update).not.toHaveBeenCalled();
+    });
+
+    it("throws when the slug matches no document", async () => {
+      prismaMock.estimate.findFirst.mockResolvedValue(null);
+
+      await expect(
+        markPublicDocumentViewed("est-550e8400-e29b-41d4-a716-446655440000"),
+      ).rejects.toThrow(EntityNotFoundError);
     });
   });
 });

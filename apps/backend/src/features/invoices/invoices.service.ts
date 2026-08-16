@@ -5,6 +5,7 @@ import type {
   InvoiceStatus,
   Prisma,
 } from "@addinvoice/db";
+import type { AssertCanCreateOptions } from "@addinvoice/db";
 import type { EstimateResponse } from "@addinvoice/schemas";
 import type {
   AdvanceListItemResponse,
@@ -694,9 +695,10 @@ export function calculateItemTotal(
 export async function createInvoice(
   workspaceId: number,
   data: CreateInvoiceDto,
+  options: AssertCanCreateOptions = {},
 ): Promise<InvoiceEntityWithRelations> {
   return await prisma.$transaction(async (tx) => {
-    await assertCanCreate(tx, workspaceId, "invoices");
+    await assertCanCreate(tx, workspaceId, "invoices", options);
     // Check if workspace has at least one business
     const businessCount = await tx.business.count({
       where: {
@@ -1300,7 +1302,7 @@ export async function listInvoices(
   };
 
   const buildStatsWhere = (
-    status?: Prisma.EnumInvoiceStatusFilter | InvoiceStatus,
+    status?: InvoiceStatus | Prisma.EnumInvoiceStatusFilter,
   ): Prisma.InvoiceWhereInput => {
     // Workspace-wide stats (and per-metric counts) ignore the list status tab filter.
     if (status !== undefined) {

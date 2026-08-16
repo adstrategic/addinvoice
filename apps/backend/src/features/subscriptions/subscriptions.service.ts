@@ -9,6 +9,11 @@ import {
 } from "@addinvoice/db";
 
 import { PLAN_PRODUCT_IDS, stripe } from "../../core/stripe.js";
+import { EntityValidationError } from "../../errors/EntityErrors.js";
+import {
+  convertReferral,
+  getCheckoutPromotionCode,
+} from "../referrals/referrals.service.js";
 
 export interface PlanPriceInfo {
   amount: number;
@@ -73,6 +78,28 @@ export async function createCheckoutSession(
   clerkUserId: string,
   userEmail: string,
 ): Promise<string> {
+  const frontendUrl = process.env.FRONTEND_URL;
+
+  if (!frontendUrl) {
+    throw new Error("FRONTEND_URL is not set in environment variables");
+  }
+
+  // Retrieve the price so the plan claim can be verified against Stripe rather
+  // than trusted from the request body, and so the billing interval is known
+  // (the referral discount applies to monthly prices only).
+  //
+  // Validated before any Stripe customer is created, so a bad request cannot
+  // leave a stray customer behind.
+  const price = await stripe.prices.retrieve(priceId);
+  const productId =
+    typeof price.product === "string" ? price.product : price.product.id;
+
+  if (planType === "FREE_TRIAL" || productId !== PLAN_PRODUCT_IDS[planType]) {
+    throw new EntityValidationError(
+      "The selected price does not belong to the requested plan",
+    );
+  }
+
   // Get or create Stripe customer
   let customerId: string;
   const workspace = await prisma.workspace.findUnique({
@@ -104,16 +131,26 @@ export async function createCheckoutSession(
     });
   }
 
-  const frontendUrl = process.env.FRONTEND_URL;
+  const referralPromotion = await getCheckoutPromotionCode(
+    workspaceId,
+    planType,
+    price.recurring?.interval,
+  );
 
-  if (!frontendUrl) {
-    throw new Error("FRONTEND_URL is not set in environment variables");
-  }
-
-  // Create checkout session
+  // Create checkout session.
+  //
+  // Stripe treats `discounts` and `allow_promotion_codes` as mutually
+  // exclusive, so exactly one is sent. Either way the customer never sees a
+  // promo code input: every referral is attached through our own endpoint
+  // before checkout, and leaving the input open would let anyone type a
+  // referral code onto a yearly or lifetime purchase, both of which are meant
+  // to be undiscounted.
   const session = await stripe.checkout.sessions.create({
     cancel_url: `${frontendUrl}/subscribe/cancelled`,
     customer: customerId,
+    ...(referralPromotion
+      ? { discounts: [{ promotion_code: referralPromotion.promotionCodeId }] }
+      : { allow_promotion_codes: false }),
     line_items: [
       {
         price: priceId,
@@ -123,9 +160,25 @@ export async function createCheckoutSession(
     metadata: {
       clerkUserId,
       planType,
+      referralCode: referralPromotion?.code ?? "",
       workspaceId: workspaceId.toString(),
     },
     mode: planType === "LIFETIME" ? "payment" : "subscription",
+    // Stripe does not copy session metadata onto the subscription it creates,
+    // so it has to be set explicitly here. Without it the metadata lookups in
+    // handleSubscriptionUpdated never resolve and always fall back.
+    // Only valid in subscription mode — Stripe rejects it for LIFETIME.
+    ...(planType === "LIFETIME"
+      ? {}
+      : {
+          subscription_data: {
+            metadata: {
+              clerkUserId,
+              planType,
+              workspaceId: workspaceId.toString(),
+            },
+          },
+        }),
     success_url: `${frontendUrl}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
   });
 
@@ -394,6 +447,11 @@ export async function handleCheckoutCompleted(
 
   await syncVoiceWindow(workspaceId, planType, voiceWindowStart);
 
+  // Freeze referral attribution and start the commission clock. No-op when the
+  // workspace was never referred, or when the plan is LIFETIME (outside the
+  // program). Commission itself accrues from invoice.paid, not from here.
+  await convertReferral(workspaceId, planType);
+
   // TODO: AI CREDITS - Purchase AI credits here based on plan
   // MINIMUM: $3 worth of credits
   // ESSENTIAL: $8 worth of credits
@@ -438,13 +496,20 @@ export async function handleSubscriptionUpdated(
   const workspaceId = parseInt(subscription.metadata.workspaceId ?? "0", 10);
 
   if (!workspaceId) {
-    // Try to find by customer ID
+    // Try to find by customer ID. Subscriptions created before
+    // subscription_data.metadata was set always land here.
     const existing = await prisma.workspace.findUnique({
       select: { id: true },
       where: { stripeCustomerId: subscription.customer as string },
     });
     if (!existing) {
-      throw new Error("Workspace not found for this subscription");
+      // Deleted workspace, or a subscription belonging to another system.
+      // Returning quietly matches handleSubscriptionDeleted; throwing would
+      // 500 and make Stripe retry this event for ~3 days.
+      console.warn(
+        `No workspace for subscription ${subscription.id}; skipping update`,
+      );
+      return;
     }
     // Update using existing workspaceId
     await updateSubscriptionFromStripe(existing.id, subscription);
@@ -519,25 +584,34 @@ async function updateSubscriptionFromStripe(
   if (subscription.metadata.planType) {
     planType = subscription.metadata.planType as PaidSubscriptionPlan;
   } else {
-    // Fallback: try to determine from price's product ID
+    // Fallback: determine from the price's product ID. Uses PLAN_PRODUCT_IDS
+    // rather than reading process.env here, so it matches the values validated
+    // at boot in core/stripe.ts.
     const price = subscription.items.data[0]?.price;
     if (price?.product) {
       const productId =
         typeof price.product === "string" ? price.product : price.product.id;
-      if (productId === process.env.STRIPE_PRODUCT_ID_MINIMUM)
-        planType = "MINIMUM";
-      else if (productId === process.env.STRIPE_PRODUCT_ID_ESSENTIAL)
-        planType = "ESSENTIAL";
-      else if (productId === process.env.STRIPE_PRODUCT_ID_LIFETIME)
-        planType = "LIFETIME";
+      if (productId === PLAN_PRODUCT_IDS.MINIMUM) planType = "MINIMUM";
+      else if (productId === PLAN_PRODUCT_IDS.ESSENTIAL) planType = "ESSENTIAL";
+      else if (productId === PLAN_PRODUCT_IDS.LIFETIME) planType = "LIFETIME";
     }
+  }
+
+  if (!planType) {
+    // Neither metadata nor the product lookup resolved. Leaving the stored
+    // plan alone is the safe failure: writing null would make
+    // getSubscriptionStatus report isActive:false and strand a paying
+    // customer on /subscribe.
+    console.warn(
+      `Could not resolve plan for subscription ${subscription.id}; keeping stored plan`,
+    );
   }
 
   await prisma.workspace.update({
     data: {
       hasEverPaid: true,
       stripeSubscriptionId: subscription.id,
-      subscriptionPlan: planType,
+      ...(planType ? { subscriptionPlan: planType } : {}),
       subscriptionStatus: status,
     },
     where: { id: workspaceId },
@@ -555,9 +629,20 @@ async function updateSubscriptionFromStripe(
 
 /**
  * Initialize or clear the voice usage window depending on plan.
- * For MINIMUM, anchors the first window to the Stripe period start (always one
- * month long, regardless of monthly vs. yearly billing). For other plans, the
- * window is cleared so it doesn't leak into MINIMUM voice counting later.
+ *
+ * For MINIMUM this only ever *anchors* a window that does not exist yet —
+ * first purchase, or a return to MINIMUM after the non-MINIMUM branch below
+ * nulled it. It must never reset an established window, because
+ * `rollVoiceWindowIfNeeded` (packages/db/src/limits/guards.ts) already advances
+ * the window and zeroes the counter lazily at request time.
+ *
+ * That distinction matters: customer.subscription.updated fires on ordinary
+ * mid-period changes such as swapping a card or toggling cancel-at-period-end,
+ * and on the referral coupon being consumed after the first invoice. Resetting
+ * here would hand a MINIMUM user a fresh 25 voice sessions each time.
+ *
+ * For other plans the window is cleared so it doesn't leak into MINIMUM voice
+ * counting later.
  */
 async function syncVoiceWindow(
   workspaceId: number,
@@ -565,6 +650,14 @@ async function syncVoiceWindow(
   voiceWindowStart: Date | null,
 ): Promise<void> {
   if (plan === "MINIMUM" && voiceWindowStart) {
+    const existing = await prisma.workspaceUsage.findUnique({
+      select: { voiceWindowEnd: true, voiceWindowStart: true },
+      where: { workspaceId },
+    });
+
+    // Already anchored — leave the window and the counter untouched.
+    if (existing?.voiceWindowStart && existing.voiceWindowEnd) return;
+
     const voiceWindowEnd = new Date(voiceWindowStart);
     voiceWindowEnd.setUTCMonth(voiceWindowEnd.getUTCMonth() + 1);
 
@@ -584,6 +677,12 @@ async function syncVoiceWindow(
     });
     return;
   }
+
+  // Plan did not resolve. Clearing the window here would strand a MINIMUM user
+  // with no window at all, which stops rollVoiceWindowIfNeeded from ever
+  // resetting them — 25 voice sessions for the lifetime of the account. Leave
+  // everything as it is instead.
+  if (!plan) return;
 
   // Non-MINIMUM plans: keep counters but clear the voice window so it isn't
   // mistakenly reused if the user later downgrades to MINIMUM.

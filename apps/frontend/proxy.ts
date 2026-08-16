@@ -8,6 +8,7 @@ const isPublicRoute = createRouteMatcher([
   "/estimate/accept(.*)", // Public quote signing (end customer, no auth)
   "/proposal/accept(.*)", // Public proposal signing (end customer, no auth)
   "/public(.*)", // Public document viewer (invoice, estimate, proposal)
+  "/r/(.*)", // Referral landing links — must stay public or the cookie is never set
   // "/setup(.*)", // Setup page is accessible to authenticated users
   //   "/",
 ]);

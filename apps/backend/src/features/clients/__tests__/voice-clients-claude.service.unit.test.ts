@@ -92,6 +92,7 @@ describe("voice-clients-claude.service", () => {
         email: "acme@example.com",
         name: "Acme Corp",
       }),
+      { viaVoice: true },
     );
   });
 

@@ -170,6 +170,7 @@ describe("voice-invoice-claude.service", () => {
         notes: businessDefaults.defaultNotes,
         terms: businessDefaults.defaultTerms,
       }),
+      { viaVoice: true },
     );
   });
 
@@ -199,6 +200,7 @@ describe("voice-invoice-claude.service", () => {
         notes: businessDefaults.defaultNotes,
         terms: businessDefaults.defaultTerms,
       }),
+      { viaVoice: true },
     );
   });
 
@@ -234,6 +236,7 @@ describe("voice-invoice-claude.service", () => {
         notes: modelNotes,
         terms: modelTerms,
       }),
+      { viaVoice: true },
     );
   });
 
@@ -269,6 +272,7 @@ describe("voice-invoice-claude.service", () => {
         clientId: 99,
         createClient: false,
       }),
+      { viaVoice: true },
     );
   });
 

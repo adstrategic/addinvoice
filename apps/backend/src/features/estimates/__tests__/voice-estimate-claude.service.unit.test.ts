@@ -159,6 +159,7 @@ describe("voice-estimate-claude.service", () => {
         notes: businessDefaults.defaultNotes,
         terms: businessDefaults.defaultTerms,
       }),
+      { viaVoice: true },
     )
   })
 
@@ -188,6 +189,7 @@ describe("voice-estimate-claude.service", () => {
         notes: businessDefaults.defaultNotes,
         terms: businessDefaults.defaultTerms,
       }),
+      { viaVoice: true },
     )
   })
 
@@ -223,6 +225,7 @@ describe("voice-estimate-claude.service", () => {
         notes: modelNotes,
         terms: modelTerms,
       }),
+      { viaVoice: true },
     )
   })
 
@@ -258,6 +261,7 @@ describe("voice-estimate-claude.service", () => {
         clientId: 99,
         createClient: false,
       }),
+      { viaVoice: true },
     )
   })
 
