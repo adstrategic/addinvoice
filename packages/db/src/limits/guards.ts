@@ -90,7 +90,12 @@ export async function rollVoiceWindowIfNeeded(
   });
 }
 
-interface AssertCanCreateOptions {
+export interface AssertCanCreateOptions {
+  /**
+   * True when the entity was produced by a voice flow. Drives the MINIMUM
+   * plan's monthly voice quota. Callers that create on a user's behalf from
+   * speech must set it, or the quota silently never fills.
+   */
   viaVoice?: boolean;
 }
 
