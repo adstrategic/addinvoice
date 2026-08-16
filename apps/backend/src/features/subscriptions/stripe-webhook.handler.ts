@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import type Stripe from "stripe";
 
 import { stripe } from "../../core/stripe.js";
+import * as referralsService from "../referrals/referrals.service.js";
 import * as subscriptionService from "./subscriptions.service.js";
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
@@ -53,6 +54,14 @@ export async function handleStripeWebhook(
   try {
     // Handle different event types
     switch (event.type) {
+      case "charge.dispute.created":
+        await handleDisputeCreated(event.data.object);
+        break;
+
+      case "charge.refunded":
+        await handleChargeRefunded(event.data.object);
+        break;
+
       case "checkout.session.completed":
         await handleCheckoutSessionCompleted(event.data.object);
         break;
@@ -63,6 +72,13 @@ export async function handleStripeWebhook(
 
       case "customer.subscription.updated":
         await handleSubscriptionUpdated(event.data.object);
+        break;
+
+      // Referral commission accrues here rather than on checkout completion,
+      // so it follows money actually collected — renewals included, unpaid
+      // invoices excluded.
+      case "invoice.paid":
+        await referralsService.accrueCommissionForInvoice(event.data.object);
         break;
 
       // case "invoice.payment_succeeded":
@@ -96,6 +112,35 @@ async function handleCheckoutSessionCompleted(
   session: Stripe.Checkout.Session,
 ): Promise<void> {
   await subscriptionService.handleCheckoutCompleted(session);
+}
+
+/**
+ * Handle a refund by reversing the commission it invalidates.
+ *
+ * amount_refunded is cumulative across partial refunds, so passing it straight
+ * through lets the ledger converge on the correct total no matter how many
+ * refund events arrive.
+ */
+async function handleChargeRefunded(charge: Stripe.Charge): Promise<void> {
+  await referralsService.reverseCommissionForCharge(
+    charge.id,
+    charge.amount_refunded,
+  );
+}
+
+/**
+ * Handle a dispute by reversing the full commission for the charge. Treated as
+ * a total loss: even if the dispute is later won, the money was not ours to
+ * pay out in the meantime.
+ */
+async function handleDisputeCreated(dispute: Stripe.Dispute): Promise<void> {
+  const chargeId =
+    typeof dispute.charge === "string" ? dispute.charge : dispute.charge.id;
+
+  await referralsService.reverseCommissionForCharge(
+    chargeId,
+    Number.MAX_SAFE_INTEGER,
+  );
 }
 
 /**

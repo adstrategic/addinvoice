@@ -16,6 +16,8 @@ import { invoicesRoutes } from "../features/invoices/invoices.routes.js";
 import { merchantsRoutes } from "../features/merchants/merchants.routes.js";
 import { paymentsRoutes } from "../features/payments/payments.routes.js";
 import { proposalsRoutes } from "../features/proposals/proposals.routes.js";
+import { referralsAdminRoutes } from "../features/referrals/referrals-admin.routes.js";
+import { referralsRoutes } from "../features/referrals/referrals.routes.js";
 import { subscriptionsRoutes } from "../features/subscriptions/subscriptions.routes.js";
 import { workCategoriesRoutes } from "../features/work-categories/work-categories.routes.js";
 import { workspaceRoutes } from "../features/workspace/workspace.routes.js";
@@ -32,11 +34,18 @@ apiRouter.use(verifyWorkspaceAccess);
 // Subscription routes - NO subscription guard (users need to subscribe)
 apiRouter.use("/subscription", subscriptionsRoutes);
 
+// Referral routes - NO subscription guard. A referral is attached before the
+// user has any plan, so guarding these would 402 exactly the flow they exist
+// to serve.
+apiRouter.use("/referrals", referralsRoutes);
+
 // Apply subscription guard to all routes EXCEPT subscription routes
 // This allows read-only access without subscription
 apiRouter.use((req, res, next) => {
   if (
     req.path.startsWith("/subscription") ||
+    req.path.startsWith("/referrals") ||
+    req.path.startsWith("/admin") ||
     req.path.startsWith("/workspace/onboarding") ||
     // The onboarding funnel reads /businesses to work out which step the user
     // is on, and it has to do that before they can possibly have a plan.
@@ -57,7 +66,9 @@ apiRouter.use((req, res, next) => {
   if (
     req.path.startsWith("/businesses") ||
     req.path.startsWith("/workspace") ||
-    req.path.startsWith("/subscription")
+    req.path.startsWith("/subscription") ||
+    req.path.startsWith("/referrals") ||
+    req.path.startsWith("/admin")
   ) {
     next();
     return;
@@ -82,6 +93,7 @@ apiRouter.use("/work-categories", workCategoriesRoutes);
 apiRouter.use("/payments", paymentsRoutes);
 apiRouter.use("/workspace", workspaceRoutes);
 apiRouter.use("/livekit", livekitRouter);
+apiRouter.use("/admin/referrals", referralsAdminRoutes);
 
 // Placeholder route
 apiRouter.get("/", (req, res) => {

@@ -203,6 +203,7 @@ async function executeCreateEstimate(
     const estimate = await estimatesService.createEstimate(
       workspaceId,
       parsed.data,
+      { viaVoice: true },
     );
     return {
       estimateNumber: estimate.estimateNumber,

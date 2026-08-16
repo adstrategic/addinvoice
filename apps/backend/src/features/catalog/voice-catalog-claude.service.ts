@@ -88,6 +88,7 @@ async function executeCreateCatalog(
     const catalog = await catalogService.createCatalog(
       workspaceId,
       parsed.data,
+      { viaVoice: true },
     );
     return {
       id: catalog.id,

@@ -113,6 +113,7 @@ describe("voice-catalog-claude.service", () => {
         businessId: 1,
         name: "Website Management",
       }),
+      { viaVoice: true },
     )
   })
 
@@ -139,6 +140,7 @@ describe("voice-catalog-claude.service", () => {
     expect(catalogService.createCatalog).toHaveBeenCalledWith(
       99,
       expect.objectContaining({ businessId: 1 }),
+      { viaVoice: true },
     )
   })
 

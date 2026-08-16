@@ -18,6 +18,7 @@ import {
   useSubscriptionPlans,
 } from "@/hooks/use-subscription";
 import { FunnelGuard } from "@/components/guards/funnel-guard";
+import { ReferralBanner } from "@/features/referrals/components/referral-banner";
 import { FUNNEL_PATHS } from "@/lib/funnel";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
@@ -169,6 +170,8 @@ export default function SubscribePage() {
               </div>
             </div>
           </div>
+
+          <ReferralBanner />
 
           <div className="grid md:grid-cols-3 gap-6">
             {plans?.map((plan) => {
