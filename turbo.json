@@ -29,8 +29,7 @@
         "REDIS_*",
         "PUPPETEER_*",
         "ADMIN_CLERK_USER_IDS",
-        "REFERRAL_*",
-        "INTERNAL_API_URL"
+        "REFERRAL_*"
       ]
     },
     "test": {
