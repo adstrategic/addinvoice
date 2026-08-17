@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTour } from "@/components/tour/TourContext";
 import { TourSelectionModal } from "@/components/tour/TourSelectionModal";
+import { InstallWebAppSection } from "@/components/install-web-app/install-web-app-section";
 import { AskMeHowHeader } from "./AskMeHowHeader";
 import { TutorialsSection } from "./TutorialsSection";
 
@@ -17,6 +18,7 @@ export default function AskMeHowPage() {
   return (
     <>
       <div className="max-w-6xl mx-auto space-y-8">
+        <InstallWebAppSection />
         <AskMeHowHeader onStartTour={handleStartTour} />
         <div className="grid gap-8">
           <TutorialsSection onStartTour={handleStartTour} />
