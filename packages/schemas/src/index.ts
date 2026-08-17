@@ -8,4 +8,5 @@ export * from "./advances/index.js";
 export * from "./merchant.js";
 export * from "./expense.js";
 export * from "./work-categories.js";
+export * from "./referrals.js";
 export * from "./shared/date.js";

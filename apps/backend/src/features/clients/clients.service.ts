@@ -1,4 +1,5 @@
 import type { Prisma } from "@addinvoice/db";
+import type { AssertCanCreateOptions } from "@addinvoice/db";
 
 import { assertCanCreate, prisma } from "@addinvoice/db";
 
@@ -17,9 +18,10 @@ import { EntityNotFoundError } from "../../errors/EntityErrors.js";
 export async function createClient(
   workspaceId: number,
   data: CreateClientDto,
+  options: AssertCanCreateOptions = {},
 ): Promise<ClientEntity> {
   return await prisma.$transaction(async (tx) => {
-    await assertCanCreate(tx, workspaceId, "clients");
+    await assertCanCreate(tx, workspaceId, "clients", options);
     const sequence = await getNextSequence(tx, workspaceId);
 
     const client = await tx.client.create({

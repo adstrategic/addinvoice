@@ -13,6 +13,7 @@ import type {
 
 import {
   assertCanCreate,
+  type AssertCanCreateOptions,
   type EstimateStatus,
   prisma,
   type Prisma,
@@ -719,9 +720,10 @@ export function calculateItemTotal(
 export async function createEstimate(
   workspaceId: number,
   data: CreateEstimateDTO,
+  options: AssertCanCreateOptions = {},
 ): Promise<EstimateResponse> {
   return await prisma.$transaction(async (tx) => {
-    await assertCanCreate(tx, workspaceId, "estimates");
+    await assertCanCreate(tx, workspaceId, "estimates", options);
     // Check if workspace has at least one business
     const businessCount = await tx.business.count({
       where: {

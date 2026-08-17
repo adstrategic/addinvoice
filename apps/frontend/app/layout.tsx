@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ClerkTokenProvider } from "@/components/providers/clerk-token-provider";
+import { ReferralAttacher } from "@/components/providers/referral-attacher";
 import "./globals.css";
 import { TourProvider } from "@/components/tour/TourContext";
 import { TourOverlay } from "@/components/tour/TourOverlay";
@@ -82,6 +83,7 @@ export default function RootLayout({
           <ThemeProvider defaultTheme="light" storageKey="adinvoices-theme">
             <QueryProvider>
               <ClerkTokenProvider>
+                <ReferralAttacher />
                 <TourProvider>
                   <UpgradeDialogProvider>
                     <TourOverlay />

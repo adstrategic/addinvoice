@@ -28,7 +28,10 @@
         "PDF_SERVICE_*",
         "REDIS_*",
         "PUPPETEER_*",
-        "EXPO_PUBLIC_*"
+        "EXPO_PUBLIC_*",
+        "ADMIN_CLERK_USER_IDS",
+        "REFERRAL_*",
+        "INTERNAL_API_URL"
       ]
     },
     "test": {

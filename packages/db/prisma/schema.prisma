@@ -75,6 +75,8 @@ model Workspace {
     // Used to permanently block re-claiming the free trial.
     hasEverPaid          Boolean             @default(false)
     usage                WorkspaceUsage?
+    // Set when this workspace was signed up through someone's referral link.
+    referral             Referral?
     // TODO: AI CREDITS - Add fields for AI credit tracking
     // aiCreditBalance      Decimal?@db.Decimal(10,2)           @default(0)
     // aiCreditResetDate    DateTime?
@@ -754,4 +756,170 @@ model ProposalDescriptiveItem {
     @@index([proposalId])
     @@index([proposalId, sortOrder])
     @@map("proposal_descriptive_items")
+}
+
+// ---------------------------------------------------------------------------
+// Referral program
+//
+// Someone refers a new workspace with their code. The referred customer gets a
+// one-off 20% discount (monthly MINIMUM/ESSENTIAL only — yearly is already an
+// upsell discount and LIFETIME is outside the program), and the referrer earns
+// commission on every invoice that customer actually pays, for a fixed window.
+//
+// Stripe is the source of truth for money; these tables are the source of truth
+// for who referred whom and what is owed.
+// ---------------------------------------------------------------------------
+
+enum ReferrerStatus {
+    ACTIVE
+    PAUSED
+}
+
+model Referrer {
+    id Int @id @default(autoincrement())
+
+    name   String
+    email  String         @unique
+    // Customer-facing code, stored uppercase (e.g. "JUAN20").
+    code   String         @unique
+    status ReferrerStatus @default(ACTIVE)
+
+    // Stripe objects backing the customer discount. The coupon carries the
+    // percentage and product restriction; the promotion code is the redeemable
+    // string and carries metadata.referrerId so webhooks can identify it as a
+    // referral rather than an ordinary marketing coupon.
+    stripeCouponId        String
+    stripePromotionCodeId String @unique
+
+    // Current terms. Copied onto each Referral at conversion so renegotiating
+    // with a referrer never rewrites the terms of referrals they already made.
+    commissionRatePct Decimal @db.Decimal(5, 2) @default(15)
+    commissionMonths  Int     @default(12)
+
+    // Manual payout details. Unused by the app — reference for whoever pays.
+    payoutMethod  String?
+    payoutDetails String?
+    // Reserved for a future Stripe Connect migration; nothing reads it today.
+    stripeConnectAccountId String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    referrals   Referral[]
+    commissions ReferralCommission[]
+    payouts     ReferralPayout[]
+
+    @@index([code])
+    @@index([status])
+    @@map("referrers")
+}
+
+enum ReferralStatus {
+    // Attributed but the workspace has never paid. Still reassignable.
+    PENDING
+    // The workspace has paid at least once. Frozen permanently.
+    CONVERTED
+}
+
+model Referral {
+    id          Int @id @default(autoincrement())
+    referrerId  Int
+    workspaceId Int @unique
+
+    status ReferralStatus @default(PENDING)
+
+    attributedAt DateTime  @default(now())
+    convertedAt  DateTime?
+    // convertedAt + referrer.commissionMonths. Invoices paid after this stop
+    // accruing commission.
+    commissionEndsAt DateTime?
+
+    // Snapshot of referrer.commissionRatePct taken at conversion.
+    commissionRatePct Decimal? @db.Decimal(5, 2)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    referrer    Referrer             @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+    workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    commissions ReferralCommission[]
+
+    @@index([referrerId])
+    @@index([status])
+    @@map("referrals")
+}
+
+enum ReferralCommissionStatus {
+    // Inside the refund hold window; not yet payable.
+    PENDING
+    // Hold window elapsed; payable.
+    APPROVED
+    // Included in a recorded payout.
+    PAID
+    // A reversal row, or an accrual cancelled by one.
+    REVERSED
+}
+
+// Append-only ledger. Refunds and disputes insert new negative rows rather than
+// editing existing ones, so the history stays reconstructable.
+model ReferralCommission {
+    id         Int @id @default(autoincrement())
+    referrerId Int
+    referralId Int
+
+    // Unique per invoice: this is what makes Stripe webhook redelivery
+    // incapable of double-crediting. Null on reversal rows, which are keyed by
+    // stripeChargeId instead.
+    stripeInvoiceId String? @unique
+    stripeChargeId  String?
+
+    // Invoice amount actually paid, excluding tax.
+    baseAmountCents Int
+    // Commission owed. Negative on reversal rows.
+    amountCents     Int
+    currency        String
+
+    status      ReferralCommissionStatus @default(PENDING)
+    // createdAt + REFERRAL_HOLD_DAYS. Before this, the row is not payable.
+    availableAt DateTime
+
+    payoutId Int?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    referrer Referrer        @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+    referral Referral        @relation(fields: [referralId], references: [id], onDelete: Cascade)
+    payout   ReferralPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+    @@index([referrerId])
+    @@index([referralId])
+    @@index([status])
+    @@index([availableAt])
+    @@index([stripeChargeId])
+    @@map("referral_commissions")
+}
+
+// Record of a payment actually made to a referrer, outside the app.
+model ReferralPayout {
+    id         Int @id @default(autoincrement())
+    referrerId Int
+
+    amountCents Int
+    currency    String
+
+    // e.g. "bank_transfer", "paypal", "wise".
+    method    String?
+    // External transaction reference, for reconciliation.
+    reference String?
+    note      String?
+
+    paidAt    DateTime @default(now())
+    createdAt DateTime @default(now())
+
+    referrer    Referrer             @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+    commissions ReferralCommission[]
+
+    @@index([referrerId])
+    @@map("referral_payouts")
 }

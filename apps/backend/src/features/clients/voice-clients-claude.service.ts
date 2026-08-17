@@ -64,7 +64,11 @@ async function executeCreateClient(
   }
 
   try {
-    const client = await clientsService.createClient(workspaceId, parsed.data);
+    const client = await clientsService.createClient(
+      workspaceId,
+      parsed.data,
+      { viaVoice: true },
+    );
     return {
       name: client.name,
       ok: true,

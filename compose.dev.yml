@@ -118,6 +118,9 @@ services:
       - apps/frontend/.env.local
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:4000
+      # Server-side calls (route handlers) resolve the backend over the compose
+      # network; localhost inside this container is the frontend itself.
+      INTERNAL_API_URL: http://backend:4000
     depends_on:
       - backend
 

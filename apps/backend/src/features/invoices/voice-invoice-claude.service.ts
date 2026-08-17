@@ -4,7 +4,6 @@ import { prisma } from "@addinvoice/db";
 
 import { runAgenticToolLoop } from "../../lib/agentic-runner.js";
 import { VOICE_EXTRACTION_MODEL } from "../../lib/anthropic.js";
-import { languageDisplayName } from "../../lib/voice-language.js";
 import {
   normalizeTipTapField,
   resolveVoiceTiptapOrBusinessDefault,
@@ -12,6 +11,7 @@ import {
   TIPTAP_DOC_JSON_SCHEMA_REQUIRED,
   TIPTAP_SYSTEM_PROMPT_INSTRUCTIONS,
 } from "../../lib/tiptap.js";
+import { languageDisplayName } from "../../lib/voice-language.js";
 import { createInvoiceSchema } from "./invoices.schemas.js";
 import * as invoicesService from "./invoices.service.js";
 
@@ -177,7 +177,11 @@ async function executeCreateInvoice(
   }
 
   try {
-    const invoice = await invoicesService.createInvoice(workspaceId, parsed.data);
+    const invoice = await invoicesService.createInvoice(
+      workspaceId,
+      parsed.data,
+      { viaVoice: true },
+    );
     return {
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
